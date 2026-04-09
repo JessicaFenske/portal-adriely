@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Oportunidades - Adriely</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+
+        .header {
+            background: linear-gradient(135deg, #6c3fb5, #4a1a8a);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 22px; font-weight: 600; }
+        .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+        .header .stats {
+            display: flex;
+            gap: 25px;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-box .number { font-size: 24px; font-weight: 700; }
+        .stat-box .label { font-size: 11px; opacity: 0.8; text-transform: uppercase; }
+
+        .controls {
+            padding: 15px 30px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .controls input, .controls select {
+            padding: 8px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+        .controls input:focus, .controls select:focus {
+            border-color: #6c3fb5;
+            box-shadow: 0 0 0 2px rgba(108,63,181,0.15);
+        }
+        .controls input[type="text"] { width: 250px; }
+        .controls label { font-size: 12px; color: #666; font-weight: 500; }
+        .filter-group { display: flex; flex-direction: column; gap: 3px; }
+
+        .btn-refresh {
+            background: #6c3fb5;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .btn-refresh:hover { background: #5a2fa0; }
+        .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #888;
+            font-size: 16px;
+        }
+        .loading .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #6c3fb5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .table-container {
+            padding: 20px 30px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            font-size: 13px;
+        }
+        thead th {
+            background: #f8f8fa;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e8e8e8;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        thead th:hover { background: #f0f0f4; }
+        thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+        thead th.sorted .sort-icon { opacity: 1; color: #6c3fb5; }
+
+        tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+        tbody tr:hover { background: #f8f6fc; }
+        tbody td { padding: 10px 14px; vertical-align: middle; }
+
+        .deal-title {
+            font-weight: 500;
+            color: #333;
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .deal-link {
+            color: #6c3fb5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .deal-link:hover { text-decoration: underline; }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .contact-name { font-weight: 500; }
+        .contact-email { font-size: 11px; color: #888; }
+
+        .phone-link {
+            color: #2e7d32;
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .phone-link:hover { text-decoration: underline; }
+        .no-phone { color: #ccc; font-style: italic; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .badge-pipeline-vendas { background: #e8eaf6; color: #3f51b5; }
+        .badge-pipeline-sankhya { background: #fff3e0; color: #e65100; }
+        .badge-pipeline-farmer { background: #e8f5e9; color: #2e7d32; }
+        .badge-pipeline-cs { background: #fce4ec; color: #c62828; }
+        .badge-pipeline-default { background: #f5f5f5; color: #666; }
+
+        .stage-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .stage-reconhecimento { background: #e3f2fd; color: #1565c0; }
+        .stage-consideracao { background: #f1f8e9; color: #558b2f; }
+        .stage-aprovado { background: #fff8e1; color: #f9a825; }
+        .stage-formalizacao { background: #e8f5e9; color: #2e7d32; }
+        .stage-default { background: #f5f5f5; color: #666; }
+
+        .state-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #e0e0e0;
+            color: #555;
+        }
+        .state-sp { background: #c8e6c9; color: #1b5e20; }
+        .state-other { background: #ffe0b2; color: #e65100; }
+        .state-unknown { background: #f5f5f5; color: #bbb; font-weight: 400; font-style: italic; }
+
+        .money { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .money-positive { color: #2e7d32; font-weight: 500; }
+        .days { text-align: center; }
+        .days-high { color: #c62828; font-weight: 600; }
+        .days-medium { color: #e65100; }
+        .days-low { color: #2e7d32; }
+
+        /* Contact modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal h2 { margin-bottom: 20px; color: #333; font-size: 18px; }
+        .modal .field { margin-bottom: 14px; }
+        .modal .field-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
+        .modal .field-value { font-size: 15px; color: #333; }
+        .modal .field-value a { color: #6c3fb5; text-decoration: none; }
+        .modal .field-value a:hover { text-decoration: underline; }
+        .modal .close-btn {
+            margin-top: 20px;
+            background: #6c3fb5;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .modal .close-btn:hover { background: #5a2fa0; }
+        .call-btn {
+            display: inline-block;
+            background: #2e7d32;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .call-btn:hover { background: #1b5e20; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state h3 { color: #666; margin-bottom: 8px; }
+
+        .last-update { font-size: 11px; color: #999; padding: 10px 30px; text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Portal de Oportunidades</h1>
+            <div class="subtitle">Leads Adriely - Dados em tempo real do Ploomes</div>
+        </div>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="number" id="totalDeals">-</div>
+                <div class="label">Oportunidades</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="totalMRR">-</div>
+                <div class="label">MRR Total</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="totalSetup">-</div>
+                <div class="label">Setup Total</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="filter-group">
+            <label>Buscar</label>
+            <input type="text" id="searchInput" placeholder="Buscar por titulo, contato, responsavel...">
+        </div>
+        <div class="filter-group">
+            <label>Funil</label>
+            <select id="filterPipeline">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Estagio</label>
+            <select id="filterStage">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Responsavel</label>
+            <select id="filterOwner">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Estado</label>
+            <select id="filterState">
+                <option value="">Todos</option>
+                <option value="SP">SP</option>
+                <option value="OTHER">Demais regioes</option>
+                <option value="UNKNOWN">Sem estado</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button class="btn-refresh" id="btnRefresh" onclick="loadDeals()">Atualizar</button>
+        </div>
+    </div>
+
+    <div id="loadingArea" class="loading">
+        <div class="spinner"></div>
+        <div>Carregando oportunidades do Ploomes...</div>
+    </div>
+
+    <div class="table-container" id="tableArea" style="display:none;">
+        <table>
+            <thead>
+                <tr>
+                    <th data-sort="title">Titulo <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="owner">Responsavel <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="contact">Contato <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="phone">Telefone</th>
+                    <th data-sort="state">Estado <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="mrr" class="money">MRR <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="setup" class="money">Setup <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="pipeline">Funil <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="stage">Estagio <span class="sort-icon">&#8597;</span></th>
+                    <th data-sort="days" class="days">Dias <span class="sort-icon">&#8597;</span></th>
+                </tr>
+            </thead>
+            <tbody id="dealsBody"></tbody>
+        </table>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+        <h3>Nenhuma oportunidade encontrada</h3>
+        <p>Tente ajustar os filtros</p>
+    </div>
+
+    <div class="last-update" id="lastUpdate"></div>
+
+    <!-- Contact Modal -->
+    <div class="modal-overlay" id="contactModal">
+        <div class="modal">
+            <h2 id="modalTitle">Detalhes do Contato</h2>
+            <div id="modalContent"></div>
+            <button class="close-btn" onclick="closeModal()">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        // API calls go through local proxy to avoid CORS
+        const API_BASE = '/api';
+
+        // Field keys for custom properties
+        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+        const FIELD_SDR = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2';
+        const CONTACT_STATE_FIELD = 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848';
+
+        let allDeals = [];
+        let sortField = 'days';
+        let sortDir = -1;
+
+        // DDD to state mapping
+        const DDD_STATE = {
+            '11':'SP','12':'SP','13':'SP','14':'SP','15':'SP','16':'SP','17':'SP','18':'SP','19':'SP',
+            '21':'RJ','22':'RJ','24':'RJ',
+            '27':'ES','28':'ES',
+            '31':'MG','32':'MG','33':'MG','34':'MG','35':'MG','37':'MG','38':'MG',
+            '41':'PR','42':'PR','43':'PR','44':'PR','45':'PR','46':'PR',
+            '47':'SC','48':'SC','49':'SC',
+            '51':'RS','53':'RS','54':'RS','55':'RS',
+            '61':'DF','62':'GO','63':'TO','64':'GO','65':'MT','66':'MT','67':'MS','68':'AC','69':'RO',
+            '71':'BA','73':'BA','74':'BA','75':'BA','77':'BA',
+            '79':'SE','81':'PE','82':'AL','83':'PB','84':'RN','85':'CE','86':'PI','87':'PE','88':'CE','89':'PI',
+            '91':'PA','92':'AM','93':'PA','94':'PA','95':'RR','96':'AP','97':'AM','98':'MA','99':'MA'
+        };
+
+        // Title keywords to state mapping
+        const TITLE_STATE_HINTS = {
+            'Campinas': 'SP', 'Berrini': 'SP', 'Interior Paulista': 'SP', 'Sudeste Paulista': 'SP',
+            'ABC Paulista': 'SP', 'SP ': 'SP', 'Sao Paulo': 'SP', 'São Paulo': 'SP',
+            'Belo Horizonte': 'MG', 'BH': 'MG', 'Triangulo Mineiro': 'MG', 'Triângulo Mineiro': 'MG',
+            'Espírito Santo': 'ES', 'Espirito Santo': 'ES',
+            'Recife': 'PE', 'Goiânia': 'GO', 'Goiania': 'GO', 'Brasil Central': 'GO',
+            'Curitiba': 'PR', 'Florianópolis': 'SC', 'Porto Alegre': 'RS',
+            'Salvador': 'BA', 'Fortaleza': 'CE', 'Manaus': 'AM', 'Belém': 'PA',
+            'Brasília': 'DF', 'Brasilia': 'DF', 'Rio de Janeiro': 'RJ',
+        };
+
+        function inferState(deal) {
+            // 1. From contact city/state (already set)
+            if (deal.state) return deal.state;
+
+            // 2. From phone DDD
+            if (deal.phone) {
+                const digits = deal.phone.replace(/\D/g, '');
+                let ddd = '';
+                if (digits.startsWith('55') && digits.length >= 4) ddd = digits.substring(2, 4);
+                else if (digits.length >= 2) ddd = digits.substring(0, 2);
+                if (DDD_STATE[ddd]) return DDD_STATE[ddd];
+            }
+
+            // 3. From deal title keywords
+            for (const [keyword, state] of Object.entries(TITLE_STATE_HINTS)) {
+                if (deal.title.includes(keyword)) return state;
+            }
+
+            return null;
+        }
+
+        async function apiGet(endpoint) {
+            const resp = await fetch(`${API_BASE}${endpoint}`);
+            if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+            return resp.json();
+        }
+
+        function getOtherProp(deal, fieldKey) {
+            const prop = (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
+            return prop || null;
+        }
+
+        function formatMoney(value) {
+            if (!value && value !== 0) return '-';
+            return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+        }
+
+        function getPipelineClass(name) {
+            if (!name) return 'badge-pipeline-default';
+            const n = name.toLowerCase();
+            if (n.includes('vendas')) return 'badge-pipeline-vendas';
+            if (n.includes('sankhya')) return 'badge-pipeline-sankhya';
+            if (n.includes('farmer')) return 'badge-pipeline-farmer';
+            if (n.includes('cs')) return 'badge-pipeline-cs';
+            return 'badge-pipeline-default';
+        }
+
+        function getStageClass(name) {
+            if (!name) return 'stage-default';
+            const n = name.toLowerCase();
+            if (n.includes('reconhecimento')) return 'stage-reconhecimento';
+            if (n.includes('considera')) return 'stage-consideracao';
+            if (n.includes('aprovado')) return 'stage-aprovado';
+            if (n.includes('formaliza')) return 'stage-formalizacao';
+            return 'stage-default';
+        }
+
+        function getDaysClass(days) {
+            if (days > 60) return 'days-high';
+            if (days > 30) return 'days-medium';
+            return 'days-low';
+        }
+
+        async function loadDeals() {
+            const btn = document.getElementById('btnRefresh');
+            const loadingArea = document.getElementById('loadingArea');
+            const tableArea = document.getElementById('tableArea');
+
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+            loadingArea.style.display = 'block';
+            tableArea.style.display = 'none';
+
+            try {
+                // Load ALL open deals with pagination (API limits to ~300 per request)
+                const PAGE_SIZE = 200;
+                let allRawDeals = [];
+                let skip = 0;
+                let hasMore = true;
+
+                while (hasMore) {
+                    loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando oportunidades do Ploomes... (${allRawDeals.length} carregados)</div>`;
+                    const data = await apiGet(
+                        `/Deals?$top=${PAGE_SIZE}&$skip=${skip}&$filter=StatusId eq 1` +
+                        `&$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties` +
+                        `&$orderby=DaysInStage desc`
+                    );
+                    const page = data.value || [];
+                    allRawDeals = allRawDeals.concat(page);
+                    skip += PAGE_SIZE;
+                    hasMore = page.length === PAGE_SIZE;
+                }
+
+                const deals = allRawDeals;
+
+                // Second pass: fetch ALL contacts with state field in OtherProperties
+                loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando estados dos contatos...</div>`;
+                const contactStateMap = {};
+                let cSkip = 0;
+                let cHasMore = true;
+                while (cHasMore) {
+                    try {
+                        const cData = await apiGet(
+                            `/Contacts?$top=200&$skip=${cSkip}` +
+                            `&$filter=OtherProperties/any(o: o/FieldKey eq '${CONTACT_STATE_FIELD}')` +
+                            `&$expand=OtherProperties&$select=Id`
+                        );
+                        const contacts = cData.value || [];
+                        contacts.forEach(c => {
+                            const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
+                            if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
+                        });
+                        cSkip += 200;
+                        cHasMore = contacts.length === 200;
+                    } catch(e) { console.warn('Contact state fetch error:', e); cHasMore = false; }
+                }
+                // Attach to deals
+                deals.forEach(d => { d._contactState = contactStateMap[d.ContactId] || null; });
+
+                // Process deals
+                allDeals = deals.map(d => {
+                    const mrrProp = getOtherProp(d, FIELD_MRR);
+                    const setupProp = getOtherProp(d, FIELD_SETUP);
+                    const sdrProp = getOtherProp(d, FIELD_SDR);
+
+                    const contact = d.Contact || {};
+                    const phones = contact.Phones || [];
+                    const phone = phones.length > 0 ? phones[0].PhoneNumber : null;
+                    // State: first try City.State, then contact custom field from batch
+                    const state = contact.City?.State?.Short || d._contactState || null;
+                    const cityName = contact.City?.Name || null;
+
+                    return {
+                        id: d.Id,
+                        title: d.Title || '',
+                        owner: d.Owner?.Name || '',
+                        contactName: contact.Name || d.ContactName || '',
+                        contactEmail: contact.Email || '',
+                        contactId: d.ContactId,
+                        phone: phone,
+                        allPhones: phones,
+                        state: state,
+                        cityName: cityName,
+                        mrr: mrrProp?.DecimalValue || 0,
+                        setup: setupProp?.DecimalValue || 0,
+                        pipeline: d.Pipeline?.Name || '',
+                        stage: d.Stage?.Name || '',
+                        days: d.DaysInStage || 0,
+                        sdr: sdrProp?.ObjectValueName || '',
+                        amount: d.Amount || 0,
+                        ploomesUrl: `https://app10.ploomes.com/deal/${d.Id}`
+                    };
+                });
+
+                // Infer state from DDD/title when not available from contact
+                allDeals.forEach(d => {
+                    if (!d.state) d.state = inferState(d);
+                });
+
+                // Populate filter dropdowns
+                populateFilters();
+
+                // Render
+                renderDeals();
+                updateStats();
+
+                document.getElementById('lastUpdate').textContent =
+                    `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
+
+            } catch (err) {
+                console.error(err);
+                loadingArea.innerHTML = `<div style="color:#c62828;">Erro ao carregar dados: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Atualizar';
+            }
+        }
+
+        function populateFilters() {
+            const pipelines = [...new Set(allDeals.map(d => d.pipeline).filter(Boolean))].sort();
+            const stages = [...new Set(allDeals.map(d => d.stage).filter(Boolean))].sort();
+
+            const pipelineSelect = document.getElementById('filterPipeline');
+            pipelineSelect.innerHTML = '<option value="">Todos</option>';
+            pipelines.forEach(p => {
+                pipelineSelect.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+
+            const stageSelect = document.getElementById('filterStage');
+            stageSelect.innerHTML = '<option value="">Todos</option>';
+            stages.forEach(s => {
+                stageSelect.innerHTML += `<option value="${s}">${s.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim()}</option>`;
+            });
+
+            const owners = [...new Set(allDeals.map(d => d.owner).filter(Boolean))].sort();
+            const ownerSelect = document.getElementById('filterOwner');
+            ownerSelect.innerHTML = '<option value="">Todos</option>';
+            owners.forEach(o => {
+                ownerSelect.innerHTML += `<option value="${o}">${o}</option>`;
+            });
+        }
+
+        function getFilteredDeals() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const pipeline = document.getElementById('filterPipeline').value;
+            const stage = document.getElementById('filterStage').value;
+            const stateFilter = document.getElementById('filterState').value;
+
+            return allDeals.filter(d => {
+                if (search && !d.title.toLowerCase().includes(search) &&
+                    !d.contactName.toLowerCase().includes(search) &&
+                    !d.owner.toLowerCase().includes(search) &&
+                    !d.sdr.toLowerCase().includes(search)) return false;
+                const owner = document.getElementById('filterOwner').value;
+                if (pipeline && d.pipeline !== pipeline) return false;
+                if (stage && d.stage !== stage) return false;
+                if (owner && d.owner !== owner) return false;
+                if (stateFilter === 'SP' && d.state !== 'SP') return false;
+                if (stateFilter === 'OTHER' && (d.state === 'SP' || !d.state)) return false;
+                if (stateFilter === 'UNKNOWN' && d.state) return false;
+                return true;
+            }).sort((a, b) => {
+                let va = a[sortField];
+                let vb = b[sortField];
+                if (typeof va === 'string') va = va.toLowerCase();
+                if (typeof vb === 'string') vb = vb.toLowerCase();
+                if (va < vb) return -1 * sortDir;
+                if (va > vb) return 1 * sortDir;
+                return 0;
+            });
+        }
+
+        function renderDeals() {
+            const filtered = getFilteredDeals();
+            const tbody = document.getElementById('dealsBody');
+            const tableArea = document.getElementById('tableArea');
+            const loadingArea = document.getElementById('loadingArea');
+            const emptyState = document.getElementById('emptyState');
+
+            loadingArea.style.display = 'none';
+
+            if (filtered.length === 0) {
+                tableArea.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tableArea.style.display = 'block';
+
+            tbody.innerHTML = filtered.map(d => {
+                const stateHtml = d.state
+                    ? `<span class="state-badge ${d.state === 'SP' ? 'state-sp' : 'state-other'}">${d.state}</span>`
+                    : `<span class="state-badge state-unknown">-</span>`;
+
+                const phoneHtml = d.phone
+                    ? `<a href="tel:${d.phone.replace(/[^\d+]/g, '')}" class="phone-link">${d.phone}</a>`
+                    : `<span class="no-phone">-</span>`;
+
+                return `<tr>
+                    <td>
+                        <a href="${d.ploomesUrl}" target="_blank" class="deal-link" title="${d.title}">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a>
+                    </td>
+                    <td>${d.owner}</td>
+                    <td>
+                        <div class="contact-info" style="cursor:pointer;" onclick="showContact(${d.id})">
+                            <span class="contact-name">${d.contactName}</span>
+                            ${d.contactEmail ? `<span class="contact-email">${d.contactEmail}</span>` : ''}
+                        </div>
+                    </td>
+                    <td>${phoneHtml}</td>
+                    <td>${stateHtml}</td>
+                    <td class="money ${d.mrr > 0 ? 'money-positive' : ''}">${formatMoney(d.mrr)}</td>
+                    <td class="money">${formatMoney(d.setup)}</td>
+                    <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
+                    <td><span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span></td>
+                    <td class="days ${getDaysClass(d.days)}">${d.days}</td>
+                </tr>`;
+            }).join('');
+
+            // Update header stats for filtered
+            document.getElementById('totalDeals').textContent = filtered.length;
+        }
+
+        function updateStats() {
+            const filtered = getFilteredDeals();
+            document.getElementById('totalDeals').textContent = filtered.length;
+
+            const totalMRR = filtered.reduce((s, d) => s + d.mrr, 0);
+            const totalSetup = filtered.reduce((s, d) => s + d.setup, 0);
+            document.getElementById('totalMRR').textContent = 'R$ ' + formatMoney(totalMRR);
+            document.getElementById('totalSetup').textContent = 'R$ ' + formatMoney(totalSetup);
+        }
+
+        function showContact(dealId) {
+            const deal = allDeals.find(d => d.id === dealId);
+            if (!deal) return;
+
+            const modal = document.getElementById('contactModal');
+            document.getElementById('modalTitle').textContent = deal.contactName || 'Contato';
+
+            let phonesHtml = '';
+            if (deal.allPhones.length > 0) {
+                phonesHtml = deal.allPhones.map(p =>
+                    `<div style="margin-bottom:8px;">
+                        <a href="tel:${p.PhoneNumber.replace(/[^\d+]/g, '')}" class="call-btn">
+                            Ligar: ${p.PhoneNumber}
+                        </a>
+                    </div>`
+                ).join('');
+            } else {
+                phonesHtml = '<span style="color:#999;">Nenhum telefone cadastrado</span>';
+            }
+
+            document.getElementById('modalContent').innerHTML = `
+                <div class="field">
+                    <div class="field-label">Negocio</div>
+                    <div class="field-value">
+                        <a href="${deal.ploomesUrl}" target="_blank">${deal.title}</a>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Contato</div>
+                    <div class="field-value">${deal.contactName}</div>
+                </div>
+                ${deal.contactEmail ? `
+                <div class="field">
+                    <div class="field-label">E-mail</div>
+                    <div class="field-value"><a href="mailto:${deal.contactEmail}">${deal.contactEmail}</a></div>
+                </div>` : ''}
+                <div class="field">
+                    <div class="field-label">Telefone(s)</div>
+                    <div class="field-value">${phonesHtml}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Estado / Cidade</div>
+                    <div class="field-value">${deal.cityName ? deal.cityName + ' - ' : ''}${deal.state || 'Nao informado'}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Responsavel</div>
+                    <div class="field-value">${deal.owner}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">SDR</div>
+                    <div class="field-value">${deal.sdr || '-'}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Funil / Estagio</div>
+                    <div class="field-value">${deal.pipeline} / ${deal.stage}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">MRR / Setup</div>
+                    <div class="field-value">R$ ${formatMoney(deal.mrr)} / R$ ${formatMoney(deal.setup)}</div>
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('contactModal').classList.remove('active');
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', () => { renderDeals(); updateStats(); });
+        document.getElementById('filterPipeline').addEventListener('change', () => { renderDeals(); updateStats(); });
+        document.getElementById('filterStage').addEventListener('change', () => { renderDeals(); updateStats(); });
+        document.getElementById('filterState').addEventListener('change', () => { renderDeals(); updateStats(); });
+        document.getElementById('filterOwner').addEventListener('change', () => { renderDeals(); updateStats(); });
+
+        // Sort
+        document.querySelectorAll('thead th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.sort;
+                if (sortField === field) sortDir *= -1;
+                else { sortField = field; sortDir = 1; }
+                document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted'));
+                th.classList.add('sorted');
+                renderDeals();
+            });
+        });
+
+        // Close modal on overlay click
+        document.getElementById('contactModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModal();
+        });
+
+        // Load on start
+        loadDeals();
+    </script>
+</body>
+</html>
