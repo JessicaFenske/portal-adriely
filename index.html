@@ -782,6 +782,189 @@
             border-color: rgba(16, 185, 129, 0.6);
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
+
+        /* ==================== FORECAST VIEW ==================== */
+        #view-forecast .fc-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 30px rgba(16, 185, 129, 0.1);
+        }
+        #view-forecast .fc-header h1 { font-size: 22px; font-weight: 700; }
+        #view-forecast .fc-header .subtitle { font-size: 13px; opacity: 0.6; margin-top: 2px; color: #b0b0c0; }
+
+        .fc-period-bar {
+            padding: 15px 30px;
+            background: rgba(20, 20, 38, 0.6);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .fc-period-bar label { font-size: 13px; font-weight: 600; color: #8888a0; margin-right: 5px; }
+        .fc-period-btn {
+            padding: 6px 14px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #8888a0;
+            font-family: inherit;
+        }
+        .fc-period-btn:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #10b981;
+        }
+        .fc-period-btn.active {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border-color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .fc-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 20px 30px;
+        }
+        @media (max-width: 900px) {
+            .fc-kpi-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .fc-kpi-card {
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 18px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .fc-kpi-card:hover { box-shadow: 0 0 20px rgba(255,255,255,0.05); transform: translateY(-2px); }
+        .fc-kpi-card .fc-kpi-value { font-size: 22px; font-weight: 700; text-shadow: 0 0 20px rgba(0,0,0,0.3); }
+        .fc-kpi-card .fc-kpi-label { font-size: 11px; color: #8888a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+        .fc-kpi-card.scenario-otimista { border-color: rgba(16,185,129,0.3); }
+        .fc-kpi-card.scenario-otimista .fc-kpi-value { color: #10b981; }
+        .fc-kpi-card.scenario-realista { border-color: rgba(245,158,11,0.3); }
+        .fc-kpi-card.scenario-realista .fc-kpi-value { color: #f59e0b; }
+        .fc-kpi-card.scenario-pessimista { border-color: rgba(239,68,68,0.3); }
+        .fc-kpi-card.scenario-pessimista .fc-kpi-value { color: #ef4444; }
+
+        .fc-section { padding: 20px 30px; }
+        .fc-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fc-chart-container {
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            margin-bottom: 20px;
+        }
+        .fc-chart-container canvas { max-height: 350px; }
+
+        #view-forecast table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        #view-forecast thead th {
+            background: rgba(16, 185, 129, 0.08);
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #8888a0;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+            white-space: nowrap;
+        }
+        #view-forecast tbody tr { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: all 0.2s ease; }
+        #view-forecast tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.01); }
+        #view-forecast tbody tr:hover { background: rgba(16, 185, 129, 0.06); }
+        #view-forecast tbody td { padding: 10px 14px; vertical-align: middle; color: #c0c0d0; }
+
+        .badge-otimista { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-realista { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge-pessimista { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+
+        .editable-cell {
+            cursor: pointer;
+            border: 1px dashed rgba(255,255,255,0.1);
+            border-radius: 4px;
+            padding: 4px 8px !important;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .editable-cell:hover { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05); }
+        .editable-cell.overridden {
+            border-left: 3px solid #a78bfa;
+            background: rgba(167, 139, 250, 0.05);
+        }
+        .editable-cell input {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(16,185,129,0.4);
+            border-radius: 4px;
+            color: #e0e0e0;
+            padding: 4px 6px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            width: 90px;
+        }
+        .editable-cell input:focus { border-color: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.3); }
+
+        .fc-reset-btn {
+            background: rgba(248, 113, 113, 0.15);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #f87171;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        .fc-reset-btn:hover { background: rgba(248, 113, 113, 0.3); }
+
+        .fc-loading {
+            text-align: center;
+            padding: 80px;
+            color: #6868a0;
+            font-size: 16px;
+        }
+
+        .fc-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 0 30px 20px;
+        }
+        @media (max-width: 900px) {
+            .fc-summary-grid { grid-template-columns: 1fr; }
+        }
+        .fc-summary-card {
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+        }
+        .fc-summary-card h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 12px; }
+        .fc-summary-card table { margin-top: 12px; }
+        .fc-summary-card canvas { max-height: 250px; }
     </style>
 </head>
 <body>
@@ -828,6 +1011,12 @@
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
                 <span class="sub-num">9</span><span class="sub-label">Conversao por Etapa</span>
+            </div>
+
+            <div class="nav-section-title" style="margin-top:20px;">Forecast</div>
+            <div class="nav-item" data-view="forecast" onclick="showView('forecast')">
+                <span class="nav-icon">&#128176;</span>
+                <span class="nav-label">Forecast</span>
             </div>
 
             <div class="nav-section-title" style="margin-top:20px;">Dados</div>
@@ -1225,6 +1414,89 @@
             <div class="last-update" id="dashLastUpdate"></div>
         </div>
 
+        <!-- ==================== VIEW: FORECAST ==================== -->
+        <div id="view-forecast" style="display:none;">
+            <div class="fc-header">
+                <div>
+                    <h1>Forecast</h1>
+                    <div class="subtitle">Previsao de fechamento - dados do Ploomes</div>
+                </div>
+            </div>
+
+            <div class="fc-period-bar">
+                <label>Periodo:</label>
+                <button class="fc-period-btn active" onclick="setFcPeriod('thisMonth', this)">Este mes</button>
+                <button class="fc-period-btn" onclick="setFcPeriod('lastMonth', this)">Mes passado</button>
+                <button class="fc-period-btn" onclick="setFcPeriod('custom', this)">Personalizado</button>
+                <input type="date" class="date-input" id="fcDateStart" style="display:none;" onchange="applyFcCustomPeriod()">
+                <input type="date" class="date-input" id="fcDateEnd" style="display:none;" onchange="applyFcCustomPeriod()">
+            </div>
+
+            <div id="fcLoadingArea" class="fc-loading">
+                <div class="spinner"></div>
+                <div>Carregando forecast do Ploomes...</div>
+            </div>
+
+            <div id="fcContentArea" style="display:none;">
+                <!-- KPI Cards -->
+                <div class="fc-kpi-grid" id="fcKpiGrid"></div>
+
+                <!-- Main Chart -->
+                <div class="fc-section">
+                    <div class="fc-chart-container">
+                        <canvas id="chartForecast"></canvas>
+                    </div>
+                </div>
+
+                <!-- Main Table -->
+                <div class="fc-section">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <div class="fc-section-title" style="margin-bottom:0;">Detalhes do Forecast</div>
+                        <button class="export-btn" onclick="exportForecast()">&#128229; Exportar Excel</button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Titulo</th>
+                                    <th>Vendedor</th>
+                                    <th>Funil</th>
+                                    <th>Cenario</th>
+                                    <th class="money">MRR</th>
+                                    <th class="money">Setup</th>
+                                    <th>Data Fechamento</th>
+                                    <th>Acoes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fcTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Summary by Vendedor and Funil -->
+                <div class="fc-summary-grid">
+                    <div class="fc-summary-card">
+                        <h3>Por Vendedor</h3>
+                        <canvas id="chartFcVendedor"></canvas>
+                        <table>
+                            <thead><tr><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th>Deals</th></tr></thead>
+                            <tbody id="fcVendedorBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="fc-summary-card">
+                        <h3>Por Funil</h3>
+                        <canvas id="chartFcFunil"></canvas>
+                        <table>
+                            <thead><tr><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th>Deals</th></tr></thead>
+                            <tbody id="fcFunilBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="last-update" id="fcLastUpdate"></div>
+        </div>
+
     </div><!-- /main-content -->
 
     <!-- Contact Modal (global) -->
@@ -1332,16 +1604,19 @@ function toggleTable(id) {
 // ==================== VIEW NAVIGATION ====================
 let oportLoaded = false;
 let dashLoaded = false;
+let forecastLoaded = false;
 let pendingScrollSection = null;
 
 function showView(viewName) {
     document.getElementById('view-oportunidades').style.display = 'none';
     document.getElementById('view-dashboard').style.display = 'none';
+    document.getElementById('view-forecast').style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
     if (viewName === 'oportunidades' && !oportLoaded) { loadDeals(); oportLoaded = true; }
     if (viewName === 'dashboard' && !dashLoaded) { loadDashboard(); dashLoaded = true; }
+    if (viewName === 'forecast' && !forecastLoaded) { loadForecast(); forecastLoaded = true; }
 
     updateSidebarActive(viewName);
 
@@ -2655,6 +2930,386 @@ function exportSection9() {
         { header: 'Negocios', getValue: d => d.count },
         { header: 'Conversao', getValue: d => d.convPct || '-' }
     ], 'conversao_por_etapa');
+}
+
+// ==================== FORECAST VIEW ====================
+const FIELD_FORECAST = 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC';
+const FIELD_CLOSE_DATE = 'deal_9FC0805D-E23C-47B0-A182-8350B724F096';
+
+let fcAllDeals = [];
+let fcPeriodStart = null, fcPeriodEnd = null;
+let fcCharts = {};
+
+function getFcOverride(dealId, field) {
+    const val = localStorage.getItem(`forecast_override_${dealId}_${field}`);
+    return val !== null ? parseFloat(val) : null;
+}
+
+function setFcPeriod(preset, btnEl) {
+    document.querySelectorAll('.fc-period-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const showCustom = preset === 'custom';
+    document.getElementById('fcDateStart').style.display = showCustom ? '' : 'none';
+    document.getElementById('fcDateEnd').style.display = showCustom ? '' : 'none';
+    switch(preset) {
+        case 'thisMonth':
+            fcPeriodStart = new Date(y, m, 1);
+            fcPeriodEnd = new Date(y, m + 1, 0, 23, 59, 59);
+            break;
+        case 'lastMonth':
+            fcPeriodStart = new Date(y, m - 1, 1);
+            fcPeriodEnd = new Date(y, m, 0, 23, 59, 59);
+            break;
+        case 'custom':
+            return;
+    }
+    renderForecast();
+}
+
+function applyFcCustomPeriod() {
+    const s = document.getElementById('fcDateStart').value;
+    const e = document.getElementById('fcDateEnd').value;
+    if (s && e) {
+        fcPeriodStart = new Date(s + 'T00:00:00');
+        fcPeriodEnd = new Date(e + 'T23:59:59');
+        renderForecast();
+    }
+}
+
+function getFcFiltered() {
+    return fcAllDeals.filter(d => {
+        if (!d.closeDate || !fcPeriodStart || !fcPeriodEnd) return true;
+        const dt = new Date(d.closeDate);
+        return dt >= fcPeriodStart && dt <= fcPeriodEnd;
+    });
+}
+
+function getFcMrr(deal) {
+    const ov = getFcOverride(deal.id, 'mrr');
+    return ov !== null ? ov : deal.mrr;
+}
+function getFcSetup(deal) {
+    const ov = getFcOverride(deal.id, 'setup');
+    return ov !== null ? ov : deal.setup;
+}
+
+function startFcEdit(cell, dealId, field, originalValue) {
+    const currentVal = getFcOverride(dealId, field) ?? originalValue;
+    cell.innerHTML = `<input type="text" value="${formatMoney(currentVal)}"
+        onblur="saveFcEdit(this, ${dealId}, '${field}', ${originalValue})"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        style="width:90px;" autofocus>`;
+    cell.querySelector('input').focus();
+    cell.querySelector('input').select();
+}
+
+function saveFcEdit(input, dealId, field, originalValue) {
+    const newVal = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+    if (Math.abs(newVal - originalValue) > 0.001) {
+        localStorage.setItem(`forecast_override_${dealId}_${field}`, newVal);
+    } else {
+        localStorage.removeItem(`forecast_override_${dealId}_${field}`);
+    }
+    renderForecast();
+}
+
+function resetFcOverride(dealId) {
+    localStorage.removeItem(`forecast_override_${dealId}_mrr`);
+    localStorage.removeItem(`forecast_override_${dealId}_setup`);
+    renderForecast();
+}
+
+function getScenarioBadge(scenario) {
+    if (!scenario) return '<span class="badge badge-pipeline-default">-</span>';
+    const s = scenario.toLowerCase();
+    if (s.includes('otimista')) return '<span class="badge badge-otimista">Otimista</span>';
+    if (s.includes('realista')) return '<span class="badge badge-realista">Realista</span>';
+    if (s.includes('pessimista')) return '<span class="badge badge-pessimista">Pessimista</span>';
+    return `<span class="badge badge-pipeline-default">${scenario}</span>`;
+}
+
+function normalizeScenario(raw) {
+    if (!raw) return '';
+    if (raw.toLowerCase().includes('pessimista')) return 'Pessimista';
+    if (raw.toLowerCase().includes('realista')) return 'Realista';
+    if (raw.toLowerCase().includes('otimista')) return 'Otimista';
+    return raw;
+}
+
+function scenarioOrder(s) {
+    if (s === 'Otimista') return 0;
+    if (s === 'Realista') return 1;
+    if (s === 'Pessimista') return 2;
+    return 3;
+}
+
+function renderForecast() {
+    const filtered = getFcFiltered();
+
+    // Sort: scenario order, then closeDate
+    filtered.sort((a, b) => {
+        const sa = scenarioOrder(a.forecast);
+        const sb = scenarioOrder(b.forecast);
+        if (sa !== sb) return sa - sb;
+        return new Date(a.closeDate || 0) - new Date(b.closeDate || 0);
+    });
+
+    // Calculate KPIs
+    const kpis = { Otimista: { mrr: 0, setup: 0 }, Realista: { mrr: 0, setup: 0 }, Pessimista: { mrr: 0, setup: 0 } };
+    filtered.forEach(d => {
+        const s = d.forecast;
+        if (kpis[s]) {
+            kpis[s].mrr += getFcMrr(d);
+            kpis[s].setup += getFcSetup(d);
+        }
+    });
+
+    document.getElementById('fcKpiGrid').innerHTML = `
+        <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.mrr)}</div>
+            <div class="fc-kpi-label">MRR Otimista</div>
+        </div>
+        <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.mrr)}</div>
+            <div class="fc-kpi-label">MRR Realista</div>
+        </div>
+        <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.mrr)}</div>
+            <div class="fc-kpi-label">MRR Pessimista</div>
+        </div>
+        <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.setup)}</div>
+            <div class="fc-kpi-label">Setup Otimista</div>
+        </div>
+        <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.setup)}</div>
+            <div class="fc-kpi-label">Setup Realista</div>
+        </div>
+        <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
+            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.setup)}</div>
+            <div class="fc-kpi-label">Setup Pessimista</div>
+        </div>
+    `;
+
+    // Main Chart
+    if (fcCharts.main) { fcCharts.main.destroy(); fcCharts.main = null; }
+    fcCharts.main = new Chart(document.getElementById('chartForecast'), {
+        type: 'bar',
+        data: {
+            labels: ['MRR', 'Setup'],
+            datasets: [
+                { label: 'Otimista', data: [kpis.Otimista.mrr, kpis.Otimista.setup], backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
+                { label: 'Realista', data: [kpis.Realista.mrr, kpis.Realista.setup], backgroundColor: 'rgba(245,158,11,0.7)', borderColor: '#f59e0b', borderWidth: 1 },
+                { label: 'Pessimista', data: [kpis.Pessimista.mrr, kpis.Pessimista.setup], backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const dsIdx = elements[0].datasetIndex;
+                    const scenarios = ['Otimista', 'Realista', 'Pessimista'];
+                    showFcDrilldown(scenarios[dsIdx]);
+                }
+            },
+            scales: {
+                x: { ...darkScaleOptions },
+                y: { beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }
+            }
+        }
+    });
+
+    // Main Table
+    document.getElementById('fcTableBody').innerHTML = filtered.map(d => {
+        const hasMrrOv = getFcOverride(d.id, 'mrr') !== null;
+        const hasSetupOv = getFcOverride(d.id, 'setup') !== null;
+        const hasAnyOv = hasMrrOv || hasSetupOv;
+        const mrrVal = getFcMrr(d);
+        const setupVal = getFcSetup(d);
+        return `<tr>
+            <td><a href="https://app10.ploomes.com/deal/${d.id}" target="_blank" class="deal-link">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
+            <td>${d.owner}</td>
+            <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
+            <td>${getScenarioBadge(d.forecast)}</td>
+            <td class="money editable-cell ${hasMrrOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'mrr', ${d.mrr})">
+                ${formatMoney(mrrVal)}${hasMrrOv ? ' &#9998;' : ''}
+            </td>
+            <td class="money editable-cell ${hasSetupOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'setup', ${d.setup})">
+                ${formatMoney(setupVal)}${hasSetupOv ? ' &#9998;' : ''}
+            </td>
+            <td>${d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-'}</td>
+            <td>${hasAnyOv ? `<button class="fc-reset-btn" onclick="resetFcOverride(${d.id})">Resetar</button>` : ''}</td>
+        </tr>`;
+    }).join('');
+
+    // Summary by Vendedor
+    const vendMap = {};
+    filtered.forEach(d => {
+        const v = d.owner || 'Sem vendedor';
+        if (!vendMap[v]) vendMap[v] = { mrr: 0, setup: 0, count: 0 };
+        vendMap[v].mrr += getFcMrr(d);
+        vendMap[v].setup += getFcSetup(d);
+        vendMap[v].count++;
+    });
+    const vendSorted = Object.entries(vendMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => (b.mrr + b.setup) - (a.mrr + a.setup));
+
+    if (fcCharts.vendedor) { fcCharts.vendedor.destroy(); fcCharts.vendedor = null; }
+    fcCharts.vendedor = new Chart(document.getElementById('chartFcVendedor'), {
+        type: 'bar',
+        data: {
+            labels: vendSorted.map(v => v.name),
+            datasets: [
+                { label: 'MRR', data: vendSorted.map(v => v.mrr), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
+                { label: 'Setup', data: vendSorted.map(v => v.setup), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#818cf8', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } }
+        }
+    });
+    document.getElementById('fcVendedorBody').innerHTML = vendSorted.map(v => `<tr>
+        <td style="font-weight:500;color:#e0e0e0;">${v.name}</td>
+        <td class="money">${formatMoney(v.mrr)}</td>
+        <td class="money">${formatMoney(v.setup)}</td>
+        <td style="text-align:center;">${v.count}</td>
+    </tr>`).join('');
+
+    // Summary by Funil
+    const funilMap = {};
+    filtered.forEach(d => {
+        const f = d.pipeline || 'Sem funil';
+        if (!funilMap[f]) funilMap[f] = { mrr: 0, setup: 0, count: 0 };
+        funilMap[f].mrr += getFcMrr(d);
+        funilMap[f].setup += getFcSetup(d);
+        funilMap[f].count++;
+    });
+    const funilSorted = Object.entries(funilMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => (b.mrr + b.setup) - (a.mrr + a.setup));
+
+    if (fcCharts.funil) { fcCharts.funil.destroy(); fcCharts.funil = null; }
+    fcCharts.funil = new Chart(document.getElementById('chartFcFunil'), {
+        type: 'bar',
+        data: {
+            labels: funilSorted.map(f => f.name),
+            datasets: [
+                { label: 'MRR', data: funilSorted.map(f => f.mrr), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
+                { label: 'Setup', data: funilSorted.map(f => f.setup), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#818cf8', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } }
+        }
+    });
+    document.getElementById('fcFunilBody').innerHTML = funilSorted.map(f => `<tr>
+        <td style="font-weight:500;color:#e0e0e0;">${f.name}</td>
+        <td class="money">${formatMoney(f.mrr)}</td>
+        <td class="money">${formatMoney(f.setup)}</td>
+        <td style="text-align:center;">${f.count}</td>
+    </tr>`).join('');
+}
+
+function showFcDrilldown(scenario) {
+    const filtered = getFcFiltered().filter(d => d.forecast === scenario);
+    const columns = [
+        { header: 'Titulo', getValue: d => d.title },
+        { header: 'Vendedor', getValue: d => d.owner },
+        { header: 'Funil', getValue: d => d.pipeline },
+        { header: 'MRR', getValue: d => getFcMrr(d) },
+        { header: 'Setup', getValue: d => getFcSetup(d) },
+        { header: 'Data Fechamento', getValue: d => d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-' }
+    ];
+    // Use a custom drilldown since these are processed objects
+    document.getElementById('drilldownTitle').textContent = `Forecast ${scenario} (${filtered.length} negocios)`;
+    _drilldownData = filtered;
+    _drilldownColumns = columns;
+    _drilldownFilename = `forecast_${scenario}`;
+
+    let html = '<table><thead><tr>';
+    columns.forEach(c => { html += `<th>${c.header}</th>`; });
+    html += '</tr></thead><tbody>';
+    filtered.forEach(d => {
+        html += '<tr>';
+        columns.forEach(c => {
+            const val = c.getValue(d);
+            const isNum = typeof val === 'number';
+            html += `<td${isNum ? ' class="money"' : ''}>${isNum ? formatMoney(val) : (val || '-')}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    if (filtered.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negocio encontrado</p>';
+
+    document.getElementById('drilldownContent').innerHTML = html;
+    document.getElementById('drilldownModal').classList.add('active');
+}
+
+function exportForecast() {
+    const filtered = getFcFiltered();
+    exportToExcel(filtered, [
+        { header: 'Titulo', getValue: d => d.title },
+        { header: 'Vendedor', getValue: d => d.owner },
+        { header: 'Funil', getValue: d => d.pipeline },
+        { header: 'Cenario', getValue: d => d.forecast },
+        { header: 'MRR', getValue: d => getFcMrr(d) },
+        { header: 'Setup', getValue: d => getFcSetup(d) },
+        { header: 'Data Fechamento', getValue: d => d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-' }
+    ], 'forecast');
+}
+
+async function loadForecast() {
+    const loadingArea = document.getElementById('fcLoadingArea');
+    const contentArea = document.getElementById('fcContentArea');
+
+    loadingArea.style.display = 'block';
+    contentArea.style.display = 'none';
+
+    try {
+        const data = await apiGet(
+            `/Deals?$top=200&$filter=StatusId eq 1 and OtherProperties/any(o: o/FieldKey eq '${FIELD_FORECAST}')` +
+            `&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc`
+        );
+        const rawDeals = data.value || [];
+
+        fcAllDeals = rawDeals.map(d => {
+            const forecastProp = (d.OtherProperties || []).find(p => p.FieldKey === FIELD_FORECAST);
+            const closeDateProp = (d.OtherProperties || []).find(p => p.FieldKey === FIELD_CLOSE_DATE);
+            const mrrProp = (d.OtherProperties || []).find(p => p.FieldKey === FIELD_MRR);
+            const setupProp = (d.OtherProperties || []).find(p => p.FieldKey === FIELD_SETUP);
+
+            return {
+                id: d.Id,
+                title: d.Title || '',
+                owner: d.Owner?.Name || '',
+                pipeline: d.Pipeline?.Name || '',
+                forecast: normalizeScenario(forecastProp?.ObjectValueName || ''),
+                closeDate: closeDateProp?.DateTimeValue || null,
+                mrr: mrrProp?.DecimalValue || 0,
+                setup: setupProp?.DecimalValue || 0
+            };
+        });
+
+        // Set default period to this month
+        const now = new Date();
+        fcPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        fcPeriodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+        loadingArea.style.display = 'none';
+        contentArea.style.display = '';
+        renderForecast();
+
+        document.getElementById('fcLastUpdate').textContent =
+            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | ${fcAllDeals.length} negocios com forecast`;
+
+    } catch (err) {
+        console.error(err);
+        loadingArea.innerHTML = `<div style="color:#f87171;">Erro ao carregar forecast: ${err.message}</div>`;
+    }
 }
 
 // ==================== INIT ====================
