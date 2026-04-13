@@ -797,42 +797,43 @@
             <span class="brand-text">Lincros</span>
         </div>
         <div class="sidebar-nav">
-            <div class="nav-item active" data-view="oportunidades" onclick="showView('oportunidades')">
-                <span class="nav-icon">&#128203;</span>
-                <span class="nav-label">Oportunidades</span>
-            </div>
-
             <div class="nav-section-title">Dashboard</div>
-            <div class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
+            <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
                 <span class="nav-icon">&#128202;</span>
                 <span class="nav-label">Dashboard</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec1');">
-                <span class="sub-num">1</span><span class="sub-label">Ganhas</span>
+                <span class="sub-num">1</span><span class="sub-label">Oportunidades Ganhas</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2');">
-                <span class="sub-num">2</span><span class="sub-label">Perdidas</span>
+                <span class="sub-num">2</span><span class="sub-label">Oportunidades Perdidas</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
-                <span class="sub-num">3</span><span class="sub-label">Produtos</span>
+                <span class="sub-num">3</span><span class="sub-label">Produtos Vendidos</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
                 <span class="sub-num">4</span><span class="sub-label">Ranking Vendedores</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
-                <span class="sub-num">5</span><span class="sub-label">Propostas</span>
+                <span class="sub-num">5</span><span class="sub-label">Propostas Enviadas</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
-                <span class="sub-num">6</span><span class="sub-label">Perdidos/Vendedor</span>
+                <span class="sub-num">6</span><span class="sub-label">Perdidos por Vendedor</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
-                <span class="sub-num">7</span><span class="sub-label">Reunioes SDR</span>
+                <span class="sub-num">7</span><span class="sub-label">Reunioes por SDR</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
-                <span class="sub-num">8</span><span class="sub-label">Origem Reunioes</span>
+                <span class="sub-num">8</span><span class="sub-label">Origem das Reunioes</span>
             </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
-                <span class="sub-num">9</span><span class="sub-label">Conversao</span>
+                <span class="sub-num">9</span><span class="sub-label">Conversao por Etapa</span>
+            </div>
+
+            <div class="nav-section-title" style="margin-top:20px;">Dados</div>
+            <div class="nav-item" data-view="oportunidades" onclick="showView('oportunidades')">
+                <span class="nav-icon">&#128203;</span>
+                <span class="nav-label">Oportunidades</span>
             </div>
         </div>
         <div class="sidebar-toggle" onclick="toggleSidebar()">&#171;</div>
@@ -842,7 +843,7 @@
     <div class="main-content" id="mainContent">
 
         <!-- ==================== VIEW: OPORTUNIDADES ==================== -->
-        <div id="view-oportunidades" style="display:block;">
+        <div id="view-oportunidades" style="display:none;">
             <div class="op-header">
                 <div>
                     <h1>Dashboard Revenue Lincros</h1>
@@ -901,6 +902,24 @@
                 <div>Carregando oportunidades do Ploomes...</div>
             </div>
 
+            <!-- Grafico de pizza por segmento -->
+            <div id="opChartsArea" style="display:none; padding: 20px 30px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:900px;">
+                    <div class="dash-card" style="padding:20px;">
+                        <h3 style="color:#fff; margin-bottom:15px; font-size:15px;">Oportunidades por Segmento</h3>
+                        <div style="max-height:350px; display:flex; justify-content:center;">
+                            <canvas id="chartSegmentoPie"></canvas>
+                        </div>
+                    </div>
+                    <div class="dash-card" style="padding:20px;">
+                        <h3 style="color:#fff; margin-bottom:15px; font-size:15px;">Oportunidades por Estado</h3>
+                        <div style="max-height:350px; display:flex; justify-content:center;">
+                            <canvas id="chartEstadoPie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="op-table-container" id="opTableArea" style="display:none;">
                 <table>
                     <thead>
@@ -930,7 +949,7 @@
         </div>
 
         <!-- ==================== VIEW: DASHBOARD ==================== -->
-        <div id="view-dashboard" style="display:none;">
+        <div id="view-dashboard" style="display:block;">
 
             <div class="period-bar">
                 <label>Periodo:</label>
@@ -965,7 +984,7 @@
                             </select>
                             <select class="section-period-select" id="periodSec1" onchange="renderSection1()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -998,7 +1017,7 @@
                             </select>
                             <select class="section-period-select" id="periodSec2" onchange="renderSection2()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1025,7 +1044,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1052,7 +1071,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1078,7 +1097,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1104,7 +1123,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1130,7 +1149,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1156,7 +1175,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec8" onchange="renderSection8()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1182,7 +1201,7 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec9" onchange="renderSection9()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth">Este mes</option>
+                                <option value="thisMonth" selected>Este mes</option>
                                 <option value="lastMonth">Mes passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
@@ -1446,6 +1465,7 @@ async function loadDeals() {
 
         loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando estados dos contatos...</div>`;
         const contactStateMap = {};
+        const contactSegmentMap = {};
         let cSkip = 0;
         let cHasMore = true;
         while (cHasMore) {
@@ -1459,12 +1479,17 @@ async function loadDeals() {
                 contacts.forEach(c => {
                     const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
                     if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
+                    const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
+                    if (seg) contactSegmentMap[c.Id] = seg.ObjectValueName || seg.StringValue;
                 });
                 cSkip += 200;
                 cHasMore = contacts.length === 200;
             } catch(e) { console.warn('Contact state fetch error:', e); cHasMore = false; }
         }
-        deals.forEach(d => { d._contactState = contactStateMap[d.ContactId] || null; });
+        deals.forEach(d => {
+            d._contactState = contactStateMap[d.ContactId] || null;
+            d._contactSegment = contactSegmentMap[d.ContactId] || null;
+        });
 
         allDeals_op = deals.map(d => {
             const mrrProp = getOtherProp_op(d, FIELD_MRR);
@@ -1494,6 +1519,7 @@ async function loadDeals() {
                 days: d.DaysInStage || 0,
                 sdr: sdrProp?.ObjectValueName || '',
                 amount: d.Amount || 0,
+                segment: d._contactSegment || null,
                 ploomesUrl: `https://app10.ploomes.com/deal/${d.Id}`
             };
         });
@@ -1613,6 +1639,47 @@ function updateStats() {
     const totalSetup = filtered.reduce((s, d) => s + d.setup, 0);
     document.getElementById('totalMRR').textContent = 'R$ ' + formatMoney(totalMRR);
     document.getElementById('totalSetup').textContent = 'R$ ' + formatMoney(totalSetup);
+    renderOpCharts(filtered);
+}
+
+let opChartSeg = null, opChartEst = null;
+const PIE_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#e879f9','#fbbf24','#22d3ee','#a3e635','#fb7185'];
+
+function renderOpCharts(filtered) {
+    document.getElementById('opChartsArea').style.display = filtered.length > 0 ? 'block' : 'none';
+    if (filtered.length === 0) return;
+
+    // Segmento pie
+    const segCounts = {};
+    filtered.forEach(d => {
+        const seg = d.segment || 'Sem segmento';
+        segCounts[seg] = (segCounts[seg] || 0) + 1;
+    });
+    const segLabels = Object.keys(segCounts).sort((a, b) => segCounts[b] - segCounts[a]);
+    const segData = segLabels.map(l => segCounts[l]);
+
+    if (opChartSeg) opChartSeg.destroy();
+    opChartSeg = new Chart(document.getElementById('chartSegmentoPie'), {
+        type: 'doughnut',
+        data: { labels: segLabels, datasets: [{ data: segData, backgroundColor: PIE_COLORS.slice(0, segLabels.length), borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: '#ccc', font: { size: 10 }, boxWidth: 12, padding: 8 } } } }
+    });
+
+    // Estado pie
+    const estCounts = {};
+    filtered.forEach(d => {
+        const est = d.state || 'Sem estado';
+        estCounts[est] = (estCounts[est] || 0) + 1;
+    });
+    const estLabels = Object.keys(estCounts).sort((a, b) => estCounts[b] - estCounts[a]);
+    const estData = estLabels.map(l => estCounts[l]);
+
+    if (opChartEst) opChartEst.destroy();
+    opChartEst = new Chart(document.getElementById('chartEstadoPie'), {
+        type: 'doughnut',
+        data: { labels: estLabels, datasets: [{ data: estData, backgroundColor: PIE_COLORS.slice(0, estLabels.length), borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: '#ccc', font: { size: 10 }, boxWidth: 12, padding: 8 } } } }
+    });
 }
 
 function showContact(dealId) {
@@ -1921,10 +1988,12 @@ function renderSection1() {
     const pf = document.getElementById('wonPipelineFilter').value;
     const deals = filteredWon(pf, sp);
     window._sec1_data = deals;
-    const totalValue = deals.reduce((s, d) => s + getMRR(d) + getSetup(d), 0);
+    const totalMRRWon = deals.reduce((s, d) => s + getMRR(d), 0);
+    const totalSetupWon = deals.reduce((s, d) => s + getSetup(d), 0);
     document.getElementById('wonKpis').innerHTML = `
         <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
-        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalValue)}</div><div class="kpi-label">Valor total</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRRWon)}</div><div class="kpi-label">MRR</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetupWon)}</div><div class="kpi-label">Setup</div></div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
     const pipelines = SALES_PIPELINES.filter(p => !pf || p === pf);
@@ -2589,8 +2658,8 @@ function exportSection9() {
 }
 
 // ==================== INIT ====================
-// Load oportunidades on start (default view)
-showView('oportunidades');
+// Load dashboard on start (default view)
+showView('dashboard');
 </script>
 </body>
 </html>
