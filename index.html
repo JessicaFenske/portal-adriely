@@ -3449,6 +3449,17 @@ async function loadForecast() {
 // ==================== INIT ====================
 // Load dashboard on start (default view)
 showView('dashboard');
+
+// Auto-refresh every 5 minutes
+setInterval(() => {
+    const activeView = document.getElementById('view-dashboard').style.display !== 'none' ? 'dashboard'
+        : document.getElementById('view-forecast').style.display !== 'none' ? 'forecast'
+        : 'oportunidades';
+    if (activeView === 'dashboard') { dashLoaded = false; loadDashboard(); }
+    else if (activeView === 'forecast') { fcLoaded = false; loadForecast(); }
+    else { oportLoaded = false; loadDeals(); }
+    console.log('Auto-refresh executado:', new Date().toLocaleTimeString());
+}, 5 * 60 * 1000);
 </script>
 </body>
 </html>
