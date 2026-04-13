@@ -6,6 +6,7 @@
     <title>Lincros - Portal Comercial</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -700,6 +701,87 @@
 
         /* Scroll margin for nav anchors */
         .section-card[id] { scroll-margin-top: 20px; }
+
+        /* ==================== DRILLDOWN MODAL ==================== */
+        .drilldown-modal {
+            max-width: 900px !important;
+            width: 95% !important;
+        }
+        .drilldown-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .drilldown-header h2 {
+            flex: 1;
+            margin-bottom: 0 !important;
+            font-size: 16px;
+            color: #fff;
+        }
+        .drilldown-header .close-btn {
+            margin-top: 0 !important;
+            padding: 6px 14px;
+            font-size: 13px;
+            background: rgba(248, 113, 113, 0.3);
+            border: 1px solid rgba(248, 113, 113, 0.5);
+            color: #f87171;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .drilldown-header .close-btn:hover { background: rgba(248, 113, 113, 0.5); }
+        #drilldownContent {
+            max-height: 70vh;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+        #drilldownContent table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        #drilldownContent thead th {
+            background: rgba(108, 63, 181, 0.08);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #8888a0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        #drilldownContent tbody tr { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: all 0.2s ease; }
+        #drilldownContent tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.01); }
+        #drilldownContent tbody tr:hover { background: rgba(108, 63, 181, 0.08); }
+        #drilldownContent tbody td { padding: 8px 12px; vertical-align: middle; color: #c0c0d0; }
+
+        /* ==================== EXPORT BUTTON ==================== */
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 14px;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #10b981;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .export-btn:hover {
+            background: rgba(16, 185, 129, 0.35);
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -896,6 +978,7 @@
                         <div class="kpi-row" id="wonKpis"></div>
                         <div class="chart-container"><canvas id="chartWon"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableWon')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection1()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableWon"><table><thead><tr>
                             <th>Titulo</th><th>Responsavel</th><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th>Data Fechamento</th>
                         </tr></thead><tbody id="tbodyWon"></tbody></table></div>
@@ -928,6 +1011,7 @@
                         <div class="kpi-row" id="lostKpis"></div>
                         <div class="chart-container"><canvas id="chartLost"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableLost')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection2()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableLost"><table><thead><tr>
                             <th>Titulo</th><th>Responsavel</th><th>Funil</th><th>Motivo Perda</th><th>Data Fechamento</th>
                         </tr></thead><tbody id="tbodyLost"></tbody></table></div>
@@ -954,6 +1038,7 @@
                         <div class="kpi-row" id="productKpis"></div>
                         <div class="chart-container"><canvas id="chartProducts"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection3()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableProducts"><table><thead><tr>
                             <th>Titulo</th><th>Responsavel</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
@@ -979,6 +1064,7 @@
                     <div class="section-body">
                         <div class="chart-container"><canvas id="chartRanking"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection4()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableRanking"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negocios</th>
                         </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
@@ -1004,6 +1090,7 @@
                     <div class="section-body">
                         <div class="chart-container"><canvas id="chartProposals"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableProposals')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableProposals"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Propostas</th>
                         </tr></thead><tbody id="tbodyProposals"></tbody></table></div>
@@ -1029,6 +1116,7 @@
                     <div class="section-body">
                         <div class="chart-container"><canvas id="chartLostSeller"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableLostSeller')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection6()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th>
                         </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
@@ -1054,6 +1142,7 @@
                     <div class="section-body">
                         <div class="chart-container"><canvas id="chartMeetings"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
                             <th class="rank-num">#</th><th>Pre-Vendedor (SDR)</th><th>Reunioes</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
@@ -1079,6 +1168,7 @@
                     <div class="section-body">
                         <div class="chart-container"><canvas id="chartOrigin"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableOrigin')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection8()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableOrigin"><table><thead><tr>
                             <th>Pre-Vendedor</th><th>Segmento</th><th>Quantidade</th>
                         </tr></thead><tbody id="tbodyOrigin"></tbody></table></div>
@@ -1105,6 +1195,7 @@
                     <div class="section-body">
                         <div class="funnel-container" id="funnelContainer"></div>
                         <button class="table-toggle" onclick="toggleTable('tableFunnel')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection9()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableFunnel"><table><thead><tr>
                             <th>Etapa</th><th>Negocios</th><th>Conversao</th>
                         </tr></thead><tbody id="tbodyFunnel"></tbody></table></div>
@@ -1123,6 +1214,18 @@
             <h2 id="modalTitle">Detalhes do Contato</h2>
             <div id="modalContent"></div>
             <button class="close-btn" onclick="closeModal()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Drilldown Modal -->
+    <div class="modal-overlay" id="drilldownModal">
+        <div class="modal drilldown-modal">
+            <div class="drilldown-header">
+                <h2 id="drilldownTitle"></h2>
+                <button class="export-btn" onclick="exportDrilldownToExcel()">&#128229; Exportar Excel</button>
+                <button class="close-btn" onclick="closeDrilldown()">X</button>
+            </div>
+            <div id="drilldownContent"></div>
         </div>
     </div>
 
@@ -1817,20 +1920,33 @@ function renderSection1() {
     const sp = getSectionPeriod('sec1');
     const pf = document.getElementById('wonPipelineFilter').value;
     const deals = filteredWon(pf, sp);
+    window._sec1_data = deals;
     const totalValue = deals.reduce((s, d) => s + getMRR(d) + getSetup(d), 0);
     document.getElementById('wonKpis').innerHTML = `
         <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalValue)}</div><div class="kpi-label">Valor total</div></div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
-    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
-        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
-        return { label: pipeline, data: months.map(mk => (byMonth[mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
+    const pipelines = SALES_PIPELINES.filter(p => !pf || p === pf);
+    const byMonthByPipeline = {};
+    pipelines.forEach(pipeline => { byMonthByPipeline[pipeline] = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate'); });
+    const datasets = pipelines.map(pipeline => {
+        return { label: pipeline, data: months.map(mk => (byMonthByPipeline[pipeline][mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
     });
     destroyChart('won');
     charts.won = new Chart(document.getElementById('chartWon'), {
         type: 'bar', data: { labels: months.map(monthLabel), datasets },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const dsIdx = elements[0].datasetIndex;
+                    const mk = months[idx];
+                    const pipeline = pipelines[dsIdx];
+                    const clickDeals = (byMonthByPipeline[pipeline][mk] || []);
+                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'won');
+                }
+            },
             scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
     });
     document.getElementById('tbodyWon').innerHTML = deals.map(d => `<tr>
@@ -1845,18 +1961,31 @@ function renderSection2() {
     const sp = getSectionPeriod('sec2');
     const pf = document.getElementById('lostPipelineFilter').value;
     const deals = filteredLost(pf, sp);
+    window._sec2_data = deals;
     document.getElementById('lostKpis').innerHTML = `
         <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios perdidos</div></div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
-    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
-        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
-        return { label: pipeline, data: months.map(mk => (byMonth[mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
+    const pipelines2 = SALES_PIPELINES.filter(p => !pf || p === pf);
+    const byMonthByPipeline2 = {};
+    pipelines2.forEach(pipeline => { byMonthByPipeline2[pipeline] = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate'); });
+    const datasets = pipelines2.map(pipeline => {
+        return { label: pipeline, data: months.map(mk => (byMonthByPipeline2[pipeline][mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
     });
     destroyChart('lost');
     charts.lost = new Chart(document.getElementById('chartLost'), {
         type: 'bar', data: { labels: months.map(monthLabel), datasets },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const dsIdx = elements[0].datasetIndex;
+                    const mk = months[idx];
+                    const pipeline = pipelines2[dsIdx];
+                    const clickDeals = (byMonthByPipeline2[pipeline][mk] || []);
+                    showDrilldown(`Perdidas - ${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'lost');
+                }
+            },
             scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
     });
     document.getElementById('tbodyLost').innerHTML = deals.map(d => `<tr>
@@ -1869,6 +1998,7 @@ function renderSection2() {
 function renderSection3() {
     const sp = getSectionPeriod('sec3');
     const deals = filteredWon('', sp);
+    window._sec3_data = deals;
     const months = getMonthRangeFor(sp.start, sp.end);
     const byMonth = groupByMonth(deals, 'FinishDate');
     const mrrData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getMRR(d), 0));
@@ -1887,6 +2017,14 @@ function renderSection3() {
             { label: 'Setup', data: setupData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
         ]},
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const mk = months[idx];
+                    const clickDeals = (byMonth[mk] || []);
+                    showDrilldown(`Produtos - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'products');
+                }
+            },
             scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks } } }
     });
     document.getElementById('tbodyProducts').innerHTML = deals.map(d => {
@@ -1901,7 +2039,9 @@ function renderSection3() {
 function renderSection4() {
     const sp = getSectionPeriod('sec4');
     const deals = filteredWon('', sp);
+    window._sec4_deals = deals;
     const sellerMap = {};
+    const sellerDealsMap = {};
     deals.forEach(d => {
         const name = getOwnerName(d);
         if (!name) return;
@@ -1909,8 +2049,11 @@ function renderSection4() {
         sellerMap[name].mrr += getMRR(d);
         sellerMap[name].setup += getSetup(d);
         sellerMap[name].count++;
+        if (!sellerDealsMap[name]) sellerDealsMap[name] = [];
+        sellerDealsMap[name].push(d);
     });
     const sorted = Object.entries(sellerMap).map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup })).sort((a, b) => b.total - a.total);
+    window._sec4_sorted = sorted;
 
     destroyChart('ranking');
     charts.ranking = new Chart(document.getElementById('chartRanking'), {
@@ -1920,6 +2063,14 @@ function renderSection4() {
                 { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
             ]},
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const seller = sorted[idx];
+                    const clickDeals = sellerDealsMap[seller.name] || [];
+                    showDrilldown(`Ranking - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
+                }
+            },
             scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } } }
     });
     document.getElementById('tbodyRanking').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -1940,14 +2091,31 @@ function renderSection5() {
         if (!pd) return false;
         return inPeriodSection(pd, sp.start, sp.end);
     });
+    window._sec5_deals = proposalDeals;
     const sellerMap = {};
-    proposalDeals.forEach(d => { const name = getOwnerName(d); if (!name) return; sellerMap[name] = (sellerMap[name] || 0) + 1; });
+    const sellerDealsMap5 = {};
+    proposalDeals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        sellerMap[name] = (sellerMap[name] || 0) + 1;
+        if (!sellerDealsMap5[name]) sellerDealsMap5[name] = [];
+        sellerDealsMap5[name].push(d);
+    });
     const sorted = Object.entries(sellerMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    window._sec5_sorted = sorted;
 
     destroyChart('proposals');
     charts.proposals = new Chart(document.getElementById('chartProposals'), {
         type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Propostas', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const seller = sorted[idx];
+                    const clickDeals = sellerDealsMap5[seller.name] || [];
+                    showDrilldown(`Propostas - ${seller.name} (${clickDeals.length} propostas)`, clickDeals, null, 'proposals');
+                }
+            },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyProposals').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -1960,14 +2128,31 @@ function renderSection5() {
 function renderSection6() {
     const sp = getSectionPeriod('sec6');
     const deals = filteredLost('', sp);
+    window._sec6_data = deals;
     const sellerMap = {};
-    deals.forEach(d => { const name = getOwnerName(d); if (!name) return; sellerMap[name] = (sellerMap[name] || 0) + 1; });
+    const sellerDealsMap6 = {};
+    deals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        sellerMap[name] = (sellerMap[name] || 0) + 1;
+        if (!sellerDealsMap6[name]) sellerDealsMap6[name] = [];
+        sellerDealsMap6[name].push(d);
+    });
     const sorted = Object.entries(sellerMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    window._sec6_sorted = sorted;
 
     destroyChart('lostSeller');
     charts.lostSeller = new Chart(document.getElementById('chartLostSeller'), {
         type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(248, 113, 113, 0.7)', borderColor: '#f87171', borderWidth: 1 }] },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const seller = sorted[idx];
+                    const clickDeals = sellerDealsMap6[seller.name] || [];
+                    showDrilldown(`Perdidos - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'lostSeller');
+                }
+            },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyLostSeller').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -1980,14 +2165,31 @@ function renderSection6() {
 function renderSection7() {
     const sp = getSectionPeriod('sec7');
     const deals = allDealsForMeetings(sp);
+    window._sec7_data = deals;
     const sdrMap = {};
-    deals.forEach(d => { const sdr = getSDR(d); if (!sdr) return; sdrMap[sdr] = (sdrMap[sdr] || 0) + 1; });
+    const sdrDealsMap = {};
+    deals.forEach(d => {
+        const sdr = getSDR(d);
+        if (!sdr) return;
+        sdrMap[sdr] = (sdrMap[sdr] || 0) + 1;
+        if (!sdrDealsMap[sdr]) sdrDealsMap[sdr] = [];
+        sdrDealsMap[sdr].push(d);
+    });
     const sorted = Object.entries(sdrMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    window._sec7_sorted = sorted;
 
     destroyChart('meetings');
     charts.meetings = new Chart(document.getElementById('chartMeetings'), {
         type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const sdrName = sorted[idx];
+                    const clickDeals = sdrDealsMap[sdrName.name] || [];
+                    showDrilldown(`Reunioes - ${sdrName.name} (${clickDeals.length} reunioes)`, clickDeals, null, 'meetings');
+                }
+            },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -2022,14 +2224,33 @@ function renderSection8() {
         label: seg, data: sdrs.map(sdr => matrix[sdr][seg] || 0), backgroundColor: segColors[i % segColors.length]
     }));
 
+    // Build deals-by-SDR map for drilldown
+    const sdrDealsMap8 = {};
+    deals.forEach(d => {
+        const sdr = getSDR(d); if (!sdr) return;
+        if (!sdrDealsMap8[sdr]) sdrDealsMap8[sdr] = [];
+        sdrDealsMap8[sdr].push(d);
+    });
+
     destroyChart('origin');
     charts.origin = new Chart(document.getElementById('chartOrigin'), {
         type: 'bar', data: { labels: sdrs, datasets },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'top' } },
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const dsIdx = elements[0].datasetIndex;
+                    const sdrName = sdrs[idx];
+                    const segName = segments[dsIdx];
+                    const clickDeals = (sdrDealsMap8[sdrName] || []).filter(d => getContactSegment(d) === segName);
+                    showDrilldown(`${sdrName} - ${segName} (${clickDeals.length} reunioes)`, clickDeals, null, 'meetings');
+                }
+            },
             scales: { x: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { stacked: true, ...darkScaleOptions } } }
     });
     const rows = [];
     sdrs.forEach(sdr => { segments.forEach(seg => { const c = matrix[sdr][seg] || 0; if (c > 0) rows.push({ sdr, seg, count: c }); }); });
+    window._sec8_rows = rows;
     document.getElementById('tbodyOrigin').innerHTML = rows.map(r => `<tr>
         <td style="font-weight:500;color:#e0e0e0;">${r.sdr}</td><td>${r.seg}</td>
         <td style="text-align:center;font-weight:700;color:#b794f4;">${r.count}</td></tr>`).join('');
@@ -2082,12 +2303,16 @@ function renderSection9() {
         </div>`;
     }).join('');
 
-    document.getElementById('tbodyFunnel').innerHTML = funnelFinal.map((stage, i) => {
+    window._sec9_funnelData = funnelFinal.map((stage, i) => {
         const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
             ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%' : '-';
+        return { name: stage.name, count: stage.count, convPct };
+    });
+
+    document.getElementById('tbodyFunnel').innerHTML = window._sec9_funnelData.map(stage => {
         return `<tr><td style="font-weight:500;color:#e0e0e0;">${stage.name}</td>
             <td style="text-align:center;font-weight:700;color:#b794f4;">${stage.count}</td>
-            <td style="text-align:center;color:#8888a0;">${convPct}</td></tr>`;
+            <td style="text-align:center;color:#8888a0;">${stage.convPct}</td></tr>`;
     }).join('');
 }
 
@@ -2152,6 +2377,215 @@ async function loadDashboard() {
         console.error(err);
         loadingMsg.innerHTML = `<span style="color:#f87171;">Erro ao carregar dados: ${err.message}</span>`;
     }
+}
+
+// ==================== DRILLDOWN & EXPORT ====================
+let _drilldownData = null;
+let _drilldownColumns = null;
+let _drilldownFilename = 'drilldown';
+
+function exportToExcel(data, columns, filename) {
+    const ws_data = [columns.map(c => c.header)];
+    data.forEach(row => {
+        ws_data.push(columns.map(c => c.getValue(row)));
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+    XLSX.writeFile(wb, filename + '.xlsx');
+}
+
+function showDrilldown(title, deals, columns, type) {
+    document.getElementById('drilldownTitle').textContent = title;
+    _drilldownData = deals;
+    _drilldownFilename = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+
+    if (!columns) {
+        if (type === 'won') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'MRR', getValue: d => getMRR(d) },
+                { header: 'Setup', getValue: d => getSetup(d) },
+                { header: 'Data Ganho', getValue: d => formatDate(d.FinishDate) }
+            ];
+        } else if (type === 'lost') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'Motivo Perda', getValue: d => d.LossReason?.Name || '-' },
+                { header: 'Data Perda', getValue: d => formatDate(d.FinishDate) }
+            ];
+        } else if (type === 'products') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'MRR', getValue: d => getMRR(d) },
+                { header: 'Setup', getValue: d => getSetup(d) },
+                { header: 'Total', getValue: d => getMRR(d) + getSetup(d) }
+            ];
+        } else if (type === 'ranking') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'MRR', getValue: d => getMRR(d) },
+                { header: 'Setup', getValue: d => getSetup(d) },
+                { header: 'Data', getValue: d => formatDate(d.FinishDate || d.CreateDate) }
+            ];
+        } else if (type === 'proposals') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'Data Proposta', getValue: d => formatDate(getProposalDate(d)) }
+            ];
+        } else if (type === 'lostSeller') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'Motivo Perda', getValue: d => d.LossReason?.Name || '-' },
+                { header: 'Data Perda', getValue: d => formatDate(d.FinishDate) }
+            ];
+        } else if (type === 'meetings') {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'SDR', getValue: d => getSDR(d) },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'Data', getValue: d => formatDate(d.CreateDate) }
+            ];
+        } else {
+            columns = [
+                { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Responsavel', getValue: d => getOwnerName(d) },
+                { header: 'Funil', getValue: d => getPipelineName(d) },
+                { header: 'Data', getValue: d => formatDate(d.FinishDate || d.CreateDate) }
+            ];
+        }
+    }
+    _drilldownColumns = columns;
+
+    let html = '<table><thead><tr>';
+    columns.forEach(c => { html += `<th>${c.header}</th>`; });
+    html += '</tr></thead><tbody>';
+    deals.forEach(d => {
+        html += '<tr>';
+        columns.forEach(c => {
+            const val = c.getValue(d);
+            const isNum = typeof val === 'number' && c.header !== '#';
+            html += `<td${isNum ? ' class="money"' : ''}>${isNum ? formatMoney(val) : (val || '-')}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    if (deals.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negocio encontrado</p>';
+
+    document.getElementById('drilldownContent').innerHTML = html;
+    document.getElementById('drilldownModal').classList.add('active');
+}
+
+function closeDrilldown() {
+    document.getElementById('drilldownModal').classList.remove('active');
+    _drilldownData = null;
+    _drilldownColumns = null;
+}
+
+function exportDrilldownToExcel() {
+    if (!_drilldownData || !_drilldownColumns) return;
+    exportToExcel(_drilldownData, _drilldownColumns, _drilldownFilename);
+}
+
+// Close drilldown on overlay click
+document.getElementById('drilldownModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeDrilldown();
+});
+
+// Section export functions
+function exportSection1() {
+    const data = window._sec1_data || [];
+    exportToExcel(data, [
+        { header: 'Titulo', getValue: d => d.Title || '' },
+        { header: 'Responsavel', getValue: d => getOwnerName(d) },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'MRR', getValue: d => getMRR(d) },
+        { header: 'Setup', getValue: d => getSetup(d) },
+        { header: 'Data Fechamento', getValue: d => formatDate(d.FinishDate) }
+    ], 'oportunidades_ganhas');
+}
+function exportSection2() {
+    const data = window._sec2_data || [];
+    exportToExcel(data, [
+        { header: 'Titulo', getValue: d => d.Title || '' },
+        { header: 'Responsavel', getValue: d => getOwnerName(d) },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'Motivo Perda', getValue: d => d.LossReason?.Name || '-' },
+        { header: 'Data Fechamento', getValue: d => formatDate(d.FinishDate) }
+    ], 'oportunidades_perdidas');
+}
+function exportSection3() {
+    const data = window._sec3_data || [];
+    exportToExcel(data, [
+        { header: 'Titulo', getValue: d => d.Title || '' },
+        { header: 'Responsavel', getValue: d => getOwnerName(d) },
+        { header: 'MRR', getValue: d => getMRR(d) },
+        { header: 'Setup', getValue: d => getSetup(d) },
+        { header: 'Total', getValue: d => getMRR(d) + getSetup(d) }
+    ], 'produtos_vendidos');
+}
+function exportSection4() {
+    const data = window._sec4_sorted || [];
+    exportToExcel(data, [
+        { header: '#', getValue: (d, i) => i + 1 },
+        { header: 'Vendedor', getValue: d => d.name },
+        { header: 'MRR', getValue: d => d.mrr },
+        { header: 'Setup', getValue: d => d.setup },
+        { header: 'Total', getValue: d => d.total },
+        { header: 'Negocios', getValue: d => d.count }
+    ], 'ranking_vendedores');
+}
+function exportSection5() {
+    const data = window._sec5_sorted || [];
+    exportToExcel(data, [
+        { header: '#', getValue: (d, i) => i + 1 },
+        { header: 'Vendedor', getValue: d => d.name },
+        { header: 'Propostas', getValue: d => d.count }
+    ], 'propostas_enviadas');
+}
+function exportSection6() {
+    const data = window._sec6_sorted || [];
+    exportToExcel(data, [
+        { header: '#', getValue: (d, i) => i + 1 },
+        { header: 'Vendedor', getValue: d => d.name },
+        { header: 'Perdidos', getValue: d => d.count }
+    ], 'perdidos_por_vendedor');
+}
+function exportSection7() {
+    const data = window._sec7_sorted || [];
+    exportToExcel(data, [
+        { header: '#', getValue: (d, i) => i + 1 },
+        { header: 'Pre-Vendedor (SDR)', getValue: d => d.name },
+        { header: 'Reunioes', getValue: d => d.count }
+    ], 'reunioes_por_sdr');
+}
+function exportSection8() {
+    const data = window._sec8_rows || [];
+    exportToExcel(data, [
+        { header: 'Pre-Vendedor', getValue: d => d.sdr },
+        { header: 'Segmento', getValue: d => d.seg },
+        { header: 'Quantidade', getValue: d => d.count }
+    ], 'reunioes_sdr_segmento');
+}
+function exportSection9() {
+    const data = window._sec9_funnelData || [];
+    exportToExcel(data, [
+        { header: 'Etapa', getValue: d => d.name },
+        { header: 'Negocios', getValue: d => d.count },
+        { header: 'Conversao', getValue: d => d.convPct || '-' }
+    ], 'conversao_por_etapa');
 }
 
 // ==================== INIT ====================
