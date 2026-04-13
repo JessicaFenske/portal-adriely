@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Comercial - Ploomes</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+
+        .header {
+            background: linear-gradient(135deg, #6c3fb5, #4a1a8a);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 22px; font-weight: 600; }
+        .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .back-link {
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            opacity: 0.85;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .back-link:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+        /* Navigation */
+        .nav-bar {
+            background: white;
+            padding: 10px 30px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 62px;
+            z-index: 99;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .nav-link {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-decoration: none;
+            color: #555;
+            background: #f0f0f0;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .nav-link:hover { background: #e8e0f5; color: #6c3fb5; }
+
+        /* Period Filter */
+        .period-bar {
+            padding: 15px 30px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .period-bar label { font-size: 13px; font-weight: 600; color: #555; margin-right: 5px; }
+        .period-btn {
+            padding: 6px 14px;
+            border: 1px solid #d0d0d0;
+            border-radius: 20px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #555;
+        }
+        .period-btn:hover { border-color: #6c3fb5; color: #6c3fb5; }
+        .period-btn.active { background: #6c3fb5; color: white; border-color: #6c3fb5; }
+        .date-input {
+            padding: 6px 10px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+        }
+        .date-input:focus { border-color: #6c3fb5; box-shadow: 0 0 0 2px rgba(108,63,181,0.15); }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 80px;
+            color: #888;
+            font-size: 16px;
+        }
+        .loading .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #6c3fb5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Dashboard Grid */
+        .dashboard {
+            padding: 20px 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .dashboard { grid-template-columns: 1fr; padding: 15px; }
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+        .section-card.full-width { grid-column: 1 / -1; }
+        .section-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: #6c3fb5;
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .section-body { padding: 20px; }
+        .chart-container { position: relative; width: 100%; min-height: 280px; }
+
+        /* KPI Cards */
+        .kpi-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .kpi-card {
+            flex: 1;
+            min-width: 120px;
+            background: #f8f6fc;
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+        .kpi-value { font-size: 22px; font-weight: 700; color: #6c3fb5; }
+        .kpi-label { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 2px; }
+
+        /* Sub-filter */
+        .sub-filter {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .sub-filter select {
+            padding: 5px 10px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+        }
+        .sub-filter select:focus { border-color: #6c3fb5; }
+
+        /* Collapsible table */
+        .table-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #555;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        .table-toggle:hover { background: #e0e0e0; }
+        .collapsible-table { display: none; margin-top: 12px; overflow-x: auto; }
+        .collapsible-table.open { display: block; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead th {
+            background: #f8f8fa;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e8e8e8;
+            white-space: nowrap;
+        }
+        tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+        tbody tr:hover { background: #f8f6fc; }
+        tbody td { padding: 8px 12px; vertical-align: middle; }
+        .money { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .badge-pipeline-vendas { background: #e8eaf6; color: #3f51b5; }
+        .badge-pipeline-sankhya { background: #fff3e0; color: #e65100; }
+        .badge-pipeline-farmer { background: #e8f5e9; color: #2e7d32; }
+        .badge-pipeline-default { background: #f5f5f5; color: #666; }
+
+        /* Ranking medals */
+        .rank-medal { font-size: 18px; }
+        .rank-num { font-weight: 700; color: #888; font-size: 14px; text-align: center; width: 40px; }
+        .rank-highlight-1 { background: #fffde7 !important; }
+        .rank-highlight-2 { background: #f5f5f5 !important; }
+        .rank-highlight-3 { background: #fff8e1 !important; }
+
+        /* Funnel */
+        .funnel-container { padding: 10px 0; }
+        .funnel-stage {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 10px;
+        }
+        .funnel-label {
+            flex: 0 0 180px;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: right;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .funnel-bar-wrap { flex: 1; position: relative; height: 32px; }
+        .funnel-bar {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            min-width: 40px;
+            transition: width 0.5s ease;
+        }
+        .funnel-pct {
+            flex: 0 0 70px;
+            font-size: 12px;
+            color: #888;
+            text-align: left;
+        }
+
+        /* Pipeline selector */
+        .pipeline-selector {
+            display: flex;
+            gap: 6px;
+        }
+        .pipeline-tab {
+            padding: 5px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            background: white;
+            color: #555;
+            transition: all 0.2s;
+        }
+        .pipeline-tab:hover { border-color: #6c3fb5; color: #6c3fb5; }
+        .pipeline-tab.active { background: #6c3fb5; color: white; border-color: #6c3fb5; }
+
+        .last-update { font-size: 11px; color: #999; padding: 10px 30px; text-align: right; }
+
+        /* Scroll margin for nav anchors */
+        .section-card[id] { scroll-margin-top: 120px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a href="index.html" class="back-link">&#8592; Voltar ao Portal</a>
+            <div>
+                <h1>Dashboard Comercial</h1>
+                <div class="subtitle">Indicadores de performance - Ploomes CRM</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar" id="navBar">
+        <a href="#sec1" class="nav-link">1. Ganhas</a>
+        <a href="#sec2" class="nav-link">2. Perdidas</a>
+        <a href="#sec3" class="nav-link">3. Produtos</a>
+        <a href="#sec4" class="nav-link">4. Ranking Vendedores</a>
+        <a href="#sec5" class="nav-link">5. Propostas</a>
+        <a href="#sec6" class="nav-link">6. Perdidos/Vendedor</a>
+        <a href="#sec7" class="nav-link">7. Reunioes SDR</a>
+        <a href="#sec8" class="nav-link">8. Origem Reunioes</a>
+        <a href="#sec9" class="nav-link">9. Conversao</a>
+    </div>
+
+    <div class="period-bar">
+        <label>Periodo:</label>
+        <button class="period-btn active" onclick="setPeriod('thisMonth')">Este mes</button>
+        <button class="period-btn" onclick="setPeriod('lastMonth')">Mes passado</button>
+        <button class="period-btn" onclick="setPeriod('thisQuarter')">Este trimestre</button>
+        <button class="period-btn" onclick="setPeriod('lastQuarter')">Trimestre anterior</button>
+        <button class="period-btn" onclick="setPeriod('last6')">Ultimo 6 meses</button>
+        <button class="period-btn" onclick="setPeriod('thisYear')">Este ano</button>
+        <button class="period-btn" onclick="setPeriod('custom')">Personalizado</button>
+        <input type="date" class="date-input" id="dateStart" style="display:none;" onchange="applyCustomPeriod()">
+        <input type="date" class="date-input" id="dateEnd" style="display:none;" onchange="applyCustomPeriod()">
+    </div>
+
+    <div id="loadingArea" class="loading">
+        <div class="spinner"></div>
+        <div id="loadingMsg">Carregando dados do Ploomes...</div>
+    </div>
+
+    <div class="dashboard" id="dashboardArea" style="display:none;">
+
+        <!-- Section 1: Oportunidades Ganhas -->
+        <div class="section-card full-width" id="sec1">
+            <div class="section-header">
+                <h2><span class="section-num">1</span> Oportunidades Ganhas</h2>
+                <div class="sub-filter">
+                    <select id="wonPipelineFilter" onchange="renderSection1()">
+                        <option value="">Todos os funis</option>
+                        <option value="Funil de Vendas">Funil de Vendas</option>
+                        <option value="Sankhya">Sankhya</option>
+                        <option value="Farmer">Farmer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="kpi-row" id="wonKpis"></div>
+                <div class="chart-container"><canvas id="chartWon"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableWon')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableWon"><table><thead><tr>
+                    <th>Titulo</th><th>Responsavel</th><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th>Data Fechamento</th>
+                </tr></thead><tbody id="tbodyWon"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 2: Oportunidades Perdidas -->
+        <div class="section-card full-width" id="sec2">
+            <div class="section-header">
+                <h2><span class="section-num">2</span> Oportunidades Perdidas</h2>
+                <div class="sub-filter">
+                    <select id="lostPipelineFilter" onchange="renderSection2()">
+                        <option value="">Todos os funis</option>
+                        <option value="Funil de Vendas">Funil de Vendas</option>
+                        <option value="Sankhya">Sankhya</option>
+                        <option value="Farmer">Farmer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="section-body">
+                <div class="kpi-row" id="lostKpis"></div>
+                <div class="chart-container"><canvas id="chartLost"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableLost')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableLost"><table><thead><tr>
+                    <th>Titulo</th><th>Responsavel</th><th>Funil</th><th>Motivo Perda</th><th>Data Fechamento</th>
+                </tr></thead><tbody id="tbodyLost"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 3: Produtos Vendidos (MRR vs Setup) -->
+        <div class="section-card full-width" id="sec3">
+            <div class="section-header">
+                <h2><span class="section-num">3</span> Produtos Vendidos (MRR vs Setup)</h2>
+            </div>
+            <div class="section-body">
+                <div class="kpi-row" id="productKpis"></div>
+                <div class="chart-container"><canvas id="chartProducts"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableProducts"><table><thead><tr>
+                    <th>Titulo</th><th>Responsavel</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 4: Ranking de Vendedores -->
+        <div class="section-card full-width" id="sec4">
+            <div class="section-header">
+                <h2><span class="section-num">4</span> Ranking de Vendedores</h2>
+            </div>
+            <div class="section-body">
+                <div class="chart-container"><canvas id="chartRanking"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableRanking"><table><thead><tr>
+                    <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negocios</th>
+                </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 5: Propostas Enviadas por Vendedor -->
+        <div class="section-card" id="sec5">
+            <div class="section-header">
+                <h2><span class="section-num">5</span> Propostas Enviadas</h2>
+            </div>
+            <div class="section-body">
+                <div class="chart-container"><canvas id="chartProposals"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableProposals')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableProposals"><table><thead><tr>
+                    <th class="rank-num">#</th><th>Vendedor</th><th>Propostas</th>
+                </tr></thead><tbody id="tbodyProposals"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 6: Negocios Perdidos por Vendedor -->
+        <div class="section-card" id="sec6">
+            <div class="section-header">
+                <h2><span class="section-num">6</span> Perdidos por Vendedor</h2>
+            </div>
+            <div class="section-body">
+                <div class="chart-container"><canvas id="chartLostSeller"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableLostSeller')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
+                    <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th>
+                </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 7: Reunioes Agendadas por Pre-Vendedor -->
+        <div class="section-card" id="sec7">
+            <div class="section-header">
+                <h2><span class="section-num">7</span> Reunioes por Pre-Vendedor</h2>
+            </div>
+            <div class="section-body">
+                <div class="chart-container"><canvas id="chartMeetings"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
+                    <th class="rank-num">#</th><th>Pre-Vendedor (SDR)</th><th>Reunioes</th>
+                </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 8: Origem das Reunioes por Pre-Vendedor e Segmento -->
+        <div class="section-card" id="sec8">
+            <div class="section-header">
+                <h2><span class="section-num">8</span> Reunioes por SDR e Segmento</h2>
+            </div>
+            <div class="section-body">
+                <div class="chart-container"><canvas id="chartOrigin"></canvas></div>
+                <button class="table-toggle" onclick="toggleTable('tableOrigin')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableOrigin"><table><thead><tr>
+                    <th>Pre-Vendedor</th><th>Segmento</th><th>Quantidade</th>
+                </tr></thead><tbody id="tbodyOrigin"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- Section 9: Conversao por Etapa -->
+        <div class="section-card full-width" id="sec9">
+            <div class="section-header">
+                <h2><span class="section-num">9</span> Conversao por Etapa</h2>
+                <div class="pipeline-selector" id="funnelPipelineTabs"></div>
+            </div>
+            <div class="section-body">
+                <div class="funnel-container" id="funnelContainer"></div>
+                <button class="table-toggle" onclick="toggleTable('tableFunnel')">Mostrar/ocultar tabela</button>
+                <div class="collapsible-table" id="tableFunnel"><table><thead><tr>
+                    <th>Etapa</th><th>Negocios</th><th>Conversao</th>
+                </tr></thead><tbody id="tbodyFunnel"></tbody></table></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="last-update" id="lastUpdate"></div>
+
+<script>
+// ==================== GLOBALS ====================
+const API_BASE = '/api';
+const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+const FIELD_SDR = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2';
+const FIELD_PROPOSAL_DATE = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E';
+const CONTACT_STATE_FIELD = 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848';
+const CONTACT_SEGMENT_FIELD = 'contact_BF700EBA-864D-423F-A890-33130BE5C038';
+
+const SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer'];
+const PIPELINE_COLORS = {
+    'Funil de Vendas': { bg: 'rgba(63,81,181,0.7)', border: '#3f51b5' },
+    'Sankhya': { bg: 'rgba(230,81,0,0.7)', border: '#e65100' },
+    'Farmer': { bg: 'rgba(46,125,50,0.7)', border: '#2e7d32' }
+};
+
+let wonDeals = [], lostDeals = [], openDeals = [];
+let periodStart = null, periodEnd = null;
+let charts = {};
+let activeFunnelPipeline = 'Funil de Vendas';
+
+// ==================== API ====================
+async function apiGet(endpoint) {
+    const resp = await fetch(`${API_BASE}${endpoint}`);
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.json();
+}
+
+async function fetchAllPages(baseUrl) {
+    const PAGE_SIZE = 200;
+    let all = [], skip = 0;
+    while (true) {
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        const url = `${baseUrl}${sep}$top=${PAGE_SIZE}&$skip=${skip}`;
+        const data = await apiGet(url);
+        const page = data.value || [];
+        all = all.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+    }
+    return all;
+}
+
+// ==================== HELPERS ====================
+function getOtherProp(otherProps, fieldKey) {
+    return (otherProps || []).find(p => p.FieldKey === fieldKey) || null;
+}
+
+function formatMoney(value) {
+    if (!value && value !== 0) return '-';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+}
+
+function monthKey(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(mk) {
+    if (!mk) return '';
+    const [y, m] = mk.split('-');
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${months[parseInt(m) - 1]}/${y}`;
+}
+
+function getPipelineName(deal) {
+    return deal.Pipeline?.Name || '';
+}
+
+function getOwnerName(deal) {
+    return deal.Owner?.Name || '';
+}
+
+function getMRR(deal) {
+    const p = getOtherProp(deal.OtherProperties, FIELD_MRR);
+    return p?.DecimalValue || 0;
+}
+
+function getSetup(deal) {
+    const p = getOtherProp(deal.OtherProperties, FIELD_SETUP);
+    return p?.DecimalValue || 0;
+}
+
+function getSDR(deal) {
+    const p = getOtherProp(deal.OtherProperties, FIELD_SDR);
+    return p?.ObjectValueName || '';
+}
+
+function getProposalDate(deal) {
+    const p = getOtherProp(deal.OtherProperties, FIELD_PROPOSAL_DATE);
+    return p?.DateTimeValue || null;
+}
+
+function getContactSegment(deal) {
+    const contactProps = deal.Contact?.OtherProperties || [];
+    const p = contactProps.find(op => op.FieldKey === CONTACT_SEGMENT_FIELD);
+    return p?.ObjectValueName || 'Sem segmento';
+}
+
+function isSalesPipeline(deal) {
+    return SALES_PIPELINES.includes(getPipelineName(deal));
+}
+
+function inPeriod(dateStr) {
+    if (!dateStr || !periodStart || !periodEnd) return true;
+    const d = new Date(dateStr);
+    return d >= periodStart && d <= periodEnd;
+}
+
+function getPipelineClass(name) {
+    if (!name) return 'badge-pipeline-default';
+    const n = name.toLowerCase();
+    if (n.includes('vendas')) return 'badge-pipeline-vendas';
+    if (n.includes('sankhya')) return 'badge-pipeline-sankhya';
+    if (n.includes('farmer')) return 'badge-pipeline-farmer';
+    return 'badge-pipeline-default';
+}
+
+function medalFor(rank) {
+    if (rank === 1) return '<span class="rank-medal">&#129351;</span> ';
+    if (rank === 2) return '<span class="rank-medal">&#129352;</span> ';
+    if (rank === 3) return '<span class="rank-medal">&#129353;</span> ';
+    return '';
+}
+
+function rankRowClass(rank) {
+    if (rank === 1) return 'rank-highlight-1';
+    if (rank === 2) return 'rank-highlight-2';
+    if (rank === 3) return 'rank-highlight-3';
+    return '';
+}
+
+function toggleTable(id) {
+    document.getElementById(id).classList.toggle('open');
+}
+
+function destroyChart(key) {
+    if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+}
+
+// ==================== PERIOD ====================
+function setPeriod(preset) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+
+    const showCustom = preset === 'custom';
+    document.getElementById('dateStart').style.display = showCustom ? '' : 'none';
+    document.getElementById('dateEnd').style.display = showCustom ? '' : 'none';
+
+    switch(preset) {
+        case 'thisMonth':
+            periodStart = new Date(y, m, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'lastMonth':
+            periodStart = new Date(y, m - 1, 1);
+            periodEnd = new Date(y, m, 0, 23, 59, 59);
+            break;
+        case 'thisQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            periodStart = new Date(y, qs, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        }
+        case 'lastQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            periodStart = new Date(y, qs - 3, 1);
+            periodEnd = new Date(y, qs, 0, 23, 59, 59);
+            break;
+        }
+        case 'last6':
+            periodStart = new Date(y, m - 6, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'thisYear':
+            periodStart = new Date(y, 0, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'custom':
+            return; // wait for date inputs
+    }
+    renderAll();
+}
+
+function applyCustomPeriod() {
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (s && e) {
+        periodStart = new Date(s + 'T00:00:00');
+        periodEnd = new Date(e + 'T23:59:59');
+        renderAll();
+    }
+}
+
+// ==================== FILTERED DATA GETTERS ====================
+function filteredWon(pipelineFilter) {
+    return wonDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        return inPeriod(d.FinishDate);
+    });
+}
+
+function filteredLost(pipelineFilter) {
+    return lostDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        return inPeriod(d.FinishDate);
+    });
+}
+
+function filteredOpen() {
+    return openDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        return inPeriod(d.CreateDate);
+    });
+}
+
+function allDealsForMeetings() {
+    // All deals (won+lost+open) in sales pipelines with SDR, filtered by CreateDate
+    return [...wonDeals, ...lostDeals, ...openDeals].filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (!getSDR(d)) return false;
+        return inPeriod(d.CreateDate);
+    });
+}
+
+function allDealsForFunnel(pipelineName) {
+    return [...wonDeals, ...lostDeals, ...openDeals].filter(d => {
+        return getPipelineName(d) === pipelineName;
+    });
+}
+
+// ==================== MONTH AXIS HELPERS ====================
+function getMonthRange() {
+    if (!periodStart || !periodEnd) return [];
+    const months = [];
+    const d = new Date(periodStart.getFullYear(), periodStart.getMonth(), 1);
+    while (d <= periodEnd) {
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        d.setMonth(d.getMonth() + 1);
+    }
+    return months;
+}
+
+function groupByMonth(deals, dateField) {
+    const groups = {};
+    deals.forEach(d => {
+        const mk = monthKey(d[dateField]);
+        if (mk) {
+            if (!groups[mk]) groups[mk] = [];
+            groups[mk].push(d);
+        }
+    });
+    return groups;
+}
+
+// ==================== SECTION RENDERERS ====================
+
+// --- Section 1: Oportunidades Ganhas ---
+function renderSection1() {
+    const pf = document.getElementById('wonPipelineFilter').value;
+    const deals = filteredWon(pf);
+
+    // KPIs
+    const totalValue = deals.reduce((s, d) => s + getMRR(d) + getSetup(d), 0);
+    document.getElementById('wonKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalValue)}</div><div class="kpi-label">Valor total</div></div>
+    `;
+
+    // Chart: stacked by pipeline per month
+    const months = getMonthRange();
+    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
+        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
+        return {
+            label: pipeline,
+            data: months.map(mk => (byMonth[mk] || []).length),
+            backgroundColor: PIPELINE_COLORS[pipeline].bg,
+            borderColor: PIPELINE_COLORS[pipeline].border,
+            borderWidth: 1
+        };
+    });
+
+    destroyChart('won');
+    charts.won = new Chart(document.getElementById('chartWon'), {
+        type: 'bar',
+        data: { labels: months.map(monthLabel), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Table
+    document.getElementById('tbodyWon').innerHTML = deals.map(d => `<tr>
+        <td>${d.Title || ''}</td>
+        <td>${getOwnerName(d)}</td>
+        <td><span class="badge ${getPipelineClass(getPipelineName(d))}">${getPipelineName(d)}</span></td>
+        <td class="money">${formatMoney(getMRR(d))}</td>
+        <td class="money">${formatMoney(getSetup(d))}</td>
+        <td>${formatDate(d.FinishDate)}</td>
+    </tr>`).join('');
+}
+
+// --- Section 2: Oportunidades Perdidas ---
+function renderSection2() {
+    const pf = document.getElementById('lostPipelineFilter').value;
+    const deals = filteredLost(pf);
+
+    document.getElementById('lostKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios perdidos</div></div>
+    `;
+
+    const months = getMonthRange();
+    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
+        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
+        return {
+            label: pipeline,
+            data: months.map(mk => (byMonth[mk] || []).length),
+            backgroundColor: PIPELINE_COLORS[pipeline].bg,
+            borderColor: PIPELINE_COLORS[pipeline].border,
+            borderWidth: 1
+        };
+    });
+
+    destroyChart('lost');
+    charts.lost = new Chart(document.getElementById('chartLost'), {
+        type: 'bar',
+        data: { labels: months.map(monthLabel), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    document.getElementById('tbodyLost').innerHTML = deals.map(d => `<tr>
+        <td>${d.Title || ''}</td>
+        <td>${getOwnerName(d)}</td>
+        <td><span class="badge ${getPipelineClass(getPipelineName(d))}">${getPipelineName(d)}</span></td>
+        <td>${d.LossReason?.Name || '-'}</td>
+        <td>${formatDate(d.FinishDate)}</td>
+    </tr>`).join('');
+}
+
+// --- Section 3: Produtos Vendidos ---
+function renderSection3() {
+    const deals = filteredWon('');
+    const months = getMonthRange();
+    const byMonth = groupByMonth(deals, 'FinishDate');
+
+    const mrrData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getMRR(d), 0));
+    const setupData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getSetup(d), 0));
+    const totalMRR = deals.reduce((s, d) => s + getMRR(d), 0);
+    const totalSetup = deals.reduce((s, d) => s + getSetup(d), 0);
+
+    document.getElementById('productKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR)}</div><div class="kpi-label">MRR Total</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetup)}</div><div class="kpi-label">Setup Total</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR + totalSetup)}</div><div class="kpi-label">Total Geral</div></div>
+    `;
+
+    destroyChart('products');
+    charts.products = new Chart(document.getElementById('chartProducts'), {
+        type: 'bar',
+        data: {
+            labels: months.map(monthLabel),
+            datasets: [
+                { label: 'MRR', data: mrrData, backgroundColor: 'rgba(46,125,50,0.7)', borderColor: '#2e7d32', borderWidth: 1 },
+                { label: 'Setup', data: setupData, backgroundColor: 'rgba(63,81,181,0.7)', borderColor: '#3f51b5', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+        }
+    });
+
+    document.getElementById('tbodyProducts').innerHTML = deals.map(d => {
+        const mrr = getMRR(d), setup = getSetup(d);
+        return `<tr>
+            <td>${d.Title || ''}</td>
+            <td>${getOwnerName(d)}</td>
+            <td class="money">${formatMoney(mrr)}</td>
+            <td class="money">${formatMoney(setup)}</td>
+            <td class="money" style="font-weight:600;">${formatMoney(mrr + setup)}</td>
+        </tr>`;
+    }).join('');
+}
+
+// --- Section 4: Ranking de Vendedores ---
+function renderSection4() {
+    const deals = filteredWon('');
+    const sellerMap = {};
+    deals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        if (!sellerMap[name]) sellerMap[name] = { mrr: 0, setup: 0, count: 0 };
+        sellerMap[name].mrr += getMRR(d);
+        sellerMap[name].setup += getSetup(d);
+        sellerMap[name].count++;
+    });
+
+    const sorted = Object.entries(sellerMap)
+        .map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup }))
+        .sort((a, b) => b.total - a.total);
+
+    destroyChart('ranking');
+    charts.ranking = new Chart(document.getElementById('chartRanking'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map((s, i) => `${medalFor(i + 1).replace(/<[^>]*>/g, '')}${s.name}`),
+            datasets: [
+                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(46,125,50,0.7)', borderColor: '#2e7d32', borderWidth: 1 },
+                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(63,81,181,0.7)', borderColor: '#3f51b5', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+        }
+    });
+
+    document.getElementById('tbodyRanking').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;">${s.name}</td>
+        <td class="money">${formatMoney(s.mrr)}</td>
+        <td class="money">${formatMoney(s.setup)}</td>
+        <td class="money" style="font-weight:700;color:#6c3fb5;">${formatMoney(s.total)}</td>
+        <td style="text-align:center;">${s.count}</td>
+    </tr>`).join('');
+}
+
+// --- Section 5: Propostas Enviadas por Vendedor ---
+function renderSection5() {
+    // Deals from all statuses in sales pipelines with proposal date in period
+    const allDeals = [...wonDeals, ...lostDeals, ...openDeals];
+    const proposalDeals = allDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        const pd = getProposalDate(d);
+        if (!pd) return false;
+        return inPeriod(pd);
+    });
+
+    const sellerMap = {};
+    proposalDeals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        sellerMap[name] = (sellerMap[name] || 0) + 1;
+    });
+
+    const sorted = Object.entries(sellerMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
+    destroyChart('proposals');
+    charts.proposals = new Chart(document.getElementById('chartProposals'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [{ label: 'Propostas', data: sorted.map(s => s.count), backgroundColor: 'rgba(108,63,181,0.7)', borderColor: '#6c3fb5', borderWidth: 1 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    document.getElementById('tbodyProposals').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;">${s.count}</td>
+    </tr>`).join('');
+}
+
+// --- Section 6: Negocios Perdidos por Vendedor ---
+function renderSection6() {
+    const deals = filteredLost('');
+    const sellerMap = {};
+    deals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        sellerMap[name] = (sellerMap[name] || 0) + 1;
+    });
+
+    const sorted = Object.entries(sellerMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
+    destroyChart('lostSeller');
+    charts.lostSeller = new Chart(document.getElementById('chartLostSeller'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [{ label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(198,40,40,0.7)', borderColor: '#c62828', borderWidth: 1 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    document.getElementById('tbodyLostSeller').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;">${s.count}</td>
+    </tr>`).join('');
+}
+
+// --- Section 7: Reunioes Agendadas por Pre-Vendedor ---
+function renderSection7() {
+    const deals = allDealsForMeetings();
+    const sdrMap = {};
+    deals.forEach(d => {
+        const sdr = getSDR(d);
+        if (!sdr) return;
+        sdrMap[sdr] = (sdrMap[sdr] || 0) + 1;
+    });
+
+    const sorted = Object.entries(sdrMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
+    destroyChart('meetings');
+    charts.meetings = new Chart(document.getElementById('chartMeetings'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(108,63,181,0.7)', borderColor: '#6c3fb5', borderWidth: 1 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;">${s.count}</td>
+    </tr>`).join('');
+}
+
+// --- Section 8: Origem das Reunioes por Pre-Vendedor e Segmento ---
+function renderSection8() {
+    const deals = allDealsForMeetings();
+    const matrix = {}; // sdr -> segment -> count
+    const allSegments = new Set();
+    deals.forEach(d => {
+        const sdr = getSDR(d);
+        if (!sdr) return;
+        const seg = getContactSegment(d);
+        allSegments.add(seg);
+        if (!matrix[sdr]) matrix[sdr] = {};
+        matrix[sdr][seg] = (matrix[sdr][seg] || 0) + 1;
+    });
+
+    const sdrs = Object.keys(matrix).sort((a, b) => {
+        const ta = Object.values(matrix[a]).reduce((s, v) => s + v, 0);
+        const tb = Object.values(matrix[b]).reduce((s, v) => s + v, 0);
+        return tb - ta;
+    });
+    const segments = [...allSegments].sort();
+
+    const segColors = [
+        'rgba(108,63,181,0.7)', 'rgba(46,125,50,0.7)', 'rgba(230,81,0,0.7)',
+        'rgba(63,81,181,0.7)', 'rgba(198,40,40,0.7)', 'rgba(0,137,123,0.7)',
+        'rgba(255,143,0,0.7)', 'rgba(121,85,72,0.7)', 'rgba(33,150,243,0.7)',
+        'rgba(156,39,176,0.7)'
+    ];
+
+    const datasets = segments.map((seg, i) => ({
+        label: seg,
+        data: sdrs.map(sdr => matrix[sdr][seg] || 0),
+        backgroundColor: segColors[i % segColors.length]
+    }));
+
+    destroyChart('origin');
+    charts.origin = new Chart(document.getElementById('chartOrigin'), {
+        type: 'bar',
+        data: { labels: sdrs, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }, y: { stacked: true } }
+        }
+    });
+
+    // Table
+    const rows = [];
+    sdrs.forEach(sdr => {
+        segments.forEach(seg => {
+            const c = matrix[sdr][seg] || 0;
+            if (c > 0) rows.push({ sdr, seg, count: c });
+        });
+    });
+    document.getElementById('tbodyOrigin').innerHTML = rows.map(r => `<tr>
+        <td style="font-weight:500;">${r.sdr}</td>
+        <td>${r.seg}</td>
+        <td style="text-align:center;font-weight:700;">${r.count}</td>
+    </tr>`).join('');
+}
+
+// --- Section 9: Conversao por Etapa ---
+function renderSection9() {
+    // Pipeline tabs
+    const tabsHtml = SALES_PIPELINES.map(p => `
+        <button class="pipeline-tab ${p === activeFunnelPipeline ? 'active' : ''}" onclick="setFunnelPipeline('${p}')">${p}</button>
+    `).join('');
+    document.getElementById('funnelPipelineTabs').innerHTML = tabsHtml;
+
+    const deals = allDealsForFunnel(activeFunnelPipeline);
+
+    // Gather all stages with their ordination
+    const stageMap = {};
+    deals.forEach(d => {
+        const stage = d.Stage;
+        if (!stage || !stage.Name) return;
+        const key = stage.Name;
+        if (!stageMap[key]) {
+            stageMap[key] = { name: stage.Name, ordination: stage.Ordination || 0, count: 0 };
+        }
+        stageMap[key].count++;
+    });
+
+    // Also count won/lost deals - they passed through their last stage
+    // For a proper funnel we count deals at each stage level
+    // Deals at stage N means they reached at least stage N
+    const stages = Object.values(stageMap).sort((a, b) => a.ordination - b.ordination);
+
+    // For funnel: a deal at stage X has passed through all stages before X
+    // Count cumulative: deals at stage with ordination >= current stage ordination
+    const funnelStages = stages.map((stage, idx) => {
+        const countAtOrBeyond = stages.slice(idx).reduce((s, st) => s + st.count, 0);
+        // Also add won + lost counts for deals that completed the pipeline
+        const wonInPipeline = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline).length;
+        const lostInPipeline = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline).length;
+        return {
+            name: stage.name,
+            count: countAtOrBeyond + wonInPipeline + lostInPipeline,
+            ordination: stage.ordination
+        };
+    });
+
+    // Recalculate: simplest approach - count deals whose stage ordination >= this stage
+    // Including open, won, lost deals for this pipeline
+    const allPipelineDeals = [...wonDeals, ...lostDeals, ...openDeals].filter(d => getPipelineName(d) === activeFunnelPipeline);
+
+    // Build stage ordination map from all deals
+    const stageOrdMap = {};
+    allPipelineDeals.forEach(d => {
+        if (d.Stage?.Name && d.Stage.Ordination !== undefined) {
+            stageOrdMap[d.Stage.Name] = d.Stage.Ordination;
+        }
+    });
+
+    const uniqueStages = Object.entries(stageOrdMap)
+        .map(([name, ord]) => ({ name, ordination: ord }))
+        .sort((a, b) => a.ordination - b.ordination);
+
+    // For each stage, count deals that reached at least that stage
+    // A deal reached stage N if its stage ordination >= N (won/lost deals passed through their stage)
+    const funnelData = uniqueStages.map(stage => {
+        const count = allPipelineDeals.filter(d => {
+            const dealOrd = d.Stage?.Ordination;
+            if (dealOrd === undefined) return false;
+            return dealOrd >= stage.ordination;
+        }).length;
+        return { name: stage.name, count };
+    });
+
+    // Won deals don't have a stage in the pipeline anymore, so add them to all stages
+    const wonCount = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline).length;
+    const lostCount = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline).length;
+
+    // Rebuild: each stage count = open deals at that stage or later + all won deals + lost deals at that stage or later
+    const funnelFinal = uniqueStages.map(stage => {
+        const openCount = openDeals.filter(d => {
+            if (getPipelineName(d) !== activeFunnelPipeline) return false;
+            return (d.Stage?.Ordination || 0) >= stage.ordination;
+        }).length;
+        const lostAtOrAfter = lostDeals.filter(d => {
+            if (getPipelineName(d) !== activeFunnelPipeline) return false;
+            return (d.Stage?.Ordination || 0) >= stage.ordination;
+        }).length;
+        return { name: stage.name, count: openCount + wonCount + lostAtOrAfter };
+    });
+
+    const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
+    const purpleShades = ['#6c3fb5','#7e52c4','#9068d0','#a27edc','#b494e8','#c6aaf0','#d8c0f8','#ead6ff'];
+
+    document.getElementById('funnelContainer').innerHTML = funnelFinal.map((stage, i) => {
+        const pct = maxCount > 0 ? (stage.count / maxCount * 100) : 0;
+        const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
+            ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%'
+            : '-';
+        const color = purpleShades[i % purpleShades.length];
+        return `<div class="funnel-stage">
+            <div class="funnel-label">${stage.name}</div>
+            <div class="funnel-bar-wrap">
+                <div class="funnel-bar" style="width:${Math.max(pct, 5)}%;background:${color};">${stage.count}</div>
+            </div>
+            <div class="funnel-pct">${convPct !== '-' ? convPct + ' conv.' : ''}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('tbodyFunnel').innerHTML = funnelFinal.map((stage, i) => {
+        const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
+            ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%'
+            : '-';
+        return `<tr>
+            <td style="font-weight:500;">${stage.name}</td>
+            <td style="text-align:center;font-weight:700;">${stage.count}</td>
+            <td style="text-align:center;">${convPct}</td>
+        </tr>`;
+    }).join('');
+}
+
+function setFunnelPipeline(p) {
+    activeFunnelPipeline = p;
+    renderSection9();
+}
+
+// ==================== RENDER ALL ====================
+function renderAll() {
+    renderSection1();
+    renderSection2();
+    renderSection3();
+    renderSection4();
+    renderSection5();
+    renderSection6();
+    renderSection7();
+    renderSection8();
+    renderSection9();
+}
+
+// ==================== LOAD DATA ====================
+async function loadData() {
+    const loadingArea = document.getElementById('loadingArea');
+    const dashboardArea = document.getElementById('dashboardArea');
+    const loadingMsg = document.getElementById('loadingMsg');
+
+    try {
+        loadingMsg.textContent = 'Carregando oportunidades ganhas...';
+        wonDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 2&$expand=Owner,Pipeline,Stage,OtherProperties,Contact($expand=OtherProperties)&$orderby=FinishDate desc'
+        );
+
+        loadingMsg.textContent = `Ganhas: ${wonDeals.length}. Carregando perdidas...`;
+        lostDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 3&$expand=Owner,Pipeline,Stage,OtherProperties,LossReason&$orderby=FinishDate desc'
+        );
+
+        loadingMsg.textContent = `Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}. Carregando abertas...`;
+        openDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 1&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc'
+        );
+
+        loadingMsg.textContent = 'Processando dados...';
+
+        // Set default period to current month
+        const now = new Date();
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+        loadingArea.style.display = 'none';
+        dashboardArea.style.display = '';
+        renderAll();
+
+        document.getElementById('lastUpdate').textContent =
+            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}, Abertas: ${openDeals.length}`;
+
+    } catch (err) {
+        console.error(err);
+        loadingMsg.innerHTML = `<span style="color:#c62828;">Erro ao carregar dados: ${err.message}</span>`;
+    }
+}
+
+// Smooth scroll for nav links
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+});
+
+// Start
+loadData();
+</script>
+</body>
+</html>
