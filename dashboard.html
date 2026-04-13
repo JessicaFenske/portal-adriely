@@ -4,111 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Comercial - Ploomes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f0f1a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6c3fb5; }
 
         .header {
-            background: linear-gradient(135deg, #6c3fb5, #4a1a8a);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.3);
             color: white;
             padding: 20px 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 30px rgba(108, 63, 181, 0.15), 0 0 60px rgba(108, 63, 181, 0.05);
             position: sticky;
             top: 0;
             z-index: 100;
+            backdrop-filter: blur(20px);
         }
-        .header h1 { font-size: 22px; font-weight: 600; }
-        .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+        .header h1 { font-size: 22px; font-weight: 700; color: #ffffff; text-shadow: 0 0 20px rgba(108, 63, 181, 0.4); }
+        .header .subtitle { font-size: 13px; opacity: 0.6; margin-top: 2px; color: #b0b0c0; }
         .header-left { display: flex; align-items: center; gap: 20px; }
         .back-link {
-            color: white;
+            color: #c0c0d0;
             text-decoration: none;
             font-size: 13px;
-            opacity: 0.85;
             display: flex;
             align-items: center;
             gap: 5px;
             padding: 6px 12px;
-            border: 1px solid rgba(255,255,255,0.3);
+            border: 1px solid rgba(108, 63, 181, 0.3);
             border-radius: 6px;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
+            background: rgba(108, 63, 181, 0.05);
         }
-        .back-link:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+        .back-link:hover {
+            color: #ffffff;
+            background: rgba(108, 63, 181, 0.15);
+            border-color: rgba(108, 63, 181, 0.6);
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.2);
+        }
 
         /* Navigation */
         .nav-bar {
-            background: white;
+            background: rgba(20, 20, 38, 0.85);
+            backdrop-filter: blur(20px);
             padding: 10px 30px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             position: sticky;
             top: 62px;
             z-index: 99;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         }
         .nav-link {
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             text-decoration: none;
-            color: #555;
-            background: #f0f0f0;
+            color: #8888a0;
+            background: rgba(255, 255, 255, 0.04);
             font-weight: 500;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             white-space: nowrap;
+            border: 1px solid transparent;
         }
-        .nav-link:hover { background: #e8e0f5; color: #6c3fb5; }
+        .nav-link:hover {
+            background: rgba(108, 63, 181, 0.15);
+            color: #b794f4;
+            border-color: rgba(108, 63, 181, 0.3);
+            box-shadow: 0 0 10px rgba(108, 63, 181, 0.15);
+        }
 
         /* Period Filter */
         .period-bar {
             padding: 15px 30px;
-            background: white;
-            border-bottom: 1px solid #e0e0e0;
+            background: rgba(20, 20, 38, 0.6);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
             display: flex;
             gap: 10px;
             align-items: center;
             flex-wrap: wrap;
         }
-        .period-bar label { font-size: 13px; font-weight: 600; color: #555; margin-right: 5px; }
+        .period-bar label { font-size: 13px; font-weight: 600; color: #8888a0; margin-right: 5px; }
         .period-btn {
             padding: 6px 14px;
-            border: 1px solid #d0d0d0;
+            border: 1px solid rgba(108, 63, 181, 0.2);
             border-radius: 20px;
-            background: white;
+            background: rgba(255, 255, 255, 0.03);
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
-            color: #555;
+            transition: all 0.3s ease;
+            color: #8888a0;
+            font-family: inherit;
         }
-        .period-btn:hover { border-color: #6c3fb5; color: #6c3fb5; }
-        .period-btn.active { background: #6c3fb5; color: white; border-color: #6c3fb5; }
+        .period-btn:hover {
+            border-color: rgba(108, 63, 181, 0.5);
+            color: #b794f4;
+            box-shadow: 0 0 12px rgba(108, 63, 181, 0.15);
+        }
+        .period-btn.active {
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white;
+            border-color: #6c3fb5;
+            box-shadow: 0 0 20px rgba(108, 63, 181, 0.4), 0 0 40px rgba(108, 63, 181, 0.1);
+        }
         .date-input {
             padding: 6px 10px;
-            border: 1px solid #d0d0d0;
+            border: 1px solid rgba(108, 63, 181, 0.2);
             border-radius: 6px;
             font-size: 12px;
             outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+            transition: all 0.3s ease;
         }
-        .date-input:focus { border-color: #6c3fb5; box-shadow: 0 0 0 2px rgba(108,63,181,0.15); }
+        .date-input:focus {
+            border-color: #6c3fb5;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.25);
+        }
 
         /* Loading */
         .loading {
             text-align: center;
             padding: 80px;
-            color: #888;
+            color: #6868a0;
             font-size: 16px;
         }
         .loading .spinner {
             display: inline-block;
             width: 40px;
             height: 40px;
-            border: 4px solid #e0e0e0;
+            border: 4px solid rgba(108, 63, 181, 0.15);
             border-top: 4px solid #6c3fb5;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -127,17 +168,24 @@
             .dashboard { grid-template-columns: 1fr; padding: 15px; }
         }
 
-        /* Section Cards */
+        /* Section Cards - Glassmorphism */
         .section-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 40px rgba(108, 63, 181, 0.03);
             overflow: hidden;
+            border: 1px solid rgba(108, 63, 181, 0.1);
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .section-card:hover {
+            border-color: rgba(108, 63, 181, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 50px rgba(108, 63, 181, 0.07);
         }
         .section-card.full-width { grid-column: 1 / -1; }
         .section-header {
             padding: 16px 20px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -147,7 +195,7 @@
         .section-header h2 {
             font-size: 16px;
             font-weight: 600;
-            color: #333;
+            color: #ffffff;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -158,16 +206,17 @@
             justify-content: center;
             width: 26px;
             height: 26px;
-            background: #6c3fb5;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
             color: white;
             border-radius: 50%;
             font-size: 12px;
             font-weight: 700;
+            box-shadow: 0 0 12px rgba(108, 63, 181, 0.3);
         }
         .section-body { padding: 20px; }
         .chart-container { position: relative; width: 100%; min-height: 280px; }
 
-        /* KPI Cards */
+        /* KPI Cards - Glass Effect */
         .kpi-row {
             display: flex;
             gap: 12px;
@@ -177,13 +226,25 @@
         .kpi-card {
             flex: 1;
             min-width: 120px;
-            background: #f8f6fc;
-            border-radius: 8px;
-            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.1), rgba(108, 63, 181, 0.05));
+            border: 1px solid rgba(108, 63, 181, 0.15);
+            border-radius: 12px;
+            padding: 14px 16px;
             text-align: center;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
         }
-        .kpi-value { font-size: 22px; font-weight: 700; color: #6c3fb5; }
-        .kpi-label { font-size: 11px; color: #888; text-transform: uppercase; margin-top: 2px; }
+        .kpi-card:hover {
+            border-color: rgba(108, 63, 181, 0.3);
+            box-shadow: 0 0 20px rgba(108, 63, 181, 0.1);
+        }
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #b794f4;
+            text-shadow: 0 0 20px rgba(108, 63, 181, 0.3);
+        }
+        .kpi-label { font-size: 11px; color: #6868a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
 
         /* Sub-filter */
         .sub-filter {
@@ -193,12 +254,23 @@
         }
         .sub-filter select {
             padding: 5px 10px;
-            border: 1px solid #d0d0d0;
+            border: 1px solid rgba(108, 63, 181, 0.2);
             border-radius: 6px;
             font-size: 12px;
             outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+            transition: all 0.3s ease;
         }
-        .sub-filter select:focus { border-color: #6c3fb5; }
+        .sub-filter select:focus {
+            border-color: #6c3fb5;
+            box-shadow: 0 0 10px rgba(108, 63, 181, 0.2);
+        }
+        .sub-filter select option {
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
 
         /* Collapsible table */
         .table-toggle {
@@ -206,16 +278,21 @@
             align-items: center;
             gap: 5px;
             padding: 6px 14px;
-            background: #f0f0f0;
-            border: none;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(108, 63, 181, 0.15);
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
-            color: #555;
+            color: #8888a0;
             margin-top: 12px;
-            transition: background 0.2s;
+            transition: all 0.3s ease;
+            font-family: inherit;
         }
-        .table-toggle:hover { background: #e0e0e0; }
+        .table-toggle:hover {
+            background: rgba(108, 63, 181, 0.1);
+            color: #b794f4;
+            border-color: rgba(108, 63, 181, 0.3);
+        }
         .collapsible-table { display: none; margin-top: 12px; overflow-x: auto; }
         .collapsible-table.open { display: block; }
 
@@ -226,17 +303,26 @@
             font-size: 13px;
         }
         thead th {
-            background: #f8f8fa;
+            background: rgba(108, 63, 181, 0.08);
             padding: 10px 12px;
             text-align: left;
             font-weight: 600;
-            color: #555;
-            border-bottom: 2px solid #e8e8e8;
+            color: #8888a0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
             white-space: nowrap;
         }
-        tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
-        tbody tr:hover { background: #f8f6fc; }
-        tbody td { padding: 8px 12px; vertical-align: middle; }
+        tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.2s ease;
+        }
+        tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        tbody tr:hover {
+            background: rgba(108, 63, 181, 0.08);
+            box-shadow: inset 0 0 30px rgba(108, 63, 181, 0.03);
+        }
+        tbody td { padding: 8px 12px; vertical-align: middle; color: #c0c0d0; }
         .money { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
         /* Badges */
@@ -248,17 +334,26 @@
             font-weight: 500;
             white-space: nowrap;
         }
-        .badge-pipeline-vendas { background: #e8eaf6; color: #3f51b5; }
-        .badge-pipeline-sankhya { background: #fff3e0; color: #e65100; }
-        .badge-pipeline-farmer { background: #e8f5e9; color: #2e7d32; }
-        .badge-pipeline-default { background: #f5f5f5; color: #666; }
+        .badge-pipeline-vendas { background: rgba(63, 81, 181, 0.2); color: #7986cb; border: 1px solid rgba(63, 81, 181, 0.3); }
+        .badge-pipeline-sankhya { background: rgba(230, 81, 0, 0.15); color: #ff9800; border: 1px solid rgba(230, 81, 0, 0.3); }
+        .badge-pipeline-farmer { background: rgba(46, 125, 50, 0.15); color: #66bb6a; border: 1px solid rgba(46, 125, 50, 0.3); }
+        .badge-pipeline-default { background: rgba(255, 255, 255, 0.05); color: #8888a0; border: 1px solid rgba(255, 255, 255, 0.1); }
 
         /* Ranking medals */
         .rank-medal { font-size: 18px; }
-        .rank-num { font-weight: 700; color: #888; font-size: 14px; text-align: center; width: 40px; }
-        .rank-highlight-1 { background: #fffde7 !important; }
-        .rank-highlight-2 { background: #f5f5f5 !important; }
-        .rank-highlight-3 { background: #fff8e1 !important; }
+        .rank-num { font-weight: 700; color: #6868a0; font-size: 14px; text-align: center; width: 40px; }
+        .rank-highlight-1 {
+            background: rgba(255, 215, 0, 0.06) !important;
+            box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.03);
+        }
+        .rank-highlight-2 {
+            background: rgba(192, 192, 192, 0.04) !important;
+            box-shadow: inset 0 0 20px rgba(192, 192, 192, 0.02);
+        }
+        .rank-highlight-3 {
+            background: rgba(205, 127, 50, 0.05) !important;
+            box-shadow: inset 0 0 20px rgba(205, 127, 50, 0.02);
+        }
 
         /* Funnel */
         .funnel-container { padding: 10px 0; }
@@ -273,7 +368,7 @@
             font-size: 13px;
             font-weight: 500;
             text-align: right;
-            color: #555;
+            color: #8888a0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -290,11 +385,12 @@
             color: white;
             min-width: 40px;
             transition: width 0.5s ease;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.2);
         }
         .funnel-pct {
             flex: 0 0 70px;
             font-size: 12px;
-            color: #888;
+            color: #6868a0;
             text-align: left;
         }
 
@@ -305,18 +401,27 @@
         }
         .pipeline-tab {
             padding: 5px 12px;
-            border: 1px solid #d0d0d0;
+            border: 1px solid rgba(108, 63, 181, 0.2);
             border-radius: 16px;
             font-size: 12px;
             cursor: pointer;
-            background: white;
-            color: #555;
-            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+            color: #8888a0;
+            transition: all 0.3s ease;
+            font-family: inherit;
         }
-        .pipeline-tab:hover { border-color: #6c3fb5; color: #6c3fb5; }
-        .pipeline-tab.active { background: #6c3fb5; color: white; border-color: #6c3fb5; }
+        .pipeline-tab:hover {
+            border-color: rgba(108, 63, 181, 0.5);
+            color: #b794f4;
+        }
+        .pipeline-tab.active {
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white;
+            border-color: #6c3fb5;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.3);
+        }
 
-        .last-update { font-size: 11px; color: #999; padding: 10px 30px; text-align: right; }
+        .last-update { font-size: 11px; color: #4a4a6a; padding: 10px 30px; text-align: right; }
 
         /* Scroll margin for nav anchors */
         .section-card[id] { scroll-margin-top: 120px; }
@@ -515,6 +620,13 @@
     <div class="last-update" id="lastUpdate"></div>
 
 <script>
+// ==================== CHART.JS DARK THEME DEFAULTS ====================
+Chart.defaults.color = '#8888a0';
+Chart.defaults.borderColor = 'rgba(108, 63, 181, 0.1)';
+Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+Chart.defaults.plugins.legend.labels.color = '#a0a0b8';
+Chart.defaults.scale = Chart.defaults.scale || {};
+
 // ==================== GLOBALS ====================
 const API_BASE = '/api';
 const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
@@ -526,9 +638,15 @@ const CONTACT_SEGMENT_FIELD = 'contact_BF700EBA-864D-423F-A890-33130BE5C038';
 
 const SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer'];
 const PIPELINE_COLORS = {
-    'Funil de Vendas': { bg: 'rgba(63,81,181,0.7)', border: '#3f51b5' },
-    'Sankhya': { bg: 'rgba(230,81,0,0.7)', border: '#e65100' },
-    'Farmer': { bg: 'rgba(46,125,50,0.7)', border: '#2e7d32' }
+    'Funil de Vendas': { bg: 'rgba(99, 102, 241, 0.7)', border: '#818cf8' },
+    'Sankhya': { bg: 'rgba(251, 146, 60, 0.7)', border: '#fb923c' },
+    'Farmer': { bg: 'rgba(74, 222, 128, 0.7)', border: '#4ade80' }
+};
+
+// Dark theme chart scale options
+const darkScaleOptions = {
+    grid: { color: 'rgba(108, 63, 181, 0.08)', drawBorder: false },
+    ticks: { color: '#6868a0' }
 };
 
 let wonDeals = [], lostDeals = [], openDeals = [];
@@ -814,7 +932,10 @@ function renderSection1() {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { stacked: true, ...darkScaleOptions },
+                y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }
+            }
         }
     });
 
@@ -857,7 +978,10 @@ function renderSection2() {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { stacked: true, ...darkScaleOptions },
+                y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }
+            }
         }
     });
 
@@ -893,14 +1017,17 @@ function renderSection3() {
         data: {
             labels: months.map(monthLabel),
             datasets: [
-                { label: 'MRR', data: mrrData, backgroundColor: 'rgba(46,125,50,0.7)', borderColor: '#2e7d32', borderWidth: 1 },
-                { label: 'Setup', data: setupData, backgroundColor: 'rgba(63,81,181,0.7)', borderColor: '#3f51b5', borderWidth: 1 }
+                { label: 'MRR', data: mrrData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
+                { label: 'Setup', data: setupData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+            scales: {
+                x: { stacked: true, ...darkScaleOptions },
+                y: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }
+            }
         }
     });
 
@@ -911,7 +1038,7 @@ function renderSection3() {
             <td>${getOwnerName(d)}</td>
             <td class="money">${formatMoney(mrr)}</td>
             <td class="money">${formatMoney(setup)}</td>
-            <td class="money" style="font-weight:600;">${formatMoney(mrr + setup)}</td>
+            <td class="money" style="font-weight:600;color:#b794f4;">${formatMoney(mrr + setup)}</td>
         </tr>`;
     }).join('');
 }
@@ -939,23 +1066,26 @@ function renderSection4() {
         data: {
             labels: sorted.map((s, i) => `${medalFor(i + 1).replace(/<[^>]*>/g, '')}${s.name}`),
             datasets: [
-                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(46,125,50,0.7)', borderColor: '#2e7d32', borderWidth: 1 },
-                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(63,81,181,0.7)', borderColor: '#3f51b5', borderWidth: 1 }
+                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
+                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { position: 'top' } },
-            scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+            scales: {
+                x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks },
+                y: { stacked: true, ...darkScaleOptions }
+            }
         }
     });
 
     document.getElementById('tbodyRanking').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;">${s.name}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
         <td class="money">${formatMoney(s.mrr)}</td>
         <td class="money">${formatMoney(s.setup)}</td>
-        <td class="money" style="font-weight:700;color:#6c3fb5;">${formatMoney(s.total)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td>
         <td style="text-align:center;">${s.count}</td>
     </tr>`).join('');
 }
@@ -987,19 +1117,22 @@ function renderSection5() {
         type: 'bar',
         data: {
             labels: sorted.map(s => s.name),
-            datasets: [{ label: 'Propostas', data: sorted.map(s => s.count), backgroundColor: 'rgba(108,63,181,0.7)', borderColor: '#6c3fb5', borderWidth: 1 }]
+            datasets: [{ label: 'Propostas', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
         }
     });
 
     document.getElementById('tbodyProposals').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;">${s.name}</td>
-        <td style="text-align:center;font-weight:700;">${s.count}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td>
     </tr>`).join('');
 }
 
@@ -1022,19 +1155,22 @@ function renderSection6() {
         type: 'bar',
         data: {
             labels: sorted.map(s => s.name),
-            datasets: [{ label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(198,40,40,0.7)', borderColor: '#c62828', borderWidth: 1 }]
+            datasets: [{ label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(248, 113, 113, 0.7)', borderColor: '#f87171', borderWidth: 1 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
         }
     });
 
     document.getElementById('tbodyLostSeller').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;">${s.name}</td>
-        <td style="text-align:center;font-weight:700;">${s.count}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#f87171;">${s.count}</td>
     </tr>`).join('');
 }
 
@@ -1057,19 +1193,22 @@ function renderSection7() {
         type: 'bar',
         data: {
             labels: sorted.map(s => s.name),
-            datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(108,63,181,0.7)', borderColor: '#6c3fb5', borderWidth: 1 }]
+            datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
         }
     });
 
     document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;">${s.name}</td>
-        <td style="text-align:center;font-weight:700;">${s.count}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td>
     </tr>`).join('');
 }
 
@@ -1095,10 +1234,10 @@ function renderSection8() {
     const segments = [...allSegments].sort();
 
     const segColors = [
-        'rgba(108,63,181,0.7)', 'rgba(46,125,50,0.7)', 'rgba(230,81,0,0.7)',
-        'rgba(63,81,181,0.7)', 'rgba(198,40,40,0.7)', 'rgba(0,137,123,0.7)',
-        'rgba(255,143,0,0.7)', 'rgba(121,85,72,0.7)', 'rgba(33,150,243,0.7)',
-        'rgba(156,39,176,0.7)'
+        'rgba(139, 92, 246, 0.7)', 'rgba(74, 222, 128, 0.7)', 'rgba(251, 146, 60, 0.7)',
+        'rgba(99, 102, 241, 0.7)', 'rgba(248, 113, 113, 0.7)', 'rgba(45, 212, 191, 0.7)',
+        'rgba(251, 191, 36, 0.7)', 'rgba(168, 162, 158, 0.7)', 'rgba(56, 189, 248, 0.7)',
+        'rgba(192, 132, 252, 0.7)'
     ];
 
     const datasets = segments.map((seg, i) => ({
@@ -1114,7 +1253,10 @@ function renderSection8() {
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
             plugins: { legend: { position: 'top' } },
-            scales: { x: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }, y: { stacked: true } }
+            scales: {
+                x: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { stacked: true, ...darkScaleOptions }
+            }
         }
     });
 
@@ -1127,9 +1269,9 @@ function renderSection8() {
         });
     });
     document.getElementById('tbodyOrigin').innerHTML = rows.map(r => `<tr>
-        <td style="font-weight:500;">${r.sdr}</td>
+        <td style="font-weight:500;color:#e0e0e0;">${r.sdr}</td>
         <td>${r.seg}</td>
-        <td style="text-align:center;font-weight:700;">${r.count}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${r.count}</td>
     </tr>`).join('');
 }
 
@@ -1219,7 +1361,7 @@ function renderSection9() {
     });
 
     const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
-    const purpleShades = ['#6c3fb5','#7e52c4','#9068d0','#a27edc','#b494e8','#c6aaf0','#d8c0f8','#ead6ff'];
+    const purpleShades = ['#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#6366f1','#818cf8','#a78bfa'];
 
     document.getElementById('funnelContainer').innerHTML = funnelFinal.map((stage, i) => {
         const pct = maxCount > 0 ? (stage.count / maxCount * 100) : 0;
@@ -1241,9 +1383,9 @@ function renderSection9() {
             ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%'
             : '-';
         return `<tr>
-            <td style="font-weight:500;">${stage.name}</td>
-            <td style="text-align:center;font-weight:700;">${stage.count}</td>
-            <td style="text-align:center;">${convPct}</td>
+            <td style="font-weight:500;color:#e0e0e0;">${stage.name}</td>
+            <td style="text-align:center;font-weight:700;color:#b794f4;">${stage.count}</td>
+            <td style="text-align:center;color:#8888a0;">${convPct}</td>
         </tr>`;
     }).join('');
 }
@@ -1304,7 +1446,7 @@ async function loadData() {
 
     } catch (err) {
         console.error(err);
-        loadingMsg.innerHTML = `<span style="color:#c62828;">Erro ao carregar dados: ${err.message}</span>`;
+        loadingMsg.innerHTML = `<span style="color:#f87171;">Erro ao carregar dados: ${err.message}</span>`;
     }
 }
 
