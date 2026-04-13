@@ -3,58 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal de Oportunidades - Adriely</title>
+    <title>Lincros - Portal Comercial</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            display: flex;
+            min-height: 100vh;
+        }
 
-        .header {
-            background: linear-gradient(135deg, #6c3fb5, #4a1a8a);
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f0f1a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6c3fb5; }
+
+        /* ==================== SIDEBAR ==================== */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 240px;
+            background: #0d1b2a;
+            border-right: 1px solid rgba(30, 144, 255, 0.15);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            overflow: hidden;
+        }
+        .sidebar.collapsed { width: 60px; }
+
+        .sidebar-brand {
+            padding: 18px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(30, 144, 255, 0.12);
+            min-height: 60px;
+            cursor: pointer;
+        }
+        .sidebar-brand .brand-icon {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, #1565c0, #1e90ff);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px; color: #fff;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.4);
+        }
+        .sidebar-brand .brand-text {
+            font-size: 16px; font-weight: 700; color: #fff;
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .sidebar.collapsed .brand-text { opacity: 0; pointer-events: none; }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            color: #7a7a9a;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+        .nav-item:hover {
+            color: #4da6ff;
+            background: rgba(30, 144, 255, 0.06);
+        }
+        .nav-item.active {
+            color: #8ecaff;
+            background: rgba(30, 144, 255, 0.1);
+            border-left-color: #1e90ff;
+        }
+        .nav-item .nav-icon {
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .nav-item .nav-label {
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .sidebar.collapsed .nav-label { opacity: 0; pointer-events: none; }
+
+        .nav-section-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4a4a6a;
+            padding: 14px 16px 4px;
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .sidebar.collapsed .nav-section-title { opacity: 0; }
+
+        .nav-sub-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 16px 7px 44px;
+            cursor: pointer;
+            color: #5a5a7a;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .nav-sub-item:hover { color: #4da6ff; background: rgba(30, 144, 255, 0.04); }
+        .nav-sub-item .sub-num {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: rgba(30, 144, 255, 0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 600; color: #1e90ff;
+            flex-shrink: 0;
+        }
+        .nav-sub-item .sub-label {
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+        .sidebar.collapsed .nav-sub-item { padding-left: 16px; }
+        .sidebar.collapsed .sub-label { opacity: 0; pointer-events: none; }
+
+        .sidebar-toggle {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(30, 144, 255, 0.12);
+            cursor: pointer;
+            color: #5a5a7a;
+            font-size: 18px;
+            text-align: center;
+            transition: color 0.2s;
+        }
+        .sidebar-toggle:hover { color: #4da6ff; }
+
+        /* Mobile hamburger */
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 12px; left: 12px;
+            z-index: 300;
+            width: 40px; height: 40px;
+            background: rgba(30, 144, 255, 0.9);
+            border: none; border-radius: 8px;
+            cursor: pointer;
+            color: #fff; font-size: 22px;
+            align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.4);
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 199;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(-100%); width: 240px !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar-overlay.active { display: block; }
+            .hamburger { display: flex; }
+            .main-content { margin-left: 0 !important; }
+        }
+
+        /* ==================== MAIN CONTENT ==================== */
+        .main-content {
+            margin-left: 240px;
+            flex: 1;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+
+        /* ==================== OPORTUNIDADES VIEW ==================== */
+        #view-oportunidades .op-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.3);
             color: white;
             padding: 20px 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 30px rgba(108, 63, 181, 0.15);
         }
-        .header h1 { font-size: 22px; font-weight: 600; }
-        .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 2px; }
-        .header .stats {
-            display: flex;
-            gap: 25px;
-        }
-        .stat-box {
-            text-align: center;
-        }
-        .stat-box .number { font-size: 24px; font-weight: 700; }
-        .stat-box .label { font-size: 11px; opacity: 0.8; text-transform: uppercase; }
+        #view-oportunidades .op-header h1 { font-size: 22px; font-weight: 700; text-shadow: 0 0 20px rgba(108, 63, 181, 0.4); }
+        #view-oportunidades .op-header .subtitle { font-size: 13px; opacity: 0.6; margin-top: 2px; color: #b0b0c0; }
+        .op-stats { display: flex; gap: 25px; align-items: center; }
+        .stat-box { text-align: center; }
+        .stat-box .number { font-size: 24px; font-weight: 700; color: #b794f4; text-shadow: 0 0 20px rgba(108, 63, 181, 0.3); }
+        .stat-box .label { font-size: 11px; color: #8888a0; text-transform: uppercase; }
 
-        .controls {
+        .op-controls {
             padding: 15px 30px;
-            background: white;
-            border-bottom: 1px solid #e0e0e0;
+            background: rgba(20, 20, 38, 0.85);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
             display: flex;
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
         }
-        .controls input, .controls select {
+        .op-controls input, .op-controls select {
             padding: 8px 12px;
-            border: 1px solid #d0d0d0;
+            border: 1px solid rgba(108, 63, 181, 0.2);
             border-radius: 6px;
             font-size: 13px;
             outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+            transition: all 0.3s ease;
         }
-        .controls input:focus, .controls select:focus {
+        .op-controls input:focus, .op-controls select:focus {
             border-color: #6c3fb5;
-            box-shadow: 0 0 0 2px rgba(108,63,181,0.15);
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.25);
         }
-        .controls input[type="text"] { width: 250px; }
-        .controls label { font-size: 12px; color: #666; font-weight: 500; }
+        .op-controls input[type="text"] { width: 250px; }
+        .op-controls select option { background: #1a1a2e; color: #e0e0e0; }
+        .op-controls label { font-size: 12px; color: #8888a0; font-weight: 500; }
         .filter-group { display: flex; flex-direction: column; gap: 3px; }
 
         .btn-refresh {
-            background: #6c3fb5;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
             color: white;
             border: none;
             padding: 8px 18px;
@@ -62,104 +249,74 @@
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.3);
         }
-        .btn-refresh:hover { background: #5a2fa0; }
+        .btn-refresh:hover { box-shadow: 0 0 25px rgba(108, 63, 181, 0.5); }
         .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .btn-dashboard {
-            background: white;
-            color: #6c3fb5;
-            border: 2px solid white;
-            padding: 8px 18px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-        .btn-dashboard:hover { background: rgba(255,255,255,0.9); }
-
-        .loading {
+        .op-loading {
             text-align: center;
-            padding: 60px;
-            color: #888;
+            padding: 80px;
+            color: #6868a0;
             font-size: 16px;
         }
-        .loading .spinner {
+        .op-loading .spinner, .dash-loading .spinner {
             display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid #e0e0e0;
-            border-top: 3px solid #6c3fb5;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(108, 63, 181, 0.15);
+            border-top: 4px solid #6c3fb5;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .table-container {
+        .op-table-container {
             padding: 20px 30px;
             overflow-x: auto;
         }
-        table {
+        #view-oportunidades table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             font-size: 13px;
         }
-        thead th {
-            background: #f8f8fa;
+        #view-oportunidades thead th {
+            background: rgba(108, 63, 181, 0.08);
             padding: 12px 14px;
             text-align: left;
             font-weight: 600;
-            color: #555;
-            border-bottom: 2px solid #e8e8e8;
+            color: #8888a0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
             white-space: nowrap;
             cursor: pointer;
             user-select: none;
         }
-        thead th:hover { background: #f0f0f4; }
-        thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
-        thead th.sorted .sort-icon { opacity: 1; color: #6c3fb5; }
+        #view-oportunidades thead th:hover { background: rgba(108, 63, 181, 0.12); }
+        #view-oportunidades thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+        #view-oportunidades thead th.sorted .sort-icon { opacity: 1; color: #b794f4; }
 
-        tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
-        tbody tr:hover { background: #f8f6fc; }
-        tbody td { padding: 10px 14px; vertical-align: middle; }
+        #view-oportunidades tbody tr { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: all 0.2s ease; }
+        #view-oportunidades tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.01); }
+        #view-oportunidades tbody tr:hover { background: rgba(108, 63, 181, 0.08); }
+        #view-oportunidades tbody td { padding: 10px 14px; vertical-align: middle; color: #c0c0d0; }
 
-        .deal-title {
-            font-weight: 500;
-            color: #333;
-            max-width: 280px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
         .deal-link {
-            color: #6c3fb5;
+            color: #b794f4;
             text-decoration: none;
             font-weight: 500;
         }
-        .deal-link:hover { text-decoration: underline; }
+        .deal-link:hover { text-decoration: underline; color: #d4bfff; }
 
-        .contact-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .contact-name { font-weight: 500; }
-        .contact-email { font-size: 11px; color: #888; }
+        .contact-info { display: flex; flex-direction: column; gap: 2px; }
+        .contact-name { font-weight: 500; color: #e0e0e0; }
+        .contact-email { font-size: 11px; color: #6868a0; }
 
-        .phone-link {
-            color: #2e7d32;
-            text-decoration: none;
-            font-weight: 500;
-            white-space: nowrap;
-        }
+        .phone-link { color: #4ade80; text-decoration: none; font-weight: 500; white-space: nowrap; }
         .phone-link:hover { text-decoration: underline; }
-        .no-phone { color: #ccc; font-style: italic; }
+        .no-phone { color: #4a4a6a; font-style: italic; }
 
         .badge {
             display: inline-block;
@@ -169,11 +326,11 @@
             font-weight: 500;
             white-space: nowrap;
         }
-        .badge-pipeline-vendas { background: #e8eaf6; color: #3f51b5; }
-        .badge-pipeline-sankhya { background: #fff3e0; color: #e65100; }
-        .badge-pipeline-farmer { background: #e8f5e9; color: #2e7d32; }
-        .badge-pipeline-cs { background: #fce4ec; color: #c62828; }
-        .badge-pipeline-default { background: #f5f5f5; color: #666; }
+        .badge-pipeline-vendas { background: rgba(63, 81, 181, 0.2); color: #7986cb; border: 1px solid rgba(63, 81, 181, 0.3); }
+        .badge-pipeline-sankhya { background: rgba(230, 81, 0, 0.15); color: #ff9800; border: 1px solid rgba(230, 81, 0, 0.3); }
+        .badge-pipeline-farmer { background: rgba(46, 125, 50, 0.15); color: #66bb6a; border: 1px solid rgba(46, 125, 50, 0.3); }
+        .badge-pipeline-cs { background: rgba(198, 40, 40, 0.15); color: #ef5350; border: 1px solid rgba(198, 40, 40, 0.3); }
+        .badge-pipeline-default { background: rgba(255, 255, 255, 0.05); color: #8888a0; border: 1px solid rgba(255, 255, 255, 0.1); }
 
         .stage-badge {
             display: inline-block;
@@ -183,11 +340,11 @@
             font-weight: 500;
             white-space: nowrap;
         }
-        .stage-reconhecimento { background: #e3f2fd; color: #1565c0; }
-        .stage-consideracao { background: #f1f8e9; color: #558b2f; }
-        .stage-aprovado { background: #fff8e1; color: #f9a825; }
-        .stage-formalizacao { background: #e8f5e9; color: #2e7d32; }
-        .stage-default { background: #f5f5f5; color: #666; }
+        .stage-reconhecimento { background: rgba(21, 101, 192, 0.2); color: #42a5f5; border: 1px solid rgba(21, 101, 192, 0.3); }
+        .stage-consideracao { background: rgba(85, 139, 47, 0.2); color: #9ccc65; border: 1px solid rgba(85, 139, 47, 0.3); }
+        .stage-aprovado { background: rgba(249, 168, 37, 0.2); color: #ffca28; border: 1px solid rgba(249, 168, 37, 0.3); }
+        .stage-formalizacao { background: rgba(46, 125, 50, 0.2); color: #66bb6a; border: 1px solid rgba(46, 125, 50, 0.3); }
+        .stage-default { background: rgba(255, 255, 255, 0.05); color: #8888a0; border: 1px solid rgba(255, 255, 255, 0.1); }
 
         .state-badge {
             display: inline-block;
@@ -195,172 +352,772 @@
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
-            background: #e0e0e0;
-            color: #555;
         }
-        .state-sp { background: #c8e6c9; color: #1b5e20; }
-        .state-other { background: #ffe0b2; color: #e65100; }
-        .state-unknown { background: #f5f5f5; color: #bbb; font-weight: 400; font-style: italic; }
+        .state-sp { background: rgba(46, 125, 50, 0.2); color: #4ade80; border: 1px solid rgba(46, 125, 50, 0.3); }
+        .state-other { background: rgba(230, 81, 0, 0.15); color: #ff9800; border: 1px solid rgba(230, 81, 0, 0.3); }
+        .state-unknown { background: rgba(255, 255, 255, 0.03); color: #4a4a6a; font-weight: 400; font-style: italic; }
 
         .money { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .money-positive { color: #2e7d32; font-weight: 500; }
+        .money-positive { color: #4ade80; font-weight: 500; }
         .days { text-align: center; }
-        .days-high { color: #c62828; font-weight: 600; }
-        .days-medium { color: #e65100; }
-        .days-low { color: #2e7d32; }
+        .days-high { color: #f87171; font-weight: 600; }
+        .days-medium { color: #ff9800; }
+        .days-low { color: #4ade80; }
 
-        /* Contact modal */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6868a0;
+        }
+        .empty-state h3 { color: #8888a0; margin-bottom: 8px; }
+
+        .last-update { font-size: 11px; color: #4a4a6a; padding: 10px 30px; text-align: right; }
+
+        /* ==================== CONTACT MODAL ==================== */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(4px);
         }
         .modal-overlay.active { display: flex; }
         .modal {
-            background: white;
-            border-radius: 12px;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 16px;
             padding: 30px;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(108, 63, 181, 0.1);
+            backdrop-filter: blur(20px);
         }
-        .modal h2 { margin-bottom: 20px; color: #333; font-size: 18px; }
+        .modal h2 { margin-bottom: 20px; color: #fff; font-size: 18px; }
         .modal .field { margin-bottom: 14px; }
-        .modal .field-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
-        .modal .field-value { font-size: 15px; color: #333; }
-        .modal .field-value a { color: #6c3fb5; text-decoration: none; }
+        .modal .field-label { font-size: 11px; color: #6868a0; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
+        .modal .field-value { font-size: 15px; color: #e0e0e0; }
+        .modal .field-value a { color: #b794f4; text-decoration: none; }
         .modal .field-value a:hover { text-decoration: underline; }
         .modal .close-btn {
             margin-top: 20px;
-            background: #6c3fb5;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
             color: white;
             border: none;
             padding: 10px 24px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            font-family: inherit;
         }
-        .modal .close-btn:hover { background: #5a2fa0; }
+        .modal .close-btn:hover { box-shadow: 0 0 20px rgba(108, 63, 181, 0.4); }
         .call-btn {
             display: inline-block;
-            background: #2e7d32;
-            color: white;
+            background: rgba(46, 125, 50, 0.3);
+            border: 1px solid rgba(46, 125, 50, 0.5);
+            color: #4ade80;
             padding: 8px 16px;
             border-radius: 6px;
             text-decoration: none;
             font-size: 14px;
             margin-top: 5px;
+            transition: all 0.3s ease;
         }
-        .call-btn:hover { background: #1b5e20; }
+        .call-btn:hover { background: rgba(46, 125, 50, 0.5); box-shadow: 0 0 15px rgba(46, 125, 50, 0.3); }
 
-        .empty-state {
+        /* ==================== DASHBOARD VIEW ==================== */
+        .dash-loading {
             text-align: center;
-            padding: 60px 20px;
-            color: #999;
+            padding: 80px;
+            color: #6868a0;
+            font-size: 16px;
         }
-        .empty-state h3 { color: #666; margin-bottom: 8px; }
 
-        .last-update { font-size: 11px; color: #999; padding: 10px 30px; text-align: right; }
+        /* Nav bar inside dashboard */
+        .dash-nav-bar {
+            background: rgba(20, 20, 38, 0.85);
+            backdrop-filter: blur(20px);
+            padding: 10px 30px;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .dash-nav-link {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-decoration: none;
+            color: #8888a0;
+            background: rgba(255, 255, 255, 0.04);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        .dash-nav-link:hover {
+            background: rgba(108, 63, 181, 0.15);
+            color: #b794f4;
+            border-color: rgba(108, 63, 181, 0.3);
+        }
+
+        /* Period Filter */
+        .period-bar {
+            padding: 15px 30px;
+            background: rgba(20, 20, 38, 0.6);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .period-bar label { font-size: 13px; font-weight: 600; color: #8888a0; margin-right: 5px; }
+        .period-btn {
+            padding: 6px 14px;
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #8888a0;
+            font-family: inherit;
+        }
+        .period-btn:hover {
+            border-color: rgba(108, 63, 181, 0.5);
+            color: #b794f4;
+        }
+        .period-btn.active {
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white;
+            border-color: #6c3fb5;
+            box-shadow: 0 0 20px rgba(108, 63, 181, 0.4);
+        }
+        .date-input {
+            padding: 6px 10px;
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .date-input:focus { border-color: #6c3fb5; box-shadow: 0 0 15px rgba(108, 63, 181, 0.25); }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            padding: 20px 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; padding: 15px; }
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(108, 63, 181, 0.1);
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .section-card:hover {
+            border-color: rgba(108, 63, 181, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 50px rgba(108, 63, 181, 0.07);
+        }
+        .section-card.full-width { grid-column: 1 / -1; }
+        .section-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px; height: 26px;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 0 12px rgba(108, 63, 181, 0.3);
+        }
+        .section-body { padding: 20px; }
+        .chart-container { position: relative; width: 100%; min-height: 280px; }
+
+        /* KPI Cards */
+        .kpi-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .kpi-card {
+            flex: 1; min-width: 120px;
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.1), rgba(108, 63, 181, 0.05));
+            border: 1px solid rgba(108, 63, 181, 0.15);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        .kpi-card:hover { border-color: rgba(108, 63, 181, 0.3); box-shadow: 0 0 20px rgba(108, 63, 181, 0.1); }
+        .kpi-value { font-size: 22px; font-weight: 700; color: #b794f4; text-shadow: 0 0 20px rgba(108, 63, 181, 0.3); }
+        .kpi-label { font-size: 11px; color: #6868a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+
+        /* Sub-filter */
+        .sub-filter { display: flex; gap: 8px; align-items: center; }
+        .sub-filter select {
+            padding: 5px 10px;
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+        }
+        .sub-filter select:focus { border-color: #6c3fb5; }
+        .sub-filter select option { background: #1a1a2e; color: #e0e0e0; }
+
+        /* Section Period Select */
+        .section-period-select {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 6px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: #b0b0c0;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .section-period-select:focus {
+            border-color: #1e90ff;
+            box-shadow: 0 0 10px rgba(30, 144, 255, 0.2);
+        }
+        .section-period-select option { background: #1a1a2e; color: #e0e0e0; }
+
+        /* Collapsible table */
+        .table-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(108, 63, 181, 0.15);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #8888a0;
+            margin-top: 12px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .table-toggle:hover { background: rgba(108, 63, 181, 0.1); color: #b794f4; }
+        .collapsible-table { display: none; margin-top: 12px; overflow-x: auto; }
+        .collapsible-table.open { display: block; }
+
+        /* Dashboard tables */
+        #view-dashboard table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        #view-dashboard thead th {
+            background: rgba(108, 63, 181, 0.08);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #8888a0;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.15);
+            white-space: nowrap;
+        }
+        #view-dashboard tbody tr { border-bottom: 1px solid rgba(255, 255, 255, 0.03); transition: all 0.2s ease; }
+        #view-dashboard tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.01); }
+        #view-dashboard tbody tr:hover { background: rgba(108, 63, 181, 0.08); }
+        #view-dashboard tbody td { padding: 8px 12px; vertical-align: middle; color: #c0c0d0; }
+
+        /* Ranking medals */
+        .rank-medal { font-size: 18px; }
+        .rank-num { font-weight: 700; color: #6868a0; font-size: 14px; text-align: center; width: 40px; }
+        .rank-highlight-1 { background: rgba(255, 215, 0, 0.06) !important; }
+        .rank-highlight-2 { background: rgba(192, 192, 192, 0.04) !important; }
+        .rank-highlight-3 { background: rgba(205, 127, 50, 0.05) !important; }
+
+        /* Funnel */
+        .funnel-container { padding: 10px 0; }
+        .funnel-stage { display: flex; align-items: center; margin-bottom: 6px; gap: 10px; }
+        .funnel-label { flex: 0 0 180px; font-size: 13px; font-weight: 500; text-align: right; color: #8888a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .funnel-bar-wrap { flex: 1; position: relative; height: 32px; }
+        .funnel-bar {
+            height: 100%; border-radius: 4px;
+            display: flex; align-items: center; padding: 0 10px;
+            font-size: 12px; font-weight: 600; color: white; min-width: 40px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.2);
+        }
+        .funnel-pct { flex: 0 0 70px; font-size: 12px; color: #6868a0; text-align: left; }
+
+        /* Pipeline selector */
+        .pipeline-selector { display: flex; gap: 6px; }
+        .pipeline-tab {
+            padding: 5px 12px;
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.03);
+            color: #8888a0;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .pipeline-tab:hover { border-color: rgba(108, 63, 181, 0.5); color: #b794f4; }
+        .pipeline-tab.active {
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white; border-color: #6c3fb5;
+            box-shadow: 0 0 15px rgba(108, 63, 181, 0.3);
+        }
+
+        /* Scroll margin for nav anchors */
+        .section-card[id] { scroll-margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div>
-            <h1>Portal de Oportunidades</h1>
-            <div class="subtitle">Leads Adriely - Dados em tempo real do Ploomes</div>
+
+    <!-- Hamburger button for mobile -->
+    <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileSidebar()">&#9776;</button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand" onclick="toggleSidebar()">
+            <div class="brand-icon">L</div>
+            <span class="brand-text">Lincros</span>
         </div>
-        <div class="stats">
-            <div class="stat-box">
-                <div class="number" id="totalDeals">-</div>
-                <div class="label">Oportunidades</div>
+        <div class="sidebar-nav">
+            <div class="nav-item active" data-view="oportunidades" onclick="showView('oportunidades')">
+                <span class="nav-icon">&#128203;</span>
+                <span class="nav-label">Oportunidades</span>
             </div>
-            <div class="stat-box">
-                <div class="number" id="totalMRR">-</div>
-                <div class="label">MRR Total</div>
+
+            <div class="nav-section-title">Dashboard</div>
+            <div class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
+                <span class="nav-icon">&#128202;</span>
+                <span class="nav-label">Dashboard</span>
             </div>
-            <div class="stat-box">
-                <div class="number" id="totalSetup">-</div>
-                <div class="label">Setup Total</div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec1');">
+                <span class="sub-num">1</span><span class="sub-label">Ganhas</span>
             </div>
-            <a href="dashboard.html" class="btn-dashboard">Dashboard</a>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2');">
+                <span class="sub-num">2</span><span class="sub-label">Perdidas</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
+                <span class="sub-num">3</span><span class="sub-label">Produtos</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
+                <span class="sub-num">4</span><span class="sub-label">Ranking Vendedores</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
+                <span class="sub-num">5</span><span class="sub-label">Propostas</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
+                <span class="sub-num">6</span><span class="sub-label">Perdidos/Vendedor</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
+                <span class="sub-num">7</span><span class="sub-label">Reunioes SDR</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
+                <span class="sub-num">8</span><span class="sub-label">Origem Reunioes</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
+                <span class="sub-num">9</span><span class="sub-label">Conversao</span>
+            </div>
         </div>
-    </div>
+        <div class="sidebar-toggle" onclick="toggleSidebar()">&#171;</div>
+    </nav>
 
-    <div class="controls">
-        <div class="filter-group">
-            <label>Buscar</label>
-            <input type="text" id="searchInput" placeholder="Buscar por titulo, contato, responsavel...">
-        </div>
-        <div class="filter-group">
-            <label>Funil</label>
-            <select id="filterPipeline">
-                <option value="">Todos</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Estagio</label>
-            <select id="filterStage">
-                <option value="">Todos</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Responsavel</label>
-            <select id="filterOwner">
-                <option value="">Todos</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Estado</label>
-            <select id="filterState">
-                <option value="">Todos</option>
-                <option value="SP">SP</option>
-                <option value="OTHER">Demais regioes</option>
-                <option value="UNKNOWN">Sem estado</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>&nbsp;</label>
-            <button class="btn-refresh" id="btnRefresh" onclick="loadDeals()">Atualizar</button>
-        </div>
-    </div>
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
 
-    <div id="loadingArea" class="loading">
-        <div class="spinner"></div>
-        <div>Carregando oportunidades do Ploomes...</div>
-    </div>
+        <!-- ==================== VIEW: OPORTUNIDADES ==================== -->
+        <div id="view-oportunidades" style="display:block;">
+            <div class="op-header">
+                <div>
+                    <h1>Portal de Oportunidades</h1>
+                    <div class="subtitle">Leads Adriely - Dados em tempo real do Ploomes</div>
+                </div>
+                <div class="op-stats">
+                    <div class="stat-box">
+                        <div class="number" id="totalDeals">-</div>
+                        <div class="label">Oportunidades</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="totalMRR">-</div>
+                        <div class="label">MRR Total</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="totalSetup">-</div>
+                        <div class="label">Setup Total</div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="table-container" id="tableArea" style="display:none;">
-        <table>
-            <thead>
-                <tr>
-                    <th data-sort="title">Titulo <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="owner">Responsavel <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="contact">Contato <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="phone">Telefone</th>
-                    <th data-sort="state">Estado <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="mrr" class="money">MRR <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="setup" class="money">Setup <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="pipeline">Funil <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="stage">Estagio <span class="sort-icon">&#8597;</span></th>
-                    <th data-sort="days" class="days">Dias <span class="sort-icon">&#8597;</span></th>
-                </tr>
-            </thead>
-            <tbody id="dealsBody"></tbody>
-        </table>
-    </div>
+            <div class="op-controls">
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <input type="text" id="searchInput" placeholder="Buscar por titulo, contato, responsavel...">
+                </div>
+                <div class="filter-group">
+                    <label>Funil</label>
+                    <select id="filterPipeline"><option value="">Todos</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Estagio</label>
+                    <select id="filterStage"><option value="">Todos</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Responsavel</label>
+                    <select id="filterOwner"><option value="">Todos</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Estado</label>
+                    <select id="filterState">
+                        <option value="">Todos</option>
+                        <option value="SP">SP</option>
+                        <option value="OTHER">Demais regioes</option>
+                        <option value="UNKNOWN">Sem estado</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button class="btn-refresh" id="btnRefresh" onclick="loadDeals()">Atualizar</button>
+                </div>
+            </div>
 
-    <div id="emptyState" class="empty-state" style="display:none;">
-        <h3>Nenhuma oportunidade encontrada</h3>
-        <p>Tente ajustar os filtros</p>
-    </div>
+            <div id="opLoadingArea" class="op-loading">
+                <div class="spinner"></div>
+                <div>Carregando oportunidades do Ploomes...</div>
+            </div>
 
-    <div class="last-update" id="lastUpdate"></div>
+            <div class="op-table-container" id="opTableArea" style="display:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-sort="title">Titulo <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="owner">Responsavel <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="contact">Contato <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="phone">Telefone</th>
+                            <th data-sort="state">Estado <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="mrr" class="money">MRR <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="setup" class="money">Setup <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="pipeline">Funil <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="stage">Estagio <span class="sort-icon">&#8597;</span></th>
+                            <th data-sort="days" class="days">Dias <span class="sort-icon">&#8597;</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="dealsBody"></tbody>
+                </table>
+            </div>
 
-    <!-- Contact Modal -->
+            <div id="opEmptyState" class="empty-state" style="display:none;">
+                <h3>Nenhuma oportunidade encontrada</h3>
+                <p>Tente ajustar os filtros</p>
+            </div>
+
+            <div class="last-update" id="opLastUpdate"></div>
+        </div>
+
+        <!-- ==================== VIEW: DASHBOARD ==================== -->
+        <div id="view-dashboard" style="display:none;">
+
+            <div class="period-bar">
+                <label>Periodo:</label>
+                <button class="period-btn active" onclick="setPeriod('thisMonth', this)">Este mes</button>
+                <button class="period-btn" onclick="setPeriod('lastMonth', this)">Mes passado</button>
+                <button class="period-btn" onclick="setPeriod('thisQuarter', this)">Este trimestre</button>
+                <button class="period-btn" onclick="setPeriod('lastQuarter', this)">Trimestre anterior</button>
+                <button class="period-btn" onclick="setPeriod('last6', this)">Ultimo 6 meses</button>
+                <button class="period-btn" onclick="setPeriod('thisYear', this)">Este ano</button>
+                <button class="period-btn" onclick="setPeriod('custom', this)">Personalizado</button>
+                <input type="date" class="date-input" id="dateStart" style="display:none;" onchange="applyCustomPeriod()">
+                <input type="date" class="date-input" id="dateEnd" style="display:none;" onchange="applyCustomPeriod()">
+            </div>
+
+            <div id="dashLoadingArea" class="dash-loading">
+                <div class="spinner"></div>
+                <div id="dashLoadingMsg">Carregando dados do Ploomes...</div>
+            </div>
+
+            <div class="dashboard-grid" id="dashboardArea" style="display:none;">
+
+                <!-- Section 1: Oportunidades Ganhas -->
+                <div class="section-card full-width" id="sec1">
+                    <div class="section-header">
+                        <h2><span class="section-num">1</span> Oportunidades Ganhas</h2>
+                        <div class="sub-filter">
+                            <select id="wonPipelineFilter" onchange="renderSection1()">
+                                <option value="">Todos os funis</option>
+                                <option value="Funil de Vendas">Funil de Vendas</option>
+                                <option value="Sankhya">Sankhya</option>
+                                <option value="Farmer">Farmer</option>
+                            </select>
+                            <select class="section-period-select" id="periodSec1" onchange="renderSection1()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="kpi-row" id="wonKpis"></div>
+                        <div class="chart-container"><canvas id="chartWon"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableWon')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableWon"><table><thead><tr>
+                            <th>Titulo</th><th>Responsavel</th><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th>Data Fechamento</th>
+                        </tr></thead><tbody id="tbodyWon"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Oportunidades Perdidas -->
+                <div class="section-card full-width" id="sec2">
+                    <div class="section-header">
+                        <h2><span class="section-num">2</span> Oportunidades Perdidas</h2>
+                        <div class="sub-filter">
+                            <select id="lostPipelineFilter" onchange="renderSection2()">
+                                <option value="">Todos os funis</option>
+                                <option value="Funil de Vendas">Funil de Vendas</option>
+                                <option value="Sankhya">Sankhya</option>
+                                <option value="Farmer">Farmer</option>
+                            </select>
+                            <select class="section-period-select" id="periodSec2" onchange="renderSection2()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="kpi-row" id="lostKpis"></div>
+                        <div class="chart-container"><canvas id="chartLost"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableLost')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableLost"><table><thead><tr>
+                            <th>Titulo</th><th>Responsavel</th><th>Funil</th><th>Motivo Perda</th><th>Data Fechamento</th>
+                        </tr></thead><tbody id="tbodyLost"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Produtos Vendidos -->
+                <div class="section-card full-width" id="sec3">
+                    <div class="section-header">
+                        <h2><span class="section-num">3</span> Produtos Vendidos (MRR vs Setup)</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="kpi-row" id="productKpis"></div>
+                        <div class="chart-container"><canvas id="chartProducts"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableProducts"><table><thead><tr>
+                            <th>Titulo</th><th>Responsavel</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                        </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Ranking de Vendedores -->
+                <div class="section-card full-width" id="sec4">
+                    <div class="section-header">
+                        <h2><span class="section-num">4</span> Ranking de Vendedores</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartRanking"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableRanking"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negocios</th>
+                        </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Propostas Enviadas -->
+                <div class="section-card" id="sec5">
+                    <div class="section-header">
+                        <h2><span class="section-num">5</span> Propostas Enviadas</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartProposals"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableProposals')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableProposals"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th>Propostas</th>
+                        </tr></thead><tbody id="tbodyProposals"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Perdidos por Vendedor -->
+                <div class="section-card" id="sec6">
+                    <div class="section-header">
+                        <h2><span class="section-num">6</span> Perdidos por Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartLostSeller"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableLostSeller')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th>
+                        </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Reunioes por Pre-Vendedor -->
+                <div class="section-card" id="sec7">
+                    <div class="section-header">
+                        <h2><span class="section-num">7</span> Reunioes por Pre-Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartMeetings"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Pre-Vendedor (SDR)</th><th>Reunioes</th>
+                        </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Reunioes por SDR e Segmento -->
+                <div class="section-card" id="sec8">
+                    <div class="section-header">
+                        <h2><span class="section-num">8</span> Reunioes por SDR e Segmento</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec8" onchange="renderSection8()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartOrigin"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableOrigin')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableOrigin"><table><thead><tr>
+                            <th>Pre-Vendedor</th><th>Segmento</th><th>Quantidade</th>
+                        </tr></thead><tbody id="tbodyOrigin"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 9: Conversao por Etapa -->
+                <div class="section-card full-width" id="sec9">
+                    <div class="section-header">
+                        <h2><span class="section-num">9</span> Conversao por Etapa</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec9" onchange="renderSection9()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth">Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                            <div class="pipeline-selector" id="funnelPipelineTabs"></div>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="funnel-container" id="funnelContainer"></div>
+                        <button class="table-toggle" onclick="toggleTable('tableFunnel')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableFunnel"><table><thead><tr>
+                            <th>Etapa</th><th>Negocios</th><th>Conversao</th>
+                        </tr></thead><tbody id="tbodyFunnel"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="last-update" id="dashLastUpdate"></div>
+        </div>
+
+    </div><!-- /main-content -->
+
+    <!-- Contact Modal (global) -->
     <div class="modal-overlay" id="contactModal">
         <div class="modal">
             <h2 id="modalTitle">Detalhes do Contato</h2>
@@ -369,436 +1126,1037 @@
         </div>
     </div>
 
-    <script>
-        // API calls go through local proxy to avoid CORS
-        const API_BASE = '/api';
+<script>
+// ==================== SHARED GLOBALS ====================
+const API_BASE = '/api';
 
-        // Field keys for custom properties
-        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
-        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
-        const FIELD_SDR = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2';
-        const CONTACT_STATE_FIELD = 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848';
+// Field keys (shared by both views)
+const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+const FIELD_SDR = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2';
+const FIELD_PROPOSAL_DATE = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E';
+const CONTACT_STATE_FIELD = 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848';
+const CONTACT_SEGMENT_FIELD = 'contact_BF700EBA-864D-423F-A890-33130BE5C038';
 
-        let allDeals = [];
-        let sortField = 'days';
-        let sortDir = -1;
+const SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer'];
+const PIPELINE_COLORS = {
+    'Funil de Vendas': { bg: 'rgba(99, 102, 241, 0.7)', border: '#818cf8' },
+    'Sankhya': { bg: 'rgba(251, 146, 60, 0.7)', border: '#fb923c' },
+    'Farmer': { bg: 'rgba(74, 222, 128, 0.7)', border: '#4ade80' }
+};
+const darkScaleOptions = {
+    grid: { color: 'rgba(108, 63, 181, 0.08)', drawBorder: false },
+    ticks: { color: '#6868a0' }
+};
 
-        // DDD to state mapping
-        const DDD_STATE = {
-            '11':'SP','12':'SP','13':'SP','14':'SP','15':'SP','16':'SP','17':'SP','18':'SP','19':'SP',
-            '21':'RJ','22':'RJ','24':'RJ',
-            '27':'ES','28':'ES',
-            '31':'MG','32':'MG','33':'MG','34':'MG','35':'MG','37':'MG','38':'MG',
-            '41':'PR','42':'PR','43':'PR','44':'PR','45':'PR','46':'PR',
-            '47':'SC','48':'SC','49':'SC',
-            '51':'RS','53':'RS','54':'RS','55':'RS',
-            '61':'DF','62':'GO','63':'TO','64':'GO','65':'MT','66':'MT','67':'MS','68':'AC','69':'RO',
-            '71':'BA','73':'BA','74':'BA','75':'BA','77':'BA',
-            '79':'SE','81':'PE','82':'AL','83':'PB','84':'RN','85':'CE','86':'PI','87':'PE','88':'CE','89':'PI',
-            '91':'PA','92':'AM','93':'PA','94':'PA','95':'RR','96':'AP','97':'AM','98':'MA','99':'MA'
-        };
+// Shared API helper
+async function apiGet(endpoint) {
+    const resp = await fetch(`${API_BASE}${endpoint}`);
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.json();
+}
 
-        // Title keywords to state mapping
-        const TITLE_STATE_HINTS = {
-            'Campinas': 'SP', 'Berrini': 'SP', 'Interior Paulista': 'SP', 'Sudeste Paulista': 'SP',
-            'ABC Paulista': 'SP', 'SP ': 'SP', 'Sao Paulo': 'SP', 'São Paulo': 'SP',
-            'Belo Horizonte': 'MG', 'BH': 'MG', 'Triangulo Mineiro': 'MG', 'Triângulo Mineiro': 'MG',
-            'Espírito Santo': 'ES', 'Espirito Santo': 'ES',
-            'Recife': 'PE', 'Goiânia': 'GO', 'Goiania': 'GO', 'Brasil Central': 'GO',
-            'Curitiba': 'PR', 'Florianópolis': 'SC', 'Porto Alegre': 'RS',
-            'Salvador': 'BA', 'Fortaleza': 'CE', 'Manaus': 'AM', 'Belém': 'PA',
-            'Brasília': 'DF', 'Brasilia': 'DF', 'Rio de Janeiro': 'RJ',
-        };
+async function fetchAllPages(baseUrl) {
+    const PAGE_SIZE = 200;
+    let all = [], skip = 0;
+    while (true) {
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        const url = `${baseUrl}${sep}$top=${PAGE_SIZE}&$skip=${skip}`;
+        const data = await apiGet(url);
+        const page = data.value || [];
+        all = all.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+    }
+    return all;
+}
 
-        function inferState(deal) {
-            // 1. From contact city/state (already set)
-            if (deal.state) return deal.state;
+// Shared helpers
+function formatMoney(value) {
+    if (!value && value !== 0) return '-';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
 
-            // 2. From phone DDD
-            if (deal.phone) {
-                const digits = deal.phone.replace(/\D/g, '');
-                let ddd = '';
-                if (digits.startsWith('55') && digits.length >= 4) ddd = digits.substring(2, 4);
-                else if (digits.length >= 2) ddd = digits.substring(0, 2);
-                if (DDD_STATE[ddd]) return DDD_STATE[ddd];
-            }
+function getPipelineClass(name) {
+    if (!name) return 'badge-pipeline-default';
+    const n = name.toLowerCase();
+    if (n.includes('vendas')) return 'badge-pipeline-vendas';
+    if (n.includes('sankhya')) return 'badge-pipeline-sankhya';
+    if (n.includes('farmer')) return 'badge-pipeline-farmer';
+    if (n.includes('cs')) return 'badge-pipeline-cs';
+    return 'badge-pipeline-default';
+}
 
-            // 3. From deal title keywords
-            for (const [keyword, state] of Object.entries(TITLE_STATE_HINTS)) {
-                if (deal.title.includes(keyword)) return state;
-            }
+function getStageClass(name) {
+    if (!name) return 'stage-default';
+    const n = name.toLowerCase();
+    if (n.includes('reconhecimento')) return 'stage-reconhecimento';
+    if (n.includes('considera')) return 'stage-consideracao';
+    if (n.includes('aprovado')) return 'stage-aprovado';
+    if (n.includes('formaliza')) return 'stage-formalizacao';
+    return 'stage-default';
+}
 
-            return null;
+function getDaysClass(days) {
+    if (days > 60) return 'days-high';
+    if (days > 30) return 'days-medium';
+    return 'days-low';
+}
+
+function toggleTable(id) {
+    document.getElementById(id).classList.toggle('open');
+}
+
+// ==================== VIEW NAVIGATION ====================
+let oportLoaded = false;
+let dashLoaded = false;
+let pendingScrollSection = null;
+
+function showView(viewName) {
+    document.getElementById('view-oportunidades').style.display = 'none';
+    document.getElementById('view-dashboard').style.display = 'none';
+    document.getElementById('view-' + viewName).style.display = 'block';
+
+    // Lazy load data
+    if (viewName === 'oportunidades' && !oportLoaded) { loadDeals(); oportLoaded = true; }
+    if (viewName === 'dashboard' && !dashLoaded) { loadDashboard(); dashLoaded = true; }
+
+    updateSidebarActive(viewName);
+
+    // Close mobile sidebar
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+function updateSidebarActive(viewName) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.view === viewName);
+    });
+}
+
+function scrollToDashSection(secId) {
+    if (document.getElementById('view-dashboard').style.display === 'none') {
+        pendingScrollSection = secId;
+        showView('dashboard');
+    } else {
+        const el = document.getElementById(secId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// Sidebar collapse
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    const toggle = sidebar.querySelector('.sidebar-toggle');
+    toggle.innerHTML = sidebar.classList.contains('collapsed') ? '&#187;' : '&#171;';
+    // Update main content margin via CSS (handled by .sidebar.collapsed ~ .main-content)
+    const main = document.getElementById('mainContent');
+    main.style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '240px';
+}
+
+function toggleMobileSidebar() {
+    document.getElementById('sidebar').classList.toggle('mobile-open');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+
+// ==================== OPORTUNIDADES VIEW ====================
+let allDeals_op = [];
+let sortField = 'days';
+let sortDir = -1;
+
+const DDD_STATE = {
+    '11':'SP','12':'SP','13':'SP','14':'SP','15':'SP','16':'SP','17':'SP','18':'SP','19':'SP',
+    '21':'RJ','22':'RJ','24':'RJ',
+    '27':'ES','28':'ES',
+    '31':'MG','32':'MG','33':'MG','34':'MG','35':'MG','37':'MG','38':'MG',
+    '41':'PR','42':'PR','43':'PR','44':'PR','45':'PR','46':'PR',
+    '47':'SC','48':'SC','49':'SC',
+    '51':'RS','53':'RS','54':'RS','55':'RS',
+    '61':'DF','62':'GO','63':'TO','64':'GO','65':'MT','66':'MT','67':'MS','68':'AC','69':'RO',
+    '71':'BA','73':'BA','74':'BA','75':'BA','77':'BA',
+    '79':'SE','81':'PE','82':'AL','83':'PB','84':'RN','85':'CE','86':'PI','87':'PE','88':'CE','89':'PI',
+    '91':'PA','92':'AM','93':'PA','94':'PA','95':'RR','96':'AP','97':'AM','98':'MA','99':'MA'
+};
+
+const TITLE_STATE_HINTS = {
+    'Campinas': 'SP', 'Berrini': 'SP', 'Interior Paulista': 'SP', 'Sudeste Paulista': 'SP',
+    'ABC Paulista': 'SP', 'SP ': 'SP', 'Sao Paulo': 'SP', 'S\u00e3o Paulo': 'SP',
+    'Belo Horizonte': 'MG', 'BH': 'MG', 'Triangulo Mineiro': 'MG', 'Tri\u00e2ngulo Mineiro': 'MG',
+    'Esp\u00edrito Santo': 'ES', 'Espirito Santo': 'ES',
+    'Recife': 'PE', 'Goi\u00e2nia': 'GO', 'Goiania': 'GO', 'Brasil Central': 'GO',
+    'Curitiba': 'PR', 'Florian\u00f3polis': 'SC', 'Porto Alegre': 'RS',
+    'Salvador': 'BA', 'Fortaleza': 'CE', 'Manaus': 'AM', 'Bel\u00e9m': 'PA',
+    'Bras\u00edlia': 'DF', 'Brasilia': 'DF', 'Rio de Janeiro': 'RJ',
+};
+
+function inferState(deal) {
+    if (deal.state) return deal.state;
+    if (deal.phone) {
+        const digits = deal.phone.replace(/\D/g, '');
+        let ddd = '';
+        if (digits.startsWith('55') && digits.length >= 4) ddd = digits.substring(2, 4);
+        else if (digits.length >= 2) ddd = digits.substring(0, 2);
+        if (DDD_STATE[ddd]) return DDD_STATE[ddd];
+    }
+    for (const [keyword, state] of Object.entries(TITLE_STATE_HINTS)) {
+        if (deal.title.includes(keyword)) return state;
+    }
+    return null;
+}
+
+function getOtherProp_op(deal, fieldKey) {
+    const prop = (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
+    return prop || null;
+}
+
+async function loadDeals() {
+    const btn = document.getElementById('btnRefresh');
+    const loadingArea = document.getElementById('opLoadingArea');
+    const tableArea = document.getElementById('opTableArea');
+
+    btn.disabled = true;
+    btn.textContent = 'Carregando...';
+    loadingArea.style.display = 'block';
+    tableArea.style.display = 'none';
+
+    try {
+        const PAGE_SIZE = 200;
+        let allRawDeals = [];
+        let skip = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando oportunidades do Ploomes... (${allRawDeals.length} carregados)</div>`;
+            const data = await apiGet(
+                `/Deals?$top=${PAGE_SIZE}&$skip=${skip}&$filter=StatusId eq 1` +
+                `&$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties` +
+                `&$orderby=DaysInStage desc`
+            );
+            const page = data.value || [];
+            allRawDeals = allRawDeals.concat(page);
+            skip += PAGE_SIZE;
+            hasMore = page.length === PAGE_SIZE;
         }
 
-        async function apiGet(endpoint) {
-            const resp = await fetch(`${API_BASE}${endpoint}`);
-            if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-            return resp.json();
-        }
+        const deals = allRawDeals;
 
-        function getOtherProp(deal, fieldKey) {
-            const prop = (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
-            return prop || null;
-        }
-
-        function formatMoney(value) {
-            if (!value && value !== 0) return '-';
-            return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-        }
-
-        function getPipelineClass(name) {
-            if (!name) return 'badge-pipeline-default';
-            const n = name.toLowerCase();
-            if (n.includes('vendas')) return 'badge-pipeline-vendas';
-            if (n.includes('sankhya')) return 'badge-pipeline-sankhya';
-            if (n.includes('farmer')) return 'badge-pipeline-farmer';
-            if (n.includes('cs')) return 'badge-pipeline-cs';
-            return 'badge-pipeline-default';
-        }
-
-        function getStageClass(name) {
-            if (!name) return 'stage-default';
-            const n = name.toLowerCase();
-            if (n.includes('reconhecimento')) return 'stage-reconhecimento';
-            if (n.includes('considera')) return 'stage-consideracao';
-            if (n.includes('aprovado')) return 'stage-aprovado';
-            if (n.includes('formaliza')) return 'stage-formalizacao';
-            return 'stage-default';
-        }
-
-        function getDaysClass(days) {
-            if (days > 60) return 'days-high';
-            if (days > 30) return 'days-medium';
-            return 'days-low';
-        }
-
-        async function loadDeals() {
-            const btn = document.getElementById('btnRefresh');
-            const loadingArea = document.getElementById('loadingArea');
-            const tableArea = document.getElementById('tableArea');
-
-            btn.disabled = true;
-            btn.textContent = 'Carregando...';
-            loadingArea.style.display = 'block';
-            tableArea.style.display = 'none';
-
+        loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando estados dos contatos...</div>`;
+        const contactStateMap = {};
+        let cSkip = 0;
+        let cHasMore = true;
+        while (cHasMore) {
             try {
-                // Load ALL open deals with pagination (API limits to ~300 per request)
-                const PAGE_SIZE = 200;
-                let allRawDeals = [];
-                let skip = 0;
-                let hasMore = true;
-
-                while (hasMore) {
-                    loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando oportunidades do Ploomes... (${allRawDeals.length} carregados)</div>`;
-                    const data = await apiGet(
-                        `/Deals?$top=${PAGE_SIZE}&$skip=${skip}&$filter=StatusId eq 1` +
-                        `&$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties` +
-                        `&$orderby=DaysInStage desc`
-                    );
-                    const page = data.value || [];
-                    allRawDeals = allRawDeals.concat(page);
-                    skip += PAGE_SIZE;
-                    hasMore = page.length === PAGE_SIZE;
-                }
-
-                const deals = allRawDeals;
-
-                // Second pass: fetch ALL contacts with state field in OtherProperties
-                loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando estados dos contatos...</div>`;
-                const contactStateMap = {};
-                let cSkip = 0;
-                let cHasMore = true;
-                while (cHasMore) {
-                    try {
-                        const cData = await apiGet(
-                            `/Contacts?$top=200&$skip=${cSkip}` +
-                            `&$filter=OtherProperties/any(o: o/FieldKey eq '${CONTACT_STATE_FIELD}')` +
-                            `&$expand=OtherProperties&$select=Id`
-                        );
-                        const contacts = cData.value || [];
-                        contacts.forEach(c => {
-                            const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
-                            if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
-                        });
-                        cSkip += 200;
-                        cHasMore = contacts.length === 200;
-                    } catch(e) { console.warn('Contact state fetch error:', e); cHasMore = false; }
-                }
-                // Attach to deals
-                deals.forEach(d => { d._contactState = contactStateMap[d.ContactId] || null; });
-
-                // Process deals
-                allDeals = deals.map(d => {
-                    const mrrProp = getOtherProp(d, FIELD_MRR);
-                    const setupProp = getOtherProp(d, FIELD_SETUP);
-                    const sdrProp = getOtherProp(d, FIELD_SDR);
-
-                    const contact = d.Contact || {};
-                    const phones = contact.Phones || [];
-                    const phone = phones.length > 0 ? phones[0].PhoneNumber : null;
-                    // State: first try City.State, then contact custom field from batch
-                    const state = contact.City?.State?.Short || d._contactState || null;
-                    const cityName = contact.City?.Name || null;
-
-                    return {
-                        id: d.Id,
-                        title: d.Title || '',
-                        owner: d.Owner?.Name || '',
-                        contactName: contact.Name || d.ContactName || '',
-                        contactEmail: contact.Email || '',
-                        contactId: d.ContactId,
-                        phone: phone,
-                        allPhones: phones,
-                        state: state,
-                        cityName: cityName,
-                        mrr: mrrProp?.DecimalValue || 0,
-                        setup: setupProp?.DecimalValue || 0,
-                        pipeline: d.Pipeline?.Name || '',
-                        stage: d.Stage?.Name || '',
-                        days: d.DaysInStage || 0,
-                        sdr: sdrProp?.ObjectValueName || '',
-                        amount: d.Amount || 0,
-                        ploomesUrl: `https://app10.ploomes.com/deal/${d.Id}`
-                    };
+                const cData = await apiGet(
+                    `/Contacts?$top=200&$skip=${cSkip}` +
+                    `&$filter=OtherProperties/any(o: o/FieldKey eq '${CONTACT_STATE_FIELD}')` +
+                    `&$expand=OtherProperties&$select=Id`
+                );
+                const contacts = cData.value || [];
+                contacts.forEach(c => {
+                    const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
+                    if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
                 });
-
-                // Infer state from DDD/title when not available from contact
-                allDeals.forEach(d => {
-                    if (!d.state) d.state = inferState(d);
-                });
-
-                // Populate filter dropdowns
-                populateFilters();
-
-                // Render
-                renderDeals();
-                updateStats();
-
-                document.getElementById('lastUpdate').textContent =
-                    `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
-
-            } catch (err) {
-                console.error(err);
-                loadingArea.innerHTML = `<div style="color:#c62828;">Erro ao carregar dados: ${err.message}</div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Atualizar';
-            }
+                cSkip += 200;
+                cHasMore = contacts.length === 200;
+            } catch(e) { console.warn('Contact state fetch error:', e); cHasMore = false; }
         }
+        deals.forEach(d => { d._contactState = contactStateMap[d.ContactId] || null; });
 
-        function populateFilters() {
-            const pipelines = [...new Set(allDeals.map(d => d.pipeline).filter(Boolean))].sort();
-            const stages = [...new Set(allDeals.map(d => d.stage).filter(Boolean))].sort();
+        allDeals_op = deals.map(d => {
+            const mrrProp = getOtherProp_op(d, FIELD_MRR);
+            const setupProp = getOtherProp_op(d, FIELD_SETUP);
+            const sdrProp = getOtherProp_op(d, FIELD_SDR);
+            const contact = d.Contact || {};
+            const phones = contact.Phones || [];
+            const phone = phones.length > 0 ? phones[0].PhoneNumber : null;
+            const state = contact.City?.State?.Short || d._contactState || null;
+            const cityName = contact.City?.Name || null;
 
-            const pipelineSelect = document.getElementById('filterPipeline');
-            pipelineSelect.innerHTML = '<option value="">Todos</option>';
-            pipelines.forEach(p => {
-                pipelineSelect.innerHTML += `<option value="${p}">${p}</option>`;
-            });
-
-            const stageSelect = document.getElementById('filterStage');
-            stageSelect.innerHTML = '<option value="">Todos</option>';
-            stages.forEach(s => {
-                stageSelect.innerHTML += `<option value="${s}">${s.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim()}</option>`;
-            });
-
-            const owners = [...new Set(allDeals.map(d => d.owner).filter(Boolean))].sort();
-            const ownerSelect = document.getElementById('filterOwner');
-            ownerSelect.innerHTML = '<option value="">Todos</option>';
-            owners.forEach(o => {
-                ownerSelect.innerHTML += `<option value="${o}">${o}</option>`;
-            });
-        }
-
-        function getFilteredDeals() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const pipeline = document.getElementById('filterPipeline').value;
-            const stage = document.getElementById('filterStage').value;
-            const stateFilter = document.getElementById('filterState').value;
-
-            return allDeals.filter(d => {
-                if (search && !d.title.toLowerCase().includes(search) &&
-                    !d.contactName.toLowerCase().includes(search) &&
-                    !d.owner.toLowerCase().includes(search) &&
-                    !d.sdr.toLowerCase().includes(search)) return false;
-                const owner = document.getElementById('filterOwner').value;
-                if (pipeline && d.pipeline !== pipeline) return false;
-                if (stage && d.stage !== stage) return false;
-                if (owner && d.owner !== owner) return false;
-                if (stateFilter === 'SP' && d.state !== 'SP') return false;
-                if (stateFilter === 'OTHER' && (d.state === 'SP' || !d.state)) return false;
-                if (stateFilter === 'UNKNOWN' && d.state) return false;
-                return true;
-            }).sort((a, b) => {
-                let va = a[sortField];
-                let vb = b[sortField];
-                if (typeof va === 'string') va = va.toLowerCase();
-                if (typeof vb === 'string') vb = vb.toLowerCase();
-                if (va < vb) return -1 * sortDir;
-                if (va > vb) return 1 * sortDir;
-                return 0;
-            });
-        }
-
-        function renderDeals() {
-            const filtered = getFilteredDeals();
-            const tbody = document.getElementById('dealsBody');
-            const tableArea = document.getElementById('tableArea');
-            const loadingArea = document.getElementById('loadingArea');
-            const emptyState = document.getElementById('emptyState');
-
-            loadingArea.style.display = 'none';
-
-            if (filtered.length === 0) {
-                tableArea.style.display = 'none';
-                emptyState.style.display = 'block';
-                return;
-            }
-
-            emptyState.style.display = 'none';
-            tableArea.style.display = 'block';
-
-            tbody.innerHTML = filtered.map(d => {
-                const stateHtml = d.state
-                    ? `<span class="state-badge ${d.state === 'SP' ? 'state-sp' : 'state-other'}">${d.state}</span>`
-                    : `<span class="state-badge state-unknown">-</span>`;
-
-                const phoneHtml = d.phone
-                    ? `<a href="tel:${d.phone.replace(/[^\d+]/g, '')}" class="phone-link">${d.phone}</a>`
-                    : `<span class="no-phone">-</span>`;
-
-                return `<tr>
-                    <td>
-                        <a href="${d.ploomesUrl}" target="_blank" class="deal-link" title="${d.title}">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a>
-                    </td>
-                    <td>${d.owner}</td>
-                    <td>
-                        <div class="contact-info" style="cursor:pointer;" onclick="showContact(${d.id})">
-                            <span class="contact-name">${d.contactName}</span>
-                            ${d.contactEmail ? `<span class="contact-email">${d.contactEmail}</span>` : ''}
-                        </div>
-                    </td>
-                    <td>${phoneHtml}</td>
-                    <td>${stateHtml}</td>
-                    <td class="money ${d.mrr > 0 ? 'money-positive' : ''}">${formatMoney(d.mrr)}</td>
-                    <td class="money">${formatMoney(d.setup)}</td>
-                    <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
-                    <td><span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span></td>
-                    <td class="days ${getDaysClass(d.days)}">${d.days}</td>
-                </tr>`;
-            }).join('');
-
-            // Update header stats for filtered
-            document.getElementById('totalDeals').textContent = filtered.length;
-        }
-
-        function updateStats() {
-            const filtered = getFilteredDeals();
-            document.getElementById('totalDeals').textContent = filtered.length;
-
-            const totalMRR = filtered.reduce((s, d) => s + d.mrr, 0);
-            const totalSetup = filtered.reduce((s, d) => s + d.setup, 0);
-            document.getElementById('totalMRR').textContent = 'R$ ' + formatMoney(totalMRR);
-            document.getElementById('totalSetup').textContent = 'R$ ' + formatMoney(totalSetup);
-        }
-
-        function showContact(dealId) {
-            const deal = allDeals.find(d => d.id === dealId);
-            if (!deal) return;
-
-            const modal = document.getElementById('contactModal');
-            document.getElementById('modalTitle').textContent = deal.contactName || 'Contato';
-
-            let phonesHtml = '';
-            if (deal.allPhones.length > 0) {
-                phonesHtml = deal.allPhones.map(p =>
-                    `<div style="margin-bottom:8px;">
-                        <a href="tel:${p.PhoneNumber.replace(/[^\d+]/g, '')}" class="call-btn">
-                            Ligar: ${p.PhoneNumber}
-                        </a>
-                    </div>`
-                ).join('');
-            } else {
-                phonesHtml = '<span style="color:#999;">Nenhum telefone cadastrado</span>';
-            }
-
-            document.getElementById('modalContent').innerHTML = `
-                <div class="field">
-                    <div class="field-label">Negocio</div>
-                    <div class="field-value">
-                        <a href="${deal.ploomesUrl}" target="_blank">${deal.title}</a>
-                    </div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Contato</div>
-                    <div class="field-value">${deal.contactName}</div>
-                </div>
-                ${deal.contactEmail ? `
-                <div class="field">
-                    <div class="field-label">E-mail</div>
-                    <div class="field-value"><a href="mailto:${deal.contactEmail}">${deal.contactEmail}</a></div>
-                </div>` : ''}
-                <div class="field">
-                    <div class="field-label">Telefone(s)</div>
-                    <div class="field-value">${phonesHtml}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Estado / Cidade</div>
-                    <div class="field-value">${deal.cityName ? deal.cityName + ' - ' : ''}${deal.state || 'Nao informado'}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Responsavel</div>
-                    <div class="field-value">${deal.owner}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">SDR</div>
-                    <div class="field-value">${deal.sdr || '-'}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Funil / Estagio</div>
-                    <div class="field-value">${deal.pipeline} / ${deal.stage}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">MRR / Setup</div>
-                    <div class="field-value">R$ ${formatMoney(deal.mrr)} / R$ ${formatMoney(deal.setup)}</div>
-                </div>
-            `;
-
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('contactModal').classList.remove('active');
-        }
-
-        // Event listeners
-        document.getElementById('searchInput').addEventListener('input', () => { renderDeals(); updateStats(); });
-        document.getElementById('filterPipeline').addEventListener('change', () => { renderDeals(); updateStats(); });
-        document.getElementById('filterStage').addEventListener('change', () => { renderDeals(); updateStats(); });
-        document.getElementById('filterState').addEventListener('change', () => { renderDeals(); updateStats(); });
-        document.getElementById('filterOwner').addEventListener('change', () => { renderDeals(); updateStats(); });
-
-        // Sort
-        document.querySelectorAll('thead th[data-sort]').forEach(th => {
-            th.addEventListener('click', () => {
-                const field = th.dataset.sort;
-                if (sortField === field) sortDir *= -1;
-                else { sortField = field; sortDir = 1; }
-                document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted'));
-                th.classList.add('sorted');
-                renderDeals();
-            });
+            return {
+                id: d.Id,
+                title: d.Title || '',
+                owner: d.Owner?.Name || '',
+                contactName: contact.Name || d.ContactName || '',
+                contactEmail: contact.Email || '',
+                contactId: d.ContactId,
+                phone: phone,
+                allPhones: phones,
+                state: state,
+                cityName: cityName,
+                mrr: mrrProp?.DecimalValue || 0,
+                setup: setupProp?.DecimalValue || 0,
+                pipeline: d.Pipeline?.Name || '',
+                stage: d.Stage?.Name || '',
+                days: d.DaysInStage || 0,
+                sdr: sdrProp?.ObjectValueName || '',
+                amount: d.Amount || 0,
+                ploomesUrl: `https://app10.ploomes.com/deal/${d.Id}`
+            };
         });
 
-        // Close modal on overlay click
-        document.getElementById('contactModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) closeModal();
-        });
+        allDeals_op.forEach(d => { if (!d.state) d.state = inferState(d); });
+        populateFilters();
+        renderDeals();
+        updateStats();
 
-        // Load on start
-        loadDeals();
-    </script>
+        document.getElementById('opLastUpdate').textContent =
+            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
+
+    } catch (err) {
+        console.error(err);
+        loadingArea.innerHTML = `<div style="color:#f87171;">Erro ao carregar dados: ${err.message}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Atualizar';
+    }
+}
+
+function populateFilters() {
+    const pipelines = [...new Set(allDeals_op.map(d => d.pipeline).filter(Boolean))].sort();
+    const stages = [...new Set(allDeals_op.map(d => d.stage).filter(Boolean))].sort();
+
+    const pipelineSelect = document.getElementById('filterPipeline');
+    pipelineSelect.innerHTML = '<option value="">Todos</option>';
+    pipelines.forEach(p => { pipelineSelect.innerHTML += `<option value="${p}">${p}</option>`; });
+
+    const stageSelect = document.getElementById('filterStage');
+    stageSelect.innerHTML = '<option value="">Todos</option>';
+    stages.forEach(s => { stageSelect.innerHTML += `<option value="${s}">${s.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim()}</option>`; });
+
+    const owners = [...new Set(allDeals_op.map(d => d.owner).filter(Boolean))].sort();
+    const ownerSelect = document.getElementById('filterOwner');
+    ownerSelect.innerHTML = '<option value="">Todos</option>';
+    owners.forEach(o => { ownerSelect.innerHTML += `<option value="${o}">${o}</option>`; });
+}
+
+function getFilteredDeals() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const pipeline = document.getElementById('filterPipeline').value;
+    const stage = document.getElementById('filterStage').value;
+    const stateFilter = document.getElementById('filterState').value;
+
+    return allDeals_op.filter(d => {
+        if (search && !d.title.toLowerCase().includes(search) &&
+            !d.contactName.toLowerCase().includes(search) &&
+            !d.owner.toLowerCase().includes(search) &&
+            !d.sdr.toLowerCase().includes(search)) return false;
+        const owner = document.getElementById('filterOwner').value;
+        if (pipeline && d.pipeline !== pipeline) return false;
+        if (stage && d.stage !== stage) return false;
+        if (owner && d.owner !== owner) return false;
+        if (stateFilter === 'SP' && d.state !== 'SP') return false;
+        if (stateFilter === 'OTHER' && (d.state === 'SP' || !d.state)) return false;
+        if (stateFilter === 'UNKNOWN' && d.state) return false;
+        return true;
+    }).sort((a, b) => {
+        let va = a[sortField];
+        let vb = b[sortField];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return -1 * sortDir;
+        if (va > vb) return 1 * sortDir;
+        return 0;
+    });
+}
+
+function renderDeals() {
+    const filtered = getFilteredDeals();
+    const tbody = document.getElementById('dealsBody');
+    const tableArea = document.getElementById('opTableArea');
+    const loadingArea = document.getElementById('opLoadingArea');
+    const emptyState = document.getElementById('opEmptyState');
+
+    loadingArea.style.display = 'none';
+
+    if (filtered.length === 0) {
+        tableArea.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    tableArea.style.display = 'block';
+
+    tbody.innerHTML = filtered.map(d => {
+        const stateHtml = d.state
+            ? `<span class="state-badge ${d.state === 'SP' ? 'state-sp' : 'state-other'}">${d.state}</span>`
+            : `<span class="state-badge state-unknown">-</span>`;
+        const phoneHtml = d.phone
+            ? `<a href="tel:${d.phone.replace(/[^\d+]/g, '')}" class="phone-link">${d.phone}</a>`
+            : `<span class="no-phone">-</span>`;
+
+        return `<tr>
+            <td><a href="${d.ploomesUrl}" target="_blank" class="deal-link" title="${d.title}">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
+            <td>${d.owner}</td>
+            <td><div class="contact-info" style="cursor:pointer;" onclick="showContact(${d.id})"><span class="contact-name">${d.contactName}</span>${d.contactEmail ? `<span class="contact-email">${d.contactEmail}</span>` : ''}</div></td>
+            <td>${phoneHtml}</td>
+            <td>${stateHtml}</td>
+            <td class="money ${d.mrr > 0 ? 'money-positive' : ''}">${formatMoney(d.mrr)}</td>
+            <td class="money">${formatMoney(d.setup)}</td>
+            <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
+            <td><span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span></td>
+            <td class="days ${getDaysClass(d.days)}">${d.days}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('totalDeals').textContent = filtered.length;
+}
+
+function updateStats() {
+    const filtered = getFilteredDeals();
+    document.getElementById('totalDeals').textContent = filtered.length;
+    const totalMRR = filtered.reduce((s, d) => s + d.mrr, 0);
+    const totalSetup = filtered.reduce((s, d) => s + d.setup, 0);
+    document.getElementById('totalMRR').textContent = 'R$ ' + formatMoney(totalMRR);
+    document.getElementById('totalSetup').textContent = 'R$ ' + formatMoney(totalSetup);
+}
+
+function showContact(dealId) {
+    const deal = allDeals_op.find(d => d.id === dealId);
+    if (!deal) return;
+
+    const modal = document.getElementById('contactModal');
+    document.getElementById('modalTitle').textContent = deal.contactName || 'Contato';
+
+    let phonesHtml = '';
+    if (deal.allPhones.length > 0) {
+        phonesHtml = deal.allPhones.map(p =>
+            `<div style="margin-bottom:8px;"><a href="tel:${p.PhoneNumber.replace(/[^\d+]/g, '')}" class="call-btn">Ligar: ${p.PhoneNumber}</a></div>`
+        ).join('');
+    } else {
+        phonesHtml = '<span style="color:#6868a0;">Nenhum telefone cadastrado</span>';
+    }
+
+    document.getElementById('modalContent').innerHTML = `
+        <div class="field"><div class="field-label">Negocio</div><div class="field-value"><a href="${deal.ploomesUrl}" target="_blank">${deal.title}</a></div></div>
+        <div class="field"><div class="field-label">Contato</div><div class="field-value">${deal.contactName}</div></div>
+        ${deal.contactEmail ? `<div class="field"><div class="field-label">E-mail</div><div class="field-value"><a href="mailto:${deal.contactEmail}">${deal.contactEmail}</a></div></div>` : ''}
+        <div class="field"><div class="field-label">Telefone(s)</div><div class="field-value">${phonesHtml}</div></div>
+        <div class="field"><div class="field-label">Estado / Cidade</div><div class="field-value">${deal.cityName ? deal.cityName + ' - ' : ''}${deal.state || 'Nao informado'}</div></div>
+        <div class="field"><div class="field-label">Responsavel</div><div class="field-value">${deal.owner}</div></div>
+        <div class="field"><div class="field-label">SDR</div><div class="field-value">${deal.sdr || '-'}</div></div>
+        <div class="field"><div class="field-label">Funil / Estagio</div><div class="field-value">${deal.pipeline} / ${deal.stage}</div></div>
+        <div class="field"><div class="field-label">MRR / Setup</div><div class="field-value">R$ ${formatMoney(deal.mrr)} / R$ ${formatMoney(deal.setup)}</div></div>
+    `;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('contactModal').classList.remove('active');
+}
+
+// Oportunidades event listeners
+document.getElementById('searchInput').addEventListener('input', () => { renderDeals(); updateStats(); });
+document.getElementById('filterPipeline').addEventListener('change', () => { renderDeals(); updateStats(); });
+document.getElementById('filterStage').addEventListener('change', () => { renderDeals(); updateStats(); });
+document.getElementById('filterState').addEventListener('change', () => { renderDeals(); updateStats(); });
+document.getElementById('filterOwner').addEventListener('change', () => { renderDeals(); updateStats(); });
+
+// Sort
+document.querySelectorAll('#view-oportunidades thead th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+        const field = th.dataset.sort;
+        if (sortField === field) sortDir *= -1;
+        else { sortField = field; sortDir = 1; }
+        document.querySelectorAll('#view-oportunidades thead th').forEach(t => t.classList.remove('sorted'));
+        th.classList.add('sorted');
+        renderDeals();
+    });
+});
+
+// Close modal on overlay click
+document.getElementById('contactModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+// ==================== DASHBOARD VIEW ====================
+let wonDeals = [], lostDeals = [], dashOpenDeals = [];
+let periodStart = null, periodEnd = null;
+let charts = {};
+let activeFunnelPipeline = 'Funil de Vendas';
+
+function getSectionPeriod(sectionId) {
+    const sel = document.getElementById('period' + sectionId.charAt(0).toUpperCase() + sectionId.slice(1));
+    if (!sel || sel.value === 'global') return { start: periodStart, end: periodEnd };
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    let start, end;
+    switch(sel.value) {
+        case 'thisMonth':
+            start = new Date(y, m, 1);
+            end = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'lastMonth':
+            start = new Date(y, m - 1, 1);
+            end = new Date(y, m, 0, 23, 59, 59);
+            break;
+        case 'thisQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            start = new Date(y, qs, 1);
+            end = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        }
+        case 'lastQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            start = new Date(y, qs - 3, 1);
+            end = new Date(y, qs, 0, 23, 59, 59);
+            break;
+        }
+        case 'last6':
+            start = new Date(y, m - 6, 1);
+            end = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'thisYear':
+            start = new Date(y, 0, 1);
+            end = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        default:
+            return { start: periodStart, end: periodEnd };
+    }
+    return { start, end };
+}
+
+function inPeriodSection(dateStr, secStart, secEnd) {
+    if (!dateStr || !secStart || !secEnd) return true;
+    const d = new Date(dateStr);
+    return d >= secStart && d <= secEnd;
+}
+
+function getMonthRangeFor(secStart, secEnd) {
+    if (!secStart || !secEnd) return [];
+    const months = [];
+    const d = new Date(secStart.getFullYear(), secStart.getMonth(), 1);
+    while (d <= secEnd) {
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        d.setMonth(d.getMonth() + 1);
+    }
+    return months;
+}
+
+function getOtherProp_dash(otherProps, fieldKey) {
+    return (otherProps || []).find(p => p.FieldKey === fieldKey) || null;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+}
+
+function monthKey(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(mk) {
+    if (!mk) return '';
+    const [y, m] = mk.split('-');
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${months[parseInt(m) - 1]}/${y}`;
+}
+
+function getPipelineName(deal) { return deal.Pipeline?.Name || ''; }
+function getOwnerName(deal) { return deal.Owner?.Name || ''; }
+function getMRR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_MRR); return p?.DecimalValue || 0; }
+function getSetup(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SETUP); return p?.DecimalValue || 0; }
+function getSDR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SDR); return p?.ObjectValueName || ''; }
+function getProposalDate(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_PROPOSAL_DATE); return p?.DateTimeValue || null; }
+function getContactSegment(deal) {
+    const contactProps = deal.Contact?.OtherProperties || [];
+    const p = contactProps.find(op => op.FieldKey === CONTACT_SEGMENT_FIELD);
+    return p?.ObjectValueName || 'Sem segmento';
+}
+function isSalesPipeline(deal) { return SALES_PIPELINES.includes(getPipelineName(deal)); }
+function inPeriod(dateStr) {
+    if (!dateStr || !periodStart || !periodEnd) return true;
+    const d = new Date(dateStr);
+    return d >= periodStart && d <= periodEnd;
+}
+
+function medalEmoji(rank) {
+    if (rank === 1) return '\u{1F3C6}';
+    if (rank === 2) return '\u{1F48E}';
+    if (rank === 3) return '\u{1F4B0}';
+    return '';
+}
+function medalFor(rank) {
+    const e = medalEmoji(rank);
+    if (e) return '<span class="rank-medal">' + e + '</span> ';
+    return '';
+}
+function rankRowClass(rank) {
+    if (rank === 1) return 'rank-highlight-1';
+    if (rank === 2) return 'rank-highlight-2';
+    if (rank === 3) return 'rank-highlight-3';
+    return '';
+}
+
+function destroyChart(key) {
+    if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+}
+
+// Period
+function setPeriod(preset, btnEl) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const showCustom = preset === 'custom';
+    document.getElementById('dateStart').style.display = showCustom ? '' : 'none';
+    document.getElementById('dateEnd').style.display = showCustom ? '' : 'none';
+
+    switch(preset) {
+        case 'thisMonth':
+            periodStart = new Date(y, m, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'lastMonth':
+            periodStart = new Date(y, m - 1, 1);
+            periodEnd = new Date(y, m, 0, 23, 59, 59);
+            break;
+        case 'thisQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            periodStart = new Date(y, qs, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        }
+        case 'lastQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            periodStart = new Date(y, qs - 3, 1);
+            periodEnd = new Date(y, qs, 0, 23, 59, 59);
+            break;
+        }
+        case 'last6':
+            periodStart = new Date(y, m - 6, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'thisYear':
+            periodStart = new Date(y, 0, 1);
+            periodEnd = new Date(y, m, now.getDate(), 23, 59, 59);
+            break;
+        case 'custom':
+            return;
+    }
+    renderAllDash();
+}
+
+function applyCustomPeriod() {
+    const s = document.getElementById('dateStart').value;
+    const e = document.getElementById('dateEnd').value;
+    if (s && e) {
+        periodStart = new Date(s + 'T00:00:00');
+        periodEnd = new Date(e + 'T23:59:59');
+        renderAllDash();
+    }
+}
+
+// Filtered data getters
+function filteredWon(pipelineFilter, secPeriod) {
+    const sp = secPeriod || { start: periodStart, end: periodEnd };
+    return wonDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        return inPeriodSection(d.FinishDate, sp.start, sp.end);
+    });
+}
+function filteredLost(pipelineFilter, secPeriod) {
+    const sp = secPeriod || { start: periodStart, end: periodEnd };
+    return lostDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        return inPeriodSection(d.FinishDate, sp.start, sp.end);
+    });
+}
+function filteredOpen(secPeriod) {
+    const sp = secPeriod || { start: periodStart, end: periodEnd };
+    return dashOpenDeals.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        return inPeriodSection(d.CreateDate, sp.start, sp.end);
+    });
+}
+function allDealsForMeetings(secPeriod) {
+    const sp = secPeriod || { start: periodStart, end: periodEnd };
+    return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        if (!getSDR(d)) return false;
+        return inPeriodSection(d.CreateDate, sp.start, sp.end);
+    });
+}
+function allDealsForFunnel(pipelineName) {
+    return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
+        return getPipelineName(d) === pipelineName;
+    });
+}
+
+// Month axis helpers
+function getMonthRange() {
+    if (!periodStart || !periodEnd) return [];
+    const months = [];
+    const d = new Date(periodStart.getFullYear(), periodStart.getMonth(), 1);
+    while (d <= periodEnd) {
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+        d.setMonth(d.getMonth() + 1);
+    }
+    return months;
+}
+function groupByMonth(deals, dateField) {
+    const groups = {};
+    deals.forEach(d => {
+        const mk = monthKey(d[dateField]);
+        if (mk) {
+            if (!groups[mk]) groups[mk] = [];
+            groups[mk].push(d);
+        }
+    });
+    return groups;
+}
+
+// --- Section 1: Oportunidades Ganhas ---
+function renderSection1() {
+    const sp = getSectionPeriod('sec1');
+    const pf = document.getElementById('wonPipelineFilter').value;
+    const deals = filteredWon(pf, sp);
+    const totalValue = deals.reduce((s, d) => s + getMRR(d) + getSetup(d), 0);
+    document.getElementById('wonKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalValue)}</div><div class="kpi-label">Valor total</div></div>
+    `;
+    const months = getMonthRangeFor(sp.start, sp.end);
+    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
+        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
+        return { label: pipeline, data: months.map(mk => (byMonth[mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
+    });
+    destroyChart('won');
+    charts.won = new Chart(document.getElementById('chartWon'), {
+        type: 'bar', data: { labels: months.map(monthLabel), datasets },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
+    });
+    document.getElementById('tbodyWon').innerHTML = deals.map(d => `<tr>
+        <td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
+        <td><span class="badge ${getPipelineClass(getPipelineName(d))}">${getPipelineName(d)}</span></td>
+        <td class="money">${formatMoney(getMRR(d))}</td><td class="money">${formatMoney(getSetup(d))}</td>
+        <td>${formatDate(d.FinishDate)}</td></tr>`).join('');
+}
+
+// --- Section 2: Oportunidades Perdidas ---
+function renderSection2() {
+    const sp = getSectionPeriod('sec2');
+    const pf = document.getElementById('lostPipelineFilter').value;
+    const deals = filteredLost(pf, sp);
+    document.getElementById('lostKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios perdidos</div></div>
+    `;
+    const months = getMonthRangeFor(sp.start, sp.end);
+    const datasets = SALES_PIPELINES.filter(p => !pf || p === pf).map(pipeline => {
+        const byMonth = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate');
+        return { label: pipeline, data: months.map(mk => (byMonth[mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
+    });
+    destroyChart('lost');
+    charts.lost = new Chart(document.getElementById('chartLost'), {
+        type: 'bar', data: { labels: months.map(monthLabel), datasets },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
+    });
+    document.getElementById('tbodyLost').innerHTML = deals.map(d => `<tr>
+        <td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
+        <td><span class="badge ${getPipelineClass(getPipelineName(d))}">${getPipelineName(d)}</span></td>
+        <td>${d.LossReason?.Name || '-'}</td><td>${formatDate(d.FinishDate)}</td></tr>`).join('');
+}
+
+// --- Section 3: Produtos Vendidos ---
+function renderSection3() {
+    const sp = getSectionPeriod('sec3');
+    const deals = filteredWon('', sp);
+    const months = getMonthRangeFor(sp.start, sp.end);
+    const byMonth = groupByMonth(deals, 'FinishDate');
+    const mrrData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getMRR(d), 0));
+    const setupData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getSetup(d), 0));
+    const totalMRR = deals.reduce((s, d) => s + getMRR(d), 0);
+    const totalSetup = deals.reduce((s, d) => s + getSetup(d), 0);
+    document.getElementById('productKpis').innerHTML = `
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR)}</div><div class="kpi-label">MRR Total</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetup)}</div><div class="kpi-label">Setup Total</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR + totalSetup)}</div><div class="kpi-label">Total Geral</div></div>
+    `;
+    destroyChart('products');
+    charts.products = new Chart(document.getElementById('chartProducts'), {
+        type: 'bar', data: { labels: months.map(monthLabel), datasets: [
+            { label: 'MRR', data: mrrData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
+            { label: 'Setup', data: setupData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks } } }
+    });
+    document.getElementById('tbodyProducts').innerHTML = deals.map(d => {
+        const mrr = getMRR(d), setup = getSetup(d);
+        return `<tr><td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
+            <td class="money">${formatMoney(mrr)}</td><td class="money">${formatMoney(setup)}</td>
+            <td class="money" style="font-weight:600;color:#b794f4;">${formatMoney(mrr + setup)}</td></tr>`;
+    }).join('');
+}
+
+// --- Section 4: Ranking de Vendedores ---
+function renderSection4() {
+    const sp = getSectionPeriod('sec4');
+    const deals = filteredWon('', sp);
+    const sellerMap = {};
+    deals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        if (!sellerMap[name]) sellerMap[name] = { mrr: 0, setup: 0, count: 0 };
+        sellerMap[name].mrr += getMRR(d);
+        sellerMap[name].setup += getSetup(d);
+        sellerMap[name].count++;
+    });
+    const sorted = Object.entries(sellerMap).map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup })).sort((a, b) => b.total - a.total);
+
+    destroyChart('ranking');
+    charts.ranking = new Chart(document.getElementById('chartRanking'), {
+        type: 'bar', data: { labels: sorted.map((s, i) => `${medalEmoji(i + 1)} ${s.name}`.trim()),
+            datasets: [
+                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
+                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
+            ]},
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyRanking').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td class="money">${formatMoney(s.mrr)}</td><td class="money">${formatMoney(s.setup)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td>
+        <td style="text-align:center;">${s.count}</td></tr>`).join('');
+}
+
+// --- Section 5: Propostas Enviadas ---
+function renderSection5() {
+    const sp = getSectionPeriod('sec5');
+    const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
+    const proposalDeals = allD.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        const pd = getProposalDate(d);
+        if (!pd) return false;
+        return inPeriodSection(pd, sp.start, sp.end);
+    });
+    const sellerMap = {};
+    proposalDeals.forEach(d => { const name = getOwnerName(d); if (!name) return; sellerMap[name] = (sellerMap[name] || 0) + 1; });
+    const sorted = Object.entries(sellerMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+    destroyChart('proposals');
+    charts.proposals = new Chart(document.getElementById('chartProposals'), {
+        type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Propostas', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyProposals').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('');
+}
+
+// --- Section 6: Perdidos por Vendedor ---
+function renderSection6() {
+    const sp = getSectionPeriod('sec6');
+    const deals = filteredLost('', sp);
+    const sellerMap = {};
+    deals.forEach(d => { const name = getOwnerName(d); if (!name) return; sellerMap[name] = (sellerMap[name] || 0) + 1; });
+    const sorted = Object.entries(sellerMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+    destroyChart('lostSeller');
+    charts.lostSeller = new Chart(document.getElementById('chartLostSeller'), {
+        type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(248, 113, 113, 0.7)', borderColor: '#f87171', borderWidth: 1 }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyLostSeller').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#f87171;">${s.count}</td></tr>`).join('');
+}
+
+// --- Section 7: Reunioes por Pre-Vendedor ---
+function renderSection7() {
+    const sp = getSectionPeriod('sec7');
+    const deals = allDealsForMeetings(sp);
+    const sdrMap = {};
+    deals.forEach(d => { const sdr = getSDR(d); if (!sdr) return; sdrMap[sdr] = (sdrMap[sdr] || 0) + 1; });
+    const sorted = Object.entries(sdrMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+    destroyChart('meetings');
+    charts.meetings = new Chart(document.getElementById('chartMeetings'), {
+        type: 'bar', data: { labels: sorted.map(s => s.name), datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('');
+}
+
+// --- Section 8: Reunioes por SDR e Segmento ---
+function renderSection8() {
+    const sp = getSectionPeriod('sec8');
+    const deals = allDealsForMeetings(sp);
+    const matrix = {};
+    const allSegments = new Set();
+    deals.forEach(d => {
+        const sdr = getSDR(d); if (!sdr) return;
+        const seg = getContactSegment(d);
+        allSegments.add(seg);
+        if (!matrix[sdr]) matrix[sdr] = {};
+        matrix[sdr][seg] = (matrix[sdr][seg] || 0) + 1;
+    });
+    const sdrs = Object.keys(matrix).sort((a, b) => {
+        const ta = Object.values(matrix[a]).reduce((s, v) => s + v, 0);
+        const tb = Object.values(matrix[b]).reduce((s, v) => s + v, 0);
+        return tb - ta;
+    });
+    const segments = [...allSegments].sort();
+    const segColors = ['rgba(139, 92, 246, 0.7)', 'rgba(74, 222, 128, 0.7)', 'rgba(251, 146, 60, 0.7)',
+        'rgba(99, 102, 241, 0.7)', 'rgba(248, 113, 113, 0.7)', 'rgba(45, 212, 191, 0.7)',
+        'rgba(251, 191, 36, 0.7)', 'rgba(168, 162, 158, 0.7)', 'rgba(56, 189, 248, 0.7)', 'rgba(192, 132, 252, 0.7)'];
+    const datasets = segments.map((seg, i) => ({
+        label: seg, data: sdrs.map(sdr => matrix[sdr][seg] || 0), backgroundColor: segColors[i % segColors.length]
+    }));
+
+    destroyChart('origin');
+    charts.origin = new Chart(document.getElementById('chartOrigin'), {
+        type: 'bar', data: { labels: sdrs, datasets },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { stacked: true, ...darkScaleOptions } } }
+    });
+    const rows = [];
+    sdrs.forEach(sdr => { segments.forEach(seg => { const c = matrix[sdr][seg] || 0; if (c > 0) rows.push({ sdr, seg, count: c }); }); });
+    document.getElementById('tbodyOrigin').innerHTML = rows.map(r => `<tr>
+        <td style="font-weight:500;color:#e0e0e0;">${r.sdr}</td><td>${r.seg}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${r.count}</td></tr>`).join('');
+}
+
+// --- Section 9: Conversao por Etapa ---
+function renderSection9() {
+    const sp = getSectionPeriod('sec9');
+    const tabsHtml = SALES_PIPELINES.map(p => `
+        <button class="pipeline-tab ${p === activeFunnelPipeline ? 'active' : ''}" onclick="setFunnelPipeline('${p}')">${p}</button>
+    `).join('');
+    document.getElementById('funnelPipelineTabs').innerHTML = tabsHtml;
+
+    const uniqueStages = [];
+    const stageOrdMap = {};
+    const allPipelineDeals = [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => getPipelineName(d) === activeFunnelPipeline);
+    allPipelineDeals.forEach(d => {
+        if (d.Stage?.Name && d.Stage.Ordination !== undefined) {
+            stageOrdMap[d.Stage.Name] = d.Stage.Ordination;
+        }
+    });
+    Object.entries(stageOrdMap).map(([name, ord]) => ({ name, ordination: ord })).sort((a, b) => a.ordination - b.ordination).forEach(s => uniqueStages.push(s));
+
+    const wonFiltered = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end));
+    const lostFiltered = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end));
+    const openFiltered = dashOpenDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.CreateDate, sp.start, sp.end));
+    const wonCount = wonFiltered.length;
+    const funnelFinal = uniqueStages.map(stage => {
+        const openCount = openFiltered.filter(d => {
+            return (d.Stage?.Ordination || 0) >= stage.ordination;
+        }).length;
+        const lostAtOrAfter = lostFiltered.filter(d => {
+            return (d.Stage?.Ordination || 0) >= stage.ordination;
+        }).length;
+        return { name: stage.name, count: openCount + wonCount + lostAtOrAfter };
+    });
+
+    const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
+    const purpleShades = ['#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#6366f1','#818cf8','#a78bfa'];
+
+    document.getElementById('funnelContainer').innerHTML = funnelFinal.map((stage, i) => {
+        const pct = maxCount > 0 ? (stage.count / maxCount * 100) : 0;
+        const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
+            ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%' : '-';
+        const color = purpleShades[i % purpleShades.length];
+        return `<div class="funnel-stage">
+            <div class="funnel-label">${stage.name}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.max(pct, 5)}%;background:${color};">${stage.count}</div></div>
+            <div class="funnel-pct">${convPct !== '-' ? convPct + ' conv.' : ''}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('tbodyFunnel').innerHTML = funnelFinal.map((stage, i) => {
+        const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
+            ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%' : '-';
+        return `<tr><td style="font-weight:500;color:#e0e0e0;">${stage.name}</td>
+            <td style="text-align:center;font-weight:700;color:#b794f4;">${stage.count}</td>
+            <td style="text-align:center;color:#8888a0;">${convPct}</td></tr>`;
+    }).join('');
+}
+
+function setFunnelPipeline(p) { activeFunnelPipeline = p; renderSection9(); }
+
+function renderAllDash() {
+    renderSection1(); renderSection2(); renderSection3();
+    renderSection4(); renderSection5(); renderSection6();
+    renderSection7(); renderSection8(); renderSection9();
+}
+
+async function loadDashboard() {
+    const loadingArea = document.getElementById('dashLoadingArea');
+    const dashboardArea = document.getElementById('dashboardArea');
+    const loadingMsg = document.getElementById('dashLoadingMsg');
+
+    // Apply Chart.js dark theme defaults
+    Chart.defaults.color = '#8888a0';
+    Chart.defaults.borderColor = 'rgba(108, 63, 181, 0.1)';
+    Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+    Chart.defaults.plugins.legend.labels.color = '#a0a0b8';
+
+    try {
+        loadingMsg.textContent = 'Carregando oportunidades ganhas...';
+        wonDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 2&$expand=Owner,Pipeline,Stage,OtherProperties,Contact($expand=OtherProperties)&$orderby=FinishDate desc'
+        );
+
+        loadingMsg.textContent = `Ganhas: ${wonDeals.length}. Carregando perdidas...`;
+        lostDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 3&$expand=Owner,Pipeline,Stage,OtherProperties,LossReason&$orderby=FinishDate desc'
+        );
+
+        loadingMsg.textContent = `Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}. Carregando abertas...`;
+        dashOpenDeals = await fetchAllPages(
+            '/Deals?$filter=StatusId eq 1&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc'
+        );
+
+        loadingMsg.textContent = 'Processando dados...';
+
+        const now = new Date();
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+        loadingArea.style.display = 'none';
+        dashboardArea.style.display = '';
+        renderAllDash();
+
+        document.getElementById('dashLastUpdate').textContent =
+            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}, Abertas: ${dashOpenDeals.length}`;
+
+        // Handle pending scroll
+        if (pendingScrollSection) {
+            setTimeout(() => {
+                const el = document.getElementById(pendingScrollSection);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                pendingScrollSection = null;
+            }, 300);
+        }
+
+    } catch (err) {
+        console.error(err);
+        loadingMsg.innerHTML = `<span style="color:#f87171;">Erro ao carregar dados: ${err.message}</span>`;
+    }
+}
+
+// ==================== INIT ====================
+// Load oportunidades on start (default view)
+showView('oportunidades');
+</script>
 </body>
 </html>
