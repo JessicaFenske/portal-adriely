@@ -476,6 +476,22 @@
             flex-wrap: wrap;
         }
         .period-bar label { font-size: 13px; font-weight: 600; color: #8888a0; margin-right: 5px; }
+        .global-owner-filter {
+            padding: 6px 12px;
+            border: 1px solid rgba(108, 63, 181, 0.3);
+            border-radius: 6px;
+            background: rgba(20, 20, 38, 0.8);
+            color: #e0e0e0;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            min-width: 180px;
+        }
+        .global-owner-filter:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
         .period-btn {
             padding: 6px 14px;
             border: 1px solid rgba(108, 63, 181, 0.2);
@@ -1200,6 +1216,10 @@
                 <button class="period-btn" onclick="setPeriod('custom', this)">Personalizado</button>
                 <input type="date" class="date-input" id="dateStart" style="display:none;" onchange="applyCustomPeriod()">
                 <input type="date" class="date-input" id="dateEnd" style="display:none;" onchange="applyCustomPeriod()">
+                <label style="margin-left:20px;">Responsavel:</label>
+                <select id="globalOwnerFilter" class="global-owner-filter" onchange="renderAllDash()">
+                    <option value="">Todos</option>
+                </select>
             </div>
 
             <div id="dashLoadingArea" class="dash-loading">
@@ -2409,12 +2429,24 @@ function applyCustomPeriod() {
     }
 }
 
+// Global owner filter helper (returns selected owner name, or '' if all)
+function getGlobalOwnerFilter() {
+    const el = document.getElementById('globalOwnerFilter');
+    return el ? el.value : '';
+}
+function ownerMatchesGlobal(deal) {
+    const of = getGlobalOwnerFilter();
+    if (!of) return true;
+    return getOwnerName(deal) === of;
+}
+
 // Filtered data getters
 function filteredWon(pipelineFilter, secPeriod) {
     const sp = secPeriod || { start: periodStart, end: periodEnd };
     return wonDeals.filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         return inPeriodSection(d.FinishDate, sp.start, sp.end);
     });
 }
@@ -2423,6 +2455,7 @@ function filteredLost(pipelineFilter, secPeriod) {
     return lostDeals.filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         return inPeriodSection(d.FinishDate, sp.start, sp.end);
     });
 }
@@ -2430,6 +2463,7 @@ function filteredOpen(secPeriod) {
     const sp = secPeriod || { start: periodStart, end: periodEnd };
     return dashOpenDeals.filter(d => {
         if (!isSalesPipeline(d)) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         return inPeriodSection(d.CreateDate, sp.start, sp.end);
     });
 }
@@ -2438,9 +2472,23 @@ function allDealsForMeetings(secPeriod) {
     return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (!getSDR(d)) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         // Match by CreateDate OR LastUpdateDate (when SDR may have been added)
         return inPeriodSection(d.CreateDate, sp.start, sp.end) || inPeriodSection(d.LastUpdateDate, sp.start, sp.end);
     });
+}
+
+// Populate the global owner filter from all deals
+function populateGlobalOwnerFilter() {
+    const el = document.getElementById('globalOwnerFilter');
+    if (!el) return;
+    const current = el.value;
+    const owners = [...new Set(
+        [...(wonDeals||[]), ...(lostDeals||[]), ...(dashOpenDeals||[])]
+            .map(d => getOwnerName(d)).filter(Boolean)
+    )].sort();
+    el.innerHTML = '<option value="">Todos</option>' +
+        owners.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
 }
 function allDealsForFunnel(pipelineName) {
     return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
@@ -2884,6 +2932,7 @@ function renderSection5() {
     const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
     const proposalDeals = allD.filter(d => {
         if (!isSalesPipeline(d)) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         const pd = getProposalDate(d);
         if (!pd) return false;
         return inPeriodSection(pd, sp.start, sp.end);
@@ -2990,6 +3039,7 @@ function renderSection5b() {
     const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
     const proposalDeals = allD.filter(d => {
         if (!isSalesPipeline(d)) return false;
+        if (!ownerMatchesGlobal(d)) return false;
         const pd = getProposalDate(d);
         if (!pd) return false;
         return inPeriodSection(pd, sp.start, sp.end);
@@ -3246,7 +3296,8 @@ function renderSection9() {
     });
     Object.entries(stageOrdMap).map(([name, ord]) => ({ name, ordination: ord })).sort((a, b) => a.ordination - b.ordination).forEach(s => uniqueStages.push(s));
 
-    const ownerMatch = d => !selectedOwner || getOwnerName(d) === selectedOwner;
+    // Combine section-specific filter with global owner filter (AND logic)
+    const ownerMatch = d => (!selectedOwner || getOwnerName(d) === selectedOwner) && ownerMatchesGlobal(d);
     const wonFiltered = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatch(d));
     const lostFiltered = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatch(d));
     const openFiltered = dashOpenDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.CreateDate, sp.start, sp.end) && ownerMatch(d));
@@ -3349,6 +3400,7 @@ async function loadDashboard() {
 
         loadingArea.style.display = 'none';
         dashboardArea.style.display = '';
+        populateGlobalOwnerFilter();
         renderAllDash();
 
         document.getElementById('dashLastUpdate').textContent =
