@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
 const API_HOST = 'public-api2.ploomes.com';
 const CACHE_DIR = '/tmp/portal-cache';
+const CACHE_VERSION = 2; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -75,7 +76,7 @@ try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch (e) {}
 
 function saveToDisk(key, data) {
     try {
-        fs.writeFileSync(path.join(CACHE_DIR, `${key}.json`), JSON.stringify({ data, ts: Date.now() }));
+        fs.writeFileSync(path.join(CACHE_DIR, `${key}.json`), JSON.stringify({ data, ts: Date.now(), v: CACHE_VERSION }));
     } catch (e) { console.warn(`[cache] save ${key} failed:`, e.message); }
 }
 
@@ -84,6 +85,8 @@ function loadFromDisk(key) {
         const p = path.join(CACHE_DIR, `${key}.json`);
         if (!fs.existsSync(p)) return null;
         const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+        // Invalidate if cache version mismatches (schema changes)
+        if (parsed.v !== CACHE_VERSION) return null;
         // Expire after 24h on disk
         if (Date.now() - parsed.ts > 24 * 60 * 60 * 1000) return null;
         return parsed.data;
@@ -138,7 +141,8 @@ async function refreshAll() {
     refreshOne('forecast', odataEncode(`/Deals?$filter=StatusId eq 1 and ${forecastFilter}&$orderby=CreateDate desc&$expand=Owner,Pipeline,Stage,OtherProperties`));
     refreshOne('contacts', odataEncode(`/Contacts?$filter=${stateFilter}&$expand=OtherProperties&$select=Id`));
     refreshOne('won', odataEncode(`/Deals?$filter=StatusId eq 2&$orderby=FinishDate desc&${dealExpand}`));
-    refreshOne('lost', odataEncode(`/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand}`));
+    // Lost deals need LossReason expanded for reason analysis
+    refreshOne('lost', odataEncode(`/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand},LossReason`));
     refreshOne('open', odataEncode(`/Deals?$filter=StatusId eq 1&$orderby=CreateDate desc&${dealExpand}`));
 }
 
