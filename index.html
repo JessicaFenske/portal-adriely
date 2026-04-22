@@ -2372,7 +2372,8 @@ function allDealsForMeetings(secPeriod) {
     return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (!getSDR(d)) return false;
-        return inPeriodSection(d.CreateDate, sp.start, sp.end);
+        // Match by CreateDate OR LastUpdateDate (when SDR may have been added)
+        return inPeriodSection(d.CreateDate, sp.start, sp.end) || inPeriodSection(d.LastUpdateDate, sp.start, sp.end);
     });
 }
 function allDealsForFunnel(pipelineName) {
