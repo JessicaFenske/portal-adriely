@@ -1573,6 +1573,9 @@
                     <div class="section-header">
                         <h2><span class="section-num">&#128200;</span> Conversao por Etapa</h2>
                         <div class="sub-filter">
+                            <select id="funnelOwnerFilter" onchange="renderSection9()">
+                                <option value="">Todos os executivos</option>
+                            </select>
                             <select class="section-period-select" id="periodSec9" onchange="renderSection9()">
                                 <option value="global">Global</option>
                                 <option value="thisMonth" selected>Este mes</option>
@@ -3218,6 +3221,21 @@ function renderSection9() {
     `).join('');
     document.getElementById('funnelPipelineTabs').innerHTML = tabsHtml;
 
+    // Populate owner filter (unique owners from all deals in the active pipeline)
+    const ownerFilter = document.getElementById('funnelOwnerFilter');
+    const selectedOwner = ownerFilter ? ownerFilter.value : '';
+    if (ownerFilter) {
+        const pipelineOwners = [...new Set(
+            [...wonDeals, ...lostDeals, ...dashOpenDeals]
+                .filter(d => getPipelineName(d) === activeFunnelPipeline)
+                .map(d => getOwnerName(d))
+                .filter(Boolean)
+        )].sort();
+        const current = ownerFilter.value;
+        ownerFilter.innerHTML = '<option value="">Todos os executivos</option>' +
+            pipelineOwners.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
+    }
+
     const uniqueStages = [];
     const stageOrdMap = {};
     const allPipelineDeals = [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => getPipelineName(d) === activeFunnelPipeline);
@@ -3228,9 +3246,10 @@ function renderSection9() {
     });
     Object.entries(stageOrdMap).map(([name, ord]) => ({ name, ordination: ord })).sort((a, b) => a.ordination - b.ordination).forEach(s => uniqueStages.push(s));
 
-    const wonFiltered = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end));
-    const lostFiltered = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end));
-    const openFiltered = dashOpenDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.CreateDate, sp.start, sp.end));
+    const ownerMatch = d => !selectedOwner || getOwnerName(d) === selectedOwner;
+    const wonFiltered = wonDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatch(d));
+    const lostFiltered = lostDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatch(d));
+    const openFiltered = dashOpenDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.CreateDate, sp.start, sp.end) && ownerMatch(d));
     const wonCount = wonFiltered.length;
 
     // Build deals-per-stage map for drilldown
