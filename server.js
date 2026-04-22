@@ -44,8 +44,10 @@ function apiCall(apiPath) {
 }
 
 async function fetchAllPages(baseUrl, pageSize = 200) {
-    const sep = baseUrl.includes('?') ? '&' : '?';
-    const first = await apiCall(`${baseUrl}${sep}$count=true&$top=${pageSize}&$skip=0`);
+    // Strip any existing $top/$skip from baseUrl
+    const cleanUrl = baseUrl.replace(/[?&]\$top=\d+/g, '').replace(/[?&]\$skip=\d+/g, '').replace(/[?&]\$count=true/g, '');
+    const sep = cleanUrl.includes('?') ? '&' : '?';
+    const first = await apiCall(`${cleanUrl}${sep}$count=true&$top=${pageSize}&$skip=0`);
     let all = first.value || [];
     const total = first['@odata.count'] || all.length;
     if (all.length >= total) return all;
@@ -56,7 +58,7 @@ async function fetchAllPages(baseUrl, pageSize = 200) {
     const BATCH = 5;
     for (let i = 0; i < skips.length; i += BATCH) {
         const batch = skips.slice(i, i + BATCH);
-        const results = await Promise.all(batch.map(skip => apiCall(`${baseUrl}${sep}$top=${pageSize}&$skip=${skip}`)));
+        const results = await Promise.all(batch.map(skip => apiCall(`${cleanUrl}${sep}$top=${pageSize}&$skip=${skip}`)));
         results.forEach(r => { all = all.concat(r.value || []); });
     }
     return all;
@@ -118,6 +120,13 @@ keys.forEach(key => {
     }
 });
 
+// Safe URL encoder: only encodes chars that MUST be encoded in OData URLs.
+// Preserves: / ? ( ) ' = & $ : , + - _ . ~ * # letters digits
+// Encodes: spaces (as %20) and other special chars
+function odataEncode(url) {
+    return url.replace(/ /g, '%20');
+}
+
 async function refreshAll() {
     console.log('[cache] Starting full refresh...');
     const dealExpand = '$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties';
@@ -126,11 +135,11 @@ async function refreshAll() {
 
     // Each runs independently - available as soon as it finishes
     // Start forecast first (smallest, used by mobile often)
-    refreshOne('forecast', `/Deals?$filter=StatusId eq 1 and ${encodeURIComponent(forecastFilter)}&$orderby=CreateDate desc&$expand=Owner,Pipeline,Stage,OtherProperties`);
-    refreshOne('contacts', `/Contacts?$filter=${encodeURIComponent(stateFilter)}&$expand=OtherProperties&$select=Id`);
-    refreshOne('won', `/Deals?$filter=StatusId eq 2&$orderby=FinishDate desc&${dealExpand}`);
-    refreshOne('lost', `/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand}`);
-    refreshOne('open', `/Deals?$filter=StatusId eq 1&$orderby=CreateDate desc&${dealExpand}`);
+    refreshOne('forecast', odataEncode(`/Deals?$filter=StatusId eq 1 and ${forecastFilter}&$orderby=CreateDate desc&$expand=Owner,Pipeline,Stage,OtherProperties`));
+    refreshOne('contacts', odataEncode(`/Contacts?$filter=${stateFilter}&$expand=OtherProperties&$select=Id`));
+    refreshOne('won', odataEncode(`/Deals?$filter=StatusId eq 2&$orderby=FinishDate desc&${dealExpand}`));
+    refreshOne('lost', odataEncode(`/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand}`));
+    refreshOne('open', odataEncode(`/Deals?$filter=StatusId eq 1&$orderby=CreateDate desc&${dealExpand}`));
 }
 
 refreshAll();
