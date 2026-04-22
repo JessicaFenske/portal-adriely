@@ -832,25 +832,52 @@
         .fc-kpi-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            gap: 16px;
             padding: 20px 30px;
         }
         @media (max-width: 900px) {
-            .fc-kpi-grid { grid-template-columns: 1fr 1fr; }
+            .fc-kpi-grid { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+        }
+        .fc-scenario-group {
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 16px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .fc-scenario-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .scenario-otimista-title { color: #10b981; }
+        .scenario-realista-title { color: #f59e0b; }
+        .scenario-pessimista-title { color: #ef4444; }
+        .fc-scenario-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
         .fc-kpi-card {
-            background: rgba(26, 26, 46, 0.7);
+            background: rgba(15, 15, 26, 0.6);
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px;
-            padding: 18px 16px;
+            border-radius: 10px;
+            padding: 14px 10px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
             backdrop-filter: blur(5px);
         }
         .fc-kpi-card:hover { box-shadow: 0 0 20px rgba(255,255,255,0.05); transform: translateY(-2px); }
-        .fc-kpi-card .fc-kpi-value { font-size: 22px; font-weight: 700; text-shadow: 0 0 20px rgba(0,0,0,0.3); }
-        .fc-kpi-card .fc-kpi-label { font-size: 11px; color: #8888a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+        .fc-kpi-card .fc-kpi-value { font-size: 18px; font-weight: 700; text-shadow: 0 0 20px rgba(0,0,0,0.3); word-break: break-word; }
+        .fc-kpi-card .fc-kpi-label { font-size: 11px; color: #8888a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; font-weight: 600; }
+        @media (max-width: 900px) {
+            .fc-kpi-card .fc-kpi-value { font-size: 20px; }
+        }
         .fc-kpi-card.scenario-otimista { border-color: rgba(16,185,129,0.3); }
         .fc-kpi-card.scenario-otimista .fc-kpi-value { color: #10b981; }
         .fc-kpi-card.scenario-realista { border-color: rgba(245,158,11,0.3); }
@@ -3208,29 +3235,44 @@ function renderForecast() {
     });
 
     document.getElementById('fcKpiGrid').innerHTML = `
-        <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.mrr)}</div>
-            <div class="fc-kpi-label">MRR Otimista</div>
+        <div class="fc-scenario-group">
+            <div class="fc-scenario-title scenario-otimista-title">&#128293; Otimista</div>
+            <div class="fc-scenario-pair">
+                <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.mrr)}</div>
+                    <div class="fc-kpi-label">MRR</div>
+                </div>
+                <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.setup)}</div>
+                    <div class="fc-kpi-label">Setup</div>
+                </div>
+            </div>
         </div>
-        <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.mrr)}</div>
-            <div class="fc-kpi-label">MRR Realista</div>
+        <div class="fc-scenario-group">
+            <div class="fc-scenario-title scenario-realista-title">&#9989; Realista</div>
+            <div class="fc-scenario-pair">
+                <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.mrr)}</div>
+                    <div class="fc-kpi-label">MRR</div>
+                </div>
+                <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.setup)}</div>
+                    <div class="fc-kpi-label">Setup</div>
+                </div>
+            </div>
         </div>
-        <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.mrr)}</div>
-            <div class="fc-kpi-label">MRR Pessimista</div>
-        </div>
-        <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.setup)}</div>
-            <div class="fc-kpi-label">Setup Otimista</div>
-        </div>
-        <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.setup)}</div>
-            <div class="fc-kpi-label">Setup Realista</div>
-        </div>
-        <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
-            <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.setup)}</div>
-            <div class="fc-kpi-label">Setup Pessimista</div>
+        <div class="fc-scenario-group">
+            <div class="fc-scenario-title scenario-pessimista-title">&#9888;&#65039; Pessimista</div>
+            <div class="fc-scenario-pair">
+                <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.mrr)}</div>
+                    <div class="fc-kpi-label">MRR</div>
+                </div>
+                <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.setup)}</div>
+                    <div class="fc-kpi-label">Setup</div>
+                </div>
+            </div>
         </div>
     `;
 
