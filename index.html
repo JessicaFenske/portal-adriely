@@ -1592,6 +1592,27 @@ async function fetchAllPages(baseUrl) {
     return all;
 }
 
+// Fetch from server-side cache for much faster loads (shared across team)
+async function fetchCached(key, retries = 20) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const resp = await fetch(`/cache/${key}`);
+            if (resp.status === 202) {
+                // Cache still loading - wait and retry
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+            }
+            if (!resp.ok) throw new Error(`Cache ${key} failed: ${resp.status}`);
+            const data = await resp.json();
+            return data.value || [];
+        } catch (e) {
+            if (i === retries - 1) throw e;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+    throw new Error(`Cache ${key} timeout`);
+}
+
 // Shared helpers
 function formatMoney(value) {
     if (!value && value !== 0) return '-';
@@ -1745,49 +1766,24 @@ async function loadDeals() {
     tableArea.style.display = 'none';
 
     try {
-        const PAGE_SIZE = 200;
-        let allRawDeals = [];
-        let skip = 0;
-        let hasMore = true;
+        loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando do cache...</div>`;
+        // Load deals and contacts from server cache in parallel
+        const [deals, contacts] = await Promise.all([
+            fetchCached('open'),
+            fetchCached('contacts')
+        ]);
+        // Sort by DaysInStage desc (since cache is sorted by CreateDate)
+        deals.sort((a, b) => (b.DaysInStage || 0) - (a.DaysInStage || 0));
 
-        while (hasMore) {
-            loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando oportunidades do Ploomes... (${allRawDeals.length} carregados)</div>`;
-            const data = await apiGet(
-                `/Deals?$top=${PAGE_SIZE}&$skip=${skip}&$filter=StatusId eq 1` +
-                `&$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties` +
-                `&$orderby=DaysInStage desc`
-            );
-            const page = data.value || [];
-            allRawDeals = allRawDeals.concat(page);
-            skip += PAGE_SIZE;
-            hasMore = page.length === PAGE_SIZE;
-        }
-
-        const deals = allRawDeals;
-
-        loadingArea.innerHTML = `<div class="spinner"></div><div>Carregando estados dos contatos...</div>`;
+        loadingArea.innerHTML = `<div class="spinner"></div><div>Processando ${deals.length} negocios...</div>`;
         const contactStateMap = {};
         const contactSegmentMap = {};
-        let cSkip = 0;
-        let cHasMore = true;
-        while (cHasMore) {
-            try {
-                const cData = await apiGet(
-                    `/Contacts?$top=200&$skip=${cSkip}` +
-                    `&$filter=OtherProperties/any(o: o/FieldKey eq '${CONTACT_STATE_FIELD}')` +
-                    `&$expand=OtherProperties&$select=Id`
-                );
-                const contacts = cData.value || [];
-                contacts.forEach(c => {
-                    const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
-                    if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
-                    const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
-                    if (seg) contactSegmentMap[c.Id] = seg.ObjectValueName || seg.StringValue;
-                });
-                cSkip += 200;
-                cHasMore = contacts.length === 200;
-            } catch(e) { console.warn('Contact state fetch error:', e); cHasMore = false; }
-        }
+        contacts.forEach(c => {
+            const sp = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_STATE_FIELD);
+            if (sp) contactStateMap[c.Id] = sp.ObjectValueName || sp.StringValue;
+            const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
+            if (seg) contactSegmentMap[c.Id] = seg.ObjectValueName || seg.StringValue;
+        });
         deals.forEach(d => {
             d._contactState = contactStateMap[d.ContactId] || null;
             d._contactSegment = contactSegmentMap[d.ContactId] || null;
@@ -2134,7 +2130,12 @@ function getMRR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_
 function getSetup(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SETUP); return p?.DecimalValue || 0; }
 function getSDR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SDR); return p?.ObjectValueName || ''; }
 function getProposalDate(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_PROPOSAL_DATE); return p?.DateTimeValue || null; }
+// Global map of contactId -> segment (populated on dashboard load)
+let contactSegmentGlobal = {};
 function getContactSegment(deal) {
+    // Prefer the global map (from contacts cache), fallback to inline OtherProperties
+    const cid = deal.ContactId;
+    if (cid && contactSegmentGlobal[cid]) return contactSegmentGlobal[cid];
     const contactProps = deal.Contact?.OtherProperties || [];
     const p = contactProps.find(op => op.FieldKey === CONTACT_SEGMENT_FIELD);
     return p?.ObjectValueName || 'Sem segmento';
@@ -2814,22 +2815,28 @@ async function loadDashboard() {
     Chart.defaults.plugins.legend.labels.color = '#a0a0b8';
 
     try {
-        loadingMsg.textContent = 'Carregando oportunidades ganhas...';
-        wonDeals = await fetchAllPages(
-            '/Deals?$filter=StatusId eq 2&$expand=Owner,Pipeline,Stage,OtherProperties,Contact($expand=OtherProperties)&$orderby=FinishDate desc'
-        );
+        loadingMsg.textContent = 'Carregando dados do cache...';
+        // Use server-side cache - all 3 datasets loaded in parallel, shared across team
+        const [won, lost, open] = await Promise.all([
+            fetchCached('won'),
+            fetchCached('lost'),
+            fetchCached('open')
+        ]);
+        wonDeals = won;
+        lostDeals = lost;
+        dashOpenDeals = open;
 
-        loadingMsg.textContent = `Ganhas: ${wonDeals.length}. Carregando perdidas...`;
-        lostDeals = await fetchAllPages(
-            '/Deals?$filter=StatusId eq 3&$expand=Owner,Pipeline,Stage,OtherProperties,LossReason&$orderby=FinishDate desc'
-        );
+        loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
 
-        loadingMsg.textContent = `Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}. Carregando abertas...`;
-        dashOpenDeals = await fetchAllPages(
-            '/Deals?$filter=StatusId eq 1&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc'
-        );
-
-        loadingMsg.textContent = 'Processando dados...';
+        // Build contact segment map from contacts cache (used by Section 8)
+        try {
+            const contacts = await fetchCached('contacts');
+            contactSegmentGlobal = {};
+            contacts.forEach(c => {
+                const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
+                if (seg) contactSegmentGlobal[c.Id] = seg.ObjectValueName || seg.StringValue;
+            });
+        } catch (e) { console.warn('Failed to load contact segments:', e); }
 
         const now = new Date();
         periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -3404,11 +3411,7 @@ async function loadForecast() {
     contentArea.style.display = 'none';
 
     try {
-        const data = await apiGet(
-            `/Deals?$top=200&$filter=StatusId eq 1 and OtherProperties/any(o: o/FieldKey eq '${FIELD_FORECAST}')` +
-            `&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc`
-        );
-        const rawDeals = data.value || [];
+        const rawDeals = await fetchCached('forecast');
 
         fcAllDeals = rawDeals.map(d => {
             const forecastProp = (d.OtherProperties || []).find(p => p.FieldKey === FIELD_FORECAST);
