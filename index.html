@@ -1619,25 +1619,37 @@ async function fetchAllPages(baseUrl) {
     return all;
 }
 
-// Fetch from server-side cache for much faster loads (shared across team)
-async function fetchCached(key, retries = 20) {
-    for (let i = 0; i < retries; i++) {
+// Direct API fallback URLs (used when cache is not ready yet)
+const CACHE_FALLBACK_URLS = {
+    forecast: "/Deals?$top=200&$filter=StatusId eq 1 and OtherProperties/any(o: o/FieldKey eq 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC')&$expand=Owner,Pipeline,Stage,OtherProperties&$orderby=CreateDate desc",
+    contacts: "/Contacts?$filter=OtherProperties/any(o: o/FieldKey eq 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848')&$expand=OtherProperties&$select=Id"
+};
+
+// Fetch from server-side cache, with direct API fallback for small datasets
+async function fetchCached(key) {
+    // Quick check: is cache ready?
+    for (let i = 0; i < 5; i++) {
         try {
-            const resp = await fetch(`/cache/${key}`);
-            if (resp.status === 202) {
-                // Cache still loading - wait and retry
-                await new Promise(r => setTimeout(r, 2000));
-                continue;
-            }
-            if (!resp.ok) throw new Error(`Cache ${key} failed: ${resp.status}`);
-            const data = await resp.json();
-            return data.value || [];
-        } catch (e) {
-            if (i === retries - 1) throw e;
-            await new Promise(r => setTimeout(r, 2000));
-        }
+            const resp = await fetch('/cache/' + key);
+            if (resp.ok) { const data = await resp.json(); return data.value || []; }
+            if (resp.status === 202) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 1000));
     }
-    throw new Error(`Cache ${key} timeout`);
+    // Fallback to direct API for small datasets
+    if (CACHE_FALLBACK_URLS[key]) {
+        console.log('[fallback] direct API for ' + key);
+        return await fetchAllPages(CACHE_FALLBACK_URLS[key]);
+    }
+    // For big datasets keep polling cache (server is still building it)
+    for (let i = 0; i < 90; i++) {
+        try {
+            const resp = await fetch('/cache/' + key);
+            if (resp.ok) { const data = await resp.json(); return data.value || []; }
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 2000));
+    }
+    throw new Error('Cache ' + key + ' timeout');
 }
 
 // Shared helpers
@@ -3494,6 +3506,9 @@ async function loadForecast() {
 // ==================== INIT ====================
 // Load dashboard on start (default view)
 showView('dashboard');
+
+// Keep server awake (Render free tier sleeps after 15min inactivity)
+setInterval(() => { fetch('/keepalive').catch(() => {}); }, 10 * 60 * 1000);
 
 // Auto-refresh every 5 minutes
 setInterval(() => {
