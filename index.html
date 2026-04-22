@@ -1040,6 +1040,12 @@
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
                 <span class="sub-num">&#128078;</span><span class="sub-label">Perdidos por Vendedor</span>
             </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5b');">
+                <span class="sub-num">&#128176;</span><span class="sub-label">Propostas - Valor</span>
+            </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6b');">
+                <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos - Valor</span>
+            </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
                 <span class="sub-num">&#128197;</span><span class="sub-label">Reunioes por SDR</span>
             </div>
@@ -1392,6 +1398,58 @@
                         <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th><th>MRR</th><th>Setup</th>
                         </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 5b: Propostas por Vendedor - Valor (MRR + Setup) -->
+                <div class="section-card" id="sec5b">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128176;</span> Propostas - Valor por Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec5b" onchange="renderSection5b()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartProposalsValue"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableProposalsValue')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5b()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableProposalsValue"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                        </tr></thead><tbody id="tbodyProposalsValue"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 6b: Perdidos por Vendedor - Valor (MRR + Setup) -->
+                <div class="section-card" id="sec6b">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128201;</span> Perdidos - Valor por Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec6b" onchange="renderSection6b()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartLostSellerValue"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableLostSellerValue')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection6b()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableLostSellerValue"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                        </tr></thead><tbody id="tbodyLostSellerValue"></tbody></table></div>
                     </div>
                 </div>
 
@@ -2262,10 +2320,11 @@ function setPeriod(preset, btnEl) {
             return;
     }
     // Reset all section period selectors to "global" so they follow the global period
-    for (let i = 1; i <= 9; i++) {
-        const sel = document.getElementById('periodSec' + i);
+    const allSecIds = ['1','2','3','4','5','5b','6','6b','7','8','9'];
+    allSecIds.forEach(id => {
+        const sel = document.getElementById('periodSec' + id);
         if (sel) sel.value = 'global';
-    }
+    });
     renderAllDash();
 }
 
@@ -2275,10 +2334,11 @@ function applyCustomPeriod() {
     if (s && e) {
         periodStart = new Date(s + 'T00:00:00');
         periodEnd = new Date(e + 'T23:59:59');
-        for (let i = 1; i <= 9; i++) {
-            const sel = document.getElementById('periodSec' + i);
+        const allSecIds = ['1','2','3','4','5','5b','6','6b','7','8','9'];
+        allSecIds.forEach(id => {
+            const sel = document.getElementById('periodSec' + id);
             if (sel) sel.value = 'global';
-        }
+        });
         renderAllDash();
     }
 }
@@ -2680,6 +2740,138 @@ function renderSection6() {
         <td class="money">${formatMoney(s.setup)}</td></tr>`).join('');
 }
 
+// --- Section 5b: Propostas por Vendedor - Valores (MRR + Setup) ---
+function renderSection5b() {
+    const sp = getSectionPeriod('sec5b');
+    const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
+    const proposalDeals = allD.filter(d => {
+        if (!isSalesPipeline(d)) return false;
+        const pd = getProposalDate(d);
+        if (!pd) return false;
+        return inPeriodSection(pd, sp.start, sp.end);
+    });
+    const agg = {};
+    proposalDeals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        if (!agg[name]) agg[name] = { mrr: 0, setup: 0, deals: [] };
+        agg[name].mrr += getMRR(d);
+        agg[name].setup += getSetup(d);
+        agg[name].deals.push(d);
+    });
+    const sorted = Object.entries(agg).map(([name, v]) => ({ name, total: v.mrr + v.setup, ...v })).sort((a, b) => b.total - a.total);
+    window._sec5b_sorted = sorted;
+
+    destroyChart('proposalsValue');
+    charts.proposalsValue = new Chart(document.getElementById('chartProposalsValue'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [
+                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
+                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(96, 165, 250, 0.7)', borderColor: '#60a5fa', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top', labels: { color: '#a0a0b8' } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: R$ ${formatMoney(ctx.raw)}` } }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const s = sorted[elements[0].index];
+                    showDrilldown(`Propostas - ${s.name} (${s.deals.length} propostas - R$ ${formatMoney(s.total)})`, s.deals, null, 'proposals');
+                }
+            },
+            scales: {
+                x: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }, grid: darkScaleOptions.grid },
+                y: { stacked: true, ...darkScaleOptions }
+            }
+        }
+    });
+
+    document.getElementById('tbodyProposalsValue').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td class="money" style="color:#4ade80;">${formatMoney(s.mrr)}</td>
+        <td class="money" style="color:#60a5fa;">${formatMoney(s.setup)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td></tr>`).join('');
+}
+
+// --- Section 6b: Perdidos por Vendedor - Valores (MRR + Setup) ---
+function renderSection6b() {
+    const sp = getSectionPeriod('sec6b');
+    const deals = filteredLost('', sp);
+    const agg = {};
+    deals.forEach(d => {
+        const name = getOwnerName(d);
+        if (!name) return;
+        if (!agg[name]) agg[name] = { mrr: 0, setup: 0, deals: [] };
+        agg[name].mrr += getMRR(d);
+        agg[name].setup += getSetup(d);
+        agg[name].deals.push(d);
+    });
+    const sorted = Object.entries(agg).map(([name, v]) => ({ name, total: v.mrr + v.setup, ...v })).sort((a, b) => b.total - a.total);
+    window._sec6b_sorted = sorted;
+
+    destroyChart('lostSellerValue');
+    charts.lostSellerValue = new Chart(document.getElementById('chartLostSellerValue'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [
+                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(248, 113, 113, 0.7)', borderColor: '#f87171', borderWidth: 1 },
+                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(251, 146, 60, 0.7)', borderColor: '#fb923c', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { position: 'top', labels: { color: '#a0a0b8' } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: R$ ${formatMoney(ctx.raw)}` } }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const s = sorted[elements[0].index];
+                    showDrilldown(`Perdidos - ${s.name} (${s.deals.length} negocios - R$ ${formatMoney(s.total)})`, s.deals, null, 'lostSeller');
+                }
+            },
+            scales: {
+                x: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }, grid: darkScaleOptions.grid },
+                y: { stacked: true, ...darkScaleOptions }
+            }
+        }
+    });
+
+    document.getElementById('tbodyLostSellerValue').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td class="money" style="color:#f87171;">${formatMoney(s.mrr)}</td>
+        <td class="money" style="color:#fb923c;">${formatMoney(s.setup)}</td>
+        <td class="money" style="font-weight:700;color:#ef4444;">${formatMoney(s.total)}</td></tr>`).join('');
+}
+
+function exportSection5b() {
+    const sorted = window._sec5b_sorted || [];
+    exportToExcel(sorted, [
+        { header: 'Posicao', getValue: (r, i) => i + 1 },
+        { header: 'Vendedor', getValue: r => r.name },
+        { header: 'MRR', getValue: r => r.mrr },
+        { header: 'Setup', getValue: r => r.setup },
+        { header: 'Total', getValue: r => r.total }
+    ], 'propostas-valores');
+}
+
+function exportSection6b() {
+    const sorted = window._sec6b_sorted || [];
+    exportToExcel(sorted, [
+        { header: 'Posicao', getValue: (r, i) => i + 1 },
+        { header: 'Vendedor', getValue: r => r.name },
+        { header: 'MRR', getValue: r => r.mrr },
+        { header: 'Setup', getValue: r => r.setup },
+        { header: 'Total', getValue: r => r.total }
+    ], 'perdidos-valores');
+}
+
 // --- Section 7: Reunioes por Pre-Vendedor ---
 function renderSection7() {
     const sp = getSectionPeriod('sec7');
@@ -2850,6 +3042,7 @@ function setFunnelPipeline(p) { activeFunnelPipeline = p; renderSection9(); }
 function renderAllDash() {
     renderSection1(); renderSection2(); renderSection3();
     renderSection4(); renderSection5(); renderSection6();
+    renderSection5b(); renderSection6b();
     renderSection7(); renderSection8(); renderSection9();
 }
 
