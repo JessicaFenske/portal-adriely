@@ -1077,6 +1077,9 @@
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7c');">
                 <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de Descarte</span>
             </div>
+            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7d');">
+                <span class="sub-num">&#127760;</span><span class="sub-label">Reunioes por Origem</span>
+            </div>
             <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
                 <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reunioes</span>
             </div>
@@ -1620,6 +1623,35 @@
                         <div class="collapsible-table" id="tableDiscardReasons"><table><thead><tr>
                             <th>Motivo</th><th>Quantidade</th><th>% do Total</th>
                         </tr></thead><tbody id="tbodyDiscardReasons"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 7d: Reunioes por Origem -->
+                <div class="section-card" id="sec7d">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#127760;</span> Reunioes por Origem</h2>
+                        <div class="sub-filter">
+                            <select id="meetingsOriginSdrFilter" onchange="renderSection7d()">
+                                <option value="">Todos os pre-vendedores</option>
+                            </select>
+                            <select class="section-period-select" id="periodSec7d" onchange="renderSection7d()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartMeetingsOrigin"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableMeetingsOrigin')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7d()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableMeetingsOrigin"><table><thead><tr>
+                            <th>Origem</th><th>Reunioes</th><th>% do Total</th>
+                        </tr></thead><tbody id="tbodyMeetingsOrigin"></tbody></table></div>
                     </div>
                 </div>
 
@@ -2565,7 +2597,7 @@ function setPeriod(preset, btnEl) {
             return;
     }
     // Reset all section period selectors to "global" so they follow the global period
-    const allSecIds = ['1','2','2b','2c','3','4','5','5b','6','6b','7','7b','7c','8','9'];
+    const allSecIds = ['1','2','2b','2c','3','4','5','5b','6','6b','7','7b','7c','7d','8','9'];
     allSecIds.forEach(id => {
         const sel = document.getElementById('periodSec' + id);
         if (sel) sel.value = 'global';
@@ -2579,7 +2611,7 @@ function applyCustomPeriod() {
     if (s && e) {
         periodStart = new Date(s + 'T00:00:00');
         periodEnd = new Date(e + 'T23:59:59');
-        const allSecIds = ['1','2','2b','2c','3','4','5','5b','6','6b','7','7b','7c','8','9'];
+        const allSecIds = ['1','2','2b','2c','3','4','5','5b','6','6b','7','7b','7c','7d','8','9'];
         allSecIds.forEach(id => {
             const sel = document.getElementById('periodSec' + id);
             if (sel) sel.value = 'global';
@@ -3535,6 +3567,96 @@ function exportSection7c() {
     ], 'motivos-de-descarte');
 }
 
+// --- Section 7d: Reunioes por Origem (com filtro por pre-vendedor) ---
+function renderSection7d() {
+    const sp = getSectionPeriod('sec7d');
+    const sdrSel = document.getElementById('meetingsOriginSdrFilter');
+    const selectedSdr = sdrSel ? sdrSel.value : '';
+
+    // Base: mesma regra do sec7/sec8 (deals em funis de vendas com SDR)
+    let deals = allDealsForMeetings(sp);
+
+    // Popula dropdown de pre-vendedores
+    if (sdrSel) {
+        const sdrs = [...new Set(deals.map(d => getSDR(d)).filter(Boolean))].sort();
+        const current = sdrSel.value;
+        sdrSel.innerHTML = '<option value="">Todos os pre-vendedores</option>' +
+            sdrs.map(s => `<option value="${s}"${s === current ? ' selected' : ''}>${s}</option>`).join('');
+    }
+
+    if (selectedSdr) {
+        deals = deals.filter(d => getSDR(d) === selectedSdr);
+    }
+    window._sec7d_data = deals;
+
+    // Agrupa por Origin.Name
+    const originAgg = {};
+    deals.forEach(d => {
+        const origin = d.Origin?.Name || 'Sem origem';
+        if (!originAgg[origin]) originAgg[origin] = { count: 0, deals: [] };
+        originAgg[origin].count++;
+        originAgg[origin].deals.push(d);
+    });
+    const total = deals.length;
+    const sorted = Object.entries(originAgg).map(([name, v]) => ({
+        name, count: v.count, deals: v.deals, pct: total > 0 ? (v.count / total * 100) : 0
+    })).sort((a, b) => b.count - a.count);
+    window._sec7d_sorted = sorted;
+
+    const palette = ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#f97316','#84cc16','#6366f1','#a855f7','#14b8a6','#eab308'];
+
+    destroyChart('meetingsOrigin');
+    charts.meetingsOrigin = new Chart(document.getElementById('chartMeetingsOrigin'), {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s.name),
+            datasets: [{
+                label: 'Reunioes',
+                data: sorted.map(s => s.count),
+                backgroundColor: sorted.map((s, i) => palette[i % palette.length] + 'B3'),
+                borderColor: sorted.map((s, i) => palette[i % palette.length]),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.raw} reunioes (${sorted[ctx.dataIndex].pct.toFixed(1)}%)`
+                    }
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const s = sorted[elements[0].index];
+                    const sdrLabel = selectedSdr ? selectedSdr + ' - ' : '';
+                    showDrilldown(`${sdrLabel}Origem: ${s.name} (${s.count} reunioes)`, s.deals, null, 'meetings');
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
+        }
+    });
+
+    document.getElementById('tbodyMeetingsOrigin').innerHTML = sorted.map(s => `<tr>
+        <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td>
+        <td style="text-align:center;color:#8888a0;">${s.pct.toFixed(1)}%</td></tr>`).join('');
+}
+
+function exportSection7d() {
+    const sorted = window._sec7d_sorted || [];
+    exportToExcel(sorted, [
+        { header: 'Origem', getValue: r => r.name },
+        { header: 'Reunioes', getValue: r => r.count },
+        { header: 'Percentual', getValue: r => r.pct.toFixed(1) + '%' }
+    ], 'reunioes-por-origem');
+}
+
 // --- Section 8: Reunioes por SDR e Segmento ---
 function renderSection8() {
     const sp = getSectionPeriod('sec8');
@@ -3686,7 +3808,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSection7(); renderSection7b(); renderSection7c(); renderSection8(); renderSection9();
+    renderSection7(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {

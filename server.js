@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
 const API_HOST = 'public-api2.ploomes.com';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 2; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 3; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -132,7 +132,7 @@ function odataEncode(url) {
 
 async function refreshAll() {
     console.log('[cache] Starting full refresh...');
-    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties';
+    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties,Origin';
     const forecastFilter = "OtherProperties/any(o: o/FieldKey eq 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC')";
     const stateFilter = "OtherProperties/any(o: o/FieldKey eq 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848')";
 
