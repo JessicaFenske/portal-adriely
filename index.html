@@ -1841,31 +1841,129 @@ const CACHE_FALLBACK_URLS = {
     contacts: "/Contacts?$filter=OtherProperties/any(o: o/FieldKey eq 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848')&$expand=OtherProperties&$select=Id"
 };
 
-// Fetch from server-side cache, with direct API fallback for small datasets
+// Stale-while-revalidate cache using localStorage
+const STALE_CACHE_MAX_AGE = 6 * 60 * 60 * 1000; // 6h
+function getStaleCache(key) {
+    try {
+        const raw = localStorage.getItem('cache_' + key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.ts > STALE_CACHE_MAX_AGE) return null;
+        return parsed.data;
+    } catch (e) { return null; }
+}
+function saveStaleCache(key, data) {
+    try {
+        localStorage.setItem('cache_' + key, JSON.stringify({ data, ts: Date.now() }));
+    } catch (e) {
+        // Storage full? Try clearing old cache keys
+        try {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('cache_'));
+            keys.forEach(k => localStorage.removeItem(k));
+            localStorage.setItem('cache_' + key, JSON.stringify({ data, ts: Date.now() }));
+        } catch (e2) {}
+    }
+}
+
+// Update the loading banner with current status
+function setLoadingMsg(msg) {
+    const el = document.getElementById('dashLoadingMsg');
+    if (el) el.textContent = msg;
+    const fcEl = document.getElementById('fcLoadingMsg');
+    if (fcEl) fcEl.textContent = msg;
+}
+
+// Fetch from server-side cache, with direct API fallback for small datasets.
+// Features:
+// - Tries server cache first
+// - Returns stale data from localStorage if cache is warming up (so dashboard shows something)
+// - Longer retries to tolerate slow mobile networks / Render cold starts
+// - Pauses when tab is hidden, resumes when visible again
 async function fetchCached(key) {
+    // Helper to wait with visibility awareness
+    const waitActive = async (ms) => {
+        const start = Date.now();
+        while (Date.now() - start < ms) {
+            if (document.hidden) {
+                // Tab is in background - wait for it to be active again
+                await new Promise(r => {
+                    const onVis = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', onVis); r(); } };
+                    document.addEventListener('visibilitychange', onVis);
+                });
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+    };
+
     // Quick check: is cache ready?
     for (let i = 0; i < 5; i++) {
         try {
-            const resp = await fetch('/cache/' + key);
-            if (resp.ok) { const data = await resp.json(); return data.value || []; }
-            if (resp.status === 202) { await new Promise(r => setTimeout(r, 1000)); continue; }
+            const resp = await fetch('/cache/' + key, { cache: 'no-store' });
+            if (resp.ok) {
+                const data = await resp.json();
+                const arr = data.value || [];
+                saveStaleCache(key, arr);
+                return arr;
+            }
+            if (resp.status === 202) { await waitActive(1200); continue; }
         } catch (e) {}
-        await new Promise(r => setTimeout(r, 1000));
+        await waitActive(1200);
     }
-    // Fallback to direct API for small datasets
+
+    // Server is still warming up. Try stale cache first (fast!)
+    const stale = getStaleCache(key);
+    if (stale) {
+        console.log('[stale] Using cached ' + key + ' while server warms up (' + stale.length + ' items)');
+        setLoadingMsg('Servidor aquecendo... mostrando ultima versao conhecida.');
+        // Refresh in background
+        refreshCacheInBackground(key);
+        return stale;
+    }
+
+    // No stale cache. Fallback to direct API for small datasets
     if (CACHE_FALLBACK_URLS[key]) {
         console.log('[fallback] direct API for ' + key);
-        return await fetchAllPages(CACHE_FALLBACK_URLS[key]);
+        setLoadingMsg('Buscando ' + key + ' direto do Ploomes...');
+        const data = await fetchAllPages(CACHE_FALLBACK_URLS[key]);
+        saveStaleCache(key, data);
+        return data;
     }
-    // For big datasets keep polling cache (server is still building it)
-    for (let i = 0; i < 90; i++) {
+
+    // For big datasets keep polling cache (server is still building it) - up to 5 min
+    setLoadingMsg('Aquecendo servidor, pode levar ate 1 minuto...');
+    for (let i = 0; i < 150; i++) {
         try {
-            const resp = await fetch('/cache/' + key);
-            if (resp.ok) { const data = await resp.json(); return data.value || []; }
+            const resp = await fetch('/cache/' + key, { cache: 'no-store' });
+            if (resp.ok) {
+                const data = await resp.json();
+                const arr = data.value || [];
+                saveStaleCache(key, arr);
+                return arr;
+            }
         } catch (e) {}
-        await new Promise(r => setTimeout(r, 2000));
+        if (i % 10 === 0) setLoadingMsg('Aquecendo servidor... ' + Math.floor(i * 2) + 's');
+        await waitActive(2000);
     }
     throw new Error('Cache ' + key + ' timeout');
+}
+
+// Refresh cache in background (doesn't block UI)
+function refreshCacheInBackground(key) {
+    setTimeout(async () => {
+        for (let i = 0; i < 60; i++) {
+            try {
+                const resp = await fetch('/cache/' + key, { cache: 'no-store' });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const arr = data.value || [];
+                    saveStaleCache(key, arr);
+                    console.log('[bg] Cache ' + key + ' refreshed: ' + arr.length + ' items');
+                    return;
+                }
+            } catch (e) {}
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }, 500);
 }
 
 // Shared helpers
@@ -4258,10 +4356,45 @@ async function loadForecast() {
 showView('dashboard');
 
 // Keep server awake (Render free tier sleeps after 15min inactivity)
+// NOTE: Also pinged externally every 10min by GitHub Actions (.github/workflows/keep-alive.yml)
 setInterval(() => { fetch('/keepalive').catch(() => {}); }, 10 * 60 * 1000);
+
+// Fire ping immediately so server starts waking up in parallel with page load
+fetch('/keepalive').catch(() => {});
+
+// Revalidate when user returns to tab (mobile: common scenario)
+let lastActiveTs = Date.now();
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        const idleTime = Date.now() - lastActiveTs;
+        // If tab was hidden for more than 2 min, refresh current view
+        if (idleTime > 2 * 60 * 1000) {
+            console.log('Tab voltou apos ' + Math.floor(idleTime / 1000) + 's - revalidando dados');
+            const activeView = document.getElementById('view-dashboard').style.display !== 'none' ? 'dashboard'
+                : document.getElementById('view-forecast').style.display !== 'none' ? 'forecast'
+                : 'oportunidades';
+            if (activeView === 'dashboard') { dashLoaded = false; loadDashboard(); }
+            else if (activeView === 'forecast') { fcLoaded = false; loadForecast(); }
+            else { oportLoaded = false; loadDeals(); }
+        }
+        lastActiveTs = Date.now();
+    } else {
+        lastActiveTs = Date.now();
+    }
+});
+
+// Revalidate when browser comes back online (mobile: network switches)
+window.addEventListener('online', () => {
+    console.log('Browser online - revalidando dados');
+    const activeView = document.getElementById('view-dashboard').style.display !== 'none' ? 'dashboard'
+        : document.getElementById('view-forecast').style.display !== 'none' ? 'forecast'
+        : 'oportunidades';
+    if (activeView === 'dashboard') { dashLoaded = false; loadDashboard(); }
+});
 
 // Auto-refresh every 5 minutes
 setInterval(() => {
+    if (document.hidden) return; // Don't refresh while tab is hidden
     const activeView = document.getElementById('view-dashboard').style.display !== 'none' ? 'dashboard'
         : document.getElementById('view-forecast').style.display !== 'none' ? 'forecast'
         : 'oportunidades';
