@@ -1432,7 +1432,16 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <div class="chart-container"><canvas id="chartRanking"></canvas></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                            <div>
+                                <h3 style="color:#4ade80;font-size:15px;margin-bottom:10px;text-align:center;">&#128176; Ranking por MRR</h3>
+                                <div class="chart-container"><canvas id="chartRankingMrr"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 style="color:#818cf8;font-size:15px;margin-bottom:10px;text-align:center;">&#128181; Ranking por Setup</h3>
+                                <div class="chart-container"><canvas id="chartRankingSetup"></canvas></div>
+                            </div>
+                        </div>
                         <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection4()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableRanking"><table><thead><tr>
@@ -3088,31 +3097,84 @@ function renderSection4() {
         if (!sellerDealsMap[name]) sellerDealsMap[name] = [];
         sellerDealsMap[name].push(d);
     });
+    // Two separate rankings: one sorted by MRR, one by Setup
+    const sortedByMrr = Object.entries(sellerMap).map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup })).filter(s => s.mrr > 0).sort((a, b) => b.mrr - a.mrr);
+    const sortedBySetup = Object.entries(sellerMap).map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup })).filter(s => s.setup > 0).sort((a, b) => b.setup - a.setup);
+    // Table: combined sort by total
     const sorted = Object.entries(sellerMap).map(([name, v]) => ({ name, ...v, total: v.mrr + v.setup })).sort((a, b) => b.total - a.total);
     window._sec4_sorted = sorted;
 
-    destroyChart('ranking');
-    charts.ranking = new Chart(document.getElementById('chartRanking'), {
-        type: 'bar', data: { labels: sorted.map((s, i) => `${medalEmoji(i + 1)} ${s.name}`.trim()),
-            datasets: [
-                { label: 'MRR', data: sorted.map(s => s.mrr), backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
-                { label: 'Setup', data: sorted.map(s => s.setup), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
-            ]},
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'top' } },
-            onClick: (event, elements, chart) => {
+    const tooltipMoney = {
+        callbacks: {
+            label: ctx => ctx.dataset.label + ': R$ ' + formatMoney(ctx.raw)
+        }
+    };
+
+    destroyChart('rankingMrr');
+    charts.rankingMrr = new Chart(document.getElementById('chartRankingMrr'), {
+        type: 'bar',
+        data: {
+            labels: sortedByMrr.map((s, i) => `${medalEmoji(i + 1)} ${s.name}`.trim()),
+            datasets: [{
+                label: 'MRR',
+                data: sortedByMrr.map(s => s.mrr),
+                backgroundColor: 'rgba(74, 222, 128, 0.75)',
+                borderColor: '#4ade80',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false }, tooltip: tooltipMoney },
+            onClick: (event, elements) => {
                 if (elements.length > 0) {
-                    const idx = elements[0].index;
-                    const seller = sorted[idx];
+                    const seller = sortedByMrr[elements[0].index];
                     const clickDeals = sellerDealsMap[seller.name] || [];
-                    showDrilldown(`Ranking - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
+                    showDrilldown(`MRR - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
                 }
             },
-            scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } } }
+            scales: {
+                x: { beginAtZero: true, grid: darkScaleOptions.grid, ticks: { ...darkScaleOptions.ticks, callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } },
+                y: { ...darkScaleOptions }
+            }
+        }
     });
+
+    destroyChart('rankingSetup');
+    charts.rankingSetup = new Chart(document.getElementById('chartRankingSetup'), {
+        type: 'bar',
+        data: {
+            labels: sortedBySetup.map((s, i) => `${medalEmoji(i + 1)} ${s.name}`.trim()),
+            datasets: [{
+                label: 'Setup',
+                data: sortedBySetup.map(s => s.setup),
+                backgroundColor: 'rgba(99, 102, 241, 0.75)',
+                borderColor: '#818cf8',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false }, tooltip: tooltipMoney },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const seller = sortedBySetup[elements[0].index];
+                    const clickDeals = sellerDealsMap[seller.name] || [];
+                    showDrilldown(`Setup - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: darkScaleOptions.grid, ticks: { ...darkScaleOptions.ticks, callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } },
+                y: { ...darkScaleOptions }
+            }
+        }
+    });
+
     document.getElementById('tbodyRanking').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
         <td style="font-weight:600;color:#e0e0e0;">${s.name}</td>
-        <td class="money">${formatMoney(s.mrr)}</td><td class="money">${formatMoney(s.setup)}</td>
+        <td class="money" style="color:#4ade80;">${formatMoney(s.mrr)}</td>
+        <td class="money" style="color:#818cf8;">${formatMoney(s.setup)}</td>
         <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td>
         <td style="text-align:center;">${s.count}</td></tr>`).join('');
 }
