@@ -48,19 +48,28 @@ async function fetchAllPages(baseUrl, pageSize = 200) {
     // Strip any existing $top/$skip from baseUrl
     const cleanUrl = baseUrl.replace(/[?&]\$top=\d+/g, '').replace(/[?&]\$skip=\d+/g, '').replace(/[?&]\$count=true/g, '');
     const sep = cleanUrl.includes('?') ? '&' : '?';
+    console.log('[fetch]', cleanUrl.substring(0, 100));
     const first = await apiCall(`${cleanUrl}${sep}$count=true&$top=${pageSize}&$skip=0`);
     let all = first.value || [];
     const total = first['@odata.count'] || all.length;
+    console.log('[fetch]  total=' + total + ', got first=' + all.length);
     if (all.length >= total) return all;
 
     const skips = [];
     for (let skip = pageSize; skip < total; skip += pageSize) skips.push(skip);
 
-    const BATCH = 5;
+    // Reduced batch size to avoid memory pressure on Render free tier (512MB)
+    const BATCH = 2;
     for (let i = 0; i < skips.length; i += BATCH) {
         const batch = skips.slice(i, i + BATCH);
-        const results = await Promise.all(batch.map(skip => apiCall(`${cleanUrl}${sep}$top=${pageSize}&$skip=${skip}`)));
-        results.forEach(r => { all = all.concat(r.value || []); });
+        try {
+            const results = await Promise.all(batch.map(skip => apiCall(`${cleanUrl}${sep}$top=${pageSize}&$skip=${skip}`)));
+            results.forEach(r => { all = all.concat(r.value || []); });
+            console.log('[fetch]  progress=' + all.length + '/' + total);
+        } catch (e) {
+            console.error('[fetch]  batch error at skip=' + batch[0] + ':', e.message);
+            throw e;
+        }
     }
     return all;
 }
