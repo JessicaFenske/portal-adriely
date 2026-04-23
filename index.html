@@ -2753,7 +2753,7 @@ function renderSection1() {
                     showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'won');
                 }
             },
-            scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
+            scales: { x: { ...darkScaleOptions }, y: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
     });
     document.getElementById('tbodyWon').innerHTML = deals.map(d => `<tr>
         <td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
