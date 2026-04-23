@@ -202,7 +202,8 @@ const server = http.createServer((req, res) => {
                 lost: cache.lost?.length || 0,
                 open: cache.open?.length || 0,
                 contacts: cache.contacts?.length || 0,
-                forecast: cache.forecast?.length || 0
+                forecast: cache.forecast?.length || 0,
+                orders: cache.orders?.length || 0
             }
         }));
     }
