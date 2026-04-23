@@ -121,7 +121,7 @@ async function refreshOne(key, url) {
 
 // Load from disk immediately on startup
 console.log('[cache] Loading cache from disk...');
-const keys = ['won', 'lost', 'open', 'contacts', 'forecast'];
+const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders'];
 keys.forEach(key => {
     const data = loadFromDisk(key);
     if (data) {
@@ -153,6 +153,8 @@ async function refreshAll() {
     // Lost deals need LossReason expanded for reason analysis
     refreshOne('lost', odataEncode(`/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand},LossReason`));
     refreshOne('open', odataEncode(`/Deals?$filter=StatusId eq 1&$orderby=CreateDate desc&${dealExpand}`));
+    // Orders (pedidos fechados) com produtos para analise de produtos vendidos
+    refreshOne('orders', odataEncode('/Orders?$expand=Products&$orderby=Date desc'));
 }
 
 refreshAll();

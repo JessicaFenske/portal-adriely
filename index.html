@@ -2433,7 +2433,7 @@ document.getElementById('contactModal').addEventListener('click', (e) => {
 });
 
 // ==================== DASHBOARD VIEW ====================
-let wonDeals = [], lostDeals = [], dashOpenDeals = [];
+let wonDeals = [], lostDeals = [], dashOpenDeals = [], dashOrders = [];
 let periodStart = null, periodEnd = null;
 let charts = {};
 let activeFunnelPipeline = 'Funil de Vendas';
@@ -2983,67 +2983,68 @@ function exportSection2c() {
 }
 
 // --- Section 3: Produtos Vendidos ---
-// Deteccao de produtos a partir do titulo do deal (Lincros)
-const PRODUCT_KEYWORDS = [
-    { pat: /\bLAISA\b/i, name: 'LAISA' },
-    { pat: /\bRoteirizador\b/i, name: 'Roteirizador' },
-    { pat: /Torre de Controle/i, name: 'Torre de Controle' },
-    { pat: /\bLPH\b/i, name: 'LPH' },
-    { pat: /CT-?e/i, name: 'CT-e' },
-    { pat: /Emissor/i, name: 'Emissor CT-e' },
-    { pat: /\bBPO\b/i, name: 'BPO' },
-    { pat: /Auditoria/i, name: 'Auditoria' },
-    { pat: /\bTMS\b/i, name: 'TMS' },
-    { pat: /Sankhya\s*(OM|WMS|Asis|Expresso)?/i, name: 'Sankhya' },
-    { pat: /Intermodal/i, name: 'Intermodal' },
-    { pat: /Modelador 3D/i, name: 'Modelador 3D' },
-    { pat: /IA Tracking/i, name: 'IA Tracking' },
-    { pat: /Trial Laisa/i, name: 'LAISA' },
-    { pat: /Reajuste|IPCA/i, name: 'IPCA' },
-    { pat: /Retomada/i, name: 'Retomada' },
-    { pat: /Implanta[cç][aã]o/i, name: 'Implantacao' },
-    { pat: /Setup/i, name: 'Setup' },
-    { pat: /Cross Sell/i, name: 'Cross Sell' },
-    { pat: /Up Sell/i, name: 'Up Sell' },
-    { pat: /Readequa[cç][aã]o/i, name: 'Readequacao' },
-    { pat: /Demonstra[cç][aã]o|Demo/i, name: 'Demonstracao' },
-];
-
-function detectProduct(title) {
-    if (!title) return 'Sem identificacao';
-    for (const p of PRODUCT_KEYWORDS) {
-        if (p.pat.test(title)) return p.name;
-    }
-    return 'Outros';
+// Normaliza o nome do produto do Ploomes (remove " - MRR"/" - Setup" e classifica)
+function normalizeProductName(name) {
+    if (!name) return 'Sem nome';
+    return name.replace(/\s*-\s*(MRR|Setup)\s*$/i, '').trim();
 }
+function isMrrProduct(name) { return /\bMRR\b/i.test(name || ''); }
+function isSetupProduct(name) { return /\bSetup\b/i.test(name || ''); }
 
 function renderSection3() {
     const sp = getSectionPeriod('sec3');
     const deals = filteredWon('', sp);
     window._sec3_data = deals;
 
-    const totalMRR = deals.reduce((s, d) => s + getMRR(d), 0);
-    const totalSetup = deals.reduce((s, d) => s + getSetup(d), 0);
+    // Mapa dealId -> deal para filtrar orders
+    const wonDealIds = new Set(deals.map(d => d.Id));
+
+    // Filtra orders pelo periodo (pelos deals filtrados) e extrai produtos
+    const byProduct = {};
+    let totalOrders = 0;
+    let usedOrderDeals = 0;
+    (dashOrders || []).forEach(order => {
+        if (!wonDealIds.has(order.DealId)) return;
+        totalOrders++;
+        (order.Products || []).forEach(p => {
+            const rawName = p.ProductName || 'Sem nome';
+            const cleanName = normalizeProductName(rawName);
+            if (!byProduct[cleanName]) byProduct[cleanName] = { mrr: 0, setup: 0, count: 0, dealIds: new Set() };
+            const total = p.Total || 0;
+            if (isSetupProduct(rawName)) byProduct[cleanName].setup += total;
+            else byProduct[cleanName].mrr += total; // Default: MRR
+            byProduct[cleanName].count++;
+            byProduct[cleanName].dealIds.add(order.DealId);
+        });
+    });
+
+    // Deals que tem order vs deals ganhos que nao tem order (fallback: mostrar como "Sem produto vinculado")
+    const dealsComOrder = new Set((dashOrders || []).filter(o => wonDealIds.has(o.DealId)).map(o => o.DealId));
+    const dealsSemOrder = deals.filter(d => !dealsComOrder.has(d.Id));
+    if (dealsSemOrder.length > 0) {
+        const mrrSem = dealsSemOrder.reduce((s, d) => s + getMRR(d), 0);
+        const setupSem = dealsSemOrder.reduce((s, d) => s + getSetup(d), 0);
+        if (mrrSem > 0 || setupSem > 0) {
+            byProduct['(deals sem order vinculada)'] = {
+                mrr: mrrSem, setup: setupSem, count: dealsSemOrder.length,
+                dealIds: new Set(dealsSemOrder.map(d => d.Id))
+            };
+        }
+    }
+
+    const sortedProducts = Object.entries(byProduct)
+        .map(([name, v]) => ({ name, total: v.mrr + v.setup, count: v.count, mrr: v.mrr, setup: v.setup, dealIds: v.dealIds }))
+        .filter(p => p.total > 0)
+        .sort((a, b) => b.total - a.total);
+    window._sec3_products = sortedProducts;
+
+    const totalMRR = sortedProducts.reduce((s, p) => s + p.mrr, 0);
+    const totalSetup = sortedProducts.reduce((s, p) => s + p.setup, 0);
     document.getElementById('productKpis').innerHTML = `
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR)}</div><div class="kpi-label">MRR Total</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetup)}</div><div class="kpi-label">Setup Total</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR + totalSetup)}</div><div class="kpi-label">Total Geral</div></div>
     `;
-
-    // Agrupa por produto detectado no titulo
-    const byProduct = {};
-    deals.forEach(d => {
-        const product = detectProduct(d.Title);
-        if (!byProduct[product]) byProduct[product] = { mrr: 0, setup: 0, count: 0, deals: [] };
-        byProduct[product].mrr += getMRR(d);
-        byProduct[product].setup += getSetup(d);
-        byProduct[product].count++;
-        byProduct[product].deals.push(d);
-    });
-    const sortedProducts = Object.entries(byProduct)
-        .map(([name, v]) => ({ name, total: v.mrr + v.setup, ...v }))
-        .sort((a, b) => b.total - a.total);
-    window._sec3_products = sortedProducts;
 
     destroyChart('products');
     charts.products = new Chart(document.getElementById('chartProducts'), {
@@ -3065,7 +3066,8 @@ function renderSection3() {
                 if (elements.length > 0) {
                     const idx = elements[0].index;
                     const product = sortedProducts[idx];
-                    showDrilldown(`Produto: ${product.name} (${product.count} negocios)`, product.deals, null, 'products');
+                    const productDeals = deals.filter(d => product.dealIds.has(d.Id));
+                    showDrilldown(`Produto: ${product.name} (${productDeals.length} deals, ${product.count} ocorrencias)`, productDeals, null, 'products');
                 }
             },
             scales: {
@@ -3952,15 +3954,17 @@ async function loadDashboard() {
 
     try {
         loadingMsg.textContent = 'Carregando dados do cache...';
-        // Use server-side cache - all 3 datasets loaded in parallel, shared across team
-        const [won, lost, open] = await Promise.all([
+        // Use server-side cache - all datasets loaded in parallel, shared across team
+        const [won, lost, open, orders] = await Promise.all([
             fetchCached('won'),
             fetchCached('lost'),
-            fetchCached('open')
+            fetchCached('open'),
+            fetchCached('orders').catch(() => [])  // optional
         ]);
         wonDeals = won;
         lostDeals = lost;
         dashOpenDeals = open;
+        dashOrders = orders || [];
 
         loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
 
