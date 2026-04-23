@@ -1410,7 +1410,7 @@
                         <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection3()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableProducts"><table><thead><tr>
-                            <th>Titulo</th><th>Responsavel</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                            <th>Produto</th><th>Qtd Vendas</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
                     </div>
                 </div>
@@ -2983,14 +2983,45 @@ function exportSection2c() {
 }
 
 // --- Section 3: Produtos Vendidos ---
+// Deteccao de produtos a partir do titulo do deal (Lincros)
+const PRODUCT_KEYWORDS = [
+    { pat: /\bLAISA\b/i, name: 'LAISA' },
+    { pat: /\bRoteirizador\b/i, name: 'Roteirizador' },
+    { pat: /Torre de Controle/i, name: 'Torre de Controle' },
+    { pat: /\bLPH\b/i, name: 'LPH' },
+    { pat: /CT-?e/i, name: 'CT-e' },
+    { pat: /Emissor/i, name: 'Emissor CT-e' },
+    { pat: /\bBPO\b/i, name: 'BPO' },
+    { pat: /Auditoria/i, name: 'Auditoria' },
+    { pat: /\bTMS\b/i, name: 'TMS' },
+    { pat: /Sankhya\s*(OM|WMS|Asis|Expresso)?/i, name: 'Sankhya' },
+    { pat: /Intermodal/i, name: 'Intermodal' },
+    { pat: /Modelador 3D/i, name: 'Modelador 3D' },
+    { pat: /IA Tracking/i, name: 'IA Tracking' },
+    { pat: /Trial Laisa/i, name: 'LAISA' },
+    { pat: /Reajuste|IPCA/i, name: 'IPCA' },
+    { pat: /Retomada/i, name: 'Retomada' },
+    { pat: /Implanta[cç][aã]o/i, name: 'Implantacao' },
+    { pat: /Setup/i, name: 'Setup' },
+    { pat: /Cross Sell/i, name: 'Cross Sell' },
+    { pat: /Up Sell/i, name: 'Up Sell' },
+    { pat: /Readequa[cç][aã]o/i, name: 'Readequacao' },
+    { pat: /Demonstra[cç][aã]o|Demo/i, name: 'Demonstracao' },
+];
+
+function detectProduct(title) {
+    if (!title) return 'Sem identificacao';
+    for (const p of PRODUCT_KEYWORDS) {
+        if (p.pat.test(title)) return p.name;
+    }
+    return 'Outros';
+}
+
 function renderSection3() {
     const sp = getSectionPeriod('sec3');
     const deals = filteredWon('', sp);
     window._sec3_data = deals;
-    const months = getMonthRangeFor(sp.start, sp.end);
-    const byMonth = groupByMonth(deals, 'FinishDate');
-    const mrrData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getMRR(d), 0));
-    const setupData = months.map(mk => (byMonth[mk] || []).reduce((s, d) => s + getSetup(d), 0));
+
     const totalMRR = deals.reduce((s, d) => s + getMRR(d), 0);
     const totalSetup = deals.reduce((s, d) => s + getSetup(d), 0);
     document.getElementById('productKpis').innerHTML = `
@@ -2998,29 +3029,59 @@ function renderSection3() {
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetup)}</div><div class="kpi-label">Setup Total</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRR + totalSetup)}</div><div class="kpi-label">Total Geral</div></div>
     `;
+
+    // Agrupa por produto detectado no titulo
+    const byProduct = {};
+    deals.forEach(d => {
+        const product = detectProduct(d.Title);
+        if (!byProduct[product]) byProduct[product] = { mrr: 0, setup: 0, count: 0, deals: [] };
+        byProduct[product].mrr += getMRR(d);
+        byProduct[product].setup += getSetup(d);
+        byProduct[product].count++;
+        byProduct[product].deals.push(d);
+    });
+    const sortedProducts = Object.entries(byProduct)
+        .map(([name, v]) => ({ name, total: v.mrr + v.setup, ...v }))
+        .sort((a, b) => b.total - a.total);
+    window._sec3_products = sortedProducts;
+
     destroyChart('products');
     charts.products = new Chart(document.getElementById('chartProducts'), {
-        type: 'bar', data: { labels: months.map(monthLabel), datasets: [
-            { label: 'MRR', data: mrrData, backgroundColor: 'rgba(74, 222, 128, 0.7)', borderColor: '#4ade80', borderWidth: 1 },
-            { label: 'Setup', data: setupData, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#818cf8', borderWidth: 1 }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
-            onClick: (event, elements, chart) => {
+        type: 'bar',
+        data: {
+            labels: sortedProducts.map(p => p.name),
+            datasets: [
+                { label: 'MRR', data: sortedProducts.map(p => p.mrr), backgroundColor: 'rgba(74, 222, 128, 0.75)', borderColor: '#4ade80', borderWidth: 1 },
+                { label: 'Setup', data: sortedProducts.map(p => p.setup), backgroundColor: 'rgba(99, 102, 241, 0.75)', borderColor: '#818cf8', borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': R$ ' + formatMoney(ctx.raw) } }
+            },
+            onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const idx = elements[0].index;
-                    const mk = months[idx];
-                    const clickDeals = (byMonth[mk] || []);
-                    showDrilldown(`Produtos - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'products');
+                    const product = sortedProducts[idx];
+                    showDrilldown(`Produto: ${product.name} (${product.count} negocios)`, product.deals, null, 'products');
                 }
             },
-            scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks } } }
+            scales: {
+                x: { beginAtZero: true, grid: darkScaleOptions.grid, ticks: { ...darkScaleOptions.ticks, callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } },
+                y: { ...darkScaleOptions }
+            }
+        }
     });
-    document.getElementById('tbodyProducts').innerHTML = deals.map(d => {
-        const mrr = getMRR(d), setup = getSetup(d);
-        return `<tr><td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
-            <td class="money">${formatMoney(mrr)}</td><td class="money">${formatMoney(setup)}</td>
-            <td class="money" style="font-weight:600;color:#b794f4;">${formatMoney(mrr + setup)}</td></tr>`;
-    }).join('');
+
+    // Tabela agora agrupada por produto
+    document.getElementById('tbodyProducts').innerHTML = sortedProducts.map(p => `<tr>
+        <td style="font-weight:600;color:#e0e0e0;">${p.name}</td>
+        <td style="text-align:center;color:#b794f4;font-weight:700;">${p.count}</td>
+        <td class="money" style="color:#4ade80;">${formatMoney(p.mrr)}</td>
+        <td class="money" style="color:#818cf8;">${formatMoney(p.setup)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(p.total)}</td></tr>`).join('');
 
     // Pipeline doughnut colors
     const pipelineDoughnutColors = { 'Funil de Vendas': '#6366f1', 'Sankhya': '#f97316', 'Farmer': '#10b981' };
@@ -4088,13 +4149,13 @@ function exportSection2() {
     ], 'oportunidades_perdidas');
 }
 function exportSection3() {
-    const data = window._sec3_data || [];
-    exportToExcel(data, [
-        { header: 'Titulo', getValue: d => d.Title || '' },
-        { header: 'Responsavel', getValue: d => getOwnerName(d) },
-        { header: 'MRR', getValue: d => getMRR(d) },
-        { header: 'Setup', getValue: d => getSetup(d) },
-        { header: 'Total', getValue: d => getMRR(d) + getSetup(d) }
+    const products = window._sec3_products || [];
+    exportToExcel(products, [
+        { header: 'Produto', getValue: p => p.name },
+        { header: 'Qtd Vendas', getValue: p => p.count },
+        { header: 'MRR', getValue: p => p.mrr },
+        { header: 'Setup', getValue: p => p.setup },
+        { header: 'Total', getValue: p => p.total }
     ], 'produtos_vendidos');
 }
 function exportSection4() {
