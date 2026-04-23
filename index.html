@@ -2725,11 +2725,16 @@ function renderSection1() {
     const pf = document.getElementById('wonPipelineFilter').value;
     const deals = filteredWon(pf, sp);
     window._sec1_data = deals;
-    const totalMRRWon = deals.reduce((s, d) => s + getMRR(d), 0);
+    // Separa MRR regular do MRR IPCA (reajuste de clientes existentes)
+    const ipcaDeals = deals.filter(d => getPipelineName(d) === 'Farmer IPCA');
+    const regularDeals = deals.filter(d => getPipelineName(d) !== 'Farmer IPCA');
+    const totalMRRRegular = regularDeals.reduce((s, d) => s + getMRR(d), 0);
+    const totalIPCA = ipcaDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalSetupWon = deals.reduce((s, d) => s + getSetup(d), 0);
     document.getElementById('wonKpis').innerHTML = `
         <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
-        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRRWon)}</div><div class="kpi-label">MRR</div></div>
+        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRRRegular)}</div><div class="kpi-label">MRR (novo)</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#c084fc;">R$ ${formatMoney(totalIPCA)}</div><div class="kpi-label">IPCA (reajuste)</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetupWon)}</div><div class="kpi-label">Setup</div></div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
