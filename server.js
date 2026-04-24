@@ -121,7 +121,7 @@ async function refreshOne(key, url) {
 
 // Load from disk immediately on startup
 console.log('[cache] Loading cache from disk...');
-const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders'];
+const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders', 'segments', 'companies'];
 keys.forEach(key => {
     const data = loadFromDisk(key);
     if (data) {
@@ -148,13 +148,17 @@ async function refreshAll() {
     // Each runs independently - available as soon as it finishes
     // Start forecast first (smallest, used by mobile often)
     refreshOne('forecast', odataEncode(`/Deals?$filter=StatusId eq 1 and ${forecastFilter}&$orderby=CreateDate desc&$expand=Owner,Pipeline,Stage,OtherProperties`));
-    refreshOne('contacts', odataEncode(`/Contacts?$filter=${stateFilter}&$expand=OtherProperties&$select=Id`));
+    refreshOne('contacts', odataEncode(`/Contacts?$filter=${stateFilter}&$expand=OtherProperties&$select=Id,LineOfBusinessId`));
     refreshOne('won', odataEncode(`/Deals?$filter=StatusId eq 2&$orderby=FinishDate desc&${dealExpand}`));
     // Lost deals need LossReason expanded for reason analysis
     refreshOne('lost', odataEncode(`/Deals?$filter=StatusId eq 3&$orderby=FinishDate desc&${dealExpand},LossReason`));
     refreshOne('open', odataEncode(`/Deals?$filter=StatusId eq 1&$orderby=CreateDate desc&${dealExpand}`));
     // Orders (pedidos fechados) com produtos para analise de produtos vendidos
     refreshOne('orders', odataEncode('/Orders?$expand=Products&$orderby=Date desc'));
+    // Segmentos (Ramo de Atividade / LineOfBusiness) - pequena lista fixa
+    refreshOne('segments', '/Contacts@LinesOfBusiness');
+    // Todas as empresas (TypeId=1) com apenas Id e LineOfBusinessId - leve, para achar Segmento de qualquer deal
+    refreshOne('companies', odataEncode('/Contacts?$filter=TypeId eq 1 and LineOfBusinessId ne null&$select=Id,LineOfBusinessId'));
 }
 
 refreshAll();

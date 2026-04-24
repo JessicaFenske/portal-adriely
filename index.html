@@ -2526,10 +2526,15 @@ function getSDR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_
 function getProposalDate(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_PROPOSAL_DATE); return p?.DateTimeValue || null; }
 // Global map of contactId -> segment (populated on dashboard load)
 let contactSegmentGlobal = {};
+let segmentsByIdGlobal = {}; // id (LineOfBusinessId) -> name
 function getContactSegment(deal) {
-    // Prefer the global map (from contacts cache), fallback to inline OtherProperties
     const cid = deal.ContactId;
+    // 1) Global map (built from companies + contacts cache)
     if (cid && contactSegmentGlobal[cid]) return contactSegmentGlobal[cid];
+    // 2) Expanded contact with LineOfBusinessId
+    const lobId = deal.Contact?.LineOfBusinessId;
+    if (lobId && segmentsByIdGlobal[lobId]) return segmentsByIdGlobal[lobId];
+    // 3) Custom field on contact (SDR fallback)
     const contactProps = deal.Contact?.OtherProperties || [];
     const p = contactProps.find(op => op.FieldKey === CONTACT_SEGMENT_FIELD);
     return p?.ObjectValueName || 'Sem segmento';
@@ -3968,14 +3973,39 @@ async function loadDashboard() {
 
         loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
 
-        // Build contact segment map from contacts cache (used by Section 8)
+        // Build contact segment map.
+        // Fonte principal: LineOfBusinessId do contato (Ramo de Atividade = Segmento no Ploomes)
+        // Fallback: campo customizado BF700EBA (Segmento manual, usado em SDRs)
         try {
-            const contacts = await fetchCached('contacts');
+            const [contacts, companies, segments] = await Promise.all([
+                fetchCached('contacts').catch(() => []),
+                fetchCached('companies').catch(() => []),
+                fetchCached('segments').catch(() => [])
+            ]);
+            // Map segmentId -> name
+            const segById = {};
+            (segments || []).forEach(s => { segById[s.Id] = s.Name; });
+            segmentsByIdGlobal = segById;
+
             contactSegmentGlobal = {};
-            contacts.forEach(c => {
+
+            // 1) Primary: all companies with LineOfBusinessId
+            (companies || []).forEach(c => {
+                if (c.LineOfBusinessId && segById[c.LineOfBusinessId]) {
+                    contactSegmentGlobal[c.Id] = segById[c.LineOfBusinessId];
+                }
+            });
+
+            // 2) Fallback: contacts com campo customizado (sobrescreve so se nao ja setado)
+            (contacts || []).forEach(c => {
+                if (contactSegmentGlobal[c.Id]) return;
                 const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
                 if (seg) contactSegmentGlobal[c.Id] = seg.ObjectValueName || seg.StringValue;
+                else if (c.LineOfBusinessId && segById[c.LineOfBusinessId]) {
+                    contactSegmentGlobal[c.Id] = segById[c.LineOfBusinessId];
+                }
             });
+            console.log('[segments] ' + Object.keys(contactSegmentGlobal).length + ' contatos com segmento mapeado');
         } catch (e) { console.warn('Failed to load contact segments:', e); }
 
         const now = new Date();
