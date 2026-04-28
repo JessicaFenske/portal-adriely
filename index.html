@@ -5156,12 +5156,14 @@ let mqlAllPeople = [];
 let mqlAllDealsLookup = {}; // contactId -> [deal]
 let mqlChart = null;
 
-// Dominios genericos (NAO consideramos MQL)
+// Dominios genericos (NAO consideramos MQL) + dominios internos do grupo
 const GENERIC_EMAIL_DOMAINS = new Set([
     'gmail.com', 'hotmail.com', 'yahoo.com', 'yahoo.com.br', 'outlook.com', 'outlook.com.br',
     'live.com', 'icloud.com', 'me.com', 'msn.com', 'bol.com.br', 'uol.com.br', 'terra.com.br',
     'globomail.com', 'globo.com', 'r7.com', 'ig.com.br', 'protonmail.com', 'aol.com',
-    'mac.com', 'zipmail.com.br', 'oi.com.br', 'click21.com.br'
+    'mac.com', 'zipmail.com.br', 'oi.com.br', 'click21.com.br',
+    // Dominios do grupo (excluir contatos internos)
+    'sankhya.com.br', 'lincros.com', 'lincros.com.br'
 ]);
 
 function isCorporateEmail(email) {
