@@ -5167,15 +5167,15 @@ async function loadMqls() {
     contentArea.style.display = 'none';
 
     try {
-        loadingMsg.textContent = 'Carregando contatos do Ploomes...';
-        const [people, won, lost, open] = await Promise.all([
-            fetchCached('people'),
-            fetchCached('won'),
-            fetchCached('lost'),
-            fetchCached('open')
+        loadingMsg.textContent = 'Carregando deals...';
+        // Pega cache dos deals (fast)
+        const [won, lost, open] = await Promise.all([
+            fetchCached('won').catch(() => []),
+            fetchCached('lost').catch(() => []),
+            fetchCached('open').catch(() => [])
         ]);
 
-        // Build deals lookup by ContactId AND CompanyId (deals podem estar em qualquer um)
+        // Build deals lookup
         mqlAllDealsLookup = {};
         const allD = [...won, ...lost, ...open];
         allD.forEach(d => {
@@ -5184,6 +5184,18 @@ async function loadMqls() {
             const pid = d.PersonId;
             if (pid) (mqlAllDealsLookup[pid] = mqlAllDealsLookup[pid] || []).push(d);
         });
+
+        // Tenta cache primeiro (mais rapido). Se vazio, busca direto na API
+        loadingMsg.textContent = 'Carregando contatos do Ploomes...';
+        let people = [];
+        try {
+            people = await fetchCached('people');
+            if (!people || people.length === 0) throw new Error('Cache vazio');
+        } catch (e) {
+            // Fallback: busca direto na API (paginando)
+            loadingMsg.textContent = 'Cache vazio, buscando direto da API...';
+            people = await fetchPeopleFromAPI(loadingMsg);
+        }
 
         // Filter MQLs (corp email + phone)
         mqlAllPeople = (people || []).filter(isMqlPerson);
@@ -5202,6 +5214,26 @@ async function loadMqls() {
         console.error(err);
         loadingArea.innerHTML = `<div style="color:#f87171;padding:30px;text-align:center;">Erro ao carregar: ${err.message}</div>`;
     }
+}
+
+// Busca pessoas direto da API (fallback quando cache nao popula)
+async function fetchPeopleFromAPI(loadingMsg) {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const baseUrl = `/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones&$select=Id,Name,Email,CompanyId,CreateDate`;
+    const PAGE_SIZE = 200;
+    let all = [];
+    let skip = 0;
+    while (true) {
+        if (loadingMsg) loadingMsg.textContent = `Buscando contatos... ${all.length} carregados`;
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        const data = await apiGet(`${baseUrl}${sep}$top=${PAGE_SIZE}&$skip=${skip}`);
+        const page = data.value || [];
+        all = all.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+        if (skip > 20000) break; // safety
+    }
+    return all;
 }
 
 function getMqlBestDeal(personId, companyId) {
