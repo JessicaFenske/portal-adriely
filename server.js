@@ -121,7 +121,7 @@ async function refreshOne(key, url) {
 
 // Load from disk immediately on startup
 console.log('[cache] Loading cache from disk...');
-const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders', 'segments', 'companies'];
+const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders', 'segments', 'companies', 'people'];
 keys.forEach(key => {
     const data = loadFromDisk(key);
     if (data) {
@@ -159,6 +159,8 @@ async function refreshAll() {
     refreshOne('segments', '/Contacts@LinesOfBusiness');
     // Todas as empresas (TypeId=1) com apenas Id e LineOfBusinessId - leve, para achar Segmento de qualquer deal
     refreshOne('companies', odataEncode('/Contacts?$filter=TypeId eq 1 and LineOfBusinessId ne null&$select=Id,LineOfBusinessId'));
+    // Pessoas (TypeId=2) com email + phones para deteccao de MQLs
+    refreshOne('people', odataEncode('/Contacts?$filter=TypeId eq 2 and Email ne null&$expand=Phones&$select=Id,Name,Email,CompanyId,CreateDate,FirstTaskDate,LastDealId,OwnerId,OriginId,LeadId,StatusId,LineOfBusinessId'));
 }
 
 refreshAll();
@@ -207,7 +209,8 @@ const server = http.createServer((req, res) => {
                 open: cache.open?.length || 0,
                 contacts: cache.contacts?.length || 0,
                 forecast: cache.forecast?.length || 0,
-                orders: cache.orders?.length || 0
+                orders: cache.orders?.length || 0,
+                people: cache.people?.length || 0
             }
         }));
     }

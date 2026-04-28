@@ -1202,6 +1202,10 @@
                 <span class="nav-icon">&#128203;</span>
                 <span class="nav-label">Oportunidades</span>
             </div>
+            <div class="nav-item" data-view="mqls" onclick="showView('mqls')">
+                <span class="nav-icon">&#128269;</span>
+                <span class="nav-label">MQLs</span>
+            </div>
         </div>
         <div class="sidebar-toggle" onclick="toggleSidebar()">&#171;</div>
     </nav>
@@ -1954,6 +1958,111 @@
             <div class="last-update" id="fcLastUpdate"></div>
         </div>
 
+        <!-- ==================== VIEW: MQLS ==================== -->
+        <div id="view-mqls" style="display:none;">
+            <div class="op-header">
+                <div>
+                    <h1>MQLs - Leads Qualificados</h1>
+                    <div class="subtitle">Leads com telefone preenchido e e-mail corporativo</div>
+                </div>
+            </div>
+
+            <div class="controls" style="border-bottom:1px solid rgba(108,63,181,0.1);background:rgba(20,20,38,0.5);">
+                <div class="filter-group">
+                    <label>Status do Lead</label>
+                    <select id="mqlFilterStatus">
+                        <option value="">Todos</option>
+                        <option value="orphan" selected>&#9888;&#65039; Orfaos (sem card)</option>
+                        <option value="active">Com card ativo</option>
+                        <option value="closed">Fechado (ganho/perdido)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Funil</label>
+                    <select id="mqlFilterPipeline">
+                        <option value="">Todos os funis</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Etapa</label>
+                    <select id="mqlFilterStage">
+                        <option value="">Todas as etapas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Periodo de criacao</label>
+                    <select id="mqlFilterPeriod">
+                        <option value="">Todos</option>
+                        <option value="7">Ultimos 7 dias</option>
+                        <option value="14">Ultimos 14 dias</option>
+                        <option value="30" selected>Ultimos 30 dias</option>
+                        <option value="60">Ultimos 60 dias</option>
+                        <option value="90">Ultimos 90 dias</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <input type="text" id="mqlFilterSearch" placeholder="Nome, email, empresa...">
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button class="btn-refresh" onclick="loadMqls()">Atualizar</button>
+                </div>
+            </div>
+
+            <div id="mqlLoadingArea" class="op-loading">
+                <div class="spinner"></div>
+                <div id="mqlLoadingMsg">Carregando MQLs...</div>
+            </div>
+
+            <div id="mqlContentArea" style="display:none;">
+                <!-- KPIs -->
+                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;padding:20px 30px;">
+                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiTotal">0</div><div class="kpi-label">Total MQLs</div></div>
+                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiOrphan" style="color:#f87171;">0</div><div class="kpi-label">Orfaos (sem card)</div></div>
+                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiActive" style="color:#4ade80;">0</div><div class="kpi-label">Com card ativo</div></div>
+                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiClosed" style="color:#a0a0b8;">0</div><div class="kpi-label">Fechados</div></div>
+                </div>
+
+                <!-- Visao por Funil/Etapa -->
+                <div style="padding:0 30px 20px;">
+                    <h2 style="color:#fff;font-size:16px;margin-bottom:12px;">Distribuicao por Funil/Etapa</h2>
+                    <div class="chart-container" style="background:rgba(26,26,46,0.5);padding:16px;border-radius:12px;border:1px solid rgba(108,63,181,0.1);">
+                        <canvas id="chartMqlByPipelineStage"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabela -->
+                <div style="padding:0 30px 30px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <h2 style="color:#fff;font-size:16px;margin:0;">Lista de MQLs</h2>
+                        <button class="export-btn" onclick="exportMqls()">&#128229; Exportar Excel</button>
+                    </div>
+                    <div style="overflow-x:auto;background:rgba(26,26,46,0.4);border-radius:12px;border:1px solid rgba(108,63,181,0.1);">
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead>
+                                <tr style="background:rgba(108,63,181,0.1);">
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Status</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Nome</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Email</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Telefone</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Empresa</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Funil</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Etapa</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Responsavel</th>
+                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Criado em</th>
+                                    <th style="padding:10px 14px;text-align:center;color:#a0a0b8;">Ploomes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mqlTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="last-update" id="mqlLastUpdate"></div>
+            </div>
+        </div>
+
     </div><!-- /main-content -->
 
     <!-- Contact Modal (global) -->
@@ -2201,18 +2310,22 @@ function toggleTable(id) {
 let oportLoaded = false;
 let dashLoaded = false;
 let forecastLoaded = false;
+let mqlsLoaded = false;
 let pendingScrollSection = null;
 
 function showView(viewName) {
     document.getElementById('view-oportunidades').style.display = 'none';
     document.getElementById('view-dashboard').style.display = 'none';
     document.getElementById('view-forecast').style.display = 'none';
+    const mqlEl = document.getElementById('view-mqls');
+    if (mqlEl) mqlEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
     if (viewName === 'oportunidades' && !oportLoaded) { loadDeals(); oportLoaded = true; }
     if (viewName === 'dashboard' && !dashLoaded) { loadDashboard(); dashLoaded = true; }
     if (viewName === 'forecast' && !forecastLoaded) { loadForecast(); forecastLoaded = true; }
+    if (viewName === 'mqls' && !mqlsLoaded) { loadMqls(); mqlsLoaded = true; }
 
     updateSidebarActive(viewName);
 
@@ -4912,6 +5025,245 @@ async function loadForecast() {
         loadingArea.innerHTML = `<div style="color:#f87171;">Erro ao carregar forecast: ${err.message}</div>`;
     }
 }
+
+// ==================== MQLS VIEW ====================
+let mqlAllPeople = [];
+let mqlAllDealsLookup = {}; // contactId -> [deal]
+let mqlChart = null;
+
+// Dominios genericos (NAO consideramos MQL)
+const GENERIC_EMAIL_DOMAINS = new Set([
+    'gmail.com', 'hotmail.com', 'yahoo.com', 'yahoo.com.br', 'outlook.com', 'outlook.com.br',
+    'live.com', 'icloud.com', 'me.com', 'msn.com', 'bol.com.br', 'uol.com.br', 'terra.com.br',
+    'globomail.com', 'globo.com', 'r7.com', 'ig.com.br', 'protonmail.com', 'aol.com',
+    'mac.com', 'zipmail.com.br', 'oi.com.br', 'click21.com.br'
+]);
+
+function isCorporateEmail(email) {
+    if (!email) return false;
+    const m = email.toLowerCase().match(/@([^@\s]+)$/);
+    if (!m) return false;
+    return !GENERIC_EMAIL_DOMAINS.has(m[1]);
+}
+
+function isMqlPerson(p) {
+    if (!isCorporateEmail(p.Email)) return false;
+    const phones = p.Phones || [];
+    return phones.length > 0;
+}
+
+async function loadMqls() {
+    const loadingArea = document.getElementById('mqlLoadingArea');
+    const contentArea = document.getElementById('mqlContentArea');
+    const loadingMsg = document.getElementById('mqlLoadingMsg');
+
+    loadingArea.style.display = 'block';
+    contentArea.style.display = 'none';
+
+    try {
+        loadingMsg.textContent = 'Carregando contatos do Ploomes...';
+        const [people, won, lost, open] = await Promise.all([
+            fetchCached('people'),
+            fetchCached('won'),
+            fetchCached('lost'),
+            fetchCached('open')
+        ]);
+
+        // Build deals lookup by ContactId AND CompanyId (deals podem estar em qualquer um)
+        mqlAllDealsLookup = {};
+        const allD = [...won, ...lost, ...open];
+        allD.forEach(d => {
+            const cid = d.ContactId;
+            if (cid) (mqlAllDealsLookup[cid] = mqlAllDealsLookup[cid] || []).push(d);
+            const pid = d.PersonId;
+            if (pid) (mqlAllDealsLookup[pid] = mqlAllDealsLookup[pid] || []).push(d);
+        });
+
+        // Filter MQLs (corp email + phone)
+        mqlAllPeople = (people || []).filter(isMqlPerson);
+
+        loadingMsg.textContent = `Processando ${mqlAllPeople.length} MQLs...`;
+
+        loadingArea.style.display = 'none';
+        contentArea.style.display = 'block';
+
+        populateMqlFilters();
+        renderMqls();
+
+        document.getElementById('mqlLastUpdate').textContent =
+            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | ${mqlAllPeople.length} MQLs detectados`;
+
+    } catch (err) {
+        console.error(err);
+        loadingArea.innerHTML = `<div style="color:#f87171;padding:30px;text-align:center;">Erro ao carregar: ${err.message}</div>`;
+    }
+}
+
+function getMqlBestDeal(personId, companyId) {
+    const candidates = [...(mqlAllDealsLookup[personId] || []), ...(mqlAllDealsLookup[companyId] || [])];
+    if (candidates.length === 0) return null;
+    // Prefer aberto, depois ganho, depois perdido. Mais recente primeiro.
+    const order = { 1: 0, 2: 1, 3: 2 };
+    return [...candidates].sort((a, b) => {
+        if (a.StatusId !== b.StatusId) return (order[a.StatusId] ?? 9) - (order[b.StatusId] ?? 9);
+        return new Date(b.LastUpdateDate || b.CreateDate) - new Date(a.LastUpdateDate || a.CreateDate);
+    })[0];
+}
+
+function getMqlClassified() {
+    return mqlAllPeople.map(p => {
+        const deal = getMqlBestDeal(p.Id, p.CompanyId);
+        let status, statusLabel, statusColor;
+        if (!deal) {
+            status = 'orphan'; statusLabel = '\u26A0\uFE0F Orfao'; statusColor = '#f87171';
+        } else if (deal.StatusId === 1) {
+            status = 'active'; statusLabel = '\u2705 Ativo'; statusColor = '#4ade80';
+        } else {
+            status = 'closed'; statusLabel = deal.StatusId === 2 ? '\uD83C\uDFC6 Ganho' : '\u274C Perdido'; statusColor = '#a0a0b8';
+        }
+        return {
+            id: p.Id,
+            name: p.Name,
+            email: p.Email,
+            phone: (p.Phones || [])[0]?.PhoneNumber || '',
+            companyId: p.CompanyId,
+            companyName: deal?.ContactName || '',
+            createDate: p.CreateDate,
+            deal: deal,
+            pipelineName: deal?.Pipeline?.Name || '',
+            stageName: deal?.Stage?.Name || '',
+            ownerName: deal?.Owner?.Name || '',
+            status: status,
+            statusLabel: statusLabel,
+            statusColor: statusColor
+        };
+    });
+}
+
+function populateMqlFilters() {
+    const all = getMqlClassified();
+    const pipelines = [...new Set(all.map(m => m.pipelineName).filter(Boolean))].sort();
+    const stages = [...new Set(all.map(m => m.stageName).filter(Boolean))].sort();
+
+    function pop(id, items, allLabel) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = `<option value="">${allLabel}</option>` +
+            items.map(it => `<option value="${it}"${it === current ? ' selected' : ''}>${it}</option>`).join('');
+    }
+    pop('mqlFilterPipeline', pipelines, 'Todos os funis');
+    pop('mqlFilterStage', stages, 'Todas as etapas');
+}
+
+function getMqlFiltered() {
+    const fStatus = document.getElementById('mqlFilterStatus').value;
+    const fPipeline = document.getElementById('mqlFilterPipeline').value;
+    const fStage = document.getElementById('mqlFilterStage').value;
+    const fPeriod = document.getElementById('mqlFilterPeriod').value;
+    const fSearch = (document.getElementById('mqlFilterSearch').value || '').toLowerCase();
+
+    const periodCutoff = fPeriod ? Date.now() - (parseInt(fPeriod) * 24 * 60 * 60 * 1000) : null;
+
+    return getMqlClassified().filter(m => {
+        if (fStatus && m.status !== fStatus) return false;
+        if (fPipeline && m.pipelineName !== fPipeline) return false;
+        if (fStage && m.stageName !== fStage) return false;
+        if (periodCutoff && m.createDate) {
+            if (new Date(m.createDate).getTime() < periodCutoff) return false;
+        }
+        if (fSearch) {
+            const blob = `${m.name||''} ${m.email||''} ${m.companyName||''}`.toLowerCase();
+            if (!blob.includes(fSearch)) return false;
+        }
+        return true;
+    });
+}
+
+function renderMqls() {
+    const filtered = getMqlFiltered();
+    const all = getMqlClassified();
+    window._mqlFiltered = filtered;
+
+    // KPIs (always over the full set, not filtered, exceto periodo)
+    const fPeriod = document.getElementById('mqlFilterPeriod').value;
+    const periodCutoff = fPeriod ? Date.now() - (parseInt(fPeriod) * 24 * 60 * 60 * 1000) : null;
+    const baseSet = periodCutoff ? all.filter(m => m.createDate && new Date(m.createDate).getTime() >= periodCutoff) : all;
+    document.getElementById('mqlKpiTotal').textContent = baseSet.length;
+    document.getElementById('mqlKpiOrphan').textContent = baseSet.filter(m => m.status === 'orphan').length;
+    document.getElementById('mqlKpiActive').textContent = baseSet.filter(m => m.status === 'active').length;
+    document.getElementById('mqlKpiClosed').textContent = baseSet.filter(m => m.status === 'closed').length;
+
+    // Chart: distribuicao por Funil/Etapa (sem orfaos por nao ter deal)
+    const pipStageMap = {};
+    filtered.forEach(m => {
+        const key = m.pipelineName ? `${m.pipelineName} | ${m.stageName || 'Sem etapa'}` : '\u26A0\uFE0F Sem card (orfao)';
+        pipStageMap[key] = (pipStageMap[key] || 0) + 1;
+    });
+    const pipStageSorted = Object.entries(pipStageMap).sort((a, b) => b[1] - a[1]);
+    const palette = ['#f87171','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#84cc16','#fb923c','#a855f7','#14b8a6','#eab308','#6366f1'];
+
+    if (mqlChart) { mqlChart.destroy(); mqlChart = null; }
+    mqlChart = new Chart(document.getElementById('chartMqlByPipelineStage'), {
+        type: 'bar',
+        data: {
+            labels: pipStageSorted.map(e => e[0]),
+            datasets: [{
+                label: 'MQLs',
+                data: pipStageSorted.map(e => e[1]),
+                backgroundColor: pipStageSorted.map((_, i) => palette[i % palette.length] + 'B3'),
+                borderColor: pipStageSorted.map((_, i) => palette[i % palette.length]),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
+        }
+    });
+
+    // Tabela
+    document.getElementById('mqlTableBody').innerHTML = filtered.map(m => `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:10px 14px;color:${m.statusColor};font-weight:600;white-space:nowrap;">${m.statusLabel}</td>
+        <td style="padding:10px 14px;color:#e0e0e0;font-weight:500;white-space:nowrap;" title="${m.name}">${m.name}</td>
+        <td style="padding:10px 14px;color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;">${m.email}</a></td>
+        <td style="padding:10px 14px;color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
+        <td style="padding:10px 14px;color:#c0c0d0;">${m.companyName || '-'}</td>
+        <td style="padding:10px 14px;">${m.pipelineName ? `<span class="badge ${getPipelineClass(m.pipelineName)}">${m.pipelineName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
+        <td style="padding:10px 14px;">${m.stageName ? `<span class="stage-badge ${getStageClass(m.stageName)}">${m.stageName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
+        <td style="padding:10px 14px;color:#c0c0d0;white-space:nowrap;font-size:12px;" title="${m.ownerName}">${shortName(m.ownerName) || '-'}</td>
+        <td style="padding:10px 14px;color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
+        <td style="padding:10px 14px;text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:14px;" title="Abrir no Ploomes">&#128279;</a></td>
+    </tr>`).join('');
+}
+
+function exportMqls() {
+    const filtered = window._mqlFiltered || getMqlFiltered();
+    exportToExcel(filtered, [
+        { header: 'Status', getValue: m => m.statusLabel },
+        { header: 'Nome', getValue: m => m.name },
+        { header: 'Email', getValue: m => m.email },
+        { header: 'Telefone', getValue: m => m.phone },
+        { header: 'Empresa', getValue: m => m.companyName },
+        { header: 'Funil', getValue: m => m.pipelineName },
+        { header: 'Etapa', getValue: m => m.stageName },
+        { header: 'Responsavel', getValue: m => m.ownerName },
+        { header: 'Data Criacao', getValue: m => m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '' },
+        { header: 'Link Ploomes', getValue: m => 'https://app10.ploomes.com/contact/' + m.id }
+    ], 'mqls');
+}
+
+// MQL filter event listeners
+['mqlFilterStatus','mqlFilterPipeline','mqlFilterStage','mqlFilterPeriod'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', renderMqls);
+});
+const mqlSearchEl = document.getElementById('mqlFilterSearch');
+if (mqlSearchEl) mqlSearchEl.addEventListener('input', renderMqls);
 
 // ==================== INIT ====================
 // Load dashboard on start (default view)
