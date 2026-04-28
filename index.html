@@ -1058,6 +1058,66 @@
         .badge-realista { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
         .badge-pessimista { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
 
+        /* Dash card (alias do section-card, usado em MQLs) */
+        .dash-card {
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(108, 63, 181, 0.1);
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .dash-card:hover {
+            border-color: rgba(108, 63, 181, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 50px rgba(108, 63, 181, 0.07);
+        }
+
+        /* MQL table styling (consistente com o resto do dashboard) */
+        .mql-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: transparent;
+        }
+        .mql-table thead th {
+            background: rgba(108, 63, 181, 0.1);
+            color: #a0a0b8;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.2);
+            white-space: nowrap;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mql-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s ease;
+        }
+        .mql-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+        .mql-table tbody tr:hover { background: rgba(108, 63, 181, 0.08); }
+        .mql-table tbody td {
+            padding: 10px 12px;
+            color: #d8d8e8;
+            vertical-align: middle;
+        }
+        .mql-status-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .mql-link-icon {
+            color: #b794f4;
+            text-decoration: none;
+            font-size: 16px;
+            transition: opacity 0.2s ease;
+        }
+        .mql-link-icon:hover { opacity: 0.7; }
+
         .editable-cell {
             cursor: pointer;
             border: 1px dashed rgba(255,255,255,0.1);
@@ -1960,49 +2020,69 @@
 
         <!-- ==================== VIEW: MQLS ==================== -->
         <div id="view-mqls" style="display:none;">
+            <!-- Header (estilo dashboard) -->
             <div class="op-header">
                 <div>
                     <h1>MQLs - Leads Qualificados</h1>
                     <div class="subtitle">Leads com telefone preenchido e e-mail corporativo</div>
                 </div>
+                <div class="op-stats">
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiTotal">-</div>
+                        <div class="label">Total MQLs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiOrphan" style="color:#f87171;">-</div>
+                        <div class="label">&#9888;&#65039; Orfaos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiActive" style="color:#4ade80;">-</div>
+                        <div class="label">&#9989; Com card</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiClosed" style="color:#a0a0b8;">-</div>
+                        <div class="label">Fechados</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="controls" style="border-bottom:1px solid rgba(108,63,181,0.1);background:rgba(20,20,38,0.5);">
+            <!-- Filtros -->
+            <div class="controls">
                 <div class="filter-group">
-                    <label>Status do Lead</label>
+                    <label>Status</label>
                     <select id="mqlFilterStatus">
                         <option value="">Todos</option>
-                        <option value="orphan" selected>&#9888;&#65039; Orfaos (sem card)</option>
-                        <option value="active">Com card ativo</option>
-                        <option value="closed">Fechado (ganho/perdido)</option>
+                        <option value="orphan" selected>&#9888;&#65039; Orfaos</option>
+                        <option value="active">&#9989; Com card ativo</option>
+                        <option value="closed">Fechados</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label>Funil</label>
                     <select id="mqlFilterPipeline">
-                        <option value="">Todos os funis</option>
+                        <option value="">Todos</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label>Etapa</label>
                     <select id="mqlFilterStage">
-                        <option value="">Todas as etapas</option>
+                        <option value="">Todas</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Periodo de criacao</label>
+                    <label>Periodo</label>
                     <select id="mqlFilterPeriod">
                         <option value="">Todos</option>
-                        <option value="7">Ultimos 7 dias</option>
-                        <option value="14">Ultimos 14 dias</option>
-                        <option value="30" selected>Ultimos 30 dias</option>
-                        <option value="60">Ultimos 60 dias</option>
-                        <option value="90">Ultimos 90 dias</option>
+                        <option value="7">7 dias</option>
+                        <option value="14">14 dias</option>
+                        <option value="30" selected>30 dias</option>
+                        <option value="60">60 dias</option>
+                        <option value="90">90 dias</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label>Buscar</label>
-                    <input type="text" id="mqlFilterSearch" placeholder="Nome, email, empresa...">
+                    <input type="text" id="mqlFilterSearch" placeholder="Nome, email, empresa..." style="width:240px;">
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
@@ -2010,52 +2090,54 @@
                 </div>
             </div>
 
-            <div id="mqlLoadingArea" class="op-loading">
+            <div id="mqlLoadingArea" class="dash-loading">
                 <div class="spinner"></div>
                 <div id="mqlLoadingMsg">Carregando MQLs...</div>
             </div>
 
             <div id="mqlContentArea" style="display:none;">
-                <!-- KPIs -->
-                <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;padding:20px 30px;">
-                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiTotal">0</div><div class="kpi-label">Total MQLs</div></div>
-                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiOrphan" style="color:#f87171;">0</div><div class="kpi-label">Orfaos (sem card)</div></div>
-                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiActive" style="color:#4ade80;">0</div><div class="kpi-label">Com card ativo</div></div>
-                    <div class="kpi-card"><div class="kpi-value" id="mqlKpiClosed" style="color:#a0a0b8;">0</div><div class="kpi-label">Fechados</div></div>
-                </div>
-
-                <!-- Visao por Funil/Etapa -->
-                <div style="padding:0 30px 20px;">
-                    <h2 style="color:#fff;font-size:16px;margin-bottom:12px;">Distribuicao por Funil/Etapa</h2>
-                    <div class="chart-container" style="background:rgba(26,26,46,0.5);padding:16px;border-radius:12px;border:1px solid rgba(108,63,181,0.1);">
-                        <canvas id="chartMqlByPipelineStage"></canvas>
+                <!-- Grafico Distribuicao por Funil/Etapa -->
+                <div style="padding:20px 30px 0;">
+                    <div class="dash-card" style="padding:20px;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 16px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
+                            Distribuicao por Funil / Etapa
+                        </h2>
+                        <div style="height:340px;">
+                            <canvas id="chartMqlByPipelineStage"></canvas>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Tabela -->
-                <div style="padding:0 30px 30px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                        <h2 style="color:#fff;font-size:16px;margin:0;">Lista de MQLs</h2>
-                        <button class="export-btn" onclick="exportMqls()">&#128229; Exportar Excel</button>
-                    </div>
-                    <div style="overflow-x:auto;background:rgba(26,26,46,0.4);border-radius:12px;border:1px solid rgba(108,63,181,0.1);">
-                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                            <thead>
-                                <tr style="background:rgba(108,63,181,0.1);">
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Status</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Nome</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Email</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Telefone</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Empresa</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Funil</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Etapa</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Responsavel</th>
-                                    <th style="padding:10px 14px;text-align:left;color:#a0a0b8;">Criado em</th>
-                                    <th style="padding:10px 14px;text-align:center;color:#a0a0b8;">Ploomes</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mqlTableBody"></tbody>
-                        </table>
+                <div style="padding:20px 30px 30px;">
+                    <div class="dash-card" style="padding:20px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
+                                Lista de MQLs
+                            </h2>
+                            <button class="export-btn" onclick="exportMqls()">&#128229; Exportar Excel</button>
+                        </div>
+                        <div style="overflow-x:auto;border-radius:8px;">
+                            <table class="mql-table">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Nome</th>
+                                        <th>Email</th>
+                                        <th>Telefone</th>
+                                        <th>Empresa</th>
+                                        <th>Funil</th>
+                                        <th>Etapa</th>
+                                        <th>Responsavel</th>
+                                        <th>Criado em</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mqlTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -5227,17 +5309,22 @@ function renderMqls() {
     });
 
     // Tabela
-    document.getElementById('mqlTableBody').innerHTML = filtered.map(m => `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-        <td style="padding:10px 14px;color:${m.statusColor};font-weight:600;white-space:nowrap;">${m.statusLabel}</td>
-        <td style="padding:10px 14px;color:#e0e0e0;font-weight:500;white-space:nowrap;" title="${m.name}">${m.name}</td>
-        <td style="padding:10px 14px;color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;">${m.email}</a></td>
-        <td style="padding:10px 14px;color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
-        <td style="padding:10px 14px;color:#c0c0d0;">${m.companyName || '-'}</td>
-        <td style="padding:10px 14px;">${m.pipelineName ? `<span class="badge ${getPipelineClass(m.pipelineName)}">${m.pipelineName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
-        <td style="padding:10px 14px;">${m.stageName ? `<span class="stage-badge ${getStageClass(m.stageName)}">${m.stageName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
-        <td style="padding:10px 14px;color:#c0c0d0;white-space:nowrap;font-size:12px;" title="${m.ownerName}">${shortName(m.ownerName) || '-'}</td>
-        <td style="padding:10px 14px;color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
-        <td style="padding:10px 14px;text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:14px;" title="Abrir no Ploomes">&#128279;</a></td>
+    function statusPill(m) {
+        const bg = m.status === 'orphan' ? 'rgba(248,113,113,0.15)' : (m.status === 'active' ? 'rgba(74,222,128,0.15)' : 'rgba(160,160,184,0.15)');
+        const border = m.status === 'orphan' ? 'rgba(248,113,113,0.4)' : (m.status === 'active' ? 'rgba(74,222,128,0.4)' : 'rgba(160,160,184,0.4)');
+        return `<span class="mql-status-pill" style="background:${bg};color:${m.statusColor};border:1px solid ${border};">${m.statusLabel}</span>`;
+    }
+    document.getElementById('mqlTableBody').innerHTML = filtered.map(m => `<tr>
+        <td>${statusPill(m)}</td>
+        <td style="font-weight:600;color:#fff;white-space:nowrap;" title="${m.name}">${m.name}</td>
+        <td style="color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;text-decoration:none;">${m.email}</a></td>
+        <td style="color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
+        <td style="color:#c0c0d0;">${m.companyName || '-'}</td>
+        <td>${m.pipelineName ? `<span class="badge ${getPipelineClass(m.pipelineName)}">${m.pipelineName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
+        <td>${m.stageName ? `<span class="stage-badge ${getStageClass(m.stageName)}">${m.stageName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
+        <td style="color:#c0c0d0;white-space:nowrap;font-size:12px;" title="${m.ownerName}">${shortName(m.ownerName) || '-'}</td>
+        <td style="color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
+        <td style="text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
     </tr>`).join('');
 }
 
