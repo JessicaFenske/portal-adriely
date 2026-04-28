@@ -5246,28 +5246,37 @@ function getMqlBestDeal(personId, companyId) {
     })[0];
 }
 
+function isSankhyaPipeline(name) {
+    return /sankhya/i.test(name || '');
+}
+
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
-        // Excluir deals ganhos (StatusId=2) da consideracao - se ganhou, virou cliente, nao e lead
-        const allDealsForPerson = [
+        const allRaw = [
             ...(mqlAllDealsLookup[p.Id] || []),
             ...(mqlAllDealsLookup[p.CompanyId] || [])
-        ].filter(d => d.StatusId !== 2);
+        ];
+
+        // Excluir deals em funis Sankhya
+        const allDeals = allRaw.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
+
+        // Excluir deals ganhos (StatusId=2) da consideracao - se ganhou, virou cliente
+        const openOrLost = allDeals.filter(d => d.StatusId !== 2);
 
         let deal = null;
-        if (allDealsForPerson.length > 0) {
+        if (openOrLost.length > 0) {
             const order = { 1: 0, 3: 1 }; // aberto > perdido
-            deal = [...allDealsForPerson].sort((a, b) => {
+            deal = [...openOrLost].sort((a, b) => {
                 if (a.StatusId !== b.StatusId) return (order[a.StatusId] ?? 9) - (order[b.StatusId] ?? 9);
                 return new Date(b.LastUpdateDate || b.CreateDate) - new Date(a.LastUpdateDate || a.CreateDate);
             })[0];
         }
 
-        // Verifica se e cliente (tem algum deal ganho) - se sim, marca pra excluir
-        const hasWonDeal = [
-            ...(mqlAllDealsLookup[p.Id] || []),
-            ...(mqlAllDealsLookup[p.CompanyId] || [])
-        ].some(d => d.StatusId === 2);
+        // Verifica se e cliente (tem deal ganho em qualquer funil de vendas)
+        const hasWonDeal = allDeals.some(d => d.StatusId === 2);
+
+        // Verifica se TEM deal Sankhya - se so existe deal Sankhya, exclui da view inteira
+        const onlyHasSankhya = allRaw.length > 0 && allDeals.length === 0;
 
         let status, statusLabel, statusColor;
         if (hasWonDeal) {
@@ -5294,9 +5303,10 @@ function getMqlClassified() {
             status: status,
             statusLabel: statusLabel,
             statusColor: statusColor,
-            isCustomer: hasWonDeal
+            isCustomer: hasWonDeal,
+            onlyHasSankhya: onlyHasSankhya
         };
-    }).filter(m => !m.isCustomer); // Excluir clientes (ja ganharam algum deal)
+    }).filter(m => !m.isCustomer && !m.onlyHasSankhya); // Excluir clientes e leads exclusivos do Sankhya
 }
 
 function populateMqlFilters() {
