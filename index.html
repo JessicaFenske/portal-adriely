@@ -1266,7 +1266,21 @@
             <span class="brand-text">Lincros</span>
         </div>
         <div class="sidebar-nav">
-            <div class="nav-section-title">Dashboard</div>
+            <div class="nav-section-title">Acesso rapido</div>
+            <div class="nav-item" data-view="forecast" onclick="showView('forecast')">
+                <span class="nav-icon">&#128176;</span>
+                <span class="nav-label">Forecast</span>
+            </div>
+            <div class="nav-item" data-view="oportunidades" onclick="showView('oportunidades')">
+                <span class="nav-icon">&#128203;</span>
+                <span class="nav-label">Oportunidades</span>
+            </div>
+            <div class="nav-item" data-view="mqls" onclick="showView('mqls')">
+                <span class="nav-icon">&#128269;</span>
+                <span class="nav-label">MQLs</span>
+            </div>
+
+            <div class="nav-section-title" style="margin-top:20px;">Dashboard</div>
             <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
                 <span class="nav-icon">&#128202;</span>
                 <span class="nav-label">Dashboard</span>
@@ -1320,21 +1334,6 @@
                 <span class="sub-num">&#128200;</span><span class="sub-label">Conversao por Etapa</span>
             </div>
 
-            <div class="nav-section-title" style="margin-top:20px;">Forecast</div>
-            <div class="nav-item" data-view="forecast" onclick="showView('forecast')">
-                <span class="nav-icon">&#128176;</span>
-                <span class="nav-label">Forecast</span>
-            </div>
-
-            <div class="nav-section-title" style="margin-top:20px;">Dados</div>
-            <div class="nav-item" data-view="oportunidades" onclick="showView('oportunidades')">
-                <span class="nav-icon">&#128203;</span>
-                <span class="nav-label">Oportunidades</span>
-            </div>
-            <div class="nav-item" data-view="mqls" onclick="showView('mqls')">
-                <span class="nav-icon">&#128269;</span>
-                <span class="nav-label">MQLs</span>
-            </div>
         </div>
         <div class="sidebar-toggle" onclick="toggleSidebar()">&#171;</div>
     </nav>
