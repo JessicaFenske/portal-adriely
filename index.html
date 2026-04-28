@@ -2169,12 +2169,13 @@
                             <table class="mql-table">
                                 <thead>
                                     <tr>
-                                        <th>Problema</th>
+                                        <th>Status</th>
                                         <th>Nome</th>
                                         <th>Email</th>
                                         <th>Telefone</th>
                                         <th>Detalhe</th>
                                         <th>Criado em</th>
+                                        <th>Origem</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -5179,6 +5180,10 @@ function isMqlPerson(p) {
     return phones.length > 0;
 }
 
+// Set global de companyIds que sao Clientes Lincros
+let mqlClientesLincrosIds = new Set();
+const TAG_CLIENTES_LINCROS = 60146250;
+
 async function loadMqls() {
     const loadingArea = document.getElementById('mqlLoadingArea');
     const contentArea = document.getElementById('mqlContentArea');
@@ -5189,12 +5194,22 @@ async function loadMqls() {
 
     try {
         loadingMsg.textContent = 'Carregando deals...';
-        // Pega cache dos deals (fast)
-        const [won, lost, open] = await Promise.all([
+        // Pega cache dos deals + companies (fast)
+        const [won, lost, open, companies] = await Promise.all([
             fetchCached('won').catch(() => []),
             fetchCached('lost').catch(() => []),
-            fetchCached('open').catch(() => [])
+            fetchCached('open').catch(() => []),
+            fetchCached('companies').catch(() => [])
         ]);
+
+        // Build set de companyIds que tem tag Clientes Lincros
+        mqlClientesLincrosIds = new Set();
+        (companies || []).forEach(c => {
+            if ((c.Tags || []).some(t => t.TagId === TAG_CLIENTES_LINCROS)) {
+                mqlClientesLincrosIds.add(c.Id);
+            }
+        });
+        console.log('[mql] Clientes Lincros excluidos:', mqlClientesLincrosIds.size);
 
         // Build deals lookup
         mqlAllDealsLookup = {};
@@ -5240,7 +5255,7 @@ async function loadMqls() {
 // Busca pessoas direto da API (fallback quando cache nao popula)
 async function fetchPeopleFromAPI(loadingMsg) {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    const baseUrl = `/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones&$select=Id,Name,Email,CompanyId,CreateDate`;
+    const baseUrl = `/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin&$select=Id,Name,Email,CompanyId,CreateDate,OriginId`;
     const PAGE_SIZE = 200;
     let all = [];
     let skip = 0;
@@ -5324,6 +5339,7 @@ function getMqlClassified() {
             phone: (p.Phones || [])[0]?.PhoneNumber || '',
             companyId: p.CompanyId,
             createDate: p.CreateDate,
+            origin: p.Origin?.Name || '',
             status: status,
             statusLabel: statusLabel,
             statusColor: statusColor,
@@ -5331,7 +5347,7 @@ function getMqlClassified() {
             dealId: latestDeal?.Id || null,
             isCustomer: isCustomer
         };
-    }).filter(m => !m.isCustomer);
+    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId));
 }
 
 function getMqlPeriodRange() {
@@ -5409,6 +5425,7 @@ function renderMqls() {
         <td style="color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
         <td style="color:#c0c0d0;font-size:12px;">${m.dealInfo || '-'}</td>
         <td style="color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
+        <td style="color:#c0c0d0;font-size:12px;">${m.origin || '-'}</td>
         <td style="text-align:center;"><a href="${linkUrl}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
     </tr>`;
     }).join('');
@@ -5423,6 +5440,7 @@ function exportMqls() {
         { header: 'Telefone', getValue: m => m.phone },
         { header: 'Detalhe', getValue: m => m.dealInfo },
         { header: 'Data Criacao', getValue: m => m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '' },
+        { header: 'Origem', getValue: m => m.origin },
         { header: 'Link Ploomes', getValue: m => 'https://app10.ploomes.com/contact/' + m.id }
     ], 'mqls');
 }
