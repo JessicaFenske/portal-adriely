@@ -2097,38 +2097,14 @@
                 </div>
                 <div class="op-stats">
                     <div class="stat-box">
-                        <div class="number" id="mqlKpiTotal">-</div>
-                        <div class="label">Total MQLs</div>
-                    </div>
-                    <div class="stat-box">
                         <div class="number" id="mqlKpiOrphan" style="color:#f87171;">-</div>
-                        <div class="label">&#9888;&#65039; Orfaos</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mqlKpiActive" style="color:#4ade80;">-</div>
-                        <div class="label">&#9989; Com card</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mqlKpiClosed" style="color:#a0a0b8;">-</div>
-                        <div class="label">&#10060; Perdidos</div>
+                        <div class="label">&#9888;&#65039; MQLs Orfaos</div>
                     </div>
                 </div>
             </div>
 
             <!-- Filtros (estilo inline tipo Forecast) -->
             <div class="mql-filters-bar">
-                <select id="mqlFilterStatus" class="mql-filter">
-                    <option value="">Todos os status</option>
-                    <option value="orphan" selected>&#9888;&#65039; Orfaos (sem card)</option>
-                    <option value="active">&#9989; Com card ativo</option>
-                    <option value="closed">&#10060; Perdidos</option>
-                </select>
-                <select id="mqlFilterPipeline" class="mql-filter">
-                    <option value="">Todos os funis</option>
-                </select>
-                <select id="mqlFilterStage" class="mql-filter">
-                    <option value="">Todas as etapas</option>
-                </select>
                 <select id="mqlFilterPeriod" class="mql-filter">
                     <option value="">Periodo: todos</option>
                     <option value="7">7 dias</option>
@@ -2150,16 +2126,11 @@
             </div>
 
             <div id="mqlContentArea" style="display:none;">
-                <!-- Grafico Distribuicao por Funil/Etapa -->
-                <div style="padding:20px 30px 0;">
-                    <div class="dash-card" style="padding:20px;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 16px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
-                            Distribuicao por Funil / Etapa
-                        </h2>
-                        <div style="height:340px;">
-                            <canvas id="chartMqlByPipelineStage"></canvas>
-                        </div>
+                <!-- Aviso explicativo -->
+                <div style="padding:16px 30px 0;">
+                    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;">
+                        <strong style="color:#f87171;">&#9888;&#65039; MQLs sem atendimento:</strong>
+                        Estes leads tem email corporativo + telefone preenchidos no Ploomes, mas <strong>nao foram criados em nenhum funil</strong> (SDR ou vendas). Precisam ser direcionados pra entrada do funil dos pre-vendedores.
                     </div>
                 </div>
 
@@ -2177,14 +2148,9 @@
                             <table class="mql-table">
                                 <thead>
                                     <tr>
-                                        <th>Status</th>
                                         <th>Nome</th>
                                         <th>Email</th>
                                         <th>Telefone</th>
-                                        <th>Empresa</th>
-                                        <th>Funil</th>
-                                        <th>Etapa</th>
-                                        <th>Responsavel</th>
                                         <th>Criado em</th>
                                         <th></th>
                                     </tr>
@@ -5223,7 +5189,6 @@ async function loadMqls() {
         loadingArea.style.display = 'none';
         contentArea.style.display = 'block';
 
-        populateMqlFilters();
         renderMqls();
 
         document.getElementById('mqlLastUpdate').textContent =
@@ -5250,6 +5215,10 @@ function isSankhyaPipeline(name) {
     return /sankhya/i.test(name || '');
 }
 
+// MQLs validos = pessoa COM email corporativo + telefone que NAO TEM nenhum deal vinculado
+// (nem em funis SDR, nem em funis de vendas, em nenhum status).
+// Se tem qualquer deal, ja foi tratada (mesmo que seja descarte) e NAO aparece como MQL.
+// Excecao: leads em funis Sankhya nao sao "tratamento" pra nos - se so tem deal Sankhya, ainda e orfao.
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
         const allRaw = [
@@ -5257,72 +5226,35 @@ function getMqlClassified() {
             ...(mqlAllDealsLookup[p.CompanyId] || [])
         ];
 
-        // Excluir deals em funis Sankhya
-        const allDeals = allRaw.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
+        // Deals que nao sao Sankhya (Sankhya nao conta como "tratamento" pra nos)
+        const nonSankhyaDeals = allRaw.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
 
-        // Excluir deals ganhos (StatusId=2) da consideracao - se ganhou, virou cliente
-        const openOrLost = allDeals.filter(d => d.StatusId !== 2);
+        // Tem algum deal nao-Sankhya em qualquer status (aberto/ganho/perdido)?
+        // Se tem, ja foi tratado: nao e MQL orfao.
+        const hasAnyDeal = nonSankhyaDeals.length > 0;
+        const hasWonDeal = nonSankhyaDeals.some(d => d.StatusId === 2);
 
-        let deal = null;
-        if (openOrLost.length > 0) {
-            const order = { 1: 0, 3: 1 }; // aberto > perdido
-            deal = [...openOrLost].sort((a, b) => {
-                if (a.StatusId !== b.StatusId) return (order[a.StatusId] ?? 9) - (order[b.StatusId] ?? 9);
-                return new Date(b.LastUpdateDate || b.CreateDate) - new Date(a.LastUpdateDate || a.CreateDate);
-            })[0];
-        }
-
-        // Verifica se e cliente (tem deal ganho em qualquer funil de vendas)
-        const hasWonDeal = allDeals.some(d => d.StatusId === 2);
-
-        // Verifica se TEM deal Sankhya - se so existe deal Sankhya, exclui da view inteira
-        const onlyHasSankhya = allRaw.length > 0 && allDeals.length === 0;
-
-        let status, statusLabel, statusColor;
-        if (hasWonDeal) {
-            status = 'customer'; statusLabel = '\uD83C\uDFC6 Cliente'; statusColor = '#a0a0b8';
-        } else if (!deal) {
-            status = 'orphan'; statusLabel = '\u26A0\uFE0F Orfao'; statusColor = '#f87171';
-        } else if (deal.StatusId === 1) {
-            status = 'active'; statusLabel = '\u2705 Ativo'; statusColor = '#4ade80';
-        } else {
-            status = 'closed'; statusLabel = '\u274C Perdido'; statusColor = '#a0a0b8';
-        }
+        // So aparece na view: pessoas SEM deal nao-Sankhya
+        // (= orfaos verdadeiros que nao foram pro funil SDR Entrada nem nada)
         return {
             id: p.Id,
             name: p.Name,
             email: p.Email,
             phone: (p.Phones || [])[0]?.PhoneNumber || '',
             companyId: p.CompanyId,
-            companyName: deal?.ContactName || '',
+            companyName: '',
             createDate: p.CreateDate,
-            deal: deal,
-            pipelineName: deal?.Pipeline?.Name || '',
-            stageName: deal?.Stage?.Name || '',
-            ownerName: deal?.Owner?.Name || '',
-            status: status,
-            statusLabel: statusLabel,
-            statusColor: statusColor,
-            isCustomer: hasWonDeal,
-            onlyHasSankhya: onlyHasSankhya
+            deal: null,
+            pipelineName: '',
+            stageName: '',
+            ownerName: '',
+            status: 'orphan',
+            statusLabel: '\u26A0\uFE0F Orfao',
+            statusColor: '#f87171',
+            hasAnyDeal: hasAnyDeal,
+            isCustomer: hasWonDeal
         };
-    }).filter(m => !m.isCustomer && !m.onlyHasSankhya); // Excluir clientes e leads exclusivos do Sankhya
-}
-
-function populateMqlFilters() {
-    const all = getMqlClassified();
-    const pipelines = [...new Set(all.map(m => m.pipelineName).filter(Boolean))].sort();
-    const stages = [...new Set(all.map(m => m.stageName).filter(Boolean))].sort();
-
-    function pop(id, items, allLabel) {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const current = sel.value;
-        sel.innerHTML = `<option value="">${allLabel}</option>` +
-            items.map(it => `<option value="${it}"${it === current ? ' selected' : ''}>${it}</option>`).join('');
-    }
-    pop('mqlFilterPipeline', pipelines, 'Todos os funis');
-    pop('mqlFilterStage', stages, 'Todas as etapas');
+    }).filter(m => !m.hasAnyDeal && !m.isCustomer); // Apenas orfaos verdadeiros
 }
 
 function getMqlPeriodRange() {
@@ -5370,72 +5302,15 @@ function getMqlFiltered() {
 
 function renderMqls() {
     const filtered = getMqlFiltered();
-    const all = getMqlClassified();
     window._mqlFiltered = filtered;
 
-    // KPIs (always over the full set, not filtered, exceto periodo)
-    const range = getMqlPeriodRange();
-    const baseSet = (range.start || range.end)
-        ? all.filter(m => {
-            if (!m.createDate) return false;
-            const t = new Date(m.createDate).getTime();
-            if (range.start && t < range.start) return false;
-            if (range.end && t > range.end) return false;
-            return true;
-        })
-        : all;
-    document.getElementById('mqlKpiTotal').textContent = baseSet.length;
-    document.getElementById('mqlKpiOrphan').textContent = baseSet.filter(m => m.status === 'orphan').length;
-    document.getElementById('mqlKpiActive').textContent = baseSet.filter(m => m.status === 'active').length;
-    document.getElementById('mqlKpiClosed').textContent = baseSet.filter(m => m.status === 'closed').length;
+    document.getElementById('mqlKpiOrphan').textContent = filtered.length;
 
-    // Chart: distribuicao por Funil/Etapa (sem orfaos por nao ter deal)
-    const pipStageMap = {};
-    filtered.forEach(m => {
-        const key = m.pipelineName ? `${m.pipelineName} | ${m.stageName || 'Sem etapa'}` : '\u26A0\uFE0F Sem card (orfao)';
-        pipStageMap[key] = (pipStageMap[key] || 0) + 1;
-    });
-    const pipStageSorted = Object.entries(pipStageMap).sort((a, b) => b[1] - a[1]);
-    const palette = ['#f87171','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#84cc16','#fb923c','#a855f7','#14b8a6','#eab308','#6366f1'];
-
-    if (mqlChart) { mqlChart.destroy(); mqlChart = null; }
-    mqlChart = new Chart(document.getElementById('chartMqlByPipelineStage'), {
-        type: 'bar',
-        data: {
-            labels: pipStageSorted.map(e => e[0]),
-            datasets: [{
-                label: 'MQLs',
-                data: pipStageSorted.map(e => e[1]),
-                backgroundColor: pipStageSorted.map((_, i) => palette[i % palette.length] + 'B3'),
-                borderColor: pipStageSorted.map((_, i) => palette[i % palette.length]),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
-                y: { ...darkScaleOptions }
-            }
-        }
-    });
-
-    // Tabela
-    function statusPill(m) {
-        const bg = m.status === 'orphan' ? 'rgba(248,113,113,0.15)' : (m.status === 'active' ? 'rgba(74,222,128,0.15)' : 'rgba(160,160,184,0.15)');
-        const border = m.status === 'orphan' ? 'rgba(248,113,113,0.4)' : (m.status === 'active' ? 'rgba(74,222,128,0.4)' : 'rgba(160,160,184,0.4)');
-        return `<span class="mql-status-pill" style="background:${bg};color:${m.statusColor};border:1px solid ${border};">${m.statusLabel}</span>`;
-    }
+    // Tabela: simples (so dados de contato + data de criacao + link)
     document.getElementById('mqlTableBody').innerHTML = filtered.map(m => `<tr>
-        <td>${statusPill(m)}</td>
         <td style="font-weight:600;color:#fff;white-space:nowrap;" title="${m.name}">${m.name}</td>
         <td style="color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;text-decoration:none;">${m.email}</a></td>
         <td style="color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
-        <td style="color:#c0c0d0;">${m.companyName || '-'}</td>
-        <td>${m.pipelineName ? `<span class="badge ${getPipelineClass(m.pipelineName)}">${m.pipelineName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
-        <td>${m.stageName ? `<span class="stage-badge ${getStageClass(m.stageName)}">${m.stageName}</span>` : '<span style="color:#6868a0;font-size:11px;">-</span>'}</td>
-        <td style="color:#c0c0d0;white-space:nowrap;font-size:12px;" title="${m.ownerName}">${shortName(m.ownerName) || '-'}</td>
         <td style="color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
         <td style="text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
     </tr>`).join('');
@@ -5444,17 +5319,12 @@ function renderMqls() {
 function exportMqls() {
     const filtered = window._mqlFiltered || getMqlFiltered();
     exportToExcel(filtered, [
-        { header: 'Status', getValue: m => m.statusLabel },
         { header: 'Nome', getValue: m => m.name },
         { header: 'Email', getValue: m => m.email },
         { header: 'Telefone', getValue: m => m.phone },
-        { header: 'Empresa', getValue: m => m.companyName },
-        { header: 'Funil', getValue: m => m.pipelineName },
-        { header: 'Etapa', getValue: m => m.stageName },
-        { header: 'Responsavel', getValue: m => m.ownerName },
         { header: 'Data Criacao', getValue: m => m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '' },
         { header: 'Link Ploomes', getValue: m => 'https://app10.ploomes.com/contact/' + m.id }
-    ], 'mqls');
+    ], 'mqls-orfaos');
 }
 
 // Mostra/oculta inputs de data quando "Personalizado" e selecionado
@@ -5465,10 +5335,6 @@ function toggleMqlCustomDateInputs() {
 }
 
 // MQL filter event listeners
-['mqlFilterStatus','mqlFilterPipeline','mqlFilterStage'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', renderMqls);
-});
 const mqlPeriodEl = document.getElementById('mqlFilterPeriod');
 if (mqlPeriodEl) {
     mqlPeriodEl.addEventListener('change', () => { toggleMqlCustomDateInputs(); renderMqls(); });
