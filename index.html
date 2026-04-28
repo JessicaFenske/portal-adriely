@@ -5212,6 +5212,15 @@ async function loadMqls() {
                 mqlClientesLincrosIds.add(c.Id);
             }
         });
+
+        // Fallback: se cache vazio ou poucos clientes detectados, busca direto da API
+        if (mqlClientesLincrosIds.size < 5) {
+            try {
+                loadingMsg.textContent = 'Buscando lista de clientes Lincros...';
+                const resp = await apiGet(`/Contacts?$top=500&$filter=Tags/any(t: t/TagId eq ${TAG_CLIENTES_LINCROS})&$select=Id`);
+                (resp.value || []).forEach(c => mqlClientesLincrosIds.add(c.Id));
+            } catch (e) { console.warn('Failed to fetch Clientes Lincros:', e); }
+        }
         console.log('[mql] Clientes Lincros excluidos:', mqlClientesLincrosIds.size);
 
         // Build deals lookup
