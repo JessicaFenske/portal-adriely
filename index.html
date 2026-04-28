@@ -1122,6 +1122,7 @@
             flex: 1;
             cursor: text;
         }
+        .mql-date-input { color-scheme: dark; min-width: 140px !important; }
         .mql-filter-search::placeholder { color: #6868a0; }
         .mql-refresh-btn {
             padding: 8px 18px;
@@ -2135,7 +2136,10 @@
                     <option value="30" selected>30 dias</option>
                     <option value="60">60 dias</option>
                     <option value="90">90 dias</option>
+                    <option value="custom">Personalizado...</option>
                 </select>
+                <input type="date" id="mqlFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;" title="Data de inicio">
+                <input type="date" id="mqlFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;" title="Data de fim">
                 <input type="text" id="mqlFilterSearch" class="mql-filter mql-filter-search" placeholder="&#128269; Buscar por nome, email, empresa...">
                 <button class="mql-refresh-btn" onclick="loadMqls()">&#128260; Atualizar</button>
             </div>
@@ -5311,21 +5315,40 @@ function populateMqlFilters() {
     pop('mqlFilterStage', stages, 'Todas as etapas');
 }
 
+function getMqlPeriodRange() {
+    const fPeriod = document.getElementById('mqlFilterPeriod').value;
+    if (fPeriod === 'custom') {
+        const from = document.getElementById('mqlFilterDateFrom').value;
+        const to = document.getElementById('mqlFilterDateTo').value;
+        return {
+            start: from ? new Date(from + 'T00:00:00').getTime() : null,
+            end: to ? new Date(to + 'T23:59:59').getTime() : null
+        };
+    }
+    if (fPeriod) {
+        return {
+            start: Date.now() - (parseInt(fPeriod) * 24 * 60 * 60 * 1000),
+            end: null
+        };
+    }
+    return { start: null, end: null };
+}
+
 function getMqlFiltered() {
     const fStatus = document.getElementById('mqlFilterStatus').value;
     const fPipeline = document.getElementById('mqlFilterPipeline').value;
     const fStage = document.getElementById('mqlFilterStage').value;
-    const fPeriod = document.getElementById('mqlFilterPeriod').value;
     const fSearch = (document.getElementById('mqlFilterSearch').value || '').toLowerCase();
-
-    const periodCutoff = fPeriod ? Date.now() - (parseInt(fPeriod) * 24 * 60 * 60 * 1000) : null;
+    const range = getMqlPeriodRange();
 
     return getMqlClassified().filter(m => {
         if (fStatus && m.status !== fStatus) return false;
         if (fPipeline && m.pipelineName !== fPipeline) return false;
         if (fStage && m.stageName !== fStage) return false;
-        if (periodCutoff && m.createDate) {
-            if (new Date(m.createDate).getTime() < periodCutoff) return false;
+        if ((range.start || range.end) && m.createDate) {
+            const t = new Date(m.createDate).getTime();
+            if (range.start && t < range.start) return false;
+            if (range.end && t > range.end) return false;
         }
         if (fSearch) {
             const blob = `${m.name||''} ${m.email||''} ${m.companyName||''}`.toLowerCase();
@@ -5341,9 +5364,16 @@ function renderMqls() {
     window._mqlFiltered = filtered;
 
     // KPIs (always over the full set, not filtered, exceto periodo)
-    const fPeriod = document.getElementById('mqlFilterPeriod').value;
-    const periodCutoff = fPeriod ? Date.now() - (parseInt(fPeriod) * 24 * 60 * 60 * 1000) : null;
-    const baseSet = periodCutoff ? all.filter(m => m.createDate && new Date(m.createDate).getTime() >= periodCutoff) : all;
+    const range = getMqlPeriodRange();
+    const baseSet = (range.start || range.end)
+        ? all.filter(m => {
+            if (!m.createDate) return false;
+            const t = new Date(m.createDate).getTime();
+            if (range.start && t < range.start) return false;
+            if (range.end && t > range.end) return false;
+            return true;
+        })
+        : all;
     document.getElementById('mqlKpiTotal').textContent = baseSet.length;
     document.getElementById('mqlKpiOrphan').textContent = baseSet.filter(m => m.status === 'orphan').length;
     document.getElementById('mqlKpiActive').textContent = baseSet.filter(m => m.status === 'active').length;
@@ -5417,8 +5447,23 @@ function exportMqls() {
     ], 'mqls');
 }
 
+// Mostra/oculta inputs de data quando "Personalizado" e selecionado
+function toggleMqlCustomDateInputs() {
+    const isCustom = document.getElementById('mqlFilterPeriod').value === 'custom';
+    document.getElementById('mqlFilterDateFrom').style.display = isCustom ? '' : 'none';
+    document.getElementById('mqlFilterDateTo').style.display = isCustom ? '' : 'none';
+}
+
 // MQL filter event listeners
-['mqlFilterStatus','mqlFilterPipeline','mqlFilterStage','mqlFilterPeriod'].forEach(id => {
+['mqlFilterStatus','mqlFilterPipeline','mqlFilterStage'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', renderMqls);
+});
+const mqlPeriodEl = document.getElementById('mqlFilterPeriod');
+if (mqlPeriodEl) {
+    mqlPeriodEl.addEventListener('change', () => { toggleMqlCustomDateInputs(); renderMqls(); });
+}
+['mqlFilterDateFrom','mqlFilterDateTo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderMqls);
 });
