@@ -2041,7 +2041,7 @@
                     </div>
                     <div class="stat-box">
                         <div class="number" id="mqlKpiClosed" style="color:#a0a0b8;">-</div>
-                        <div class="label">Fechados</div>
+                        <div class="label">&#10060; Perdidos</div>
                     </div>
                 </div>
             </div>
@@ -2054,7 +2054,7 @@
                         <option value="">Todos</option>
                         <option value="orphan" selected>&#9888;&#65039; Orfaos</option>
                         <option value="active">&#9989; Com card ativo</option>
-                        <option value="closed">Fechados</option>
+                        <option value="closed">&#10060; Perdidos</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -5194,14 +5194,36 @@ function getMqlBestDeal(personId, companyId) {
 
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
-        const deal = getMqlBestDeal(p.Id, p.CompanyId);
+        // Excluir deals ganhos (StatusId=2) da consideracao - se ganhou, virou cliente, nao e lead
+        const allDealsForPerson = [
+            ...(mqlAllDealsLookup[p.Id] || []),
+            ...(mqlAllDealsLookup[p.CompanyId] || [])
+        ].filter(d => d.StatusId !== 2);
+
+        let deal = null;
+        if (allDealsForPerson.length > 0) {
+            const order = { 1: 0, 3: 1 }; // aberto > perdido
+            deal = [...allDealsForPerson].sort((a, b) => {
+                if (a.StatusId !== b.StatusId) return (order[a.StatusId] ?? 9) - (order[b.StatusId] ?? 9);
+                return new Date(b.LastUpdateDate || b.CreateDate) - new Date(a.LastUpdateDate || a.CreateDate);
+            })[0];
+        }
+
+        // Verifica se e cliente (tem algum deal ganho) - se sim, marca pra excluir
+        const hasWonDeal = [
+            ...(mqlAllDealsLookup[p.Id] || []),
+            ...(mqlAllDealsLookup[p.CompanyId] || [])
+        ].some(d => d.StatusId === 2);
+
         let status, statusLabel, statusColor;
-        if (!deal) {
+        if (hasWonDeal) {
+            status = 'customer'; statusLabel = '\uD83C\uDFC6 Cliente'; statusColor = '#a0a0b8';
+        } else if (!deal) {
             status = 'orphan'; statusLabel = '\u26A0\uFE0F Orfao'; statusColor = '#f87171';
         } else if (deal.StatusId === 1) {
             status = 'active'; statusLabel = '\u2705 Ativo'; statusColor = '#4ade80';
         } else {
-            status = 'closed'; statusLabel = deal.StatusId === 2 ? '\uD83C\uDFC6 Ganho' : '\u274C Perdido'; statusColor = '#a0a0b8';
+            status = 'closed'; statusLabel = '\u274C Perdido'; statusColor = '#a0a0b8';
         }
         return {
             id: p.Id,
@@ -5217,9 +5239,10 @@ function getMqlClassified() {
             ownerName: deal?.Owner?.Name || '',
             status: status,
             statusLabel: statusLabel,
-            statusColor: statusColor
+            statusColor: statusColor,
+            isCustomer: hasWonDeal
         };
-    });
+    }).filter(m => !m.isCustomer); // Excluir clientes (ja ganharam algum deal)
 }
 
 function populateMqlFilters() {
