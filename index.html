@@ -4742,10 +4742,15 @@ function renderForecast() {
     const vendSorted = Object.entries(vendMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => (b.mrr + b.setup) - (a.mrr + a.setup));
 
     if (fcCharts.vendedor) { fcCharts.vendedor.destroy(); fcCharts.vendedor = null; }
+    const shortNameForChart = (n) => {
+        if (!n) return '';
+        const parts = n.trim().split(/\s+/);
+        return parts.length >= 2 ? parts[0] + ' ' + parts[1] : parts[0];
+    };
     fcCharts.vendedor = new Chart(document.getElementById('chartFcVendedor'), {
         type: 'bar',
         data: {
-            labels: vendSorted.map(v => v.name),
+            labels: vendSorted.map(v => shortNameForChart(v.name)),
             datasets: [
                 { label: 'MRR', data: vendSorted.map(v => v.mrr), backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
                 { label: 'Setup', data: vendSorted.map(v => v.setup), backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#818cf8', borderWidth: 1 }
@@ -4757,9 +4762,14 @@ function renderForecast() {
             scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } }
         }
     });
+    const shortName = (n) => {
+        if (!n) return '';
+        const parts = n.trim().split(/\s+/);
+        return parts.length >= 2 ? parts[0] + ' ' + parts[1] : parts[0];
+    };
     document.getElementById('fcVendedorBody').innerHTML = vendSorted.map((v, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;">${v.name}</td>
+        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${v.name}">${shortName(v.name)}</td>
         <td class="money" style="color:#4ade80;">${formatMoney(v.mrr)}</td>
         <td class="money" style="color:#818cf8;">${formatMoney(v.setup)}</td>
         <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(v.mrr + v.setup)}</td>
