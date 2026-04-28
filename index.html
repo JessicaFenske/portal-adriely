@@ -4746,7 +4746,10 @@ function renderForecast() {
         vendMap[v].setup += getFcSetup(d);
         vendMap[v].count++;
     });
-    const vendSorted = Object.entries(vendMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => (b.mrr + b.setup) - (a.mrr + a.setup));
+    const vendSorted = Object.entries(vendMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => {
+        if (b.mrr !== a.mrr) return b.mrr - a.mrr;
+        return b.setup - a.setup;
+    });
 
     if (fcCharts.vendedor) { fcCharts.vendedor.destroy(); fcCharts.vendedor = null; }
     fcCharts.vendedor = new Chart(document.getElementById('chartFcVendedor'), {
@@ -4782,7 +4785,10 @@ function renderForecast() {
         funilMap[f].setup += getFcSetup(d);
         funilMap[f].count++;
     });
-    const funilSorted = Object.entries(funilMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => (b.mrr + b.setup) - (a.mrr + a.setup));
+    const funilSorted = Object.entries(funilMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => {
+        if (b.mrr !== a.mrr) return b.mrr - a.mrr;
+        return b.setup - a.setup;
+    });
 
     if (fcCharts.funil) { fcCharts.funil.destroy(); fcCharts.funil = null; }
     fcCharts.funil = new Chart(document.getElementById('chartFcFunil'), {
