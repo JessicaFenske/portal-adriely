@@ -1936,7 +1936,7 @@
                         <h3>Por Vendedor</h3>
                         <canvas id="chartFcVendedor"></canvas>
                         <table>
-                            <thead><tr><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th>Deals</th></tr></thead>
+                            <thead><tr><th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Deals</th></tr></thead>
                             <tbody id="fcVendedorBody"></tbody>
                         </table>
                     </div>
@@ -1944,7 +1944,7 @@
                         <h3>Por Funil</h3>
                         <canvas id="chartFcFunil"></canvas>
                         <table>
-                            <thead><tr><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th>Deals</th></tr></thead>
+                            <thead><tr><th class="rank-num">#</th><th>Funil</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Deals</th></tr></thead>
                             <tbody id="fcFunilBody"></tbody>
                         </table>
                     </div>
@@ -4757,10 +4757,12 @@ function renderForecast() {
             scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } }
         }
     });
-    document.getElementById('fcVendedorBody').innerHTML = vendSorted.map(v => `<tr>
-        <td style="font-weight:500;color:#e0e0e0;">${v.name}</td>
-        <td class="money">${formatMoney(v.mrr)}</td>
-        <td class="money">${formatMoney(v.setup)}</td>
+    document.getElementById('fcVendedorBody').innerHTML = vendSorted.map((v, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${v.name}</td>
+        <td class="money" style="color:#4ade80;">${formatMoney(v.mrr)}</td>
+        <td class="money" style="color:#818cf8;">${formatMoney(v.setup)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(v.mrr + v.setup)}</td>
         <td style="text-align:center;">${v.count}</td>
     </tr>`).join('');
 
@@ -4791,10 +4793,12 @@ function renderForecast() {
             scales: { x: { stacked: true, beginAtZero: true, grid: darkScaleOptions.grid, ticks: darkScaleOptions.ticks }, y: { stacked: true, ...darkScaleOptions } }
         }
     });
-    document.getElementById('fcFunilBody').innerHTML = funilSorted.map(f => `<tr>
-        <td style="font-weight:500;color:#e0e0e0;">${f.name}</td>
-        <td class="money">${formatMoney(f.mrr)}</td>
-        <td class="money">${formatMoney(f.setup)}</td>
+    document.getElementById('fcFunilBody').innerHTML = funilSorted.map((f, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${f.name}</td>
+        <td class="money" style="color:#4ade80;">${formatMoney(f.mrr)}</td>
+        <td class="money" style="color:#818cf8;">${formatMoney(f.setup)}</td>
+        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(f.mrr + f.setup)}</td>
         <td style="text-align:center;">${f.count}</td>
     </tr>`).join('');
 }
