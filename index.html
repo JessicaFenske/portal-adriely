@@ -912,6 +912,44 @@
         .fc-kpi-card.scenario-pessimista .fc-kpi-value { color: #ef4444; }
 
         .fc-section { padding: 20px 30px; }
+        .fc-filters-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(20, 20, 38, 0.4);
+            border: 1px solid rgba(108, 63, 181, 0.1);
+            border-radius: 10px;
+        }
+        .fc-filter-input, .fc-filter-select, .fc-filter-date {
+            padding: 6px 10px;
+            border: 1px solid rgba(108, 63, 181, 0.25);
+            border-radius: 6px;
+            background: rgba(15, 15, 26, 0.7);
+            color: #e0e0e0;
+            font-size: 12px;
+            font-family: inherit;
+            min-width: 140px;
+        }
+        .fc-filter-input:focus, .fc-filter-select:focus, .fc-filter-date:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+        }
+        .fc-filter-input { min-width: 200px; }
+        .fc-filter-date { min-width: 145px; color-scheme: dark; }
+        .fc-clear-filters {
+            padding: 6px 14px;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 6px;
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .fc-clear-filters:hover { background: rgba(248, 113, 113, 0.2); }
         .fc-section-title {
             font-size: 16px;
             font-weight: 600;
@@ -1763,6 +1801,45 @@
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
                         <div class="fc-section-title" style="margin-bottom:0;">Detalhes do Forecast</div>
                         <button class="export-btn" onclick="exportForecast()">&#128229; Exportar Excel</button>
+                    </div>
+
+                    <!-- Inline filters bar (similar to Conversao por Etapa) -->
+                    <div class="fc-filters-bar">
+                        <input type="text" id="fcFilterTitle" placeholder="Buscar titulo..." class="fc-filter-input" oninput="renderForecast()">
+                        <select id="fcFilterOwner" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Todos os vendedores</option>
+                        </select>
+                        <select id="fcFilterPipeline" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Todos os funis</option>
+                        </select>
+                        <select id="fcFilterStage" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Todas as etapas</option>
+                        </select>
+                        <select id="fcFilterScenario" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Todos os cenarios</option>
+                            <option value="Otimista">Otimista</option>
+                            <option value="Realista">Realista</option>
+                            <option value="Pessimista">Pessimista</option>
+                        </select>
+                        <select id="fcFilterMrr" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Qualquer MRR</option>
+                            <option value="zero">Sem MRR (R$ 0)</option>
+                            <option value="positive">Com MRR (&gt; 0)</option>
+                            <option value="lt5k">MRR &lt; R$ 5.000</option>
+                            <option value="5k-20k">MRR R$ 5k-20k</option>
+                            <option value="gt20k">MRR &gt; R$ 20.000</option>
+                        </select>
+                        <select id="fcFilterSetup" class="fc-filter-select" onchange="renderForecast()">
+                            <option value="">Qualquer Setup</option>
+                            <option value="zero">Sem Setup (R$ 0)</option>
+                            <option value="positive">Com Setup (&gt; 0)</option>
+                            <option value="lt10k">Setup &lt; R$ 10.000</option>
+                            <option value="10k-50k">Setup R$ 10k-50k</option>
+                            <option value="gt50k">Setup &gt; R$ 50.000</option>
+                        </select>
+                        <input type="date" id="fcFilterDateFrom" class="fc-filter-date" onchange="renderForecast()" title="Data fechamento - inicio">
+                        <input type="date" id="fcFilterDateTo" class="fc-filter-date" onchange="renderForecast()" title="Data fechamento - fim">
+                        <button class="fc-clear-filters" onclick="clearFcFilters()">Limpar</button>
                     </div>
                     <div style="overflow-x:auto;">
                         <table>
@@ -4292,11 +4369,84 @@ function applyFcCustomPeriod() {
 }
 
 function getFcFiltered() {
+    // Read column filters
+    const fTitle = (document.getElementById('fcFilterTitle')?.value || '').toLowerCase().trim();
+    const fOwner = document.getElementById('fcFilterOwner')?.value || '';
+    const fPipeline = document.getElementById('fcFilterPipeline')?.value || '';
+    const fStage = document.getElementById('fcFilterStage')?.value || '';
+    const fScenario = document.getElementById('fcFilterScenario')?.value || '';
+    const fMrr = document.getElementById('fcFilterMrr')?.value || '';
+    const fSetup = document.getElementById('fcFilterSetup')?.value || '';
+    const fDateFrom = document.getElementById('fcFilterDateFrom')?.value || '';
+    const fDateTo = document.getElementById('fcFilterDateTo')?.value || '';
+
+    function rangeMatch(val, opt) {
+        if (!opt) return true;
+        if (opt === 'zero') return !val || val === 0;
+        if (opt === 'positive') return val > 0;
+        if (opt === 'lt5k') return val > 0 && val < 5000;
+        if (opt === '5k-20k') return val >= 5000 && val <= 20000;
+        if (opt === 'gt20k') return val > 20000;
+        if (opt === 'lt10k') return val > 0 && val < 10000;
+        if (opt === '10k-50k') return val >= 10000 && val <= 50000;
+        if (opt === 'gt50k') return val > 50000;
+        return true;
+    }
+
+    // Period filter (when there's no manual date filter)
+    const usingManualDate = fDateFrom || fDateTo;
+    const dFrom = fDateFrom ? new Date(fDateFrom + 'T00:00:00') : null;
+    const dTo = fDateTo ? new Date(fDateTo + 'T23:59:59') : null;
+
     return fcAllDeals.filter(d => {
-        if (!d.closeDate || !fcPeriodStart || !fcPeriodEnd) return true;
-        const dt = new Date(d.closeDate);
-        return dt >= fcPeriodStart && dt <= fcPeriodEnd;
+        // Period
+        if (usingManualDate) {
+            if (!d.closeDate) return false;
+            const dt = new Date(d.closeDate);
+            if (dFrom && dt < dFrom) return false;
+            if (dTo && dt > dTo) return false;
+        } else if (d.closeDate && fcPeriodStart && fcPeriodEnd) {
+            const dt = new Date(d.closeDate);
+            if (dt < fcPeriodStart || dt > fcPeriodEnd) return false;
+        }
+
+        // Column filters
+        if (fTitle && !d.title.toLowerCase().includes(fTitle)) return false;
+        if (fOwner && d.owner !== fOwner) return false;
+        if (fPipeline && d.pipeline !== fPipeline) return false;
+        if (fStage && d.stage !== fStage) return false;
+        if (fScenario && d.forecast !== fScenario) return false;
+        if (!rangeMatch(getFcMrr(d), fMrr)) return false;
+        if (!rangeMatch(getFcSetup(d), fSetup)) return false;
+
+        return true;
     });
+}
+
+function clearFcFilters() {
+    ['fcFilterTitle','fcFilterOwner','fcFilterPipeline','fcFilterStage','fcFilterScenario','fcFilterMrr','fcFilterSetup','fcFilterDateFrom','fcFilterDateTo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderForecast();
+}
+
+function populateFcFilters() {
+    // Populate dropdowns based on current data
+    const owners = [...new Set(fcAllDeals.map(d => d.owner).filter(Boolean))].sort();
+    const pipelines = [...new Set(fcAllDeals.map(d => d.pipeline).filter(Boolean))].sort();
+    const stages = [...new Set(fcAllDeals.map(d => d.stage).filter(Boolean))].sort();
+
+    function populate(id, items, allLabel) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = `<option value="">${allLabel}</option>` +
+            items.map(it => `<option value="${it}"${it === current ? ' selected' : ''}>${it}</option>`).join('');
+    }
+    populate('fcFilterOwner', owners, 'Todos os vendedores');
+    populate('fcFilterPipeline', pipelines, 'Todos os funis');
+    populate('fcFilterStage', stages, 'Todas as etapas');
 }
 
 function getFcMrr(deal) {
@@ -4628,6 +4778,7 @@ async function loadForecast() {
 
         loadingArea.style.display = 'none';
         contentArea.style.display = '';
+        populateFcFilters();
         renderForecast();
 
         document.getElementById('fcLastUpdate').textContent =
