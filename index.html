@@ -2123,6 +2123,9 @@
                     <option value="ativo">&#9989; Em atendimento</option>
                     <option value="perdido">&#10060; Perdidos</option>
                 </select>
+                <select id="mqlFilterOrigin" class="mql-filter">
+                    <option value="">Todas as origens</option>
+                </select>
                 <select id="mqlFilterPeriod" class="mql-filter">
                     <option value="">Periodo: todos</option>
                     <option value="7">7 dias</option>
@@ -5241,6 +5244,7 @@ async function loadMqls() {
         loadingArea.style.display = 'none';
         contentArea.style.display = 'block';
 
+        populateMqlOriginFilter();
         renderMqls();
 
         document.getElementById('mqlLastUpdate').textContent =
@@ -5371,11 +5375,16 @@ function getMqlPeriodRange() {
 
 function getMqlFiltered() {
     const fStatus = document.getElementById('mqlFilterStatus')?.value || '';
+    const fOrigin = document.getElementById('mqlFilterOrigin')?.value || '';
     const fSearch = (document.getElementById('mqlFilterSearch')?.value || '').toLowerCase();
     const range = getMqlPeriodRange();
 
     return getMqlClassified().filter(m => {
         if (fStatus && m.status !== fStatus) return false;
+        if (fOrigin) {
+            if (fOrigin === '__none__' && m.origin) return false;
+            if (fOrigin !== '__none__' && m.origin !== fOrigin) return false;
+        }
         if ((range.start || range.end) && m.createDate) {
             const t = new Date(m.createDate).getTime();
             if (range.start && t < range.start) return false;
@@ -5387,6 +5396,18 @@ function getMqlFiltered() {
         }
         return true;
     });
+}
+
+function populateMqlOriginFilter() {
+    const sel = document.getElementById('mqlFilterOrigin');
+    if (!sel) return;
+    const all = getMqlClassified();
+    const origins = [...new Set(all.map(m => m.origin).filter(Boolean))].sort();
+    const hasNoOrigin = all.some(m => !m.origin);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Todas as origens</option>' +
+        (hasNoOrigin ? `<option value="__none__"${current === '__none__' ? ' selected' : ''}>(Sem origem)</option>` : '') +
+        origins.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
 }
 
 function renderMqls() {
@@ -5455,6 +5476,8 @@ function toggleMqlCustomDateInputs() {
 // MQL filter event listeners
 const mqlStatusEl = document.getElementById('mqlFilterStatus');
 if (mqlStatusEl) mqlStatusEl.addEventListener('change', renderMqls);
+const mqlOriginEl = document.getElementById('mqlFilterOrigin');
+if (mqlOriginEl) mqlOriginEl.addEventListener('change', renderMqls);
 const mqlPeriodEl = document.getElementById('mqlFilterPeriod');
 if (mqlPeriodEl) {
     mqlPeriodEl.addEventListener('change', () => { toggleMqlCustomDateInputs(); renderMqls(); });
