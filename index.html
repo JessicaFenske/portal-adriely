@@ -1072,6 +1072,75 @@
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 50px rgba(108, 63, 181, 0.07);
         }
 
+        /* MQL view - header com mesmo estilo de Oportunidades */
+        #view-mqls .op-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.3);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 30px rgba(108, 63, 181, 0.15);
+        }
+        #view-mqls .op-header h1 { font-size: 22px; font-weight: 700; text-shadow: 0 0 20px rgba(108, 63, 181, 0.4); margin: 0; }
+        #view-mqls .op-header .subtitle { font-size: 13px; opacity: 0.6; margin-top: 4px; color: #b0b0c0; }
+
+        /* MQL filters bar (inline, dark, sem fundo branco) */
+        .mql-filters-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px 30px;
+            background: rgba(20, 20, 38, 0.4);
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
+            align-items: center;
+        }
+        .mql-filter {
+            padding: 8px 14px;
+            border: 1px solid rgba(108, 63, 181, 0.25);
+            border-radius: 8px;
+            background: rgba(15, 15, 26, 0.7);
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 180px;
+        }
+        .mql-filter:hover {
+            border-color: rgba(108, 63, 181, 0.5);
+            background: rgba(15, 15, 26, 0.9);
+        }
+        .mql-filter:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+        .mql-filter-search {
+            min-width: 280px;
+            flex: 1;
+            cursor: text;
+        }
+        .mql-filter-search::placeholder { color: #6868a0; }
+        .mql-refresh-btn {
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 20px rgba(108, 63, 181, 0.3);
+            font-family: inherit;
+        }
+        .mql-refresh-btn:hover {
+            box-shadow: 0 0 30px rgba(108, 63, 181, 0.5);
+            transform: translateY(-1px);
+        }
+
         /* MQL table styling (consistente com o resto do dashboard) */
         .mql-table {
             width: 100%;
@@ -2046,48 +2115,30 @@
                 </div>
             </div>
 
-            <!-- Filtros -->
-            <div class="controls">
-                <div class="filter-group">
-                    <label>Status</label>
-                    <select id="mqlFilterStatus">
-                        <option value="">Todos</option>
-                        <option value="orphan" selected>&#9888;&#65039; Orfaos</option>
-                        <option value="active">&#9989; Com card ativo</option>
-                        <option value="closed">&#10060; Perdidos</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Funil</label>
-                    <select id="mqlFilterPipeline">
-                        <option value="">Todos</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Etapa</label>
-                    <select id="mqlFilterStage">
-                        <option value="">Todas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Periodo</label>
-                    <select id="mqlFilterPeriod">
-                        <option value="">Todos</option>
-                        <option value="7">7 dias</option>
-                        <option value="14">14 dias</option>
-                        <option value="30" selected>30 dias</option>
-                        <option value="60">60 dias</option>
-                        <option value="90">90 dias</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Buscar</label>
-                    <input type="text" id="mqlFilterSearch" placeholder="Nome, email, empresa..." style="width:240px;">
-                </div>
-                <div class="filter-group">
-                    <label>&nbsp;</label>
-                    <button class="btn-refresh" onclick="loadMqls()">Atualizar</button>
-                </div>
+            <!-- Filtros (estilo inline tipo Forecast) -->
+            <div class="mql-filters-bar">
+                <select id="mqlFilterStatus" class="mql-filter">
+                    <option value="">Todos os status</option>
+                    <option value="orphan" selected>&#9888;&#65039; Orfaos (sem card)</option>
+                    <option value="active">&#9989; Com card ativo</option>
+                    <option value="closed">&#10060; Perdidos</option>
+                </select>
+                <select id="mqlFilterPipeline" class="mql-filter">
+                    <option value="">Todos os funis</option>
+                </select>
+                <select id="mqlFilterStage" class="mql-filter">
+                    <option value="">Todas as etapas</option>
+                </select>
+                <select id="mqlFilterPeriod" class="mql-filter">
+                    <option value="">Periodo: todos</option>
+                    <option value="7">7 dias</option>
+                    <option value="14">14 dias</option>
+                    <option value="30" selected>30 dias</option>
+                    <option value="60">60 dias</option>
+                    <option value="90">90 dias</option>
+                </select>
+                <input type="text" id="mqlFilterSearch" class="mql-filter mql-filter-search" placeholder="&#128269; Buscar por nome, email, empresa...">
+                <button class="mql-refresh-btn" onclick="loadMqls()">&#128260; Atualizar</button>
             </div>
 
             <div id="mqlLoadingArea" class="dash-loading">
