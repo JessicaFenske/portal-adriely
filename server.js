@@ -159,9 +159,10 @@ async function refreshAll() {
     refreshOne('segments', '/Contacts@LinesOfBusiness');
     // Todas as empresas (TypeId=1) com apenas Id e LineOfBusinessId - leve, para achar Segmento de qualquer deal
     refreshOne('companies', odataEncode('/Contacts?$filter=TypeId eq 1 and LineOfBusinessId ne null&$select=Id,LineOfBusinessId'));
-    // Pessoas (TypeId=2) com email + phones para deteccao de MQLs (ultimos 90 dias somente)
+    // Pessoas (TypeId=2) com email para deteccao de MQLs (ultimos 90 dias somente)
+    // Sem expand de Phones para reduzir payload - vamos buscar phones em batch separado se necessario
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones($select=PhoneNumber)&$select=Id,Name,Email,CompanyId,CreateDate,LastDealId`));
+    refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones&$select=Id,Name,Email,CompanyId,CreateDate`));
 }
 
 refreshAll();
