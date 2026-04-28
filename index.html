@@ -2097,14 +2097,32 @@
                 </div>
                 <div class="op-stats">
                     <div class="stat-box">
-                        <div class="number" id="mqlKpiOrphan" style="color:#f87171;">-</div>
-                        <div class="label">&#9888;&#65039; MQLs Orfaos</div>
+                        <div class="number" id="mqlKpiTotal" style="color:#b794f4;">-</div>
+                        <div class="label">Total MQLs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiSemCard" style="color:#f87171;">-</div>
+                        <div class="label">&#9888;&#65039; Sem card</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiAtivo" style="color:#4ade80;">-</div>
+                        <div class="label">&#9989; Em atendimento</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mqlKpiPerdido" style="color:#a0a0b8;">-</div>
+                        <div class="label">&#10060; Perdidos</div>
                     </div>
                 </div>
             </div>
 
             <!-- Filtros (estilo inline tipo Forecast) -->
             <div class="mql-filters-bar">
+                <select id="mqlFilterStatus" class="mql-filter">
+                    <option value="">Todos os status</option>
+                    <option value="sem_card">&#9888;&#65039; Sem card</option>
+                    <option value="ativo">&#9989; Em atendimento</option>
+                    <option value="perdido">&#10060; Perdidos</option>
+                </select>
                 <select id="mqlFilterPeriod" class="mql-filter">
                     <option value="">Periodo: todos</option>
                     <option value="7">7 dias</option>
@@ -2128,11 +2146,12 @@
             <div id="mqlContentArea" style="display:none;">
                 <!-- Aviso explicativo -->
                 <div style="padding:16px 30px 0;">
-                    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;line-height:1.5;">
-                        <strong style="color:#f87171;">&#9888;&#65039; MQLs com problema de atendimento:</strong>
-                        Leads com email corporativo + telefone preenchidos. Mostra 2 tipos de problema:
-                        <span style="color:#f87171;font-weight:600;">&#9888;&#65039; Sem card</span> (nao foi pra nenhum funil)
-                        e <span style="color:#fb923c;font-weight:600;">&#9889; Descarte rapido</span> (descartado em menos de 7 dias - pode nao ter sido atendido adequadamente).
+                    <div style="background:rgba(108,63,181,0.08);border:1px solid rgba(108,63,181,0.3);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;line-height:1.5;">
+                        <strong style="color:#b794f4;">&#128269; MQLs detectados:</strong>
+                        Leads com <strong>email corporativo + telefone</strong> preenchidos no Ploomes, excluindo clientes ja existentes. Cada MQL pode estar:
+                        <span style="color:#f87171;font-weight:600;">Sem card</span> (precisa criar atendimento),
+                        <span style="color:#4ade80;font-weight:600;">Em atendimento</span> (com card aberto)
+                        ou <span style="color:#a0a0b8;font-weight:600;">Perdido</span> (descartado/nao convertido).
                     </div>
                 </div>
 
@@ -5251,57 +5270,48 @@ function isSankhyaPipeline(name) {
     return /sankhya/i.test(name || '');
 }
 
-// MQLs problematicos = pessoa com email corporativo + telefone que tem 1 dos 2 problemas:
-//  1. ORFAO: nenhum deal vinculado (ela como Person OU a empresa dela)
-//  2. DESCARTADO RAPIDO: o unico deal vinculado a pessoa (PersonId) foi descartado em SDR
-//     em menos de 7 dias (ou seja, nao deu tempo de atender de verdade)
-//
-// Excluimos clientes (empresa com deal ganho) - ja sao clientes
+// MQLs = pessoas com email corporativo + telefone preenchidos no Ploomes,
+// que NAO sao clientes (empresa nao tem deal ganho)
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
-        const personDeals = mqlAllDealsLookup[p.Id] || []; // deals onde a pessoa e Person ou Contact
+        const personDeals = mqlAllDealsLookup[p.Id] || [];
         const companyDeals = mqlAllDealsLookup[p.CompanyId] || [];
         const allDeals = [...personDeals, ...companyDeals];
 
-        // Cliente: empresa tem qualquer deal ganho
         const isCustomer = allDeals.some(d => d.StatusId === 2);
 
         // Deals nao-Sankhya da pessoa
         const personDealsNonSankhya = personDeals.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
 
-        // Status:
-        // - Sem nenhum deal pessoal (PersonId): orfao
-        // - So tem deal pessoal descartado em SDR rapido (< 7 dias entre create e finish): descarte rapido
-        let status, statusLabel, statusColor, problemReason;
+        // Status do MQL:
+        // - sem_card: pessoa sem nenhum deal pessoal (precisa criar card pra atender)
+        // - ativo: tem deal aberto (em atendimento)
+        // - perdido: so tem deal descartado/perdido (atendimento finalizado)
+        let status, statusLabel, statusColor, dealInfo, latestDeal;
 
         if (personDealsNonSankhya.length === 0) {
-            status = 'orphan';
+            status = 'sem_card';
             statusLabel = '\u26A0\uFE0F Sem card';
             statusColor = '#f87171';
-            problemReason = 'Nao foi criado nenhum card vinculado a esta pessoa';
+            dealInfo = 'Sem card vinculado';
         } else {
-            // Tem deal pessoal. Verificar se foi descartado rapido demais
-            const allLost = personDealsNonSankhya.every(d => d.StatusId === 3);
-            if (allLost) {
-                // Pega o deal mais recente
-                const latestDeal = [...personDealsNonSankhya].sort((a, b) =>
+            const hasOpen = personDealsNonSankhya.some(d => d.StatusId === 1);
+            if (hasOpen) {
+                latestDeal = [...personDealsNonSankhya].filter(d => d.StatusId === 1).sort((a, b) =>
+                    new Date(b.LastUpdateDate || b.CreateDate) - new Date(a.LastUpdateDate || a.CreateDate)
+                )[0];
+                status = 'ativo';
+                statusLabel = '\u2705 Em atendimento';
+                statusColor = '#4ade80';
+                dealInfo = `${latestDeal.Pipeline?.Name || ''} / ${latestDeal.Stage?.Name || ''}`;
+            } else {
+                latestDeal = [...personDealsNonSankhya].sort((a, b) =>
                     new Date(b.FinishDate || b.CreateDate) - new Date(a.FinishDate || a.CreateDate)
                 )[0];
-                const create = new Date(latestDeal.CreateDate).getTime();
-                const finish = new Date(latestDeal.FinishDate || latestDeal.CreateDate).getTime();
-                const diffDays = (finish - create) / (1000 * 60 * 60 * 24);
-                if (diffDays < 7) {
-                    status = 'fast_discard';
-                    statusLabel = `\u26A1 Descarte rapido`;
-                    statusColor = '#fb923c';
-                    problemReason = `Descartado em ${Math.round(diffDays)} dias - "${latestDeal.LossReason?.Name || 'sem motivo'}"`;
-                } else {
-                    // Foi descartado mas nao rapido demais - nao mostrar
-                    status = 'ok';
-                }
-            } else {
-                // Tem deal aberto - foi tratado, nao mostrar
-                status = 'ok';
+                status = 'perdido';
+                statusLabel = '\u274C Perdido';
+                statusColor = '#a0a0b8';
+                dealInfo = `Perdido - ${latestDeal.LossReason?.Name || 'sem motivo'}`;
             }
         }
 
@@ -5313,12 +5323,13 @@ function getMqlClassified() {
             companyId: p.CompanyId,
             createDate: p.CreateDate,
             status: status,
-            statusLabel: statusLabel || '',
-            statusColor: statusColor || '',
-            problemReason: problemReason || '',
+            statusLabel: statusLabel,
+            statusColor: statusColor,
+            dealInfo: dealInfo,
+            dealId: latestDeal?.Id || null,
             isCustomer: isCustomer
         };
-    }).filter(m => (m.status === 'orphan' || m.status === 'fast_discard') && !m.isCustomer);
+    }).filter(m => !m.isCustomer);
 }
 
 function getMqlPeriodRange() {
@@ -5341,23 +5352,19 @@ function getMqlPeriodRange() {
 }
 
 function getMqlFiltered() {
-    const fStatus = document.getElementById('mqlFilterStatus').value;
-    const fPipeline = document.getElementById('mqlFilterPipeline').value;
-    const fStage = document.getElementById('mqlFilterStage').value;
-    const fSearch = (document.getElementById('mqlFilterSearch').value || '').toLowerCase();
+    const fStatus = document.getElementById('mqlFilterStatus')?.value || '';
+    const fSearch = (document.getElementById('mqlFilterSearch')?.value || '').toLowerCase();
     const range = getMqlPeriodRange();
 
     return getMqlClassified().filter(m => {
         if (fStatus && m.status !== fStatus) return false;
-        if (fPipeline && m.pipelineName !== fPipeline) return false;
-        if (fStage && m.stageName !== fStage) return false;
         if ((range.start || range.end) && m.createDate) {
             const t = new Date(m.createDate).getTime();
             if (range.start && t < range.start) return false;
             if (range.end && t > range.end) return false;
         }
         if (fSearch) {
-            const blob = `${m.name||''} ${m.email||''} ${m.companyName||''}`.toLowerCase();
+            const blob = `${m.name||''} ${m.email||''}`.toLowerCase();
             if (!blob.includes(fSearch)) return false;
         }
         return true;
@@ -5368,20 +5375,39 @@ function renderMqls() {
     const filtered = getMqlFiltered();
     window._mqlFiltered = filtered;
 
-    document.getElementById('mqlKpiOrphan').textContent = filtered.length;
+    // KPIs - calcula sobre todos os MQLs (independente do filtro de status), respeitando periodo
+    const allClassified = getMqlClassified();
+    const range = getMqlPeriodRange();
+    const baseSet = (range.start || range.end)
+        ? allClassified.filter(m => {
+            if (!m.createDate) return false;
+            const t = new Date(m.createDate).getTime();
+            if (range.start && t < range.start) return false;
+            if (range.end && t > range.end) return false;
+            return true;
+        })
+        : allClassified;
+    document.getElementById('mqlKpiTotal').textContent = baseSet.length;
+    document.getElementById('mqlKpiSemCard').textContent = baseSet.filter(m => m.status === 'sem_card').length;
+    document.getElementById('mqlKpiAtivo').textContent = baseSet.filter(m => m.status === 'ativo').length;
+    document.getElementById('mqlKpiPerdido').textContent = baseSet.filter(m => m.status === 'perdido').length;
 
-    // Tabela: dados de contato + tipo de problema + link
     document.getElementById('mqlTableBody').innerHTML = filtered.map(m => {
-        const bg = m.status === 'orphan' ? 'rgba(248,113,113,0.15)' : 'rgba(251,146,60,0.15)';
-        const border = m.status === 'orphan' ? 'rgba(248,113,113,0.4)' : 'rgba(251,146,60,0.4)';
+        const bg = m.status === 'sem_card' ? 'rgba(248,113,113,0.15)'
+            : m.status === 'ativo' ? 'rgba(74,222,128,0.15)'
+            : 'rgba(160,160,184,0.15)';
+        const border = m.status === 'sem_card' ? 'rgba(248,113,113,0.4)'
+            : m.status === 'ativo' ? 'rgba(74,222,128,0.4)'
+            : 'rgba(160,160,184,0.4)';
+        const linkUrl = m.dealId ? `https://app10.ploomes.com/deal/${m.dealId}` : `https://app10.ploomes.com/contact/${m.id}`;
         return `<tr>
         <td><span class="mql-status-pill" style="background:${bg};color:${m.statusColor};border:1px solid ${border};">${m.statusLabel}</span></td>
         <td style="font-weight:600;color:#fff;white-space:nowrap;" title="${m.name}">${m.name}</td>
         <td style="color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;text-decoration:none;">${m.email}</a></td>
         <td style="color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
-        <td style="color:#c0c0d0;font-size:12px;">${m.problemReason || '-'}</td>
+        <td style="color:#c0c0d0;font-size:12px;">${m.dealInfo || '-'}</td>
         <td style="color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
-        <td style="text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
+        <td style="text-align:center;"><a href="${linkUrl}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
     </tr>`;
     }).join('');
 }
@@ -5389,14 +5415,14 @@ function renderMqls() {
 function exportMqls() {
     const filtered = window._mqlFiltered || getMqlFiltered();
     exportToExcel(filtered, [
-        { header: 'Problema', getValue: m => m.statusLabel },
+        { header: 'Status', getValue: m => m.statusLabel },
         { header: 'Nome', getValue: m => m.name },
         { header: 'Email', getValue: m => m.email },
         { header: 'Telefone', getValue: m => m.phone },
-        { header: 'Detalhe', getValue: m => m.problemReason },
+        { header: 'Detalhe', getValue: m => m.dealInfo },
         { header: 'Data Criacao', getValue: m => m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '' },
         { header: 'Link Ploomes', getValue: m => 'https://app10.ploomes.com/contact/' + m.id }
-    ], 'mqls-problemas');
+    ], 'mqls');
 }
 
 // Mostra/oculta inputs de data quando "Personalizado" e selecionado
@@ -5407,6 +5433,8 @@ function toggleMqlCustomDateInputs() {
 }
 
 // MQL filter event listeners
+const mqlStatusEl = document.getElementById('mqlFilterStatus');
+if (mqlStatusEl) mqlStatusEl.addEventListener('change', renderMqls);
 const mqlPeriodEl = document.getElementById('mqlFilterPeriod');
 if (mqlPeriodEl) {
     mqlPeriodEl.addEventListener('change', () => { toggleMqlCustomDateInputs(); renderMqls(); });
