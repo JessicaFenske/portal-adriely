@@ -4722,7 +4722,7 @@ function renderForecast() {
         const setupVal = getFcSetup(d);
         return `<tr>
             <td><a href="https://app10.ploomes.com/deal/${d.id}" target="_blank" class="deal-link">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
-            <td>${d.owner}</td>
+            <td style="white-space:nowrap;" title="${d.owner}">${shortName(d.owner)}</td>
             <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
             <td>${d.stage ? `<span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span>` : '-'}</td>
             <td>${getScenarioBadge(d.forecast)}</td>
