@@ -1771,6 +1771,7 @@
                                     <th>Titulo</th>
                                     <th>Vendedor</th>
                                     <th>Funil</th>
+                                    <th>Etapa</th>
                                     <th>Cenario</th>
                                     <th class="money">MRR</th>
                                     <th class="money">Setup</th>
@@ -4460,6 +4461,7 @@ function renderForecast() {
             <td><a href="https://app10.ploomes.com/deal/${d.id}" target="_blank" class="deal-link">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
             <td>${d.owner}</td>
             <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
+            <td>${d.stage ? `<span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span>` : '-'}</td>
             <td>${getScenarioBadge(d.forecast)}</td>
             <td class="money editable-cell ${hasMrrOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'mrr', ${d.mrr})">
                 ${formatMoney(mrrVal)}${hasMrrOv ? ' &#9998;' : ''}
@@ -4582,6 +4584,7 @@ function exportForecast() {
         { header: 'Titulo', getValue: d => d.title },
         { header: 'Vendedor', getValue: d => d.owner },
         { header: 'Funil', getValue: d => d.pipeline },
+        { header: 'Etapa', getValue: d => d.stage || '' },
         { header: 'Cenario', getValue: d => d.forecast },
         { header: 'MRR', getValue: d => getFcMrr(d) },
         { header: 'Setup', getValue: d => getFcSetup(d) },
@@ -4610,6 +4613,7 @@ async function loadForecast() {
                 title: d.Title || '',
                 owner: d.Owner?.Name || '',
                 pipeline: d.Pipeline?.Name || '',
+                stage: d.Stage?.Name || '',
                 forecast: normalizeScenario(forecastProp?.ObjectValueName || ''),
                 closeDate: closeDateProp?.DateTimeValue || null,
                 mrr: mrrProp?.DecimalValue || 0,
