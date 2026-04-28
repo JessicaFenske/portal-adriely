@@ -854,6 +854,68 @@
         @media (max-width: 900px) {
             .fc-kpi-grid { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
         }
+        .fc-totals-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 0 30px 20px;
+        }
+        @media (max-width: 900px) {
+            .fc-totals-grid { grid-template-columns: 1fr; gap: 14px; padding: 0 16px 16px; }
+        }
+        .fc-total-group {
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 16px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .fc-total-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            color: #ffffff;
+        }
+        .fc-total-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .fc-total-card {
+            background: rgba(15, 15, 26, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .fc-total-card .fc-total-value {
+            font-size: clamp(13px, 4vw, 18px);
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+        .fc-total-card .fc-total-label {
+            font-size: 11px;
+            color: #8888a0;
+            text-transform: uppercase;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .fc-total-subtitle {
+            text-align: center;
+            font-size: 10px;
+            color: #6868a0;
+            margin-top: 8px;
+            font-style: italic;
+        }
         .fc-scenario-group {
             background: rgba(26, 26, 46, 0.5);
             border-radius: 16px;
@@ -1792,6 +1854,9 @@
             <div id="fcContentArea" style="display:none;">
                 <!-- KPI Cards -->
                 <div class="fc-kpi-grid" id="fcKpiGrid"></div>
+
+                <!-- Summary Totals Cards -->
+                <div class="fc-totals-grid" id="fcTotalsGrid"></div>
 
                 <!-- Main Chart -->
                 <div class="fc-section">
@@ -4572,6 +4637,43 @@ function renderForecast() {
                     <div class="fc-kpi-label">Setup</div>
                 </div>
             </div>
+        </div>
+    `;
+
+    // Totais consolidados
+    const totalGeralMrr = kpis.Otimista.mrr + kpis.Realista.mrr + kpis.Pessimista.mrr;
+    const totalGeralSetup = kpis.Otimista.setup + kpis.Realista.setup + kpis.Pessimista.setup;
+    const totalRealPesMrr = kpis.Realista.mrr + kpis.Pessimista.mrr;
+    const totalRealPesSetup = kpis.Realista.setup + kpis.Pessimista.setup;
+
+    document.getElementById('fcTotalsGrid').innerHTML = `
+        <div class="fc-total-group">
+            <div class="fc-total-title">&#128202; Total Geral (todos os cenarios)</div>
+            <div class="fc-total-pair">
+                <div class="fc-total-card">
+                    <div class="fc-total-value">R$ ${formatMoney(totalGeralMrr)}</div>
+                    <div class="fc-total-label">MRR Total</div>
+                </div>
+                <div class="fc-total-card">
+                    <div class="fc-total-value">R$ ${formatMoney(totalGeralSetup)}</div>
+                    <div class="fc-total-label">Setup Total</div>
+                </div>
+            </div>
+            <div class="fc-total-subtitle">Otimista + Realista + Pessimista</div>
+        </div>
+        <div class="fc-total-group">
+            <div class="fc-total-title">&#127919; Forecast Conservador</div>
+            <div class="fc-total-pair">
+                <div class="fc-total-card">
+                    <div class="fc-total-value">R$ ${formatMoney(totalRealPesMrr)}</div>
+                    <div class="fc-total-label">MRR (Realista + Pessimista)</div>
+                </div>
+                <div class="fc-total-card">
+                    <div class="fc-total-value">R$ ${formatMoney(totalRealPesSetup)}</div>
+                    <div class="fc-total-label">Setup (Realista + Pessimista)</div>
+                </div>
+            </div>
+            <div class="fc-total-subtitle">Sem o cenario otimista</div>
         </div>
     `;
 
