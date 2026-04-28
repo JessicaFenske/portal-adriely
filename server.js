@@ -159,8 +159,10 @@ async function refreshAll() {
     refreshOne('segments', '/Contacts@LinesOfBusiness');
     // Todas as empresas (TypeId=1) com apenas Id e LineOfBusinessId - leve, para achar Segmento de qualquer deal
     refreshOne('companies', odataEncode('/Contacts?$filter=TypeId eq 1 and LineOfBusinessId ne null&$select=Id,LineOfBusinessId'));
-    // Pessoas (TypeId=2) com email + phones para deteccao de MQLs
-    refreshOne('people', odataEncode('/Contacts?$filter=TypeId eq 2 and Email ne null&$expand=Phones&$select=Id,Name,Email,CompanyId,CreateDate,FirstTaskDate,LastDealId,OwnerId,OriginId,LeadId,StatusId,LineOfBusinessId'));
+    // Pessoas (TypeId=2) com email + phones para deteccao de MQLs (apenas com email)
+    // Filtro reduzido: ultimos 6 meses pra evitar timeout (12k+ pessoas)
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+    refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${sixMonthsAgo}&$expand=Phones($select=PhoneNumber)&$select=Id,Name,Email,CompanyId,CreateDate,LastDealId`));
 }
 
 refreshAll();
