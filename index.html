@@ -2128,9 +2128,11 @@
             <div id="mqlContentArea" style="display:none;">
                 <!-- Aviso explicativo -->
                 <div style="padding:16px 30px 0;">
-                    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;">
-                        <strong style="color:#f87171;">&#9888;&#65039; MQLs sem atendimento:</strong>
-                        Estes leads tem email corporativo + telefone preenchidos no Ploomes, mas <strong>nao foram criados em nenhum funil</strong> (SDR ou vendas). Precisam ser direcionados pra entrada do funil dos pre-vendedores.
+                    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;line-height:1.5;">
+                        <strong style="color:#f87171;">&#9888;&#65039; MQLs com problema de atendimento:</strong>
+                        Leads com email corporativo + telefone preenchidos. Mostra 2 tipos de problema:
+                        <span style="color:#f87171;font-weight:600;">&#9888;&#65039; Sem card</span> (nao foi pra nenhum funil)
+                        e <span style="color:#fb923c;font-weight:600;">&#9889; Descarte rapido</span> (descartado em menos de 7 dias - pode nao ter sido atendido adequadamente).
                     </div>
                 </div>
 
@@ -2148,9 +2150,11 @@
                             <table class="mql-table">
                                 <thead>
                                     <tr>
+                                        <th>Problema</th>
                                         <th>Nome</th>
                                         <th>Email</th>
                                         <th>Telefone</th>
+                                        <th>Detalhe</th>
                                         <th>Criado em</th>
                                         <th></th>
                                     </tr>
@@ -5215,46 +5219,74 @@ function isSankhyaPipeline(name) {
     return /sankhya/i.test(name || '');
 }
 
-// MQLs validos = pessoa COM email corporativo + telefone que NAO TEM nenhum deal vinculado
-// (nem em funis SDR, nem em funis de vendas, em nenhum status).
-// Se tem qualquer deal, ja foi tratada (mesmo que seja descarte) e NAO aparece como MQL.
-// Excecao: leads em funis Sankhya nao sao "tratamento" pra nos - se so tem deal Sankhya, ainda e orfao.
+// MQLs problematicos = pessoa com email corporativo + telefone que tem 1 dos 2 problemas:
+//  1. ORFAO: nenhum deal vinculado (ela como Person OU a empresa dela)
+//  2. DESCARTADO RAPIDO: o unico deal vinculado a pessoa (PersonId) foi descartado em SDR
+//     em menos de 7 dias (ou seja, nao deu tempo de atender de verdade)
+//
+// Excluimos clientes (empresa com deal ganho) - ja sao clientes
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
-        const allRaw = [
-            ...(mqlAllDealsLookup[p.Id] || []),
-            ...(mqlAllDealsLookup[p.CompanyId] || [])
-        ];
+        const personDeals = mqlAllDealsLookup[p.Id] || []; // deals onde a pessoa e Person ou Contact
+        const companyDeals = mqlAllDealsLookup[p.CompanyId] || [];
+        const allDeals = [...personDeals, ...companyDeals];
 
-        // Deals que nao sao Sankhya (Sankhya nao conta como "tratamento" pra nos)
-        const nonSankhyaDeals = allRaw.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
+        // Cliente: empresa tem qualquer deal ganho
+        const isCustomer = allDeals.some(d => d.StatusId === 2);
 
-        // Tem algum deal nao-Sankhya em qualquer status (aberto/ganho/perdido)?
-        // Se tem, ja foi tratado: nao e MQL orfao.
-        const hasAnyDeal = nonSankhyaDeals.length > 0;
-        const hasWonDeal = nonSankhyaDeals.some(d => d.StatusId === 2);
+        // Deals nao-Sankhya da pessoa
+        const personDealsNonSankhya = personDeals.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
 
-        // So aparece na view: pessoas SEM deal nao-Sankhya
-        // (= orfaos verdadeiros que nao foram pro funil SDR Entrada nem nada)
+        // Status:
+        // - Sem nenhum deal pessoal (PersonId): orfao
+        // - So tem deal pessoal descartado em SDR rapido (< 7 dias entre create e finish): descarte rapido
+        let status, statusLabel, statusColor, problemReason;
+
+        if (personDealsNonSankhya.length === 0) {
+            status = 'orphan';
+            statusLabel = '\u26A0\uFE0F Sem card';
+            statusColor = '#f87171';
+            problemReason = 'Nao foi criado nenhum card vinculado a esta pessoa';
+        } else {
+            // Tem deal pessoal. Verificar se foi descartado rapido demais
+            const allLost = personDealsNonSankhya.every(d => d.StatusId === 3);
+            if (allLost) {
+                // Pega o deal mais recente
+                const latestDeal = [...personDealsNonSankhya].sort((a, b) =>
+                    new Date(b.FinishDate || b.CreateDate) - new Date(a.FinishDate || a.CreateDate)
+                )[0];
+                const create = new Date(latestDeal.CreateDate).getTime();
+                const finish = new Date(latestDeal.FinishDate || latestDeal.CreateDate).getTime();
+                const diffDays = (finish - create) / (1000 * 60 * 60 * 24);
+                if (diffDays < 7) {
+                    status = 'fast_discard';
+                    statusLabel = `\u26A1 Descarte rapido`;
+                    statusColor = '#fb923c';
+                    problemReason = `Descartado em ${Math.round(diffDays)} dias - "${latestDeal.LossReason?.Name || 'sem motivo'}"`;
+                } else {
+                    // Foi descartado mas nao rapido demais - nao mostrar
+                    status = 'ok';
+                }
+            } else {
+                // Tem deal aberto - foi tratado, nao mostrar
+                status = 'ok';
+            }
+        }
+
         return {
             id: p.Id,
             name: p.Name,
             email: p.Email,
             phone: (p.Phones || [])[0]?.PhoneNumber || '',
             companyId: p.CompanyId,
-            companyName: '',
             createDate: p.CreateDate,
-            deal: null,
-            pipelineName: '',
-            stageName: '',
-            ownerName: '',
-            status: 'orphan',
-            statusLabel: '\u26A0\uFE0F Orfao',
-            statusColor: '#f87171',
-            hasAnyDeal: hasAnyDeal,
-            isCustomer: hasWonDeal
+            status: status,
+            statusLabel: statusLabel || '',
+            statusColor: statusColor || '',
+            problemReason: problemReason || '',
+            isCustomer: isCustomer
         };
-    }).filter(m => !m.hasAnyDeal && !m.isCustomer); // Apenas orfaos verdadeiros
+    }).filter(m => (m.status === 'orphan' || m.status === 'fast_discard') && !m.isCustomer);
 }
 
 function getMqlPeriodRange() {
@@ -5306,25 +5338,33 @@ function renderMqls() {
 
     document.getElementById('mqlKpiOrphan').textContent = filtered.length;
 
-    // Tabela: simples (so dados de contato + data de criacao + link)
-    document.getElementById('mqlTableBody').innerHTML = filtered.map(m => `<tr>
+    // Tabela: dados de contato + tipo de problema + link
+    document.getElementById('mqlTableBody').innerHTML = filtered.map(m => {
+        const bg = m.status === 'orphan' ? 'rgba(248,113,113,0.15)' : 'rgba(251,146,60,0.15)';
+        const border = m.status === 'orphan' ? 'rgba(248,113,113,0.4)' : 'rgba(251,146,60,0.4)';
+        return `<tr>
+        <td><span class="mql-status-pill" style="background:${bg};color:${m.statusColor};border:1px solid ${border};">${m.statusLabel}</span></td>
         <td style="font-weight:600;color:#fff;white-space:nowrap;" title="${m.name}">${m.name}</td>
         <td style="color:#a0a0b8;font-size:12px;"><a href="mailto:${m.email}" style="color:#a0a0b8;text-decoration:none;">${m.email}</a></td>
         <td style="color:#4ade80;white-space:nowrap;">${m.phone || '-'}</td>
+        <td style="color:#c0c0d0;font-size:12px;">${m.problemReason || '-'}</td>
         <td style="color:#a0a0b8;white-space:nowrap;font-size:12px;">${m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '-'}</td>
         <td style="text-align:center;"><a href="https://app10.ploomes.com/contact/${m.id}" target="_blank" class="mql-link-icon" title="Abrir no Ploomes">&#128279;</a></td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
 }
 
 function exportMqls() {
     const filtered = window._mqlFiltered || getMqlFiltered();
     exportToExcel(filtered, [
+        { header: 'Problema', getValue: m => m.statusLabel },
         { header: 'Nome', getValue: m => m.name },
         { header: 'Email', getValue: m => m.email },
         { header: 'Telefone', getValue: m => m.phone },
+        { header: 'Detalhe', getValue: m => m.problemReason },
         { header: 'Data Criacao', getValue: m => m.createDate ? new Date(m.createDate).toLocaleDateString('pt-BR') : '' },
         { header: 'Link Ploomes', getValue: m => 'https://app10.ploomes.com/contact/' + m.id }
-    ], 'mqls-orfaos');
+    ], 'mqls-problemas');
 }
 
 // Mostra/oculta inputs de data quando "Personalizado" e selecionado
