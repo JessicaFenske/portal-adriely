@@ -965,6 +965,7 @@
             .fc-kpi-card { padding: 12px 8px; }
             .fc-kpi-card .fc-kpi-value { font-size: clamp(13px, 4.2vw, 18px); }
             .fc-kpi-card .fc-kpi-label { font-size: 10px; }
+            .mkt-grid > * { grid-column: 1 / -1 !important; }
         }
         .fc-kpi-card.scenario-otimista { border-color: rgba(16,185,129,0.3); }
         .fc-kpi-card.scenario-otimista .fc-kpi-value { color: #10b981; }
@@ -2125,102 +2126,97 @@
             </div>
 
             <div id="mktContentArea" style="display:none;">
-                <div style="padding:16px 30px 30px;display:grid;grid-template-columns:2fr 1fr;gap:18px;">
+                <div class="mkt-grid" style="padding:16px 30px 30px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:minmax(0,auto);gap:18px;align-items:stretch;">
 
-                    <!-- Coluna esquerda: funil + evolucao + canal -->
-                    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
-                        <!-- Funil visual -->
-                        <div class="dash-card" style="padding:20px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
-                                Funil de conversao
-                            </h2>
-                            <div id="mktFunnel" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"></div>
-                        </div>
+                    <!-- LINHA 1: Funil (8) | Insights (4) -->
+                    <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
+                            Funil de conversao
+                        </h2>
+                        <div id="mktFunnel" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0;flex:1;justify-content:center;"></div>
+                    </div>
 
-                        <!-- Evolucao temporal -->
-                        <div class="dash-card" style="padding:20px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
-                                Evolucao diaria
-                            </h2>
-                            <div style="position:relative;height:240px;">
-                                <canvas id="mktChartTimeline"></canvas>
-                            </div>
-                        </div>
+                    <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128161;</span>
+                            Insights e acoes
+                        </h2>
+                        <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;max-height:480px;"></div>
+                    </div>
 
-                        <!-- Performance por canal -->
-                        <div class="dash-card" style="padding:20px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127919;</span>
-                                Performance por canal
-                            </h2>
-                            <div style="overflow-x:auto;">
-                                <table class="mql-table" style="font-size:12.5px;">
-                                    <thead>
-                                        <tr>
-                                            <th>Canal</th>
-                                            <th style="text-align:right;">Leads</th>
-                                            <th style="text-align:right;">MQLs</th>
-                                            <th style="text-align:right;">% MQL</th>
-                                            <th style="text-align:right;">Reun.</th>
-                                            <th style="text-align:right;">Prop.</th>
-                                            <th style="text-align:right;">Ganhos</th>
-                                            <th style="text-align:right;">Investimento</th>
-                                            <th style="text-align:right;">CPL</th>
-                                            <th style="text-align:right;">CAC</th>
-                                            <th style="text-align:right;">ROI</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="mktChannelBody"></tbody>
-                                </table>
-                            </div>
+                    <!-- LINHA 2: Evolucao (8) | Motivos (4) -->
+                    <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
+                            Evolucao diaria
+                        </h2>
+                        <div style="position:relative;flex:1;min-height:280px;">
+                            <canvas id="mktChartTimeline"></canvas>
                         </div>
                     </div>
 
-                    <!-- Coluna direita: insights + motivos de perda -->
-                    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
-                        <div class="dash-card" style="padding:20px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128161;</span>
-                                Insights e acoes
-                            </h2>
-                            <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;"></div>
+                    <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
+                            Motivos de Perda
+                        </h2>
+                        <div style="overflow:auto;flex:1;max-height:340px;">
+                            <table class="mql-table" style="font-size:12.5px;">
+                                <thead><tr><th>Motivo</th><th style="text-align:right;">Qtd</th></tr></thead>
+                                <tbody id="mktLossBody"></tbody>
+                            </table>
                         </div>
+                    </div>
 
-                        <div class="dash-card" style="padding:20px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
-                                Motivos de Perda
-                            </h2>
-                            <div style="overflow-x:auto;">
-                                <table class="mql-table" style="font-size:12.5px;">
-                                    <thead><tr><th>Motivo</th><th style="text-align:right;">Qtd</th></tr></thead>
-                                    <tbody id="mktLossBody"></tbody>
-                                </table>
-                            </div>
+                    <!-- LINHA 3: Performance por canal (full width) -->
+                    <div class="dash-card" style="padding:20px;grid-column:span 12;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127919;</span>
+                            Performance por canal
+                        </h2>
+                        <div style="overflow-x:auto;">
+                            <table class="mql-table" style="font-size:12.5px;">
+                                <thead>
+                                    <tr>
+                                        <th>Canal</th>
+                                        <th style="text-align:right;">Leads</th>
+                                        <th style="text-align:right;">MQLs</th>
+                                        <th style="text-align:right;">% MQL</th>
+                                        <th style="text-align:right;">Reun.</th>
+                                        <th style="text-align:right;">Prop.</th>
+                                        <th style="text-align:right;">Ganhos</th>
+                                        <th style="text-align:right;">Investimento</th>
+                                        <th style="text-align:right;">CPL</th>
+                                        <th style="text-align:right;">CAC</th>
+                                        <th style="text-align:right;">ROI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mktChannelBody"></tbody>
+                            </table>
                         </div>
+                    </div>
 
-                        <div class="dash-card" style="padding:20px;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                                <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
-                                    <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
-                                    Detalhe dos MQLs
-                                </h2>
-                                <button class="export-btn" onclick="exportMarketing()" style="font-size:11px;padding:6px 10px;">&#128229; Excel</button>
-                            </div>
-                            <div style="max-height:380px;overflow-y:auto;">
-                                <table class="mql-table" style="font-size:11.5px;">
-                                    <thead>
-                                        <tr>
-                                            <th>Nome</th>
-                                            <th>Origem</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="mktDetailBody"></tbody>
-                                </table>
-                            </div>
+                    <!-- LINHA 4: Detalhe MQLs (full width) -->
+                    <div class="dash-card" style="padding:20px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
+                                Detalhe dos MQLs
+                            </h2>
+                            <button class="export-btn" onclick="exportMarketing()" style="font-size:11px;padding:6px 10px;">&#128229; Excel</button>
+                        </div>
+                        <div style="max-height:380px;overflow-y:auto;">
+                            <table class="mql-table" style="font-size:12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Origem</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mktDetailBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
