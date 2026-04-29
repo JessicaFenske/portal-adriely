@@ -7,8 +7,9 @@ const path = require('path');
 const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
 const API_HOST = 'public-api2.ploomes.com';
+const RD_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Station token
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 4; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 5; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -222,6 +223,54 @@ const server = http.createServer((req, res) => {
         refreshAll();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ status: 'refreshing' }));
+    }
+
+    // RD Station - tenta varios formatos de auth ate encontrar o que funciona
+    if (req.url.startsWith('/rdstation/')) {
+        const subPath = req.url.replace('/rdstation/', '');
+        // Endpoints possiveis a tentar (RD Marketing OAuth Bearer eh o mais comum)
+        const attempts = [
+            { host: 'api.rd.services', path: '/platform/contacts' + (subPath.startsWith('?') ? subPath : ''), auth: 'bearer' },
+            { host: 'crm.rdstation.com', path: '/api/v1/' + subPath + (subPath.includes('?') ? '&' : '?') + 'token=' + RD_TOKEN, auth: 'none' }
+        ];
+        // subPath pode ser por ex "leads?start_date=...&end_date=..."
+        const match = subPath.match(/^([^?]+)(\?.*)?$/);
+        const resource = match ? match[1] : subPath;
+        const qs = match && match[2] ? match[2] : '';
+        async function tryRd(idx) {
+            if (idx >= attempts.length) {
+                res.writeHead(502, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'RD Station: nenhum endpoint funcionou', tried: attempts.map(a => a.host + a.path) }));
+            }
+            const a = attempts[idx];
+            const opts = {
+                hostname: a.host,
+                path: a.path,
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            };
+            if (a.auth === 'bearer') opts.headers['Authorization'] = 'Bearer ' + RD_TOKEN;
+            const r = https.request(opts, (rr) => {
+                const chunks = [];
+                rr.on('data', c => chunks.push(c));
+                rr.on('end', () => {
+                    const body = Buffer.concat(chunks).toString('utf8');
+                    if (rr.statusCode >= 200 && rr.statusCode < 300) {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        return res.end(body);
+                    }
+                    if (rr.statusCode === 401 || rr.statusCode === 403 || rr.statusCode === 404) {
+                        return tryRd(idx + 1);
+                    }
+                    res.writeHead(rr.statusCode, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'RD ' + rr.statusCode, body: body.substring(0, 500), endpoint: a.host + a.path }));
+                });
+            });
+            r.on('error', () => tryRd(idx + 1));
+            r.setTimeout(15000, () => { r.destroy(); tryRd(idx + 1); });
+            r.end();
+        }
+        return tryRd(0);
     }
 
     if (req.url.startsWith('/api/')) {

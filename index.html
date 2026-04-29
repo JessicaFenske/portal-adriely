@@ -1276,6 +1276,10 @@
                 <span class="nav-icon">&#128203;</span>
                 <span class="nav-label">Oportunidades</span>
             </div>
+            <div class="nav-item" data-view="marketing" onclick="showView('marketing')">
+                <span class="nav-icon">&#128225;</span>
+                <span class="nav-label">Marketing</span>
+            </div>
             <div class="nav-item" data-view="mqls" onclick="showView('mqls')">
                 <span class="nav-icon">&#128269;</span>
                 <span class="nav-label">MQLs</span>
@@ -2088,6 +2092,138 @@
         </div>
 
         <!-- ==================== VIEW: MQLS ==================== -->
+        <!-- ==================== VIEW: MARKETING ==================== -->
+        <div id="view-marketing" style="display:none;">
+            <div class="op-header">
+                <div>
+                    <h1>&#128225; Marketing - Funil de Geracao</h1>
+                    <div class="subtitle">Da geracao do lead no RD Station ate o fechamento no Ploomes</div>
+                </div>
+                <div class="op-stats">
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiTotal" style="color:#60a5fa;">-</div>
+                        <div class="label">Leads RD</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiMql" style="color:#b794f4;">-</div>
+                        <div class="label">MQLs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiReunioes" style="color:#fbbf24;">-</div>
+                        <div class="label">Reunioes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiPropostas" style="color:#34d399;">-</div>
+                        <div class="label">Propostas</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiGanhos" style="color:#22c55e;">-</div>
+                        <div class="label">Ganhos</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="mktKpiPerdidos" style="color:#f87171;">-</div>
+                        <div class="label">Perdidos</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mql-filters-bar">
+                <select id="mktFilterPeriod" class="mql-filter">
+                    <option value="thisMonth" selected>Este mes</option>
+                    <option value="lastMonth">Mes passado</option>
+                    <option value="30">Ultimos 30 dias</option>
+                    <option value="60">Ultimos 60 dias</option>
+                    <option value="90">Ultimos 90 dias</option>
+                    <option value="custom">Personalizado...</option>
+                </select>
+                <input type="date" id="mktFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
+                <input type="date" id="mktFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
+                <button class="mql-refresh-btn" onclick="loadMarketing()">&#128260; Atualizar</button>
+            </div>
+
+            <div id="mktLoadingArea" class="dash-loading">
+                <div class="spinner"></div>
+                <div id="mktLoadingMsg">Carregando dados de Marketing...</div>
+            </div>
+
+            <div id="mktContentArea" style="display:none;">
+                <div style="padding:16px 30px 0;">
+                    <div id="mktRdWarning" style="display:none;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:12px 16px;color:#fcd34d;font-size:13px;line-height:1.5;margin-bottom:14px;">
+                        <strong>&#9888;&#65039; RD Station:</strong> <span id="mktRdWarningMsg">nao foi possivel buscar o total de leads do RD Station agora. Verifique o token/endpoint.</span>
+                    </div>
+                </div>
+
+                <div style="padding:8px 30px 30px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+                    <!-- Funil -->
+                    <div class="dash-card" style="padding:20px;grid-column:1 / -1;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
+                            Funil de conversao
+                        </h2>
+                        <div id="mktFunnel" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+                    </div>
+
+                    <!-- Origens -->
+                    <div class="dash-card" style="padding:20px;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127760;</span>
+                            Origens dos MQLs
+                        </h2>
+                        <div style="overflow-x:auto;">
+                            <table class="mql-table">
+                                <thead><tr><th>Origem</th><th style="text-align:right;">Qtd</th><th style="text-align:right;">%</th></tr></thead>
+                                <tbody id="mktOriginsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Motivos de Perda -->
+                    <div class="dash-card" style="padding:20px;">
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
+                            Motivos de Perda
+                        </h2>
+                        <div style="overflow-x:auto;">
+                            <table class="mql-table">
+                                <thead><tr><th>Motivo</th><th style="text-align:right;">Qtd</th></tr></thead>
+                                <tbody id="mktLossBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Detalhe MQLs -->
+                    <div class="dash-card" style="padding:20px;grid-column:1 / -1;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
+                                Detalhe dos MQLs no periodo
+                            </h2>
+                            <button class="export-btn" onclick="exportMarketing()">&#128229; Exportar Excel</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="mql-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Email</th>
+                                        <th>Empresa</th>
+                                        <th>Origem</th>
+                                        <th>Reuniao?</th>
+                                        <th>Proposta?</th>
+                                        <th>Status</th>
+                                        <th>Motivo Perda</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mktDetailBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="last-update" id="mktLastUpdate"></div>
+            </div>
+        </div>
+
         <div id="view-mqls" style="display:none;">
             <!-- Header (estilo dashboard) -->
             <div class="op-header">
@@ -2440,6 +2576,7 @@ let oportLoaded = false;
 let dashLoaded = false;
 let forecastLoaded = false;
 let mqlsLoaded = false;
+let marketingLoaded = false;
 let pendingScrollSection = null;
 
 function showView(viewName) {
@@ -2448,6 +2585,8 @@ function showView(viewName) {
     document.getElementById('view-forecast').style.display = 'none';
     const mqlEl = document.getElementById('view-mqls');
     if (mqlEl) mqlEl.style.display = 'none';
+    const mktEl = document.getElementById('view-marketing');
+    if (mktEl) mktEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -2455,6 +2594,7 @@ function showView(viewName) {
     if (viewName === 'dashboard' && !dashLoaded) { loadDashboard(); dashLoaded = true; }
     if (viewName === 'forecast' && !forecastLoaded) { loadForecast(); forecastLoaded = true; }
     if (viewName === 'mqls' && !mqlsLoaded) { loadMqls(); mqlsLoaded = true; }
+    if (viewName === 'marketing' && !marketingLoaded) { loadMarketing(); marketingLoaded = true; }
 
     updateSidebarActive(viewName);
 
@@ -5585,6 +5725,259 @@ if (mqlPeriodEl) {
 });
 const mqlSearchEl = document.getElementById('mqlFilterSearch');
 if (mqlSearchEl) mqlSearchEl.addEventListener('input', renderMqls);
+
+// ==================== MARKETING ====================
+const PROP_DATE_FIELD_KEY = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E'; // Data Proposta Enviada
+const SDR_FIELD_KEY = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2'; // SDR (proxy de "reuniao agendada")
+
+function getMktPeriodRange() {
+    const f = document.getElementById('mktFilterPeriod').value;
+    const now = new Date();
+    if (f === 'thisMonth') {
+        return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    }
+    if (f === 'lastMonth') {
+        const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        return { from, to };
+    }
+    if (f === 'custom') {
+        const from = document.getElementById('mktFilterDateFrom').value;
+        const to = document.getElementById('mktFilterDateTo').value;
+        return {
+            from: from ? new Date(from + 'T00:00:00') : null,
+            to: to ? new Date(to + 'T23:59:59') : null
+        };
+    }
+    const days = parseInt(f, 10);
+    const from = new Date(now.getTime() - days * 86400000);
+    return { from, to: now };
+}
+
+function inMktRange(dateStr, range) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (range.from && d < range.from) return false;
+    if (range.to && d > range.to) return false;
+    return true;
+}
+
+function dealHasProposalInRange(d, range) {
+    const props = d.OtherProperties || [];
+    const f = props.find(p => p.FieldKey === PROP_DATE_FIELD_KEY);
+    return f && f.DateTimeValue && inMktRange(f.DateTimeValue, range);
+}
+
+function dealHasMeeting(d) {
+    // Reuniao agendada = deal em funil de vendedor (nao Sankhya/SDR) com SDR preenchido
+    const props = d.OtherProperties || [];
+    const sdr = props.find(p => p.FieldKey === SDR_FIELD_KEY);
+    return sdr && (sdr.ObjectValueName || sdr.ObjectValueId);
+}
+
+async function fetchRdLeadsCount(range) {
+    if (!range.from || !range.to) return { count: null, error: 'Periodo invalido' };
+    const fmt = d => d.toISOString().slice(0, 10);
+    const qs = `?start_date=${fmt(range.from)}&end_date=${fmt(range.to)}`;
+    try {
+        const r = await fetch('/rdstation/leads' + qs);
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            return { count: null, error: j.error || ('HTTP ' + r.status) };
+        }
+        const j = await r.json();
+        // Tenta varios formatos de resposta possiveis
+        if (typeof j.total === 'number') return { count: j.total };
+        if (typeof j.count === 'number') return { count: j.count };
+        if (Array.isArray(j.contacts)) return { count: j.contacts.length };
+        if (Array.isArray(j.leads)) return { count: j.leads.length };
+        if (Array.isArray(j)) return { count: j.length };
+        return { count: null, error: 'Formato de resposta nao reconhecido' };
+    } catch (e) {
+        return { count: null, error: e.message };
+    }
+}
+
+async function loadMarketing() {
+    document.getElementById('mktLoadingArea').style.display = 'flex';
+    document.getElementById('mktContentArea').style.display = 'none';
+    document.getElementById('mktLoadingMsg').textContent = 'Carregando MQLs e deals...';
+
+    // Reusa pipeline do MQL (ja carrega people + deals)
+    if (!mqlsLoaded) {
+        await loadMqls();
+        mqlsLoaded = true;
+    }
+
+    document.getElementById('mktLoadingMsg').textContent = 'Consultando RD Station...';
+    const range = getMktPeriodRange();
+    const rd = await fetchRdLeadsCount(range);
+
+    renderMarketing(range, rd);
+    document.getElementById('mktLoadingArea').style.display = 'none';
+    document.getElementById('mktContentArea').style.display = 'block';
+    document.getElementById('mktLastUpdate').textContent =
+        `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
+}
+
+function renderMarketing(range, rd) {
+    // MQLs no periodo (filtra mqlAllPeople por createDate dentro do range, sem filtros de status)
+    const mqlsAll = mqlAllPeople.filter(p => inMktRange(p.CreateDate, range));
+
+    // Aplicar mesmo filtros de "exclusao de cliente/farmer/empresa atendida" que getMqlClassified
+    const mqlsClean = mqlsAll.filter(p => {
+        if (isClientEmail(p.Email)) return false;
+        if (mqlClientesLincrosIds.has(p.CompanyId)) return false;
+        if (isCreatedByFarmer(p)) return false;
+        const allDeals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])];
+        if (allDeals.some(d => d.StatusId === 2)) return false; // ja virou cliente
+        return true;
+    });
+
+    // Para cada MQL, anexa info de deal: meeting, proposal, won, lost, lossReason, origin
+    const enriched = mqlsClean.map(p => {
+        const deals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])]
+            .filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
+        const hasMeeting = deals.some(dealHasMeeting);
+        const hasProposal = deals.some(d => dealHasProposalInRange(d, range)) ||
+                            deals.some(d => (d.OtherProperties || []).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue));
+        const wonDeal = deals.find(d => d.StatusId === 2);
+        const lostDeal = deals.find(d => d.StatusId === 3);
+        const openDeal = deals.find(d => d.StatusId === 1);
+        let status = 'sem_card', statusLabel = 'Sem card';
+        if (wonDeal) { status = 'ganho'; statusLabel = '\u2705 Ganho'; }
+        else if (openDeal) { status = 'aberto'; statusLabel = '\uD83D\uDFE2 Aberto'; }
+        else if (lostDeal) { status = 'perdido'; statusLabel = '\u274C Perdido'; }
+        return {
+            person: p,
+            origin: p.Origin?.Name || '(sem origem)',
+            hasMeeting,
+            hasProposal,
+            won: !!wonDeal,
+            lost: !!lostDeal && !wonDeal && !openDeal,
+            lossReason: lostDeal?.LossReason?.Name || '',
+            status, statusLabel
+        };
+    });
+
+    const total = enriched.length;
+    const totalReunioes = enriched.filter(e => e.hasMeeting).length;
+    const totalPropostas = enriched.filter(e => e.hasProposal).length;
+    const totalGanhos = enriched.filter(e => e.won).length;
+    const totalPerdidos = enriched.filter(e => e.lost).length;
+
+    // KPIs
+    document.getElementById('mktKpiTotal').textContent = rd.count !== null ? rd.count : '\u2014';
+    document.getElementById('mktKpiMql').textContent = total;
+    document.getElementById('mktKpiReunioes').textContent = totalReunioes;
+    document.getElementById('mktKpiPropostas').textContent = totalPropostas;
+    document.getElementById('mktKpiGanhos').textContent = totalGanhos;
+    document.getElementById('mktKpiPerdidos').textContent = totalPerdidos;
+
+    // Aviso RD se falhou
+    const warn = document.getElementById('mktRdWarning');
+    if (rd.count === null) {
+        warn.style.display = '';
+        document.getElementById('mktRdWarningMsg').textContent =
+            'nao foi possivel buscar o total de leads no RD Station (' + (rd.error || 'erro') + '). Confirme se o token e o endpoint estao corretos.';
+    } else {
+        warn.style.display = 'none';
+    }
+
+    // Funil visual
+    const funnelData = [
+        { label: 'Leads RD', value: rd.count !== null ? rd.count : null, color: '#60a5fa' },
+        { label: 'MQLs (corp)', value: total, color: '#b794f4' },
+        { label: 'Reunioes', value: totalReunioes, color: '#fbbf24' },
+        { label: 'Propostas', value: totalPropostas, color: '#34d399' },
+        { label: 'Ganhos', value: totalGanhos, color: '#22c55e' }
+    ];
+    const baseTotal = rd.count || total || 1;
+    document.getElementById('mktFunnel').innerHTML = funnelData.map((f, i) => {
+        const v = f.value === null ? '\u2014' : f.value;
+        const pct = (typeof f.value === 'number' && baseTotal > 0) ? ((f.value / baseTotal) * 100).toFixed(1) + '%' : '';
+        const conv = (i > 0 && typeof f.value === 'number' && typeof funnelData[i-1].value === 'number' && funnelData[i-1].value > 0)
+            ? ((f.value / funnelData[i-1].value) * 100).toFixed(1) + '%' : '';
+        return `<div style="flex:1;min-width:140px;background:rgba(255,255,255,0.04);border:1px solid ${f.color}55;border-radius:10px;padding:14px;">
+            <div style="font-size:11px;color:#a0a0b8;text-transform:uppercase;letter-spacing:0.5px;">${f.label}</div>
+            <div style="font-size:28px;font-weight:700;color:${f.color};margin:6px 0 4px;">${v}</div>
+            <div style="font-size:11px;color:#888;">${pct ? 'Total: ' + pct : ''}${conv ? ' &middot; Etapa: ' + conv : ''}</div>
+        </div>`;
+    }).join('');
+
+    // Origens
+    const originCounts = {};
+    enriched.forEach(e => { originCounts[e.origin] = (originCounts[e.origin] || 0) + 1; });
+    const originRows = Object.entries(originCounts).sort((a, b) => b[1] - a[1]);
+    document.getElementById('mktOriginsBody').innerHTML = originRows.length === 0
+        ? '<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">Sem dados</td></tr>'
+        : originRows.map(([o, c]) =>
+            `<tr><td>${o}</td><td style="text-align:right;">${c}</td><td style="text-align:right;color:#a0a0b8;">${total > 0 ? ((c/total)*100).toFixed(1) : 0}%</td></tr>`
+        ).join('');
+
+    // Motivos de Perda
+    const lossCounts = {};
+    enriched.filter(e => e.lost).forEach(e => {
+        const r = e.lossReason || '(sem motivo)';
+        lossCounts[r] = (lossCounts[r] || 0) + 1;
+    });
+    const lossRows = Object.entries(lossCounts).sort((a, b) => b[1] - a[1]);
+    document.getElementById('mktLossBody').innerHTML = lossRows.length === 0
+        ? '<tr><td colspan="2" style="text-align:center;color:#888;padding:20px;">Nenhum perdido</td></tr>'
+        : lossRows.map(([r, c]) =>
+            `<tr><td>${r}</td><td style="text-align:right;">${c}</td></tr>`
+        ).join('');
+
+    // Detalhe
+    document.getElementById('mktDetailBody').innerHTML = enriched.length === 0
+        ? '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">Sem MQLs no periodo</td></tr>'
+        : enriched.map(e => {
+            const companyId = e.person.CompanyId;
+            return `<tr>
+                <td><a href="https://app10.ploomes.com/contact/${e.person.Id}" target="_blank" style="color:#b794f4;text-decoration:none;">${e.person.Name || ''}</a></td>
+                <td style="font-size:12px;color:#a0a0b8;">${e.person.Email || ''}</td>
+                <td><a href="https://app10.ploomes.com/contact/${companyId}" target="_blank" style="color:#a0a0b8;text-decoration:none;">${companyId || ''}</a></td>
+                <td>${e.origin}</td>
+                <td style="text-align:center;">${e.hasMeeting ? '\u2705' : '\u2014'}</td>
+                <td style="text-align:center;">${e.hasProposal ? '\u2705' : '\u2014'}</td>
+                <td>${e.statusLabel}</td>
+                <td style="font-size:12px;color:#a0a0b8;">${e.lossReason}</td>
+            </tr>`;
+        }).join('');
+
+    window._mktEnriched = enriched;
+}
+
+function exportMarketing() {
+    const rows = window._mktEnriched || [];
+    exportToExcel(rows, [
+        { header: 'Nome', getValue: r => r.person.Name || '' },
+        { header: 'Email', getValue: r => r.person.Email || '' },
+        { header: 'CompanyId', getValue: r => r.person.CompanyId || '' },
+        { header: 'Origem', getValue: r => r.origin },
+        { header: 'Reuniao', getValue: r => r.hasMeeting ? 'Sim' : 'Nao' },
+        { header: 'Proposta', getValue: r => r.hasProposal ? 'Sim' : 'Nao' },
+        { header: 'Status', getValue: r => r.statusLabel },
+        { header: 'Motivo Perda', getValue: r => r.lossReason },
+        { header: 'Criado em', getValue: r => r.person.CreateDate ? new Date(r.person.CreateDate).toLocaleDateString('pt-BR') : '' },
+        { header: 'Link', getValue: r => 'https://app10.ploomes.com/contact/' + r.person.Id }
+    ], 'marketing');
+}
+
+function toggleMktCustomDateInputs() {
+    const isCustom = document.getElementById('mktFilterPeriod').value === 'custom';
+    document.getElementById('mktFilterDateFrom').style.display = isCustom ? '' : 'none';
+    document.getElementById('mktFilterDateTo').style.display = isCustom ? '' : 'none';
+}
+
+const mktPeriodEl = document.getElementById('mktFilterPeriod');
+if (mktPeriodEl) {
+    mktPeriodEl.addEventListener('change', () => { toggleMktCustomDateInputs(); loadMarketing(); });
+}
+['mktFilterDateFrom','mktFilterDateTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', loadMarketing);
+});
 
 // ==================== INIT ====================
 // Load dashboard on start (default view)
