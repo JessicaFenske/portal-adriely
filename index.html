@@ -5234,6 +5234,20 @@ function isCorporateEmail(email) {
     return !GENERIC_EMAIL_DOMAINS.has(m[1]);
 }
 
+// Farmers / pos-venda - leads criados por estes nao devem aparecer no MQL
+// (contas existentes, nao novo negocio)
+const FARMER_NAMES = [
+    'maja','agnes','vanessa ponce','vanessa lechuk','frederico'
+];
+function normalizeName(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+function isCreatedByFarmer(p) {
+    const creator = normalizeName(p.Creator?.Name);
+    const owner = normalizeName(p.Owner?.Name);
+    return FARMER_NAMES.some(f => creator.includes(f) || owner.includes(f));
+}
+
 // Verifica se o email pertence a um cliente Lincros (por palavra-chave no dominio)
 function isClientEmail(email) {
     if (!email) return false;
@@ -5424,9 +5438,10 @@ function getMqlClassified() {
             statusColor: statusColor,
             dealInfo: dealInfo,
             dealId: latestDeal?.Id || null,
-            isCustomer: isCustomer
+            isCustomer: isCustomer,
+            isFarmer: isCreatedByFarmer(p)
         };
-    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email));
+    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email) && !m.isFarmer);
 }
 
 function getMqlPeriodRange() {

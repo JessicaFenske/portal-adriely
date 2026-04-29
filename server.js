@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
 const API_HOST = 'public-api2.ploomes.com';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 3; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 4; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -163,7 +163,7 @@ async function refreshAll() {
     // Pessoas (TypeId=2) com email para deteccao de MQLs (ultimos 90 dias somente)
     // Sem expand de Phones para reduzir payload - vamos buscar phones em batch separado se necessario
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin&$select=Id,Name,Email,CompanyId,CreateDate,OriginId`));
+    refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin,Owner($select=Id,Name),Creator($select=Id,Name)&$select=Id,Name,Email,CompanyId,CreateDate,OriginId,OwnerId,CreatorId`));
 }
 
 refreshAll();
