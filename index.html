@@ -5780,19 +5780,20 @@ async function fetchRdLeadsCount(range) {
     const fmt = d => d.toISOString().slice(0, 10);
     const qs = `?start_date=${fmt(range.from)}&end_date=${fmt(range.to)}`;
     try {
-        const r = await fetch('/rdstation/leads' + qs);
+        const r = await fetch('/rdstation/conversions' + qs);
         if (!r.ok) {
             const j = await r.json().catch(() => ({}));
-            return { count: null, error: j.error || ('HTTP ' + r.status) };
+            return { count: null, error: j.error || ('HTTP ' + r.status), debug: j };
         }
         const j = await r.json();
-        // Tenta varios formatos de resposta possiveis
+        // RD legacy /conversions retorna {conversions: [...]} ou array direto
+        if (Array.isArray(j.conversions)) return { count: j.conversions.length };
         if (typeof j.total === 'number') return { count: j.total };
         if (typeof j.count === 'number') return { count: j.count };
         if (Array.isArray(j.contacts)) return { count: j.contacts.length };
         if (Array.isArray(j.leads)) return { count: j.leads.length };
         if (Array.isArray(j)) return { count: j.length };
-        return { count: null, error: 'Formato de resposta nao reconhecido' };
+        return { count: null, error: 'Formato de resposta nao reconhecido', debug: j };
     } catch (e) {
         return { count: null, error: e.message };
     }

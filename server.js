@@ -236,17 +236,15 @@ const server = http.createServer((req, res) => {
         const sep = qs ? '&' : '?';
         // Endpoints possiveis a tentar
         const attempts = [
-            // 1) API legada com auth_token na querystring (token privado)
-            { host: 'www.rdstation.com.br', path: '/api/1.3/' + resource + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.3 + auth_token' },
-            { host: 'www.rdstation.com.br', path: '/api/1.2/' + resource + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.2 + auth_token' },
-            // 2) API moderna com Bearer (precisa OAuth, pode falhar)
+            // 1) API legada GET /conversions - eh o endpoint correto pra listar conversoes (leads)
+            { host: 'www.rdstation.com.br', path: '/api/1.2/conversions.json' + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.2/conversions + auth_token' },
+            { host: 'www.rdstation.com.br', path: '/api/1.3/conversions' + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.3/conversions + auth_token' },
+            // 2) Tenta tambem o que o usuario pediu (resource) caso seja diferente de "leads"
+            { host: 'www.rdstation.com.br', path: '/api/1.2/' + resource + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.2/' + resource + ' + auth_token' },
+            // 3) API moderna com Bearer (precisa OAuth, pode falhar)
             { host: 'api.rd.services', path: '/platform/contacts' + qs, auth: 'bearer', label: 'api.rd.services platform/contacts (Bearer)' },
-            { host: 'api.rd.services', path: '/marketing/leads' + qs, auth: 'bearer', label: 'api.rd.services marketing/leads (Bearer)' },
-            // 3) Header X-Auth-Token (alguns endpoints aceitam)
-            { host: 'api.rd.services', path: '/platform/contacts' + qs, auth: 'xauth', label: 'api.rd.services X-Auth-Token' },
-            // 4) CRM
-            { host: 'crm.rdstation.com', path: '/api/v1/' + resource + qs + sep + 'token=' + RD_PUBLIC_TOKEN, auth: 'none', label: 'crm.rdstation.com (token publico)' },
-            { host: 'crm.rdstation.com', path: '/api/v1/' + resource + qs + sep + 'token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'crm.rdstation.com (token privado)' }
+            // 4) Header X-Auth-Token (alguns endpoints aceitam)
+            { host: 'api.rd.services', path: '/platform/contacts' + qs, auth: 'xauth', label: 'api.rd.services X-Auth-Token' }
         ];
         const errors = [];
         function tryRd(idx) {
