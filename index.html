@@ -2096,35 +2096,10 @@
         <div id="view-marketing" style="display:none;">
             <div class="op-header">
                 <div>
-                    <h1>&#128225; Marketing - Funil de Geracao</h1>
-                    <div class="subtitle">Total de leads = contatos criados no Ploomes (sincronizados do RD Station)</div>
+                    <h1>&#128225; Marketing - Performance</h1>
+                    <div class="subtitle">Funil completo + investimento + ROI por canal</div>
                 </div>
-                <div class="op-stats">
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiTotal" style="color:#60a5fa;">-</div>
-                        <div class="label">Total leads</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiMql" style="color:#b794f4;">-</div>
-                        <div class="label">MQLs</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiReunioes" style="color:#fbbf24;">-</div>
-                        <div class="label">Reunioes</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiPropostas" style="color:#34d399;">-</div>
-                        <div class="label">Propostas</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiGanhos" style="color:#22c55e;">-</div>
-                        <div class="label">Ganhos</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="mktKpiPerdidos" style="color:#f87171;">-</div>
-                        <div class="label">Perdidos</div>
-                    </div>
-                </div>
+                <div class="op-stats" id="mktKpiBar"></div>
             </div>
 
             <div class="mql-filters-bar">
@@ -2141,6 +2116,7 @@
                 <input type="date" id="mktFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <input type="date" id="mktFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <button class="mql-refresh-btn" onclick="loadMarketing()">&#128260; Atualizar</button>
+                <button class="mql-refresh-btn" onclick="openMktSpendModal()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128184; Investimento em midia</button>
             </div>
 
             <div id="mktLoadingArea" class="dash-loading">
@@ -2149,80 +2125,120 @@
             </div>
 
             <div id="mktContentArea" style="display:none;">
-                <div style="padding:16px 30px 0;">
-                    <div id="mktRdWarning" style="display:none;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:12px 16px;color:#fcd34d;font-size:13px;line-height:1.5;margin-bottom:14px;">
-                        <strong>&#9888;&#65039; RD Station:</strong> <span id="mktRdWarningMsg">nao foi possivel buscar o total de leads do RD Station agora. Verifique o token/endpoint.</span>
-                    </div>
-                </div>
+                <div style="padding:16px 30px 30px;display:grid;grid-template-columns:2fr 1fr;gap:18px;">
 
-                <div style="padding:8px 30px 30px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-                    <!-- Funil -->
-                    <div class="dash-card" style="padding:20px;grid-column:1 / -1;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
-                            Funil de conversao
-                        </h2>
-                        <div id="mktFunnel" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
-                    </div>
-
-                    <!-- Origens -->
-                    <div class="dash-card" style="padding:20px;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127760;</span>
-                            Origens dos MQLs
-                        </h2>
-                        <div style="overflow-x:auto;">
-                            <table class="mql-table">
-                                <thead><tr><th>Origem</th><th style="text-align:right;">Qtd</th><th style="text-align:right;">%</th></tr></thead>
-                                <tbody id="mktOriginsBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Motivos de Perda -->
-                    <div class="dash-card" style="padding:20px;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
-                            Motivos de Perda
-                        </h2>
-                        <div style="overflow-x:auto;">
-                            <table class="mql-table">
-                                <thead><tr><th>Motivo</th><th style="text-align:right;">Qtd</th></tr></thead>
-                                <tbody id="mktLossBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Detalhe MQLs -->
-                    <div class="dash-card" style="padding:20px;grid-column:1 / -1;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
-                                Detalhe dos MQLs no periodo
+                    <!-- Coluna esquerda: funil + evolucao + canal -->
+                    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
+                        <!-- Funil visual -->
+                        <div class="dash-card" style="padding:20px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
+                                Funil de conversao
                             </h2>
-                            <button class="export-btn" onclick="exportMarketing()">&#128229; Exportar Excel</button>
+                            <div id="mktFunnel" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"></div>
                         </div>
-                        <div style="overflow-x:auto;">
-                            <table class="mql-table">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Email</th>
-                                        <th>Empresa</th>
-                                        <th>Origem</th>
-                                        <th>Reuniao?</th>
-                                        <th>Proposta?</th>
-                                        <th>Status</th>
-                                        <th>Motivo Perda</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="mktDetailBody"></tbody>
-                            </table>
+
+                        <!-- Evolucao temporal -->
+                        <div class="dash-card" style="padding:20px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
+                                Evolucao diaria
+                            </h2>
+                            <div style="position:relative;height:240px;">
+                                <canvas id="mktChartTimeline"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Performance por canal -->
+                        <div class="dash-card" style="padding:20px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127919;</span>
+                                Performance por canal
+                            </h2>
+                            <div style="overflow-x:auto;">
+                                <table class="mql-table" style="font-size:12.5px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Canal</th>
+                                            <th style="text-align:right;">Leads</th>
+                                            <th style="text-align:right;">MQLs</th>
+                                            <th style="text-align:right;">% MQL</th>
+                                            <th style="text-align:right;">Reun.</th>
+                                            <th style="text-align:right;">Prop.</th>
+                                            <th style="text-align:right;">Ganhos</th>
+                                            <th style="text-align:right;">Investimento</th>
+                                            <th style="text-align:right;">CPL</th>
+                                            <th style="text-align:right;">CAC</th>
+                                            <th style="text-align:right;">ROI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mktChannelBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna direita: insights + motivos de perda -->
+                    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;">
+                        <div class="dash-card" style="padding:20px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128161;</span>
+                                Insights e acoes
+                            </h2>
+                            <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;"></div>
+                        </div>
+
+                        <div class="dash-card" style="padding:20px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
+                                Motivos de Perda
+                            </h2>
+                            <div style="overflow-x:auto;">
+                                <table class="mql-table" style="font-size:12.5px;">
+                                    <thead><tr><th>Motivo</th><th style="text-align:right;">Qtd</th></tr></thead>
+                                    <tbody id="mktLossBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="dash-card" style="padding:20px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                                <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
+                                    <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
+                                    Detalhe dos MQLs
+                                </h2>
+                                <button class="export-btn" onclick="exportMarketing()" style="font-size:11px;padding:6px 10px;">&#128229; Excel</button>
+                            </div>
+                            <div style="max-height:380px;overflow-y:auto;">
+                                <table class="mql-table" style="font-size:11.5px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Origem</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mktDetailBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="last-update" id="mktLastUpdate"></div>
+            </div>
+        </div>
+
+        <!-- Modal: Investimento em midia -->
+        <div class="modal-overlay" id="mktSpendModal">
+            <div class="modal" style="max-width:520px;">
+                <h2>&#128184; Investimento em midia</h2>
+                <p style="color:#a0a0b8;font-size:13px;margin:8px 0 14px;">Informe o valor gasto por canal no periodo. Os valores sao salvos localmente e usados pra calcular CPL/CAC/ROI.</p>
+                <div id="mktSpendForm" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;"></div>
+                <div style="display:flex;gap:10px;margin-top:18px;">
+                    <button class="close-btn" onclick="saveMktSpend()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">Salvar</button>
+                    <button class="close-btn" onclick="closeMktSpendModal()" style="background:#444;">Cancelar</button>
+                </div>
             </div>
         </div>
 
@@ -5817,95 +5833,177 @@ async function loadMarketing() {
         `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
 }
 
-function renderMarketing(range, rd) {
-    // MQLs no periodo (filtra mqlAllPeople por createDate dentro do range, sem filtros de status)
-    const mqlsAll = mqlAllPeople.filter(p => inMktRange(p.CreateDate, range));
+// Custom field keys
+const MRR_FIELD_KEY = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+const SETUP_FIELD_KEY = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
 
-    // Aplicar mesmo filtros de "exclusao de cliente/farmer/empresa atendida" que getMqlClassified
+function getDealValue(d, fieldKey) {
+    const f = (d.OtherProperties || []).find(p => p.FieldKey === fieldKey);
+    return f && typeof f.DecimalValue === 'number' ? f.DecimalValue : 0;
+}
+
+function brl(v) {
+    if (!isFinite(v) || v === 0) return 'R$ 0';
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+}
+
+function pct(v, decimals = 1) {
+    if (!isFinite(v)) return '\u2014';
+    return v.toFixed(decimals) + '%';
+}
+
+// LocalStorage para investimento por canal
+const MKT_SPEND_KEY = 'mktSpendByOrigin';
+function getMktSpend() {
+    try { return JSON.parse(localStorage.getItem(MKT_SPEND_KEY) || '{}'); }
+    catch { return {}; }
+}
+function setMktSpend(obj) {
+    localStorage.setItem(MKT_SPEND_KEY, JSON.stringify(obj));
+}
+
+function buildEnrichedMqls(range) {
+    const mqlsAll = mqlAllPeople.filter(p => inMktRange(p.CreateDate, range));
     const mqlsClean = mqlsAll.filter(p => {
         if (isClientEmail(p.Email)) return false;
         if (mqlClientesLincrosIds.has(p.CompanyId)) return false;
         if (isCreatedByFarmer(p)) return false;
         const allDeals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])];
-        if (allDeals.some(d => d.StatusId === 2)) return false; // ja virou cliente
+        if (allDeals.some(d => d.StatusId === 2)) return false;
         return true;
     });
-
-    // Para cada MQL, anexa info de deal: meeting, proposal, won, lost, lossReason, origin
-    const enriched = mqlsClean.map(p => {
+    return mqlsClean.map(p => {
         const deals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])]
             .filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
         const hasMeeting = deals.some(dealHasMeeting);
-        const hasProposal = deals.some(d => dealHasProposalInRange(d, range)) ||
-                            deals.some(d => (d.OtherProperties || []).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue));
+        const hasProposal = deals.some(d => (d.OtherProperties || []).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue));
         const wonDeal = deals.find(d => d.StatusId === 2);
         const lostDeal = deals.find(d => d.StatusId === 3);
         const openDeal = deals.find(d => d.StatusId === 1);
-        let status = 'sem_card', statusLabel = 'Sem card';
-        if (wonDeal) { status = 'ganho'; statusLabel = '\u2705 Ganho'; }
-        else if (openDeal) { status = 'aberto'; statusLabel = '\uD83D\uDFE2 Aberto'; }
-        else if (lostDeal) { status = 'perdido'; statusLabel = '\u274C Perdido'; }
+        let status = 'sem_card', statusLabel = 'Sem card', statusColor = '#a0a0b8';
+        if (wonDeal) { status = 'ganho'; statusLabel = '\u2705 Ganho'; statusColor = '#22c55e'; }
+        else if (openDeal) { status = 'aberto'; statusLabel = '\uD83D\uDFE2 Aberto'; statusColor = '#fbbf24'; }
+        else if (lostDeal) { status = 'perdido'; statusLabel = '\u274C Perdido'; statusColor = '#f87171'; }
+        const mrr = wonDeal ? getDealValue(wonDeal, MRR_FIELD_KEY) : 0;
+        const setup = wonDeal ? getDealValue(wonDeal, SETUP_FIELD_KEY) : 0;
         return {
             person: p,
             origin: p.Origin?.Name || '(sem origem)',
-            hasMeeting,
-            hasProposal,
-            won: !!wonDeal,
-            lost: !!lostDeal && !wonDeal && !openDeal,
+            hasMeeting, hasProposal,
+            won: !!wonDeal, lost: !!lostDeal && !wonDeal && !openDeal,
             lossReason: lostDeal?.LossReason?.Name || '',
-            status, statusLabel
+            mrr, setup, revenue: mrr * 12 + setup,
+            status, statusLabel, statusColor
         };
     });
+}
 
-    const total = enriched.length;
-    const totalReunioes = enriched.filter(e => e.hasMeeting).length;
-    const totalPropostas = enriched.filter(e => e.hasProposal).length;
-    const totalGanhos = enriched.filter(e => e.won).length;
-    const totalPerdidos = enriched.filter(e => e.lost).length;
+function renderMarketing(range, rd) {
+    const enriched = buildEnrichedMqls(range);
+    const totalLeads = rd.count;
+    const totalMql = enriched.length;
+    const totalReun = enriched.filter(e => e.hasMeeting).length;
+    const totalProp = enriched.filter(e => e.hasProposal).length;
+    const totalGanho = enriched.filter(e => e.won).length;
+    const totalPerd = enriched.filter(e => e.lost).length;
+    const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
 
-    // KPIs
-    document.getElementById('mktKpiTotal').textContent = rd.count;
-    document.getElementById('mktKpiMql').textContent = total;
-    document.getElementById('mktKpiReunioes').textContent = totalReunioes;
-    document.getElementById('mktKpiPropostas').textContent = totalPropostas;
-    document.getElementById('mktKpiGanhos').textContent = totalGanhos;
-    document.getElementById('mktKpiPerdidos').textContent = totalPerdidos;
+    // Spend total
+    const spendByOrigin = getMktSpend();
+    const totalSpend = Object.values(spendByOrigin).reduce((s, v) => s + (parseFloat(v) || 0), 0);
 
-    const warn = document.getElementById('mktRdWarning');
-    if (warn) warn.style.display = 'none';
+    // KPIs estrategicos
+    const mqlRate = totalLeads > 0 ? (totalMql / totalLeads) * 100 : NaN;
+    const cpl = totalSpend > 0 && totalLeads > 0 ? totalSpend / totalLeads : NaN;
+    const cpm = totalSpend > 0 && totalMql > 0 ? totalSpend / totalMql : NaN;
+    const cac = totalSpend > 0 && totalGanho > 0 ? totalSpend / totalGanho : NaN;
+    const roi = totalSpend > 0 ? ((revenueWon - totalSpend) / totalSpend) * 100 : NaN;
 
-    // Funil visual
-    const funnelData = [
-        { label: 'Total leads', value: rd.count, color: '#60a5fa' },
-        { label: 'MQLs (corp)', value: total, color: '#b794f4' },
-        { label: 'Reunioes', value: totalReunioes, color: '#fbbf24' },
-        { label: 'Propostas', value: totalPropostas, color: '#34d399' },
-        { label: 'Ganhos', value: totalGanhos, color: '#22c55e' }
+    const kpiBar = document.getElementById('mktKpiBar');
+    kpiBar.innerHTML = `
+        <div class="stat-box"><div class="number" style="color:#60a5fa;">${totalLeads}</div><div class="label">Total leads</div></div>
+        <div class="stat-box"><div class="number" style="color:#b794f4;">${totalMql}</div><div class="label">MQLs</div></div>
+        <div class="stat-box"><div class="number" style="color:#a78bfa;font-size:18px;">${pct(mqlRate)}</div><div class="label">% MQL</div></div>
+        <div class="stat-box"><div class="number" style="color:#fbbf24;font-size:18px;">${isFinite(cpl) ? brl(cpl) : '\u2014'}</div><div class="label">CPL</div></div>
+        <div class="stat-box"><div class="number" style="color:#f97316;font-size:18px;">${isFinite(cac) ? brl(cac) : '\u2014'}</div><div class="label">CAC</div></div>
+        <div class="stat-box"><div class="number" style="color:${roi >= 0 ? '#22c55e' : '#ef4444'};font-size:18px;">${isFinite(roi) ? pct(roi, 0) : '\u2014'}</div><div class="label">ROI</div></div>
+    `;
+
+    // Funil visual em forma de funil
+    const funnelStages = [
+        { label: 'Leads', value: totalLeads, color: '#60a5fa' },
+        { label: 'MQLs', value: totalMql, color: '#b794f4' },
+        { label: 'Reunioes', value: totalReun, color: '#fbbf24' },
+        { label: 'Propostas', value: totalProp, color: '#34d399' },
+        { label: 'Ganhos', value: totalGanho, color: '#22c55e' }
     ];
-    const baseTotal = rd.count || total || 1;
-    document.getElementById('mktFunnel').innerHTML = funnelData.map((f, i) => {
-        const v = f.value === null ? '\u2014' : f.value;
-        const pct = (typeof f.value === 'number' && baseTotal > 0) ? ((f.value / baseTotal) * 100).toFixed(1) + '%' : '';
-        const conv = (i > 0 && typeof f.value === 'number' && typeof funnelData[i-1].value === 'number' && funnelData[i-1].value > 0)
-            ? ((f.value / funnelData[i-1].value) * 100).toFixed(1) + '%' : '';
-        return `<div style="flex:1;min-width:140px;background:rgba(255,255,255,0.04);border:1px solid ${f.color}55;border-radius:10px;padding:14px;">
-            <div style="font-size:11px;color:#a0a0b8;text-transform:uppercase;letter-spacing:0.5px;">${f.label}</div>
-            <div style="font-size:28px;font-weight:700;color:${f.color};margin:6px 0 4px;">${v}</div>
-            <div style="font-size:11px;color:#888;">${pct ? 'Total: ' + pct : ''}${conv ? ' &middot; Etapa: ' + conv : ''}</div>
+    const maxV = Math.max(1, ...funnelStages.map(s => s.value));
+    const widths = [100, 80, 62, 46, 32]; // visual taper
+    document.getElementById('mktFunnel').innerHTML = funnelStages.map((s, i) => {
+        const w = widths[i];
+        const conv = i > 0 && funnelStages[i-1].value > 0 ? (s.value / funnelStages[i-1].value) * 100 : null;
+        const totalPctVal = totalLeads > 0 ? (s.value / totalLeads) * 100 : 0;
+        return `<div style="width:${w}%;background:linear-gradient(135deg,${s.color}cc,${s.color}88);border:1px solid ${s.color};border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;color:#fff;">
+            <div style="font-size:13px;font-weight:600;">${s.label}</div>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="font-size:11px;opacity:0.85;">${pct(totalPctVal, 1)} do topo</div>
+                ${conv !== null ? `<div style="font-size:11px;background:rgba(0,0,0,0.25);padding:3px 8px;border-radius:6px;">&#8595; ${pct(conv, 1)}</div>` : ''}
+                <div style="font-size:20px;font-weight:700;">${s.value}</div>
+            </div>
         </div>`;
     }).join('');
 
-    // Origens
-    const originCounts = {};
-    enriched.forEach(e => { originCounts[e.origin] = (originCounts[e.origin] || 0) + 1; });
-    const originRows = Object.entries(originCounts).sort((a, b) => b[1] - a[1]);
-    document.getElementById('mktOriginsBody').innerHTML = originRows.length === 0
-        ? '<tr><td colspan="3" style="text-align:center;color:#888;padding:20px;">Sem dados</td></tr>'
-        : originRows.map(([o, c]) =>
-            `<tr><td>${o}</td><td style="text-align:right;">${c}</td><td style="text-align:right;color:#a0a0b8;">${total > 0 ? ((c/total)*100).toFixed(1) : 0}%</td></tr>`
-        ).join('');
+    // Performance por canal
+    const channels = {};
+    enriched.forEach(e => {
+        const c = channels[e.origin] = channels[e.origin] || { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
+        c.mql++; c.leads++; // MQL eh subset de leads
+        if (e.hasMeeting) c.reun++;
+        if (e.hasProposal) c.prop++;
+        if (e.won) { c.ganhos++; c.revenue += e.revenue; }
+    });
+    // Conta tambem leads NAO-MQL por origem (todos os contatos do periodo)
+    const allLeadsInRange = mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range));
+    allLeadsInRange.forEach(p => {
+        const o = p.Origin?.Name || '(sem origem)';
+        if (!channels[o]) channels[o] = { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
+        // sobreescreve leads com a contagem real (nao apenas MQLs)
+    });
+    // Recontar leads pelo total bruto (nao apenas MQLs)
+    Object.keys(channels).forEach(o => { channels[o].leads = 0; });
+    allLeadsInRange.forEach(p => {
+        const o = p.Origin?.Name || '(sem origem)';
+        if (channels[o]) channels[o].leads++;
+    });
 
-    // Motivos de Perda
+    const channelRows = Object.entries(channels)
+        .sort((a, b) => b[1].leads - a[1].leads)
+        .map(([o, c]) => {
+            const spend = parseFloat(spendByOrigin[o]) || 0;
+            const cpl = spend > 0 && c.leads > 0 ? spend / c.leads : NaN;
+            const cac = spend > 0 && c.ganhos > 0 ? spend / c.ganhos : NaN;
+            const roi = spend > 0 ? ((c.revenue - spend) / spend) * 100 : NaN;
+            const mqlPct = c.leads > 0 ? (c.mql / c.leads) * 100 : NaN;
+            const roiColor = !isFinite(roi) ? '#888' : (roi > 0 ? '#22c55e' : '#ef4444');
+            return `<tr>
+                <td style="font-weight:500;">${o}</td>
+                <td style="text-align:right;">${c.leads}</td>
+                <td style="text-align:right;">${c.mql}</td>
+                <td style="text-align:right;color:#a0a0b8;">${pct(mqlPct)}</td>
+                <td style="text-align:right;">${c.reun}</td>
+                <td style="text-align:right;">${c.prop}</td>
+                <td style="text-align:right;color:#22c55e;">${c.ganhos}</td>
+                <td style="text-align:right;">${spend > 0 ? brl(spend) : '\u2014'}</td>
+                <td style="text-align:right;color:#fbbf24;">${isFinite(cpl) ? brl(cpl) : '\u2014'}</td>
+                <td style="text-align:right;color:#f97316;">${isFinite(cac) ? brl(cac) : '\u2014'}</td>
+                <td style="text-align:right;color:${roiColor};font-weight:600;">${isFinite(roi) ? pct(roi, 0) : '\u2014'}</td>
+            </tr>`;
+        });
+    document.getElementById('mktChannelBody').innerHTML = channelRows.length
+        ? channelRows.join('')
+        : '<tr><td colspan="11" style="text-align:center;color:#888;padding:20px;">Sem dados</td></tr>';
+
+    // Motivos de perda
     const lossCounts = {};
     enriched.filter(e => e.lost).forEach(e => {
         const r = e.lossReason || '(sem motivo)';
@@ -5913,29 +6011,170 @@ function renderMarketing(range, rd) {
     });
     const lossRows = Object.entries(lossCounts).sort((a, b) => b[1] - a[1]);
     document.getElementById('mktLossBody').innerHTML = lossRows.length === 0
-        ? '<tr><td colspan="2" style="text-align:center;color:#888;padding:20px;">Nenhum perdido</td></tr>'
-        : lossRows.map(([r, c]) =>
-            `<tr><td>${r}</td><td style="text-align:right;">${c}</td></tr>`
+        ? '<tr><td colspan="2" style="text-align:center;color:#888;padding:14px;">Nenhum perdido</td></tr>'
+        : lossRows.map(([r, c]) => `<tr><td>${r}</td><td style="text-align:right;">${c}</td></tr>`).join('');
+
+    // Insights & Acoes
+    renderMktInsights({
+        totalLeads, totalMql, totalReun, totalProp, totalGanho, totalPerd,
+        mqlRate, cpl, cac, roi, totalSpend, revenueWon,
+        channels, lossCounts
+    });
+
+    // Evolucao temporal
+    renderMktTimeline(allLeadsInRange, enriched, range);
+
+    // Detalhe (resumido)
+    document.getElementById('mktDetailBody').innerHTML = enriched.length === 0
+        ? '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem MQLs no periodo</td></tr>'
+        : enriched.slice(0, 200).map(e =>
+            `<tr>
+                <td><a href="https://app10.ploomes.com/contact/${e.person.Id}" target="_blank" style="color:#b794f4;text-decoration:none;">${(e.person.Name || '').substring(0, 30)}</a></td>
+                <td style="font-size:11px;color:#a0a0b8;">${(e.origin || '').substring(0, 22)}</td>
+                <td style="color:${e.statusColor};font-size:11px;">${e.statusLabel}</td>
+            </tr>`
         ).join('');
 
-    // Detalhe
-    document.getElementById('mktDetailBody').innerHTML = enriched.length === 0
-        ? '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">Sem MQLs no periodo</td></tr>'
-        : enriched.map(e => {
-            const companyId = e.person.CompanyId;
-            return `<tr>
-                <td><a href="https://app10.ploomes.com/contact/${e.person.Id}" target="_blank" style="color:#b794f4;text-decoration:none;">${e.person.Name || ''}</a></td>
-                <td style="font-size:12px;color:#a0a0b8;">${e.person.Email || ''}</td>
-                <td><a href="https://app10.ploomes.com/contact/${companyId}" target="_blank" style="color:#a0a0b8;text-decoration:none;">${companyId || ''}</a></td>
-                <td>${e.origin}</td>
-                <td style="text-align:center;">${e.hasMeeting ? '\u2705' : '\u2014'}</td>
-                <td style="text-align:center;">${e.hasProposal ? '\u2705' : '\u2014'}</td>
-                <td>${e.statusLabel}</td>
-                <td style="font-size:12px;color:#a0a0b8;">${e.lossReason}</td>
-            </tr>`;
-        }).join('');
-
     window._mktEnriched = enriched;
+}
+
+function renderMktInsights(m) {
+    const tips = [];
+    // MQL rate
+    if (m.totalLeads > 10) {
+        if (m.mqlRate < 20) tips.push({ level: 'crit', title: 'Taxa MQL baixa (' + pct(m.mqlRate) + ')', body: 'Poucos leads sao corporativos. Revise o copy do form (deixe claro o publico-alvo), torne campo de telefone obrigatorio, e considere validacao de email corp.' });
+        else if (m.mqlRate < 35) tips.push({ level: 'warn', title: 'Taxa MQL pode melhorar (' + pct(m.mqlRate) + ')', body: 'Acima de 35% e benchmark B2B. Teste landing pages mais especificas pelo cargo/segmento.' });
+        else tips.push({ level: 'ok', title: 'Taxa MQL saudavel (' + pct(m.mqlRate) + ')', body: 'Otima qualificacao no topo do funil. Mantenha.' });
+    }
+    // Reuniao rate
+    const reunRate = m.totalMql > 0 ? (m.totalReun / m.totalMql) * 100 : 0;
+    if (m.totalMql > 5) {
+        if (reunRate < 25) tips.push({ level: 'crit', title: 'Conversao MQL\u2192Reuniao baixa (' + pct(reunRate) + ')', body: 'Provavel gap de SDR. Revise cadencia de outreach (multi-canal: email + ligacao + LinkedIn em 5 dias) e treine speech de qualificacao.' });
+        else if (reunRate < 45) tips.push({ level: 'warn', title: 'Conversao MQL\u2192Reuniao mediana (' + pct(reunRate) + ')', body: 'Tente personalizar mais a abordagem usando segmento/cargo do lead.' });
+    }
+    // Proposta rate
+    const propRate = m.totalReun > 0 ? (m.totalProp / m.totalReun) * 100 : 0;
+    if (m.totalReun > 3 && propRate < 50) {
+        tips.push({ level: 'warn', title: 'Reuniao\u2192Proposta baixa (' + pct(propRate) + ')', body: 'Pode indicar qualificacao fraca - adote BANT/MEDDIC nas reunioes pra evitar levar lead nao-fit pra proposta.' });
+    }
+    // Win rate
+    const winRate = m.totalProp > 0 ? (m.totalGanho / m.totalProp) * 100 : 0;
+    if (m.totalProp > 3) {
+        if (winRate < 20) tips.push({ level: 'crit', title: 'Win rate baixa (' + pct(winRate) + ')', body: 'Revise pricing, objecoes mais comuns (ver Motivos de Perda), e considere reforcar prova social/cases.' });
+        else if (winRate >= 30) tips.push({ level: 'ok', title: 'Win rate forte (' + pct(winRate) + ')', body: 'Otima conversao final. Foco agora deve ser no topo do funil.' });
+    }
+    // Concentracao de canal
+    const totalLeadsCh = Object.values(m.channels).reduce((s, c) => s + c.leads, 0);
+    const topCh = Object.entries(m.channels).sort((a, b) => b[1].leads - a[1].leads)[0];
+    if (topCh && totalLeadsCh > 30) {
+        const share = (topCh[1].leads / totalLeadsCh) * 100;
+        if (share > 60) tips.push({ level: 'warn', title: 'Dependencia de "' + topCh[0] + '" (' + pct(share, 0) + ')', body: 'Mais da metade dos leads vem de um so canal - risco. Diversifique testando 1-2 canais novos esse mes.' });
+    }
+    // Sem origem
+    const semOrigem = m.channels['(sem origem)'];
+    if (semOrigem && totalLeadsCh > 30 && (semOrigem.leads / totalLeadsCh) > 0.15) {
+        tips.push({ level: 'warn', title: 'Muitos leads sem origem (' + pct((semOrigem.leads/totalLeadsCh)*100, 0) + ')', body: 'Configure UTMs em todas as campanhas e formularios. Sem origem, voce nao mede ROI.' });
+    }
+    // ROI
+    if (isFinite(m.roi)) {
+        if (m.roi < 0) tips.push({ level: 'crit', title: 'ROI negativo (' + pct(m.roi, 0) + ')', body: 'Receita gerada esta abaixo do investido. Pause os canais de pior CAC e realoque pros de melhor ROI - veja a tabela "Performance por canal".' });
+        else if (m.roi < 100) tips.push({ level: 'warn', title: 'ROI baixo (' + pct(m.roi, 0) + ')', body: 'Ainda nao dobrou o investimento. Foque no canal com maior ROI absoluto.' });
+        else tips.push({ level: 'ok', title: 'ROI saudavel (' + pct(m.roi, 0) + ')', body: 'Ja paga o investimento. Da pra escalar mantendo o mix atual.' });
+    } else if (m.totalSpend === 0) {
+        tips.push({ level: 'info', title: 'Cadastre o investimento em midia', body: 'Clique em "Investimento em midia" no topo pra ter CAC, CPL e ROI por canal.' });
+    }
+    // Top motivo de perda
+    const topLoss = Object.entries(m.lossCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topLoss && topLoss[1] >= 3) {
+        tips.push({ level: 'warn', title: 'Top perda: "' + topLoss[0] + '" (' + topLoss[1] + 'x)', body: 'Padrao recorrente. Crie objeção scripts especificos para esse motivo e treine vendedores.' });
+    }
+
+    const colors = {
+        crit: { bg: 'rgba(239,68,68,0.08)', border: '#ef4444', icon: '\uD83D\uDEA8' },
+        warn: { bg: 'rgba(251,191,36,0.08)', border: '#fbbf24', icon: '\u26A0\uFE0F' },
+        ok:   { bg: 'rgba(34,197,94,0.08)', border: '#22c55e', icon: '\u2705' },
+        info: { bg: 'rgba(96,165,250,0.08)', border: '#60a5fa', icon: '\u2139\uFE0F' }
+    };
+    document.getElementById('mktInsights').innerHTML = tips.length === 0
+        ? '<div style="color:#888;text-align:center;padding:20px;font-size:13px;">Carregue mais dados pra gerar insights</div>'
+        : tips.map(t => {
+            const c = colors[t.level];
+            return `<div style="background:${c.bg};border-left:3px solid ${c.border};border-radius:6px;padding:10px 12px;">
+                <div style="color:#fff;font-size:12.5px;font-weight:600;margin-bottom:4px;">${c.icon} ${t.title}</div>
+                <div style="color:#c0c0d0;font-size:11.5px;line-height:1.45;">${t.body}</div>
+            </div>`;
+        }).join('');
+}
+
+let mktTimelineChart = null;
+function renderMktTimeline(allLeads, enriched, range) {
+    if (!range.from || !range.to) return;
+    const dayMs = 86400000;
+    const days = [];
+    const start = new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate());
+    const end = new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate());
+    for (let t = start.getTime(); t <= end.getTime(); t += dayMs) {
+        days.push(new Date(t));
+    }
+    const fmt = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth()+1).padStart(2, '0');
+    const leadsByDay = days.map(d => allLeads.filter(p => {
+        const cd = new Date(p.CreateDate);
+        return cd.getDate() === d.getDate() && cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear();
+    }).length);
+    const mqlByDay = days.map(d => enriched.filter(e => {
+        const cd = new Date(e.person.CreateDate);
+        return cd.getDate() === d.getDate() && cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear();
+    }).length);
+
+    const ctx = document.getElementById('mktChartTimeline');
+    if (mktTimelineChart) mktTimelineChart.destroy();
+    mktTimelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days.map(fmt),
+            datasets: [
+                { label: 'Leads', data: leadsByDay, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.15)', tension: 0.3, fill: true, borderWidth: 2 },
+                { label: 'MQLs', data: mqlByDay, borderColor: '#b794f4', backgroundColor: 'rgba(183,148,244,0.15)', tension: 0.3, fill: true, borderWidth: 2 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#c0c0d0', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#888', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { beginAtZero: true, ticks: { color: '#888', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+        }
+    });
+}
+
+function openMktSpendModal() {
+    const range = getMktPeriodRange();
+    const allLeads = mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range));
+    const origins = [...new Set(allLeads.map(p => p.Origin?.Name || '(sem origem)'))].sort();
+    const saved = getMktSpend();
+    document.getElementById('mktSpendForm').innerHTML = origins.map(o => `
+        <div style="display:flex;align-items:center;gap:10px;">
+            <label style="flex:1;color:#e0e0e0;font-size:13px;">${o}</label>
+            <span style="color:#a0a0b8;font-size:12px;">R$</span>
+            <input type="number" step="0.01" min="0" data-origin="${o.replace(/"/g, '&quot;')}" value="${saved[o] || ''}" placeholder="0" style="width:120px;background:rgba(255,255,255,0.06);border:1px solid #444;color:#fff;padding:6px 8px;border-radius:6px;font-size:13px;text-align:right;">
+        </div>
+    `).join('');
+    document.getElementById('mktSpendModal').classList.add('active');
+}
+function closeMktSpendModal() {
+    document.getElementById('mktSpendModal').classList.remove('active');
+}
+function saveMktSpend() {
+    const inputs = document.querySelectorAll('#mktSpendForm input[data-origin]');
+    const obj = {};
+    inputs.forEach(i => {
+        const v = parseFloat(i.value) || 0;
+        if (v > 0) obj[i.dataset.origin] = v;
+    });
+    setMktSpend(obj);
+    closeMktSpendModal();
+    loadMarketing();
 }
 
 function exportMarketing() {
