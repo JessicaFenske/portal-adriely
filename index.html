@@ -5390,6 +5390,12 @@ function getMqlClassified() {
 
         const isCustomer = allDeals.some(d => d.StatusId === 2);
 
+        // A empresa ja esta sendo atendida? (qualquer outro contato da empresa
+        // com deal ATIVO em funil nao-Sankhya). Se sim, oculta MQL.
+        const companyHasActiveDeal = companyDeals.some(d =>
+            d.StatusId === 1 && !isSankhyaPipeline(d.Pipeline?.Name)
+        );
+
         // Deals nao-Sankhya da pessoa
         const personDealsNonSankhya = personDeals.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
 
@@ -5439,9 +5445,10 @@ function getMqlClassified() {
             dealInfo: dealInfo,
             dealId: latestDeal?.Id || null,
             isCustomer: isCustomer,
-            isFarmer: isCreatedByFarmer(p)
+            isFarmer: isCreatedByFarmer(p),
+            companyHasActiveDeal: companyHasActiveDeal
         };
-    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email) && !m.isFarmer);
+    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email) && !m.isFarmer && !m.companyHasActiveDeal);
 }
 
 function getMqlPeriodRange() {
