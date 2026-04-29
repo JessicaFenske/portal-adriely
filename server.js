@@ -7,7 +7,9 @@ const path = require('path');
 const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
 const API_HOST = 'public-api2.ploomes.com';
-const RD_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Station token
+const RD_PUBLIC_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Marketing token publico (envio de conversoes)
+const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing token privado (API legada)
+const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
 const CACHE_VERSION = 5; // Bump to invalidate disk cache after schema changes
 
@@ -228,19 +230,33 @@ const server = http.createServer((req, res) => {
     // RD Station - tenta varios formatos de auth ate encontrar o que funciona
     if (req.url.startsWith('/rdstation/')) {
         const subPath = req.url.replace('/rdstation/', '');
-        // Endpoints possiveis a tentar (RD Marketing OAuth Bearer eh o mais comum)
+        const m = subPath.match(/^([^?]+)(\?.*)?$/);
+        const resource = m ? m[1] : subPath;
+        const qs = m && m[2] ? m[2] : '';
+        const sep = qs ? '&' : '?';
+        // Endpoints possiveis a tentar
         const attempts = [
-            { host: 'api.rd.services', path: '/platform/contacts' + (subPath.startsWith('?') ? subPath : ''), auth: 'bearer' },
-            { host: 'crm.rdstation.com', path: '/api/v1/' + subPath + (subPath.includes('?') ? '&' : '?') + 'token=' + RD_TOKEN, auth: 'none' }
+            // 1) API legada com auth_token na querystring (token privado)
+            { host: 'www.rdstation.com.br', path: '/api/1.3/' + resource + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.3 + auth_token' },
+            { host: 'www.rdstation.com.br', path: '/api/1.2/' + resource + qs + sep + 'auth_token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'rdstation.com.br/api/1.2 + auth_token' },
+            // 2) API moderna com Bearer (precisa OAuth, pode falhar)
+            { host: 'api.rd.services', path: '/platform/contacts' + qs, auth: 'bearer', label: 'api.rd.services platform/contacts (Bearer)' },
+            { host: 'api.rd.services', path: '/marketing/leads' + qs, auth: 'bearer', label: 'api.rd.services marketing/leads (Bearer)' },
+            // 3) Header X-Auth-Token (alguns endpoints aceitam)
+            { host: 'api.rd.services', path: '/platform/contacts' + qs, auth: 'xauth', label: 'api.rd.services X-Auth-Token' },
+            // 4) CRM
+            { host: 'crm.rdstation.com', path: '/api/v1/' + resource + qs + sep + 'token=' + RD_PUBLIC_TOKEN, auth: 'none', label: 'crm.rdstation.com (token publico)' },
+            { host: 'crm.rdstation.com', path: '/api/v1/' + resource + qs + sep + 'token=' + RD_PRIVATE_TOKEN, auth: 'none', label: 'crm.rdstation.com (token privado)' }
         ];
-        // subPath pode ser por ex "leads?start_date=...&end_date=..."
-        const match = subPath.match(/^([^?]+)(\?.*)?$/);
-        const resource = match ? match[1] : subPath;
-        const qs = match && match[2] ? match[2] : '';
-        async function tryRd(idx) {
+        const errors = [];
+        function tryRd(idx) {
             if (idx >= attempts.length) {
                 res.writeHead(502, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: 'RD Station: nenhum endpoint funcionou', tried: attempts.map(a => a.host + a.path) }));
+                return res.end(JSON.stringify({
+                    error: 'RD Station: nenhum endpoint disponivel respondeu OK',
+                    hint: 'Para listar leads no RD Marketing eh necessario OAuth (Bearer token gerado via fluxo de autorizacao). O token privado so funciona em alguns endpoints legados.',
+                    attempts: errors
+                }));
             }
             const a = attempts[idx];
             const opts = {
@@ -249,7 +265,8 @@ const server = http.createServer((req, res) => {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' }
             };
-            if (a.auth === 'bearer') opts.headers['Authorization'] = 'Bearer ' + RD_TOKEN;
+            if (a.auth === 'bearer') opts.headers['Authorization'] = 'Bearer ' + RD_PRIVATE_TOKEN;
+            if (a.auth === 'xauth') opts.headers['X-Auth-Token'] = RD_PRIVATE_TOKEN;
             const r = https.request(opts, (rr) => {
                 const chunks = [];
                 rr.on('data', c => chunks.push(c));
@@ -259,15 +276,12 @@ const server = http.createServer((req, res) => {
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         return res.end(body);
                     }
-                    if (rr.statusCode === 401 || rr.statusCode === 403 || rr.statusCode === 404) {
-                        return tryRd(idx + 1);
-                    }
-                    res.writeHead(rr.statusCode, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'RD ' + rr.statusCode, body: body.substring(0, 500), endpoint: a.host + a.path }));
+                    errors.push({ endpoint: a.label, status: rr.statusCode, body: body.substring(0, 200) });
+                    tryRd(idx + 1);
                 });
             });
-            r.on('error', () => tryRd(idx + 1));
-            r.setTimeout(15000, () => { r.destroy(); tryRd(idx + 1); });
+            r.on('error', (e) => { errors.push({ endpoint: a.label, error: e.message }); tryRd(idx + 1); });
+            r.setTimeout(10000, () => { r.destroy(); errors.push({ endpoint: a.label, error: 'timeout' }); tryRd(idx + 1); });
             r.end();
         }
         return tryRd(0);
