@@ -967,6 +967,62 @@
             .fc-kpi-card .fc-kpi-label { font-size: 10px; }
             .mkt-grid > * { grid-column: 1 / -1 !important; }
         }
+        /* Marketing KPI bar */
+        .mkt-kpi-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+        .mkt-kpi {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 76px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .mkt-kpi:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
+        .mkt-kpi-label {
+            font-size: 10.5px;
+            color: #8888a0;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mkt-kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-top: 8px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .mkt-kpi-value .suffix {
+            font-size: 14px;
+            color: #8888a0;
+            font-weight: 500;
+        }
+        .mkt-kpi-empty {
+            font-size: 13px;
+            color: #5d5d75;
+            font-weight: 500;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .mkt-kpi-trend {
+            font-size: 10px;
+            color: #6d6d85;
+            margin-top: 4px;
+        }
+        @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
         .fc-kpi-card.scenario-otimista { border-color: rgba(16,185,129,0.3); }
         .fc-kpi-card.scenario-otimista .fc-kpi-value { color: #10b981; }
         .fc-kpi-card.scenario-realista { border-color: rgba(245,158,11,0.3); }
@@ -2095,12 +2151,16 @@
         <!-- ==================== VIEW: MQLS ==================== -->
         <!-- ==================== VIEW: MARKETING ==================== -->
         <div id="view-marketing" style="display:none;">
-            <div class="op-header">
+            <div class="op-header" style="padding-bottom:16px;">
                 <div>
                     <h1>&#128225; Marketing - Performance</h1>
                     <div class="subtitle">Funil completo + investimento + ROI por canal</div>
                 </div>
-                <div class="op-stats" id="mktKpiBar"></div>
+            </div>
+
+            <!-- KPI bar dedicada -->
+            <div style="padding:0 30px 6px;">
+                <div id="mktKpiBar" class="mkt-kpi-bar"></div>
             </div>
 
             <div class="mql-filters-bar">
@@ -5915,15 +5975,26 @@ function renderMarketing(range, rd) {
     const cac = totalSpend > 0 && totalGanho > 0 ? totalSpend / totalGanho : NaN;
     const roi = totalSpend > 0 ? ((revenueWon - totalSpend) / totalSpend) * 100 : NaN;
 
-    const kpiBar = document.getElementById('mktKpiBar');
-    kpiBar.innerHTML = `
-        <div class="stat-box"><div class="number" style="color:#60a5fa;">${totalLeads}</div><div class="label">Total leads</div></div>
-        <div class="stat-box"><div class="number" style="color:#b794f4;">${totalMql}</div><div class="label">MQLs</div></div>
-        <div class="stat-box"><div class="number" style="color:#a78bfa;font-size:18px;">${pct(mqlRate)}</div><div class="label">% MQL</div></div>
-        <div class="stat-box"><div class="number" style="color:#fbbf24;font-size:18px;">${isFinite(cpl) ? brl(cpl) : '\u2014'}</div><div class="label">CPL</div></div>
-        <div class="stat-box"><div class="number" style="color:#f97316;font-size:18px;">${isFinite(cac) ? brl(cac) : '\u2014'}</div><div class="label">CAC</div></div>
-        <div class="stat-box"><div class="number" style="color:${roi >= 0 ? '#22c55e' : '#ef4444'};font-size:18px;">${isFinite(roi) ? pct(roi, 0) : '\u2014'}</div><div class="label">ROI</div></div>
-    `;
+    const kpi = (label, value, color, opts = {}) => {
+        const empty = opts.empty;
+        const valueHtml = empty
+            ? `<div class="mkt-kpi-empty">${empty}</div>`
+            : `<div class="mkt-kpi-value" style="color:${color};">${value}${opts.suffix ? `<span class="suffix">${opts.suffix}</span>` : ''}</div>`;
+        return `<div class="mkt-kpi">
+            <div class="mkt-kpi-label">${label}</div>
+            ${valueHtml}
+            ${opts.trend ? `<div class="mkt-kpi-trend">${opts.trend}</div>` : ''}
+        </div>`;
+    };
+    const noSpend = totalSpend === 0;
+    const emptyHint = 'Defina o investimento';
+    document.getElementById('mktKpiBar').innerHTML =
+        kpi('Total leads', totalLeads.toLocaleString('pt-BR'), '#60a5fa') +
+        kpi('MQLs', totalMql.toLocaleString('pt-BR'), '#b794f4', { trend: totalLeads ? `${pct(mqlRate, 1)} dos leads` : '' }) +
+        kpi('Reunioes', totalReun.toLocaleString('pt-BR'), '#fbbf24', { trend: totalMql ? `${pct(totalMql > 0 ? (totalReun/totalMql)*100 : 0, 1)} dos MQLs` : '' }) +
+        kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
+        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no periodo' } : {})) +
+        kpi('ROI', isFinite(roi) ? pct(roi, 0) : '', roi >= 0 ? '#22c55e' : '#ef4444', noSpend ? { empty: emptyHint } : {});
 
     // Funil visual em forma de funil
     const funnelStages = [
