@@ -5170,11 +5170,77 @@ const GENERIC_EMAIL_DOMAINS = new Set([
     'sankhya.com.br', 'lincros.com', 'lincros.com.br'
 ]);
 
+// Palavras-chave de clientes existentes (lowercase, sem acentos/espacos).
+// Se o dominio do email contiver qualquer uma destas, considera CLIENTE e oculta da view MQLs.
+// Cada item e um fragmento distintivo do nome da empresa cliente.
+const CLIENT_KEYWORDS = [
+    'camargocia','fabercastell','faber-castell','abecom','adeel','agriconnection','agrosul',
+    'albaugh','aldosolar','alisul','agrihold','altenburg','dalcin','apodi','aquafast',
+    'artlatex','art-latex','astra-sa','astrasa','autobate','autoglass','b2pneus','bmcmaquinas',
+    'barigui','barion','barrycallebaut','barry-callebaut','bassopancotte','grassi','baly',
+    'potylog','poty','biofarm','biomm','blaufarm','blukit','pamplona','bopaper','bomleite',
+    'bracell','brandili','brasilux','taschibra','bronzearte','buschle','cvale','vilaporto',
+    'cocari','ctssilva','camil','canon.com.br','casadiconti','castrolanda','experta',
+    'cinibebidas','civitt','europacomercial','clarios','cobrarolamentos','dpk',
+    'consolida','conchaytoro','contabilista','coopagricola','holambra','cafeicultores',
+    'coopercitrus','copobras','coposul','corttex','coryalimentos','costasul','coutoflex',
+    'criviali','daterrinha','dacolonia','dinizatacadista','distribuidorasucesso',
+    'docesguimaraes','durin','dutycosm','ebeg','fratterna','elgin','embrast','enebra',
+    'engelmig','envista','envistaco','kavo','essity','eternit','eucatex','eurofins',
+    'stellantis','fcagroup','ffrr','fabmed','fischer','fontlife','baggio','forquimica',
+    'fortlev','notaro','frangonatto','friocargo','friopecas','frooty','fruttcom','fullgauge',
+    'funada','g-light','glight','gfpneus','gprtransportes','gaslog','ergon','generalmills',
+    'giannone','goedert','gpimports','granvita','irpao','goldpao','grupobimbo','bimbo',
+    'cencosud','gbarbosa','grupoelfa','atrial','gg10','lanlimp','ravanello','gruposerbom',
+    'grupounita','vibra','vittia','tuttibaby','grupozanotti','guaranamineiro',
+    'guimaraeslimpeza','hbjbiomassa','hopelingerie','hopeunderwear','halex','halexistar',
+    'hannover','grupobold','heckeimport','hennings','herweg','sulclok','hidrofiltros',
+    'husqvarna','huvispan','hypera','brainfarma','iclgroup','iclbrasil','compass-icl',
+    'ibema','imbera','incape','indaial','ipel','indianapecas','anhembi','infasa','ingleza',
+    'inoven','intercores','ironmountain','isiscom','italac','italiacomercio','easychef',
+    'jbs.com','frigoclas','jacuzzi','jetta','jolitex','jotun','kssbrasileira',
+    'ktrfios','karcher','kaercher','karsten','kellator','kleyhertz','kteli','lacticiniospa',
+    'lpalat','lebon','levbicicletas','limppano','linkcomercial','loreal','l-oreal',
+    'lunelli','mfduarte','mqhair','magnumtires','makena','malhasjn','medicalog',
+    'mercantilnovaera','meritologistica','metalfrio','midea','mocoa','mueller','hercules',
+    'multfer','modulotransporte','nagem','cilinformatica','natulab','nortene','nutrien','mococa',
+    'oncovit','ourofino','ourolux','pesacat','pmgatacadista','pxtalimentos','pacificmkt',
+    'pmi-thermos','packinggroup','softfilm','padosa','panco','pandurata','bauducco',
+    'panteraalimentos','peixotocist','petronas','petyan','pileccoNobre','pilecco-nobre',
+    'plasticomnium','plenaalimentos','portobello','positivo','premierpet','grandfood',
+    'mataboi','primafoods','qfaz','qualimpor','quataalimentos','rcell','redbull',
+    'redehds','refrigerantescoroa','itamonte','revise','riostextil','saetowers','sandvik',
+    'santahelena','santaluzia','schulz','seisrotas','semalo','silog','silvestrin',
+    'sooro','sotreq','somov','specialdog','stoqmercantil','paviloche','supergel',
+    'ssabrasil','superfrango','tabone','taffbrasil','taurus','technipfmc','tecnoblu',
+    'cclindsa','tecnomyl','tecnoset','telhaco','thabrulai','thermofast','gigalog',
+    'totalquimica','sanol','totalgas','tozzo','transerve','trebeschi','trevolacteos',
+    'tropeira','profood','tuicial','farbe','ultracheese','unidasul','sulbras','unilever',
+    'kibon','unilimp','uninter','uniaoquimica','usiminas','usualbrinquedos','vabene',
+    'gruposoul','valeautomacao','valley-irrigation','valmont','videojet','visiondist',
+    'vitafor','vmex','volkdobrasil','wurth','zanchetta','zensa','zenautomacao','segurimax',
+    // Adicoes baseadas na lista oficial dos clientes Lincros
+    '2rdistribuidora','2r-distribuidora','artlatex','art-latex','astrasa','astra-sa','aurorabebidas',
+    'auroraalimentos','autobate','autoglass','b2pneus','bmcmaquinas','bmc-maquinas',
+    'continentaldobrasil','continental.com.br','emerson.com','frigorificoargus','furukawa',
+    'lightera','biagio','grupobiagio','grupons','gruponsa','ceres','bstransportes','helte',
+    'jhsfrigoclas','laticiniospa','laticiniosportoalegre','pep','pepind','r3grupo','grupor3'
+];
+
 function isCorporateEmail(email) {
     if (!email) return false;
     const m = email.toLowerCase().match(/@([^@\s]+)$/);
     if (!m) return false;
     return !GENERIC_EMAIL_DOMAINS.has(m[1]);
+}
+
+// Verifica se o email pertence a um cliente Lincros (por palavra-chave no dominio)
+function isClientEmail(email) {
+    if (!email) return false;
+    const m = email.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/@([^@\s]+)$/);
+    if (!m) return false;
+    const domain = m[1];
+    return CLIENT_KEYWORDS.some(kw => domain.includes(kw));
 }
 
 function isMqlPerson(p) {
@@ -5360,7 +5426,7 @@ function getMqlClassified() {
             dealId: latestDeal?.Id || null,
             isCustomer: isCustomer
         };
-    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId));
+    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email));
 }
 
 function getMqlPeriodRange() {
