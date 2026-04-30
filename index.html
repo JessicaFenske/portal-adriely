@@ -4656,6 +4656,24 @@ async function loadDashboard() {
         dashMeetings = meetings || [];
         dashUsersById = {};
         (users || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
+        // Fallback: se cache de meetings veio vazio, busca direto via API (ultimos 120d)
+        if (dashMeetings.length === 0) {
+            try {
+                const since = new Date(Date.now() - 120*86400000).toISOString();
+                const flt = encodeURIComponent(`DateTime ge ${since} and (startswith(Title,'Reuni') or startswith(Title,'reuni'))`);
+                const sel = encodeURIComponent('Id,Title,DateTime,OwnerId,CreatorId,DealId,ContactId,TypeId');
+                let all = []; let skip = 0;
+                while (skip < 6000) {
+                    const r = await fetch(`/api/Tasks?%24filter=${flt}&%24select=${sel}&%24top=300&%24skip=${skip}`).then(r => r.json());
+                    const arr = r.value || [];
+                    all = all.concat(arr);
+                    if (arr.length < 300) break;
+                    skip += 300;
+                }
+                dashMeetings = all;
+                console.log('[meetings] fallback API:', dashMeetings.length);
+            } catch (e) { console.warn('[meetings] fallback failed:', e.message); }
+        }
         // Fallback: se cache de users veio vazio, busca direto da API
         if (Object.keys(dashUsersById).length === 0) {
             try {
