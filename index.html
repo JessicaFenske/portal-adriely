@@ -2541,8 +2541,13 @@ function barEndLabel(color) {
         font: { weight: '700', size: 12 },
         formatter: v => v > 0 ? v : '',
         clamp: true,
+        clip: false,
         offset: 4
     };
+}
+// Layout padrao para barras horizontais com datalabel no fim
+function barEndLayout() {
+    return { padding: { right: 36 } };
 }
 
 // Shared API helper
@@ -4293,7 +4298,7 @@ function renderSection7() {
     charts.meetings = new Chart(document.getElementById('chartMeetings'), {
         type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
         plugins: [ChartDataLabels],
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -4319,7 +4324,7 @@ async function renderSection7Inter() {
     charts.meetingsInter = new Chart(document.getElementById('chartMeetingsInter'), {
         type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
         plugins: [ChartDataLabels],
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, datalabels: barEndLabel('#22c55e') },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#22c55e') },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyMeetingsInter').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
@@ -4374,6 +4379,7 @@ function renderSection7b() {
         plugins: [ChartDataLabels],
         options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            layout: barEndLayout(),
             plugins: { legend: { display: false }, datalabels: barEndLabel('#ef4444') },
             onClick: (event, elements) => {
                 if (elements.length > 0) {
