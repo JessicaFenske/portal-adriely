@@ -11,7 +11,7 @@ const RD_PUBLIC_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Marketing toke
 const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing token privado (API legada)
 const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 5; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 6; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -124,7 +124,7 @@ async function refreshOne(key, url) {
 
 // Load from disk immediately on startup
 console.log('[cache] Loading cache from disk...');
-const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders', 'segments', 'companies', 'people'];
+const keys = ['won', 'lost', 'open', 'contacts', 'forecast', 'orders', 'segments', 'companies', 'people', 'meetings', 'users'];
 keys.forEach(key => {
     const data = loadFromDisk(key);
     if (data) {
@@ -167,6 +167,12 @@ async function refreshAll() {
     // Sem expand de Phones para reduzir payload - vamos buscar phones em batch separado se necessario
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin,Owner($select=Id,Name),Creator($select=Id,Name)&$select=Id,Name,Email,CompanyId,CreateDate,OriginId,OwnerId,CreatorId`));
+    // Atividades "Reuniao Agendada" - filtra Title local depois (RFE/encoding instavel no Ploomes)
+    // Pega ultimos 120 dias de tasks com Title comecando com Reun, Select minimo
+    const oneTwentyDaysAgo = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    refreshOne('meetings', odataEncode(`/Tasks?$filter=DateTime ge ${oneTwentyDaysAgo} and (startswith(Title,'Reuni') or startswith(Title,'reuni'))&$select=Id,Title,DateTime,OwnerId,DealId,ContactId,TypeId&$orderby=DateTime desc`));
+    // Lista de usuarios para resolver OwnerId -> Name nas atividades
+    refreshOne('users', odataEncode('/Users?$select=Id,Name'));
 }
 
 refreshAll();
@@ -216,7 +222,9 @@ const server = http.createServer((req, res) => {
                 contacts: cache.contacts?.length || 0,
                 forecast: cache.forecast?.length || 0,
                 orders: cache.orders?.length || 0,
-                people: cache.people?.length || 0
+                people: cache.people?.length || 0,
+                meetings: cache.meetings?.length || 0,
+                users: cache.users?.length || 0
             }
         }));
     }

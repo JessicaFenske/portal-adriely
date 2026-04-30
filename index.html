@@ -1021,7 +1021,7 @@
             color: #6d6d85;
             margin-top: 4px;
         }
-        @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
         .fc-kpi-card.scenario-otimista { border-color: rgba(16,185,129,0.3); }
         .fc-kpi-card.scenario-otimista .fc-kpi-value { color: #10b981; }
@@ -1852,10 +1852,11 @@
                     </div>
                 </div>
 
-                <!-- Section 7: Reunioes por Pre-Vendedor -->
-                <div class="section-card" id="sec7">
+                <!-- Section 7: Reunioes Agendadas (atividade Reuniao Agendada) -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;" class="meetings-grid">
+                <div class="section-card" id="sec7" style="margin-bottom:0;">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128197;</span> Reunioes por Pre-Vendedor</h2>
+                        <h2><span class="section-num">&#128197;</span> Reunioes Agendadas por Pre-Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
                                 <option value="global">Global</option>
@@ -1873,9 +1874,35 @@
                         <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pre-Vendedor (SDR)</th><th>Reunioes</th><th>MRR</th><th>Setup</th>
+                            <th class="rank-num">#</th><th>Pre-Vendedor</th><th>Reunioes</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
                     </div>
+                </div>
+
+                <!-- Section 7-Intermodal: Reunioes da origem Intermodal -->
+                <div class="section-card" id="sec7Inter" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#127919;</span> Reunioes - Origem Intermodal</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec7Inter" onchange="renderSection7Inter()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mes</option>
+                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartMeetingsInter"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableMeetingsInter')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableMeetingsInter"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Pre-Vendedor</th><th>Reunioes</th>
+                        </tr></thead><tbody id="tbodyMeetingsInter"></tbody></table></div>
+                    </div>
+                </div>
                 </div>
 
                 <!-- Section 7b: Descartes por Pre-Vendedor -->
@@ -3043,7 +3070,7 @@ document.getElementById('contactModal').addEventListener('click', (e) => {
 });
 
 // ==================== DASHBOARD VIEW ====================
-let wonDeals = [], lostDeals = [], dashOpenDeals = [], dashOrders = [];
+let wonDeals = [], lostDeals = [], dashOpenDeals = [], dashOrders = [], dashMeetings = [], dashUsersById = {};
 let periodStart = null, periodEnd = null;
 let charts = {};
 let activeFunnelPipeline = 'Funil de Vendas';
@@ -4102,43 +4129,86 @@ function exportSection6b() {
     ], 'perdidos-valores');
 }
 
-// --- Section 7: Reunioes por Pre-Vendedor ---
-function renderSection7() {
-    const sp = getSectionPeriod('sec7');
-    const deals = allDealsForMeetings(sp);
-    window._sec7_data = deals;
-    const sdrAgg = {};
-    deals.forEach(d => {
-        const sdr = getSDR(d);
-        if (!sdr) return;
-        if (!sdrAgg[sdr]) sdrAgg[sdr] = { count: 0, mrr: 0, setup: 0, deals: [] };
-        sdrAgg[sdr].count++;
-        sdrAgg[sdr].mrr += getMRR(d);
-        sdrAgg[sdr].setup += getSetup(d);
-        sdrAgg[sdr].deals.push(d);
+// --- Section 7: Reunioes Agendadas (atividade real do Ploomes) ---
+// Helper: filtra dashMeetings pelo periodo via DateTime + Title (Reuniao Agendada)
+function meetingsForPeriod(sp) {
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const start = sp?.start || periodStart;
+    const end = sp?.end || periodEnd;
+    return (dashMeetings || []).filter(t => {
+        const tn = norm(t.Title);
+        if (!tn.includes('reuniao agendada')) return false;
+        if (start && end) {
+            const dt = new Date(t.DateTime);
+            if (dt < start || dt > end) return false;
+        }
+        return true;
     });
-    const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
+}
+function getMeetingOrigin(t) {
+    // Cruza com deal para pegar Origin
+    if (!t.DealId) return '';
+    const d = (window._dashOpenDealsById ? window._dashOpenDealsById[t.DealId] : null);
+    return d?.Origin?.Name || '';
+}
+// Constroi index de deals abertos por id pra resolver origin (uma vez)
+function ensureDealsIndex() {
+    if (window._dashOpenDealsById) return;
+    const idx = {};
+    [...wonDeals, ...lostDeals, ...dashOpenDeals].forEach(d => { idx[d.Id] = d; });
+    window._dashOpenDealsById = idx;
+}
+
+function renderSection7() {
+    ensureDealsIndex();
+    const sp = getSectionPeriod('sec7');
+    const meetings = meetingsForPeriod(sp);
+    window._sec7_meetings = meetings;
+    const ownerAgg = {};
+    meetings.forEach(t => {
+        const name = dashUsersById[t.OwnerId] || ('Owner ' + t.OwnerId);
+        if (!ownerAgg[name]) ownerAgg[name] = { count: 0, items: [] };
+        ownerAgg[name].count++;
+        ownerAgg[name].items.push(t);
+    });
+    const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
 
     destroyChart('meetings');
     charts.meetings = new Chart(document.getElementById('chartMeetings'), {
         type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
-            onClick: (event, elements, chart) => {
-                if (elements.length > 0) {
-                    const idx = elements[0].index;
-                    const s = sorted[idx];
-                    showDrilldown(`Reunioes - ${s.name} (${s.deals.length} reunioes)`, s.deals, null, 'meetings');
-                }
-            },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
     });
     document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
         <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
-        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td>
-        <td class="money" style="color:#4ade80;">${formatMoney(s.mrr)}</td>
-        <td class="money">${formatMoney(s.setup)}</td></tr>`).join('');
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('');
+}
+
+// Reunioes da origem Intermodal
+function renderSection7Inter() {
+    ensureDealsIndex();
+    const sp = getSectionPeriod('sec7Inter');
+    const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
+    const ownerAgg = {};
+    meetings.forEach(t => {
+        const name = dashUsersById[t.OwnerId] || ('Owner ' + t.OwnerId);
+        if (!ownerAgg[name]) ownerAgg[name] = { count: 0 };
+        ownerAgg[name].count++;
+    });
+    const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
+    destroyChart('meetingsInter');
+    charts.meetingsInter = new Chart(document.getElementById('chartMeetingsInter'), {
+        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyMeetingsInter').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
+        <td style="text-align:center;font-weight:700;color:#22c55e;">${s.count}</td></tr>`).join('')
+        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no periodo</td></tr>';
 }
 
 // --- Section 7b: Descartes por Pre-Vendedor (deals perdidos nos funis SDR) ---
@@ -4553,7 +4623,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSection7(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {
@@ -4570,16 +4640,21 @@ async function loadDashboard() {
     try {
         loadingMsg.textContent = 'Carregando dados do cache...';
         // Use server-side cache - all datasets loaded in parallel, shared across team
-        const [won, lost, open, orders] = await Promise.all([
+        const [won, lost, open, orders, meetings, users] = await Promise.all([
             fetchCached('won'),
             fetchCached('lost'),
             fetchCached('open'),
-            fetchCached('orders').catch(() => [])  // optional
+            fetchCached('orders').catch(() => []),
+            fetchCached('meetings').catch(() => []),
+            fetchCached('users').catch(() => [])
         ]);
         wonDeals = won;
         lostDeals = lost;
         dashOpenDeals = open;
         dashOrders = orders || [];
+        dashMeetings = meetings || [];
+        dashUsersById = {};
+        (users || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
 
         loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
 
