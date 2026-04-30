@@ -4146,17 +4146,39 @@ function meetingsForPeriod(sp) {
     });
 }
 function getMeetingOrigin(t) {
-    // Cruza com deal para pegar Origin
     if (!t.DealId) return '';
-    const d = (window._dashOpenDealsById ? window._dashOpenDealsById[t.DealId] : null);
-    return d?.Origin?.Name || '';
+    // 1) Tenta cache local (won/lost/open)
+    const local = window._dashOpenDealsById?.[t.DealId];
+    if (local) return local.Origin?.Name || '';
+    // 2) Tenta cache resolvido via API (carregado em loadMeetingDealOrigins)
+    return window._meetingDealOrigin?.[t.DealId] || '';
 }
-// Constroi index de deals abertos por id pra resolver origin (uma vez)
 function ensureDealsIndex() {
     if (window._dashOpenDealsById) return;
     const idx = {};
     [...wonDeals, ...lostDeals, ...dashOpenDeals].forEach(d => { idx[d.Id] = d; });
     window._dashOpenDealsById = idx;
+}
+// Resolve Origins dos DealIds das meetings que nao estao no cache local
+async function loadMeetingDealOrigins() {
+    if (window._meetingDealOriginsLoaded) return;
+    ensureDealsIndex();
+    const need = [...new Set((dashMeetings||[])
+        .map(t => t.DealId)
+        .filter(id => id && !window._dashOpenDealsById[id]))];
+    if (need.length === 0) { window._meetingDealOriginsLoaded = true; return; }
+    const cache = {};
+    try {
+        for (let i = 0; i < need.length; i += 80) {
+            const slice = need.slice(i, i + 80);
+            const f = encodeURIComponent(slice.map(id => 'Id eq ' + id).join(' or '));
+            const r = await fetch(`/api/Deals?%24filter=${f}&%24expand=Origin&%24select=Id,OriginId&%24top=200`).then(r => r.json());
+            (r.value || []).forEach(d => { cache[d.Id] = d.Origin?.Name || ''; });
+        }
+        window._meetingDealOrigin = cache;
+        window._meetingDealOriginsLoaded = true;
+        console.log('[meeting-origins] resolvidos', Object.keys(cache).length);
+    } catch (e) { console.warn('[meeting-origins] falhou:', e.message); }
 }
 
 function renderSection7() {
@@ -4188,8 +4210,9 @@ function renderSection7() {
 }
 
 // Reunioes da origem Intermodal
-function renderSection7Inter() {
+async function renderSection7Inter() {
     ensureDealsIndex();
+    await loadMeetingDealOrigins();
     const sp = getSectionPeriod('sec7Inter');
     const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
     const ownerAgg = {};
