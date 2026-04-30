@@ -145,6 +145,41 @@
         .sidebar.collapsed .nav-sub-item { padding-left: 16px; }
         .sidebar.collapsed .sub-label { opacity: 0; pointer-events: none; }
 
+        /* Grupos colapsaveis (Vendas / Pre-vendas) */
+        .nav-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px 10px 28px;
+            cursor: pointer;
+            color: #7a7a9a;
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            margin: 2px 8px;
+        }
+        .nav-group-header:hover { color: #b794f4; background: rgba(108, 63, 181, 0.08); }
+        .nav-group-header .nav-group-icon { display:inline-flex; align-items:center; gap:8px; }
+        .nav-group-header .chevron {
+            font-size: 10px;
+            transition: transform 0.25s ease;
+            color: #5a5a7a;
+        }
+        .nav-group.collapsed .chevron { transform: rotate(-90deg); }
+        .nav-group-items {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .nav-group.collapsed .nav-group-items { max-height: 0; }
+        .sidebar.collapsed .nav-group-header { padding-left: 16px; justify-content: center; }
+        .sidebar.collapsed .nav-group-header .group-label,
+        .sidebar.collapsed .nav-group-header .chevron { display: none; }
+
         .sidebar-toggle {
             padding: 12px 16px;
             border-top: 1px solid rgba(30, 144, 255, 0.12);
@@ -1348,53 +1383,73 @@
                 <span class="nav-icon">&#128202;</span>
                 <span class="nav-label">Dashboard</span>
             </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec1');">
-                <span class="sub-num">&#9989;</span><span class="sub-label">Oportunidades Ganhas</span>
+
+            <!-- Grupo: Pre-vendas -->
+            <div class="nav-group" id="navGroupPreVendas">
+                <div class="nav-group-header" onclick="toggleNavGroup('navGroupPreVendas')">
+                    <span class="nav-group-icon"><span>&#128222;</span><span class="group-label">Pre-vendas</span></span>
+                    <span class="chevron">&#9662;</span>
+                </div>
+                <div class="nav-group-items">
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
+                        <span class="sub-num">&#128197;</span><span class="sub-label">Reunioes por SDR</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7b');">
+                        <span class="sub-num">&#128465;</span><span class="sub-label">Descartes por SDR</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7c');">
+                        <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de Descarte</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7d');">
+                        <span class="sub-num">&#127760;</span><span class="sub-label">Reunioes por Origem</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
+                        <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reunioes</span>
+                    </div>
+                </div>
             </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2');">
-                <span class="sub-num">&#10060;</span><span class="sub-label">Oportunidades Perdidas</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2b');">
-                <span class="sub-num">&#128680;</span><span class="sub-label">Perdas por Motivo</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2c');">
-                <span class="sub-num">&#128100;</span><span class="sub-label">Perdas Vendedor/Produto</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
-                <span class="sub-num">&#128230;</span><span class="sub-label">Produtos Vendidos</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
-                <span class="sub-num">&#127942;</span><span class="sub-label">Ranking Vendedores</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
-                <span class="sub-num">&#128196;</span><span class="sub-label">Propostas Enviadas</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
-                <span class="sub-num">&#128078;</span><span class="sub-label">Perdidos por Vendedor</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5b');">
-                <span class="sub-num">&#128176;</span><span class="sub-label">Propostas - Valor</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6b');">
-                <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos - Valor</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
-                <span class="sub-num">&#128197;</span><span class="sub-label">Reunioes por SDR</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7b');">
-                <span class="sub-num">&#128465;</span><span class="sub-label">Descartes por SDR</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7c');">
-                <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de Descarte</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7d');">
-                <span class="sub-num">&#127760;</span><span class="sub-label">Reunioes por Origem</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
-                <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reunioes</span>
-            </div>
-            <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
-                <span class="sub-num">&#128200;</span><span class="sub-label">Conversao por Etapa</span>
+
+            <!-- Grupo: Vendas -->
+            <div class="nav-group" id="navGroupVendas">
+                <div class="nav-group-header" onclick="toggleNavGroup('navGroupVendas')">
+                    <span class="nav-group-icon"><span>&#128184;</span><span class="group-label">Vendas</span></span>
+                    <span class="chevron">&#9662;</span>
+                </div>
+                <div class="nav-group-items">
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec1');">
+                        <span class="sub-num">&#9989;</span><span class="sub-label">Oportunidades Ganhas</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2');">
+                        <span class="sub-num">&#10060;</span><span class="sub-label">Oportunidades Perdidas</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2b');">
+                        <span class="sub-num">&#128680;</span><span class="sub-label">Perdas por Motivo</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2c');">
+                        <span class="sub-num">&#128100;</span><span class="sub-label">Perdas Vendedor/Produto</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
+                        <span class="sub-num">&#128230;</span><span class="sub-label">Produtos Vendidos</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
+                        <span class="sub-num">&#127942;</span><span class="sub-label">Ranking Vendedores</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
+                        <span class="sub-num">&#128196;</span><span class="sub-label">Propostas Enviadas</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
+                        <span class="sub-num">&#128078;</span><span class="sub-label">Perdidos por Vendedor</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5b');">
+                        <span class="sub-num">&#128176;</span><span class="sub-label">Propostas - Valor</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6b');">
+                        <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos - Valor</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
+                        <span class="sub-num">&#128200;</span><span class="sub-label">Conversao por Etapa</span>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -2744,6 +2799,29 @@ function toggleSidebar() {
     const main = document.getElementById('mainContent');
     main.style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '240px';
 }
+
+// Colapsa/expande grupo de menu (Vendas / Pre-vendas) e persiste no localStorage
+function toggleNavGroup(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('collapsed');
+    try {
+        const collapsed = JSON.parse(localStorage.getItem('navGroupsCollapsed') || '{}');
+        collapsed[id] = el.classList.contains('collapsed');
+        localStorage.setItem('navGroupsCollapsed', JSON.stringify(collapsed));
+    } catch {}
+}
+// Restaura estado dos grupos ao carregar
+(function restoreNavGroups() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('navGroupsCollapsed') || '{}');
+        Object.entries(saved).forEach(([id, isCollapsed]) => {
+            if (!isCollapsed) return;
+            const el = document.getElementById(id);
+            if (el) el.classList.add('collapsed');
+        });
+    } catch {}
+})();
 
 function toggleMobileSidebar() {
     document.getElementById('sidebar').classList.toggle('mobile-open');
