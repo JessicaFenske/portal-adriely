@@ -4656,6 +4656,14 @@ async function loadDashboard() {
         dashMeetings = meetings || [];
         dashUsersById = {};
         (users || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
+        // Fallback: se cache de users veio vazio, busca direto da API
+        if (Object.keys(dashUsersById).length === 0) {
+            try {
+                const r = await fetch('/api/Users?%24select=Id,Name&%24top=300').then(r => r.json());
+                (r.value || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
+                console.log('[users] fallback API:', Object.keys(dashUsersById).length);
+            } catch (e) { console.warn('[users] fallback failed:', e.message); }
+        }
 
         loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
 
