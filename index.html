@@ -4164,9 +4164,10 @@ function renderSection7() {
     const sp = getSectionPeriod('sec7');
     const meetings = meetingsForPeriod(sp);
     window._sec7_meetings = meetings;
+    // SDR = quem CRIOU a atividade (CreatorId), nao quem conduz a reuniao (OwnerId)
     const ownerAgg = {};
     meetings.forEach(t => {
-        const name = dashUsersById[t.OwnerId] || ('Owner ' + t.OwnerId);
+        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
         if (!ownerAgg[name]) ownerAgg[name] = { count: 0, items: [] };
         ownerAgg[name].count++;
         ownerAgg[name].items.push(t);
@@ -4193,7 +4194,7 @@ function renderSection7Inter() {
     const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
     const ownerAgg = {};
     meetings.forEach(t => {
-        const name = dashUsersById[t.OwnerId] || ('Owner ' + t.OwnerId);
+        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
         if (!ownerAgg[name]) ownerAgg[name] = { count: 0 };
         ownerAgg[name].count++;
     });
