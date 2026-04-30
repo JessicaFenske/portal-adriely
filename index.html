@@ -5454,6 +5454,11 @@ function isCorporateEmail(email) {
 const FARMER_NAMES = [
     'maja','agnes','vanessa ponce','vanessa lechuk','frederico'
 ];
+// Usuarios de integracao/sistema - leads criados por eles nao sao MQLs
+// (sao contatos criados via integracao com outros sistemas, nao via marketing)
+const SYSTEM_CREATORS = [
+    'sankhya'
+];
 function normalizeName(s) {
     return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
@@ -5461,6 +5466,10 @@ function isCreatedByFarmer(p) {
     const creator = normalizeName(p.Creator?.Name);
     const owner = normalizeName(p.Owner?.Name);
     return FARMER_NAMES.some(f => creator.includes(f) || owner.includes(f));
+}
+function isCreatedBySystem(p) {
+    const creator = normalizeName(p.Creator?.Name);
+    return SYSTEM_CREATORS.some(s => creator.includes(s));
 }
 
 // Verifica se o email pertence a um cliente Lincros (por palavra-chave no dominio)
@@ -5663,9 +5672,10 @@ function getMqlClassified() {
             dealId: latestDeal?.Id || null,
             isCustomer: isCustomer,
             isFarmer: isCreatedByFarmer(p),
+            isSystem: isCreatedBySystem(p),
             companyHasActiveDeal: companyHasActiveDeal
         };
-    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email) && !m.isFarmer && !m.companyHasActiveDeal);
+    }).filter(m => !m.isCustomer && !mqlClientesLincrosIds.has(m.companyId) && !isClientEmail(m.email) && !m.isFarmer && !m.isSystem && !m.companyHasActiveDeal);
 }
 
 function getMqlPeriodRange() {
@@ -5924,6 +5934,7 @@ function buildEnrichedMqls(range) {
         if (isClientEmail(p.Email)) return false;
         if (mqlClientesLincrosIds.has(p.CompanyId)) return false;
         if (isCreatedByFarmer(p)) return false;
+        if (isCreatedBySystem(p)) return false;
         const allDeals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])];
         if (allDeals.some(d => d.StatusId === 2)) return false;
         return true;
