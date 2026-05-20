@@ -1391,6 +1391,9 @@
                     <span class="chevron">&#9662;</span>
                 </div>
                 <div class="nav-group-items">
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secStuck');">
+                        <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads Parados</span>
+                    </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
                         <span class="sub-num">&#128197;</span><span class="sub-label">Reunioes por SDR</span>
                     </div>
@@ -1905,6 +1908,54 @@
                         <div class="collapsible-table" id="tableLostSellerValue"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyLostSellerValue"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section Stuck: Leads parados em Qualificacao SDR Inbound -->
+                <div class="section-card" id="secStuck" style="border-left:4px solid #ef4444;">
+                    <div class="section-header">
+                        <h2><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#128680;</span> Leads parados - Qualificacao SDR Inbound</h2>
+                        <div class="sub-filter">
+                            <select id="stuckSdrFilter" onchange="renderSectionStuck()">
+                                <option value="">Todos os SDRs</option>
+                            </select>
+                            <select id="stuckOriginFilter" onchange="renderSectionStuck()">
+                                <option value="">Todas as origens</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div id="stuckKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+
+                        <h3 style="color:#ef4444;font-size:14px;margin:16px 0 8px;font-weight:600;">
+                            &#9888;&#65039; Sem touch (nenhuma atividade agendada)
+                            <span id="stuckNoTaskCount" style="background:#fef2f2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">0</span>
+                        </h3>
+                        <div style="overflow-x:auto;border-radius:8px;">
+                            <table class="mql-table" style="font-size:12px;">
+                                <thead><tr>
+                                    <th>#</th><th>Empresa</th><th>Contato</th><th>SDR</th><th>Origem</th>
+                                    <th style="text-align:right;">Dias etapa</th><th>Acao</th>
+                                </tr></thead>
+                                <tbody id="stuckNoTaskBody"></tbody>
+                            </table>
+                        </div>
+
+                        <h3 style="color:#f59e0b;font-size:14px;margin:24px 0 8px;font-weight:600;">
+                            &#9203; Atrasados (tarefa vencida)
+                            <span id="stuckOverdueCount" style="background:#fef3c7;color:#92400e;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">0</span>
+                        </h3>
+                        <div style="overflow-x:auto;border-radius:8px;">
+                            <table class="mql-table" style="font-size:12px;">
+                                <thead><tr>
+                                    <th>#</th><th>Empresa</th><th>Contato</th><th>SDR</th><th>Origem</th>
+                                    <th style="text-align:right;">Dias etapa</th><th style="text-align:right;">Atraso</th><th>Acao</th>
+                                </tr></thead>
+                                <tbody id="stuckOverdueBody"></tbody>
+                            </table>
+                        </div>
+
+                        <button class="export-btn" style="margin-top:14px;" onclick="exportSectionStuck()">&#128229; Exportar Excel</button>
                     </div>
                 </div>
 
@@ -4308,6 +4359,153 @@ function renderSection7() {
 }
 
 // Reunioes da origem Intermodal
+// --- Section Stuck: Leads parados em Qualificacao SDR Inbound ---
+function getStuckLeads() {
+    const now = Date.now();
+    const inboundQual = (dashOpenDeals || []).filter(d =>
+        d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '')
+    );
+    const noTask = [];
+    const overdue = [];
+    inboundQual.forEach(d => {
+        const row = {
+            id: d.Id,
+            company: d.Contact?.Name || d.ContactName || '',
+            person: d.PersonName || '',
+            owner: d.Owner?.Name || '',
+            ownerShort: (d.Owner?.Name || '').split(' ')[0] || '(sem owner)',
+            origin: d.Origin?.Name || '(sem origem)',
+            daysInStage: d.DaysInStage || 0,
+            taskDate: d.FirstTaskDate || null,
+            link: 'https://app10.ploomes.com/deal/' + d.Id
+        };
+        if (!d.HasScheduledTasks) {
+            noTask.push(row);
+        } else if (d.FirstTaskDate && new Date(d.FirstTaskDate).getTime() < now) {
+            row.overdueDays = Math.floor((now - new Date(d.FirstTaskDate).getTime()) / 86400000);
+            overdue.push(row);
+        }
+    });
+    noTask.sort((a, b) => b.daysInStage - a.daysInStage);
+    overdue.sort((a, b) => b.overdueDays - a.overdueDays);
+    return { noTask, overdue, total: inboundQual.length };
+}
+
+function populateStuckFilters(noTask, overdue) {
+    const all = [...noTask, ...overdue];
+    const sdrSel = document.getElementById('stuckSdrFilter');
+    const origSel = document.getElementById('stuckOriginFilter');
+    if (!sdrSel || !origSel) return;
+    const sdrs = [...new Set(all.map(r => r.ownerShort))].sort();
+    const origins = [...new Set(all.map(r => r.origin))].sort();
+    const sdrCur = sdrSel.value;
+    const origCur = origSel.value;
+    sdrSel.innerHTML = '<option value="">Todos os SDRs</option>' + sdrs.map(s => `<option value="${s}">${s}</option>`).join('');
+    origSel.innerHTML = '<option value="">Todas as origens</option>' + origins.map(o => `<option value="${o}">${o}</option>`).join('');
+    sdrSel.value = sdrCur;
+    origSel.value = origCur;
+}
+
+function stuckRowClass(row, isNoTask) {
+    if (isNoTask) {
+        if (row.daysInStage >= 30) return 'background:rgba(239,68,68,0.08);';
+        if (row.daysInStage >= 14) return 'background:rgba(251,191,36,0.08);';
+        return '';
+    }
+    if (row.overdueDays >= 14) return 'background:rgba(239,68,68,0.08);';
+    if (row.overdueDays >= 7) return 'background:rgba(251,191,36,0.08);';
+    return '';
+}
+
+function renderSectionStuck() {
+    const { noTask, overdue, total } = getStuckLeads();
+    populateStuckFilters(noTask, overdue);
+    const sdrFilter = document.getElementById('stuckSdrFilter').value;
+    const origFilter = document.getElementById('stuckOriginFilter').value;
+    const filt = arr => arr.filter(r =>
+        (!sdrFilter || r.ownerShort === sdrFilter) &&
+        (!origFilter || r.origin === origFilter)
+    );
+    const noTaskF = filt(noTask);
+    const overdueF = filt(overdue);
+
+    // KPIs
+    const okCount = total - noTaskF.length - overdueF.length;
+    const pctProblem = total > 0 ? Math.round(((noTaskF.length + overdueF.length) / total) * 100) : 0;
+    const oldestNoTask = noTaskF[0]?.daysInStage || 0;
+    document.getElementById('stuckKpis').innerHTML = `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Total na etapa</div>
+            <div style="font-size:22px;font-weight:700;color:#60a5fa;margin-top:4px;">${total}</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10px;color:#fca5a5;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Sem touch</div>
+            <div style="font-size:22px;font-weight:700;color:#ef4444;margin-top:4px;">${noTaskF.length}</div>
+        </div>
+        <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10px;color:#fcd34d;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Atrasados</div>
+            <div style="font-size:22px;font-weight:700;color:#f59e0b;margin-top:4px;">${overdueF.length}</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10px;color:#fca5a5;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">% com problema</div>
+            <div style="font-size:22px;font-weight:700;color:#ef4444;margin-top:4px;">${pctProblem}%</div>
+        </div>
+    `;
+
+    document.getElementById('stuckNoTaskCount').textContent = noTaskF.length;
+    document.getElementById('stuckOverdueCount').textContent = overdueF.length;
+
+    const renderNoTaskRow = (r, i) => `<tr style="${stuckRowClass(r, true)}">
+        <td>${i+1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${r.company}</td>
+        <td style="color:#a0a0b8;">${r.person}</td>
+        <td>${r.ownerShort}</td>
+        <td style="color:#a0a0b8;font-size:11px;">${r.origin}</td>
+        <td style="text-align:right;color:${r.daysInStage >= 30 ? '#ef4444' : (r.daysInStage >= 14 ? '#f59e0b' : '#e0e0e0')};font-weight:600;">${r.daysInStage}d</td>
+        <td><a href="${r.link}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:11px;">Abrir &raquo;</a></td>
+    </tr>`;
+
+    const renderOverdueRow = (r, i) => `<tr style="${stuckRowClass(r, false)}">
+        <td>${i+1}</td>
+        <td style="font-weight:600;color:#e0e0e0;">${r.company}</td>
+        <td style="color:#a0a0b8;">${r.person}</td>
+        <td>${r.ownerShort}</td>
+        <td style="color:#a0a0b8;font-size:11px;">${r.origin}</td>
+        <td style="text-align:right;color:#e0e0e0;">${r.daysInStage}d</td>
+        <td style="text-align:right;color:${r.overdueDays >= 14 ? '#ef4444' : (r.overdueDays >= 7 ? '#f59e0b' : '#e0e0e0')};font-weight:600;">${r.overdueDays}d</td>
+        <td><a href="${r.link}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:11px;">Abrir &raquo;</a></td>
+    </tr>`;
+
+    document.getElementById('stuckNoTaskBody').innerHTML = noTaskF.length === 0
+        ? '<tr><td colspan="7" style="text-align:center;color:#4ade80;padding:18px;">&#10004; Nenhum lead sem touch</td></tr>'
+        : noTaskF.map(renderNoTaskRow).join('');
+
+    document.getElementById('stuckOverdueBody').innerHTML = overdueF.length === 0
+        ? '<tr><td colspan="8" style="text-align:center;color:#4ade80;padding:18px;">&#10004; Nenhum lead atrasado</td></tr>'
+        : overdueF.map(renderOverdueRow).join('');
+
+    window._stuckData = { noTask: noTaskF, overdue: overdueF };
+}
+
+function exportSectionStuck() {
+    const d = window._stuckData || { noTask: [], overdue: [] };
+    const rows = [
+        ...d.noTask.map(r => ({ tipo: 'Sem touch', ...r, overdueDays: '' })),
+        ...d.overdue.map(r => ({ tipo: 'Atrasado', ...r }))
+    ];
+    exportToExcel(rows, [
+        { header: 'Tipo', getValue: r => r.tipo },
+        { header: 'Empresa', getValue: r => r.company },
+        { header: 'Contato', getValue: r => r.person },
+        { header: 'SDR', getValue: r => r.owner },
+        { header: 'Origem', getValue: r => r.origin },
+        { header: 'Dias na etapa', getValue: r => r.daysInStage },
+        { header: 'Dias atraso', getValue: r => r.overdueDays },
+        { header: 'DealId', getValue: r => r.id },
+        { header: 'Link', getValue: r => r.link }
+    ], 'leads-parados-qualificacao');
+}
+
 async function renderSection7Inter() {
     ensureDealsIndex();
     await loadMeetingDealOrigins();
@@ -4748,7 +4946,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSectionStuck(); renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {
