@@ -1134,13 +1134,24 @@
         }
         #secStuck .stuck-tab.active .badge { background: rgba(239,68,68,0.18); color: #fca5a5; }
 
-        /* Grid de cards horizontais */
+        /* Faixa horizontal de cards (rolagem lateral) */
         #secStuck .stuck-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            display: flex;
             gap: 12px;
-            padding-top: 4px;
+            padding: 4px 4px 14px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x proximity;
+            scrollbar-color: rgba(108,63,181,0.4) transparent;
+            scrollbar-width: thin;
         }
+        #secStuck .stuck-cards-grid::-webkit-scrollbar { height: 8px; }
+        #secStuck .stuck-cards-grid::-webkit-scrollbar-track { background: transparent; }
+        #secStuck .stuck-cards-grid::-webkit-scrollbar-thumb {
+            background: rgba(108,63,181,0.35);
+            border-radius: 4px;
+        }
+        #secStuck .stuck-cards-grid::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.55); }
         #secStuck .stuck-card {
             background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.06);
@@ -1152,7 +1163,9 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            min-height: 130px;
+            min-height: 170px;
+            flex: 0 0 280px;
+            scroll-snap-align: start;
         }
         #secStuck .stuck-card:hover {
             background: rgba(255,255,255,0.04);
@@ -1286,11 +1299,23 @@
         }
         #secStuck .action-btn:hover { background: rgba(183,148,244,0.2); }
         #secStuck .empty-state {
-            grid-column: 1 / -1;
+            flex: 1;
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 20px;
             color: #6d6d85;
             font-size: 13px;
+            min-height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #secStuck .scroll-hint {
+            font-size: 10.5px;
+            color: #6d6d85;
+            text-align: right;
+            margin-top: -8px;
+            margin-bottom: 4px;
+            font-style: italic;
         }
         @media (max-width: 900px) {
             #secStuck .stuck-kpis { flex-wrap: wrap; }
@@ -2201,7 +2226,8 @@
                             </button>
                         </div>
 
-                        <!-- Grid de cards horizontais -->
+                        <div id="stuckScrollHint" class="scroll-hint" style="display:none;">Arraste &harr; para ver mais</div>
+                        <!-- Faixa horizontal de cards -->
                         <div id="stuckCardsGrid" class="stuck-cards-grid"></div>
                     </div>
                 </div>
@@ -4803,6 +4829,9 @@ async function renderSectionStuck() {
     } else {
         grid.innerHTML = rows.map(renderCard).join('');
     }
+    // Dica de scroll se houver mais cards do que cabe na tela
+    const hint = document.getElementById('stuckScrollHint');
+    if (hint) hint.style.display = rows.length > 4 ? 'block' : 'none';
 
     window._stuckData = { noTask: noTaskF, overdue: overdueF };
 }
