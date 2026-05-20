@@ -1134,8 +1134,141 @@
         }
         #secStuck .stuck-tab.active .badge { background: rgba(239,68,68,0.18); color: #fca5a5; }
 
-        /* Faixa horizontal de cards (rolagem lateral) */
-        #secStuck .stuck-cards-grid {
+        /* Tabela unificada */
+        #secStuck .stuck-table-wrap {
+            max-height: 480px;
+            overflow-y: auto;
+            border-radius: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(108,63,181,0.35) transparent;
+        }
+        #secStuck .stuck-table-wrap::-webkit-scrollbar { width: 8px; }
+        #secStuck .stuck-table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(108,63,181,0.35);
+            border-radius: 4px;
+        }
+        #secStuck .stuck-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12.5px;
+        }
+        #secStuck .stuck-table thead th {
+            font-size: 10px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        #secStuck .stuck-table tbody td {
+            padding: 11px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #d0d0e0;
+            vertical-align: middle;
+        }
+        #secStuck .stuck-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+        #secStuck .stripe { padding: 0 !important; }
+        #secStuck .stripe-inner {
+            display: block;
+            width: 3px;
+            height: 28px;
+            border-radius: 2px;
+            margin-left: 4px;
+        }
+        #secStuck .stripe-crit { background: #ef4444; }
+        #secStuck .stripe-warn { background: #f59e0b; }
+        #secStuck .stripe-none { background: rgba(255,255,255,0.08); }
+        #secStuck .empresa-cell {
+            font-weight: 600;
+            color: #fff;
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #secStuck .contato-cell {
+            color: #a0a0b8;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #secStuck .sdr-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px;
+            padding: 3px 10px 3px 3px;
+            background: rgba(108,63,181,0.18);
+            color: #c4b5fd;
+            border-radius: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        #secStuck .sdr-tag .avatar {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: linear-gradient(135deg,#6c3fb5,#8b5cf6);
+            color: #fff; font-size: 9px; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        #secStuck .origin-tag {
+            font-size: 11px;
+            color: #94a3b8;
+            white-space: nowrap;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        #secStuck .num-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        #secStuck .num-crit { color: #ef4444; }
+        #secStuck .num-warn { color: #f59e0b; }
+        #secStuck .num-ok { color: #d0d0e0; }
+        #secStuck .num-muted { color: #5a5a75; }
+        #secStuck .status-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+        }
+        #secStuck .status-tag.crit { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        #secStuck .status-tag.warn { background: rgba(245,158,11,0.15); color: #fcd34d; }
+        #secStuck .status-tag.none { background: rgba(255,255,255,0.06); color: #94a3b8; }
+        #secStuck .action-btn {
+            color: #b794f4;
+            text-decoration: none;
+            font-size: 11px;
+            padding: 5px 10px;
+            background: rgba(183,148,244,0.1);
+            border-radius: 6px;
+            display: inline-block;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        #secStuck .action-btn:hover { background: rgba(183,148,244,0.2); }
+        #secStuck .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6d6d85;
+            font-size: 13px;
+        }
+        /* (legado dos cards - mantido por compatibilidade) */
+        #secStuck .stuck-cards-grid-legacy {
             display: flex;
             gap: 12px;
             padding: 4px 4px 14px;
@@ -2226,9 +2359,23 @@
                             </button>
                         </div>
 
-                        <div id="stuckScrollHint" class="scroll-hint" style="display:none;">Arraste &harr; para ver mais</div>
-                        <!-- Faixa horizontal de cards -->
-                        <div id="stuckCardsGrid" class="stuck-cards-grid"></div>
+                        <!-- Tabela unificada -->
+                        <div class="stuck-table-wrap">
+                            <table class="stuck-table">
+                                <thead><tr>
+                                    <th style="width:6px;"></th>
+                                    <th>Empresa</th>
+                                    <th>Contato</th>
+                                    <th>SDR</th>
+                                    <th>Origem</th>
+                                    <th style="text-align:right;">Etapa</th>
+                                    <th style="text-align:right;">Atraso</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr></thead>
+                                <tbody id="stuckTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -4732,8 +4879,8 @@ function setStuckTab(tab) {
 
 async function renderSectionStuck() {
     if ((!dashOpenDeals || !dashOpenDeals.some(d => d.Pipeline?.Name === 'SDR Inbound')) && !stuckDealsCache) {
-        const grid = document.getElementById('stuckCardsGrid');
-        if (grid) grid.innerHTML = '<div class="empty-state">Carregando direto do Ploomes...</div>';
+        const body = document.getElementById('stuckTableBody');
+        if (body) body.innerHTML = '<tr><td colspan="9" class="empty-state">Carregando direto do Ploomes...</td></tr>';
         try {
             stuckDealsCache = await fetchStuckDealsDirect();
             console.log('[stuck] fallback API:', stuckDealsCache.length);
@@ -4791,47 +4938,40 @@ async function renderSectionStuck() {
         return b._sortKey - a._sortKey;
     });
 
-    const renderCard = (r) => {
+    const renderRow = (r) => {
         const isNoTask = r._type === 'notask';
         const sev = stuckRowSeverity(r, isNoTask);
         const sdrInit = initials(r.owner);
         const empresaSafe = (r.company || '(sem nome)').replace(/"/g, '&quot;');
-        const typeLabel = isNoTask ? 'Sem touch' : 'Atrasado';
-        const diasNumClass = isNoTask && (r.daysInStage >= 30 ? 'crit' : r.daysInStage >= 14 ? 'warn' : '') || '';
-        const atrasoNumClass = !isNoTask && (sev === 'crit' ? 'crit' : sev === 'warn' ? 'warn' : '') || '';
-        const atrasoMetric = isNoTask
-            ? `<div class="metric"><span class="num" style="color:#5a5a75;font-style:italic;font-size:11px;font-weight:500;">sem task</span></div>`
-            : `<div class="metric"><span class="num ${atrasoNumClass}">${r.overdueDays}</span><span class="lbl">atraso</span></div>`;
-        return `<div class="stuck-card ${sev}">
-            <span class="card-stripe"></span>
-            <div class="card-head">
-                <div class="empresa" title="${empresaSafe}">${r.company || '(sem nome)'}</div>
-                <span class="type-badge ${sev}">${typeLabel}</span>
-            </div>
-            <div class="contato">${r.person || '-'}</div>
-            <div class="meta-row">
-                <span class="sdr-tag"><span class="avatar">${sdrInit}</span>${r.ownerShort}</span>
-                <span class="origin-tag" title="${r.origin}">${r.origin}</span>
-            </div>
-            <div class="card-foot">
-                <div class="metrics">
-                    <div class="metric"><span class="num ${diasNumClass}">${r.daysInStage}</span><span class="lbl">d etapa</span></div>
-                    ${atrasoMetric}
-                </div>
-                <a class="action-btn" href="${r.link}" target="_blank">Abrir &raquo;</a>
-            </div>
-        </div>`;
+        const statusLabel = isNoTask ? 'Sem touch' : 'Atrasado';
+        const diasClass = isNoTask
+            ? (r.daysInStage >= 30 ? 'num-crit' : r.daysInStage >= 14 ? 'num-warn' : 'num-ok')
+            : 'num-ok';
+        const atrasoClass = !isNoTask
+            ? (sev === 'crit' ? 'num-crit' : sev === 'warn' ? 'num-warn' : 'num-ok')
+            : '';
+        const atrasoCell = isNoTask
+            ? '<span class="num-muted" style="font-style:italic;font-size:11px;">sem task</span>'
+            : `<span class="${atrasoClass}">${r.overdueDays}d</span>`;
+        return `<tr>
+            <td class="stripe"><span class="stripe-inner stripe-${sev}"></span></td>
+            <td class="empresa-cell" title="${empresaSafe}">${r.company || '<span style=\"color:#6d6d85;\">(sem nome)</span>'}</td>
+            <td class="contato-cell" title="${(r.person||'').replace(/"/g,'&quot;')}">${r.person || '<span style="color:#5a5a75;">-</span>'}</td>
+            <td><span class="sdr-tag"><span class="avatar">${sdrInit}</span>${r.ownerShort}</span></td>
+            <td><span class="origin-tag" title="${(r.origin||'').replace(/"/g,'&quot;')}">${r.origin}</span></td>
+            <td class="num-cell ${diasClass}">${r.daysInStage}d</td>
+            <td class="num-cell">${atrasoCell}</td>
+            <td><span class="status-tag ${sev}">${statusLabel}</span></td>
+            <td style="text-align:right;"><a class="action-btn" href="${r.link}" target="_blank">Abrir &raquo;</a></td>
+        </tr>`;
     };
 
-    const grid = document.getElementById('stuckCardsGrid');
+    const body = document.getElementById('stuckTableBody');
     if (rows.length === 0) {
-        grid.innerHTML = `<div class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visao</div>`;
+        body.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visao</td></tr>`;
     } else {
-        grid.innerHTML = rows.map(renderCard).join('');
+        body.innerHTML = rows.map(renderRow).join('');
     }
-    // Dica de scroll se houver mais cards do que cabe na tela
-    const hint = document.getElementById('stuckScrollHint');
-    if (hint) hint.style.display = rows.length > 4 ? 'block' : 'none';
 
     window._stuckData = { noTask: noTaskF, overdue: overdueF };
 }
