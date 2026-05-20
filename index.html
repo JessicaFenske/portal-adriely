@@ -1059,6 +1059,177 @@
         }
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
+        /* Leads parados - design minimal */
+        #secStuck .stuck-kpis {
+            display: flex;
+            gap: 0;
+            padding: 8px 4px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 14px;
+        }
+        #secStuck .stuck-kpi {
+            flex: 1;
+            text-align: left;
+            padding: 0 18px;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        #secStuck .stuck-kpi:first-child { padding-left: 4px; }
+        #secStuck .stuck-kpi:last-child { border-right: none; }
+        #secStuck .stuck-kpi .label {
+            font-size: 10px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        #secStuck .stuck-kpi .value {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        #secStuck .stuck-kpi .sub {
+            font-size: 11px;
+            color: #6d6d85;
+            margin-top: 2px;
+        }
+        #secStuck .stuck-tabs {
+            display: flex;
+            gap: 4px;
+            margin: 6px 0 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #secStuck .stuck-tab {
+            background: transparent;
+            border: none;
+            color: #8888a0;
+            padding: 8px 14px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all 0.15s ease;
+        }
+        #secStuck .stuck-tab:hover { color: #e0e0e0; }
+        #secStuck .stuck-tab.active { color: #fff; border-bottom-color: #ef4444; }
+        #secStuck .stuck-tab .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            display: inline-block;
+        }
+        #secStuck .dot-crit { background: #ef4444; }
+        #secStuck .dot-warn { background: #f59e0b; }
+        #secStuck .dot-all  { background: #b794f4; }
+        #secStuck .stuck-tab .badge {
+            background: rgba(255,255,255,0.06);
+            color: #c0c0d0;
+            font-size: 10.5px;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        #secStuck .stuck-tab.active .badge { background: rgba(239,68,68,0.18); color: #fca5a5; }
+
+        #secStuck .stuck-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12.5px;
+        }
+        #secStuck .stuck-table thead th {
+            font-size: 10px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: transparent;
+        }
+        #secStuck .stuck-table tbody td {
+            padding: 11px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #d0d0e0;
+            vertical-align: middle;
+        }
+        #secStuck .stuck-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+        #secStuck .stripe { padding: 0 !important; }
+        #secStuck .stripe-inner {
+            display: block;
+            width: 3px;
+            height: 28px;
+            border-radius: 2px;
+            margin-left: 4px;
+        }
+        #secStuck .stripe-crit { background: #ef4444; }
+        #secStuck .stripe-warn { background: #f59e0b; }
+        #secStuck .stripe-none { background: rgba(255,255,255,0.08); }
+        #secStuck .empresa-cell {
+            font-weight: 600;
+            color: #fff;
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #secStuck .contato-cell { color: #a0a0b8; }
+        #secStuck .sdr-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px;
+            padding: 3px 9px;
+            background: rgba(108,63,181,0.15);
+            color: #c4b5fd;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        #secStuck .sdr-tag .avatar {
+            width: 16px; height: 16px; border-radius: 50%;
+            background: linear-gradient(135deg,#6c3fb5,#8b5cf6);
+            color: #fff; font-size: 9px; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        #secStuck .origin-tag {
+            font-size: 11px;
+            color: #94a3b8;
+            white-space: nowrap;
+        }
+        #secStuck .num-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        #secStuck .num-crit { color: #ef4444; }
+        #secStuck .num-warn { color: #f59e0b; }
+        #secStuck .num-ok { color: #d0d0e0; }
+        #secStuck .num-muted { color: #5a5a75; }
+        #secStuck .action-btn {
+            color: #b794f4;
+            text-decoration: none;
+            font-size: 11px;
+            padding: 5px 10px;
+            background: rgba(183,148,244,0.08);
+            border-radius: 6px;
+            display: inline-block;
+            transition: all 0.15s ease;
+        }
+        #secStuck .action-btn:hover { background: rgba(183,148,244,0.16); }
+        #secStuck .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6d6d85;
+            font-size: 13px;
+        }
+        @media (max-width: 900px) {
+            #secStuck .stuck-kpis { flex-wrap: wrap; }
+            #secStuck .stuck-kpi { flex: 1 1 50%; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        }
+
         /* Tabs dentro de Marketing */
         .mkt-tab {
             background: transparent;
@@ -1927,9 +2098,12 @@
                 </div>
 
                 <!-- Section Stuck: Leads parados em Qualificacao SDR Inbound -->
-                <div class="section-card" id="secStuck" style="border-left:4px solid #ef4444;">
-                    <div class="section-header">
-                        <h2><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#128680;</span> Leads parados - Qualificacao SDR Inbound</h2>
+                <div class="section-card" id="secStuck">
+                    <div class="section-header" style="padding-bottom:6px;">
+                        <h2 style="display:flex;align-items:center;gap:10px;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#9201;&#65039;</span>
+                            Leads parados - Qualificacao SDR Inbound
+                        </h2>
                         <div class="sub-filter">
                             <select id="stuckSdrFilter" onchange="renderSectionStuck()">
                                 <option value="">Todos os SDRs</option>
@@ -1937,40 +2111,45 @@
                             <select id="stuckOriginFilter" onchange="renderSectionStuck()">
                                 <option value="">Todas as origens</option>
                             </select>
+                            <button class="export-btn" style="font-size:11px;padding:6px 10px;" onclick="exportSectionStuck()">&#128229; Excel</button>
                         </div>
                     </div>
                     <div class="section-body">
-                        <div id="stuckKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+                        <!-- KPI strip horizontal sutil -->
+                        <div id="stuckKpis" class="stuck-kpis"></div>
 
-                        <h3 style="color:#ef4444;font-size:14px;margin:16px 0 8px;font-weight:600;">
-                            &#9888;&#65039; Sem touch (nenhuma atividade agendada)
-                            <span id="stuckNoTaskCount" style="background:#fef2f2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">0</span>
-                        </h3>
-                        <div style="overflow-x:auto;border-radius:8px;">
-                            <table class="mql-table" style="font-size:12px;">
-                                <thead><tr>
-                                    <th>#</th><th>Empresa</th><th>Contato</th><th>SDR</th><th>Origem</th>
-                                    <th style="text-align:right;">Dias etapa</th><th>Acao</th>
-                                </tr></thead>
-                                <tbody id="stuckNoTaskBody"></tbody>
-                            </table>
+                        <!-- Tabs -->
+                        <div class="stuck-tabs">
+                            <button class="stuck-tab active" data-stuck-tab="all" onclick="setStuckTab('all')">
+                                <span class="dot dot-all"></span>Todos
+                                <span class="badge" id="stuckAllCount">0</span>
+                            </button>
+                            <button class="stuck-tab" data-stuck-tab="notask" onclick="setStuckTab('notask')">
+                                <span class="dot dot-crit"></span>Sem touch
+                                <span class="badge" id="stuckNoTaskCount">0</span>
+                            </button>
+                            <button class="stuck-tab" data-stuck-tab="overdue" onclick="setStuckTab('overdue')">
+                                <span class="dot dot-warn"></span>Atrasados
+                                <span class="badge" id="stuckOverdueCount">0</span>
+                            </button>
                         </div>
 
-                        <h3 style="color:#f59e0b;font-size:14px;margin:24px 0 8px;font-weight:600;">
-                            &#9203; Atrasados (tarefa vencida)
-                            <span id="stuckOverdueCount" style="background:#fef3c7;color:#92400e;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">0</span>
-                        </h3>
-                        <div style="overflow-x:auto;border-radius:8px;">
-                            <table class="mql-table" style="font-size:12px;">
+                        <!-- Tabela unificada -->
+                        <div style="overflow-x:auto;">
+                            <table class="stuck-table">
                                 <thead><tr>
-                                    <th>#</th><th>Empresa</th><th>Contato</th><th>SDR</th><th>Origem</th>
-                                    <th style="text-align:right;">Dias etapa</th><th style="text-align:right;">Atraso</th><th>Acao</th>
+                                    <th style="width:6px;"></th>
+                                    <th>Empresa</th>
+                                    <th>Contato</th>
+                                    <th>SDR</th>
+                                    <th>Origem</th>
+                                    <th style="text-align:right;">Etapa</th>
+                                    <th style="text-align:right;">Atraso</th>
+                                    <th></th>
                                 </tr></thead>
-                                <tbody id="stuckOverdueBody"></tbody>
+                                <tbody id="stuckTableBody"></tbody>
                             </table>
                         </div>
-
-                        <button class="export-btn" style="margin-top:14px;" onclick="exportSectionStuck()">&#128229; Exportar Excel</button>
                     </div>
                 </div>
 
@@ -4446,22 +4625,36 @@ function populateStuckFilters(noTask, overdue) {
     origSel.value = origCur;
 }
 
-function stuckRowClass(row, isNoTask) {
+function stuckRowSeverity(row, isNoTask) {
     if (isNoTask) {
-        if (row.daysInStage >= 30) return 'background:rgba(239,68,68,0.08);';
-        if (row.daysInStage >= 14) return 'background:rgba(251,191,36,0.08);';
-        return '';
+        if (row.daysInStage >= 30) return 'crit';
+        if (row.daysInStage >= 14) return 'warn';
+        return 'none';
     }
-    if (row.overdueDays >= 14) return 'background:rgba(239,68,68,0.08);';
-    if (row.overdueDays >= 7) return 'background:rgba(251,191,36,0.08);';
-    return '';
+    if (row.overdueDays >= 14) return 'crit';
+    if (row.overdueDays >= 7) return 'warn';
+    return 'none';
+}
+
+function initials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+}
+
+let _stuckTab = 'all';
+function setStuckTab(tab) {
+    _stuckTab = tab;
+    document.querySelectorAll('#secStuck .stuck-tab').forEach(b =>
+        b.classList.toggle('active', b.dataset.stuckTab === tab)
+    );
+    renderSectionStuck();
 }
 
 async function renderSectionStuck() {
-    // Se dashOpenDeals nao tem SDR Inbound, busca direto via API
     if ((!dashOpenDeals || !dashOpenDeals.some(d => d.Pipeline?.Name === 'SDR Inbound')) && !stuckDealsCache) {
-        const noTaskBody = document.getElementById('stuckNoTaskBody');
-        if (noTaskBody) noTaskBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:14px;">Carregando direto do Ploomes...</td></tr>';
+        const body = document.getElementById('stuckTableBody');
+        if (body) body.innerHTML = '<tr><td colspan="8" class="empty-state">Carregando direto do Ploomes...</td></tr>';
         try {
             stuckDealsCache = await fetchStuckDealsDirect();
             console.log('[stuck] fallback API:', stuckDealsCache.length);
@@ -4478,60 +4671,76 @@ async function renderSectionStuck() {
     const noTaskF = filt(noTask);
     const overdueF = filt(overdue);
 
-    // KPIs
-    const okCount = total - noTaskF.length - overdueF.length;
+    // KPI strip horizontal sutil
     const pctProblem = total > 0 ? Math.round(((noTaskF.length + overdueF.length) / total) * 100) : 0;
-    const oldestNoTask = noTaskF[0]?.daysInStage || 0;
     document.getElementById('stuckKpis').innerHTML = `
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:10px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Total na etapa</div>
-            <div style="font-size:22px;font-weight:700;color:#60a5fa;margin-top:4px;">${total}</div>
+        <div class="stuck-kpi">
+            <div class="label">Total na etapa</div>
+            <div class="value" style="color:#e0e0e0;">${total}</div>
+            <div class="sub">Qualificacao SDR Inbound</div>
         </div>
-        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:10px;color:#fca5a5;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Sem touch</div>
-            <div style="font-size:22px;font-weight:700;color:#ef4444;margin-top:4px;">${noTaskF.length}</div>
+        <div class="stuck-kpi">
+            <div class="label">Sem touch</div>
+            <div class="value" style="color:#ef4444;">${noTaskF.length}</div>
+            <div class="sub">${noTaskF.length === 0 ? 'tudo coberto' : 'sem atividade'}</div>
         </div>
-        <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:10px;color:#fcd34d;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Atrasados</div>
-            <div style="font-size:22px;font-weight:700;color:#f59e0b;margin-top:4px;">${overdueF.length}</div>
+        <div class="stuck-kpi">
+            <div class="label">Atrasados</div>
+            <div class="value" style="color:#f59e0b;">${overdueF.length}</div>
+            <div class="sub">${overdueF.length === 0 ? 'em dia' : 'tarefa vencida'}</div>
         </div>
-        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:10px;color:#fca5a5;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">% com problema</div>
-            <div style="font-size:22px;font-weight:700;color:#ef4444;margin-top:4px;">${pctProblem}%</div>
+        <div class="stuck-kpi">
+            <div class="label">Com problema</div>
+            <div class="value" style="color:${pctProblem >= 30 ? '#ef4444' : pctProblem >= 15 ? '#f59e0b' : '#22c55e'};">${pctProblem}%</div>
+            <div class="sub">${noTaskF.length + overdueF.length} de ${total}</div>
         </div>
     `;
 
+    document.getElementById('stuckAllCount').textContent = noTaskF.length + overdueF.length;
     document.getElementById('stuckNoTaskCount').textContent = noTaskF.length;
     document.getElementById('stuckOverdueCount').textContent = overdueF.length;
 
-    const renderNoTaskRow = (r, i) => `<tr style="${stuckRowClass(r, true)}">
-        <td>${i+1}</td>
-        <td style="font-weight:600;color:#e0e0e0;">${r.company}</td>
-        <td style="color:#a0a0b8;">${r.person}</td>
-        <td>${r.ownerShort}</td>
-        <td style="color:#a0a0b8;font-size:11px;">${r.origin}</td>
-        <td style="text-align:right;color:${r.daysInStage >= 30 ? '#ef4444' : (r.daysInStage >= 14 ? '#f59e0b' : '#e0e0e0')};font-weight:600;">${r.daysInStage}d</td>
-        <td><a href="${r.link}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:11px;">Abrir &raquo;</a></td>
-    </tr>`;
+    // Constroi linhas unificadas com tipo + severity
+    const noTaskRows = noTaskF.map(r => ({ ...r, _type: 'notask', _sortKey: r.daysInStage }));
+    const overdueRows = overdueF.map(r => ({ ...r, _type: 'overdue', _sortKey: r.overdueDays }));
+    let rows = [];
+    if (_stuckTab === 'all') rows = [...noTaskRows, ...overdueRows];
+    else if (_stuckTab === 'notask') rows = noTaskRows;
+    else if (_stuckTab === 'overdue') rows = overdueRows;
+    rows.sort((a, b) => {
+        if (a._type !== b._type) return a._type === 'notask' ? -1 : 1;
+        return b._sortKey - a._sortKey;
+    });
 
-    const renderOverdueRow = (r, i) => `<tr style="${stuckRowClass(r, false)}">
-        <td>${i+1}</td>
-        <td style="font-weight:600;color:#e0e0e0;">${r.company}</td>
-        <td style="color:#a0a0b8;">${r.person}</td>
-        <td>${r.ownerShort}</td>
-        <td style="color:#a0a0b8;font-size:11px;">${r.origin}</td>
-        <td style="text-align:right;color:#e0e0e0;">${r.daysInStage}d</td>
-        <td style="text-align:right;color:${r.overdueDays >= 14 ? '#ef4444' : (r.overdueDays >= 7 ? '#f59e0b' : '#e0e0e0')};font-weight:600;">${r.overdueDays}d</td>
-        <td><a href="${r.link}" target="_blank" style="color:#b794f4;text-decoration:none;font-size:11px;">Abrir &raquo;</a></td>
-    </tr>`;
+    const renderRow = (r) => {
+        const isNoTask = r._type === 'notask';
+        const sev = stuckRowSeverity(r, isNoTask);
+        const sdrInit = initials(r.owner);
+        const atrasoCell = isNoTask
+            ? '<span class="num-muted" style="font-size:10.5px;font-style:italic;">sem task</span>'
+            : `<span class="num-${sev === 'crit' ? 'crit' : sev === 'warn' ? 'warn' : 'ok'}">${r.overdueDays}d</span>`;
+        const diasColorClass = isNoTask
+            ? (r.daysInStage >= 30 ? 'num-crit' : r.daysInStage >= 14 ? 'num-warn' : 'num-ok')
+            : 'num-ok';
+        const empresaSafe = (r.company || '(sem nome)').replace(/"/g, '&quot;');
+        return `<tr>
+            <td class="stripe"><span class="stripe-inner stripe-${sev}"></span></td>
+            <td class="empresa-cell" title="${empresaSafe}">${r.company || '<span style=\"color:#6d6d85;\">(sem nome)</span>'}</td>
+            <td class="contato-cell">${r.person || '<span style="color:#5a5a75;">-</span>'}</td>
+            <td><span class="sdr-tag"><span class="avatar">${sdrInit}</span>${r.ownerShort}</span></td>
+            <td class="origin-tag">${r.origin}</td>
+            <td class="num-cell ${diasColorClass}">${r.daysInStage}d</td>
+            <td class="num-cell">${atrasoCell}</td>
+            <td style="text-align:right;"><a class="action-btn" href="${r.link}" target="_blank">Abrir &raquo;</a></td>
+        </tr>`;
+    };
 
-    document.getElementById('stuckNoTaskBody').innerHTML = noTaskF.length === 0
-        ? '<tr><td colspan="7" style="text-align:center;color:#4ade80;padding:18px;">&#10004; Nenhum lead sem touch</td></tr>'
-        : noTaskF.map(renderNoTaskRow).join('');
-
-    document.getElementById('stuckOverdueBody').innerHTML = overdueF.length === 0
-        ? '<tr><td colspan="8" style="text-align:center;color:#4ade80;padding:18px;">&#10004; Nenhum lead atrasado</td></tr>'
-        : overdueF.map(renderOverdueRow).join('');
+    const body = document.getElementById('stuckTableBody');
+    if (rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visao</td></tr>`;
+    } else {
+        body.innerHTML = rows.map(renderRow).join('');
+    }
 
     window._stuckData = { noTask: noTaskF, overdue: overdueF };
 }
