@@ -2418,27 +2418,20 @@
                         </div>
                     </div>
 
-                    <!-- LINHA 4: Detalhe MQLs (full width) -->
-                    <div class="dash-card" style="padding:20px;grid-column:span 12;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
-                                Detalhe dos MQLs
+                    <!-- LINHA 4: CTA para aba MQLs -->
+                    <div class="dash-card" style="padding:24px;grid-column:span 12;background:linear-gradient(135deg,rgba(108,63,181,0.15),rgba(139,92,246,0.08));border:1px solid rgba(139,92,246,0.25);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;">
+                        <div>
+                            <h2 style="color:#fff;font-size:16px;margin:0 0 6px;font-weight:600;">
+                                <span style="font-size:18px;margin-right:6px;">&#128269;</span>
+                                Ver detalhe completo dos MQLs
                             </h2>
-                            <button class="export-btn" onclick="exportMarketing()" style="font-size:11px;padding:6px 10px;">&#128229; Excel</button>
+                            <div style="color:#c0c0d0;font-size:13px;line-height:1.5;">
+                                Lista completa com status (Sem card / Em atendimento / Perdido), filtros por status, origem, periodo, busca e export Excel.
+                            </div>
                         </div>
-                        <div style="max-height:380px;overflow-y:auto;">
-                            <table class="mql-table" style="font-size:12px;">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Origem</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="mktDetailBody"></tbody>
-                            </table>
-                        </div>
+                        <button onclick="switchMktTab('mqls')" class="mql-refresh-btn" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);padding:12px 22px;font-size:13px;font-weight:600;white-space:nowrap;">
+                            Abrir aba MQLs &raquo;
+                        </button>
                     </div>
                 </div>
 
@@ -6597,16 +6590,7 @@ function renderMarketing(range, rd) {
     // Evolucao temporal
     renderMktTimeline(allLeadsInRange, enriched, range);
 
-    // Detalhe (resumido)
-    document.getElementById('mktDetailBody').innerHTML = enriched.length === 0
-        ? '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem MQLs no periodo</td></tr>'
-        : enriched.slice(0, 200).map(e =>
-            `<tr>
-                <td><a href="https://app10.ploomes.com/contact/${e.person.Id}" target="_blank" style="color:#b794f4;text-decoration:none;">${(e.person.Name || '').substring(0, 30)}</a></td>
-                <td style="font-size:11px;color:#a0a0b8;">${(e.origin || '').substring(0, 22)}</td>
-                <td style="color:${e.statusColor};font-size:11px;">${e.statusLabel}</td>
-            </tr>`
-        ).join('');
+    // Detalhe agora vive na aba MQLs (CTA na linha 4 leva pra la)
 
     window._mktEnriched = enriched;
 }
