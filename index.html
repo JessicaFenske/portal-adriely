@@ -4360,9 +4360,30 @@ function renderSection7() {
 
 // Reunioes da origem Intermodal
 // --- Section Stuck: Leads parados em Qualificacao SDR Inbound ---
+let stuckDealsCache = null;
+async function fetchStuckDealsDirect() {
+    // Pipeline SDR Inbound = 60009390 (descoberto via /Deals/60009390/funnel)
+    const filter = encodeURIComponent('StatusId eq 1 and PipelineId eq 60009390');
+    const expand = encodeURIComponent('Stage,Owner,Origin,Contact');
+    const sel = encodeURIComponent('Id,Title,ContactId,ContactName,PersonId,PersonName,StageId,DaysInStage,HasScheduledTasks,FirstTaskDate,CreateDate,OriginId,OwnerId');
+    let all = []; let skip = 0;
+    while (skip < 1000) {
+        const r = await fetch(`/api/Deals?%24filter=${filter}&%24expand=${expand}&%24select=${sel}&%24top=200&%24skip=${skip}`).then(r => r.json());
+        const arr = r.value || [];
+        all = all.concat(arr);
+        if (arr.length < 200) break;
+        skip += 200;
+    }
+    // Adiciona Pipeline name (que o expand nao trouxe via select)
+    all.forEach(d => { d.Pipeline = { Name: 'SDR Inbound' }; });
+    return all;
+}
+
 function getStuckLeads() {
     const now = Date.now();
-    const inboundQual = (dashOpenDeals || []).filter(d =>
+    // Fonte: dashOpenDeals quando disponivel, senao cache direto da API
+    const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
+    const inboundQual = source.filter(d =>
         d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '')
     );
     const noTask = [];
@@ -4417,7 +4438,16 @@ function stuckRowClass(row, isNoTask) {
     return '';
 }
 
-function renderSectionStuck() {
+async function renderSectionStuck() {
+    // Se dashOpenDeals nao tem SDR Inbound, busca direto via API
+    if ((!dashOpenDeals || !dashOpenDeals.some(d => d.Pipeline?.Name === 'SDR Inbound')) && !stuckDealsCache) {
+        const noTaskBody = document.getElementById('stuckNoTaskBody');
+        if (noTaskBody) noTaskBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:14px;">Carregando direto do Ploomes...</td></tr>';
+        try {
+            stuckDealsCache = await fetchStuckDealsDirect();
+            console.log('[stuck] fallback API:', stuckDealsCache.length);
+        } catch (e) { console.warn('[stuck] fallback failed:', e.message); stuckDealsCache = []; }
+    }
     const { noTask, overdue, total } = getStuckLeads();
     populateStuckFilters(noTask, overdue);
     const sdrFilter = document.getElementById('stuckSdrFilter').value;
