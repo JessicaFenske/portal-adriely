@@ -8441,6 +8441,27 @@ function dealHasProposalInRange(d, range) {
     return f && f.DateTimeValue && inMktRange(f.DateTimeValue, range);
 }
 
+// Constroi Sets de ContactIds e DealIds que tem atividade "Reuniao Agendada" (fonte de verdade)
+let _afMeetingsContactSet = null;
+let _afMeetingsDealSet = null;
+function ensureMeetingsSets() {
+    if (_afMeetingsContactSet) return;
+    _afMeetingsContactSet = new Set();
+    _afMeetingsDealSet = new Set();
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (t.ContactId) _afMeetingsContactSet.add(t.ContactId);
+        if (t.DealId) _afMeetingsDealSet.add(t.DealId);
+    });
+}
+function personHasMeeting(person, deals) {
+    ensureMeetingsSets();
+    if (_afMeetingsContactSet.has(person.Id)) return true;
+    if (person.CompanyId && _afMeetingsContactSet.has(person.CompanyId)) return true;
+    return (deals || []).some(d => _afMeetingsDealSet.has(d.Id));
+}
+
 function dealHasMeeting(d) {
     // Reunião agendada = deal em funil de vendedor (não Sankhya/SDR) com SDR preenchido
     const props = d.OtherProperties || [];
@@ -9530,6 +9551,18 @@ async function loadMarketing() {
         mqlsLoaded = true;
     }
 
+    // Garante cache de meetings (Reuniao Agendada) carregado pra cruzar com MQLs
+    if (!dashMeetings || dashMeetings.length === 0) {
+        document.getElementById('mktLoadingMsg').textContent = 'Carregando atividades de reunião...';
+        try {
+            const m = await fetchCached('meetings');
+            dashMeetings = m || [];
+        } catch (e) { console.warn('[mkt] meetings cache falhou:', e.message); dashMeetings = dashMeetings || []; }
+    }
+    // Invalida o cache local de sets de reuniao para recalcular com dados frescos
+    _afMeetingsContactSet = null;
+    _afMeetingsDealSet = null;
+
     const range = getMktPeriodRange();
     const totalLeads = getTotalLeadsInRange(range);
 
@@ -9583,7 +9616,8 @@ function buildEnrichedMqls(range) {
     return mqlsClean.map(p => {
         const deals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])]
             .filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
-        const hasMeeting = deals.some(dealHasMeeting);
+        // Reuniao = atividade "Reuniao Agendada" no contato/empresa OU em um dos deals
+        const hasMeeting = personHasMeeting(p, deals);
         const hasProposal = deals.some(d => (d.OtherProperties || []).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue));
         const wonDeal = deals.find(d => d.StatusId === 2);
         const lostDeal = deals.find(d => d.StatusId === 3);
