@@ -1410,6 +1410,88 @@
             background: #f59e0b;
         }
 
+        /* Cenários (Otimista / Realista / Pessimista) */
+        #view-analise-funil .af-scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 900px) { #view-analise-funil .af-scenarios-grid { grid-template-columns: 1fr; } }
+        #view-analise-funil .af-scenario-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 22px 24px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #view-analise-funil .af-scenario-card .stripe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 5px;
+        }
+        #view-analise-funil .af-scenario-card.otimista { border-left: 5px solid #10b981; }
+        #view-analise-funil .af-scenario-card.otimista .stripe { background: #10b981; }
+        #view-analise-funil .af-scenario-card.realista { border-left: 5px solid #f59e0b; }
+        #view-analise-funil .af-scenario-card.realista .stripe { background: #f59e0b; }
+        #view-analise-funil .af-scenario-card.pessimista { border-left: 5px solid #ef4444; }
+        #view-analise-funil .af-scenario-card.pessimista .stripe { background: #ef4444; }
+        #view-analise-funil .af-scenario-card .sc-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        #view-analise-funil .af-scenario-card.otimista .sc-label { color: #10b981; }
+        #view-analise-funil .af-scenario-card.realista .sc-label { color: #f59e0b; }
+        #view-analise-funil .af-scenario-card.pessimista .sc-label { color: #ef4444; }
+        #view-analise-funil .af-scenario-card .sc-count {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        #view-analise-funil .af-scenario-card .sc-mrr {
+            font-size: 32px;
+            font-weight: 700;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+            margin: 6px 0 2px;
+        }
+        #view-analise-funil .af-scenario-card .sc-sub {
+            font-size: 11px;
+            color: #6d6d85;
+        }
+        #view-analise-funil .af-scenario-card .sc-setup {
+            font-size: 14px;
+            color: #cbd5e1;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        #view-analise-funil .af-scenario-card .sc-progress-track {
+            background: rgba(255,255,255,0.05);
+            height: 6px;
+            border-radius: 3px;
+            margin: 12px 0 4px;
+            overflow: hidden;
+        }
+        #view-analise-funil .af-scenario-card .sc-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        #view-analise-funil .af-scenario-card.otimista .sc-progress-fill { background: #10b981; }
+        #view-analise-funil .af-scenario-card.realista .sc-progress-fill { background: #f59e0b; }
+        #view-analise-funil .af-scenario-card.pessimista .sc-progress-fill { background: #ef4444; }
+        #view-analise-funil .af-scenario-card .sc-vs-meta {
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
         /* Plano de ação - 3 colunas */
         #view-analise-funil .af-action-cols {
             display: grid;
@@ -4160,9 +4242,21 @@
                     </div>
                 </div>
 
+                <!-- SLIDE 7 estilo PPT: Cenários (Otimista / Realista / Pessimista) -->
+                <div class="af-slide">
+                    <h2 class="af-slide-title">7. Cenários de fechamento</h2>
+                    <div class="af-slide-sub">Somatório por cenário definido manualmente no Ploomes (campo "Forecast" do deal)</div>
+                    <div id="afScenariosGrid" class="af-scenarios-grid" style="margin-top:14px;"></div>
+                    <div id="afScenariosBanner" class="af-banner af-banner-dark" style="display:none;margin-top:14px;">
+                        <div class="af-banner-tag" style="color:#fbbf24;">RESUMO</div>
+                        <div class="af-banner-title" id="afScenariosBannerTitle"></div>
+                        <div class="af-banner-body" id="afScenariosBannerBody"></div>
+                    </div>
+                </div>
+
                 <!-- SLIDE 8 estilo PPT: Plano de ação (3 colunas por urgência) -->
                 <div class="af-slide">
-                    <h2 class="af-slide-title">7. Plano de ação</h2>
+                    <h2 class="af-slide-title">8. Plano de ação</h2>
                     <div class="af-slide-sub">Frentes de trabalho organizadas por urgência</div>
                     <div class="af-action-cols" style="margin-top:14px;">
                         <div class="af-action-col urgent">
@@ -4182,7 +4276,7 @@
 
                 <!-- SLIDE 9 estilo PPT: Aceleradores + Em risco -->
                 <div class="af-slide">
-                    <h2 class="af-slide-title">8. Deals prioritários</h2>
+                    <h2 class="af-slide-title">9. Deals prioritários</h2>
                     <div class="af-slide-sub">Onde focar pra acelerar ou pra não perder</div>
                     <div class="af-row" style="margin-top:14px;">
                         <div class="dash-card">
@@ -9095,6 +9189,9 @@ function renderAnaliseFunil() {
             </div>`;
         }).join('');
 
+    // === Cenários (Otimista / Realista / Pessimista) ===
+    renderAfScenarios(openDeals, meta);
+
     // Subtítulo da capa contextualizado
     const coverSub = document.getElementById('afCoverSubtitle');
     if (coverSub) {
@@ -9102,6 +9199,94 @@ function renderAnaliseFunil() {
     }
 
     document.getElementById('afLastUpdate').textContent = 'Última atualização: ' + new Date().toLocaleString('pt-BR') + ' · ' + (ownerFilter || 'Todos executivos') + ' · ' + pipeline;
+}
+
+function afGetScenario(d) {
+    // Campo customizado "Forecast" no Ploomes: deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC
+    const p = (d.OtherProperties || []).find(x => x.FieldKey === 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC');
+    const raw = (p?.ObjectValueName || '').toLowerCase();
+    if (raw.includes('otim')) return 'otimista';
+    if (raw.includes('real')) return 'realista';
+    if (raw.includes('pess')) return 'pessimista';
+    return null;
+}
+
+function renderAfScenarios(openDeals, meta) {
+    const grid = document.getElementById('afScenariosGrid');
+    if (!grid) return;
+    const buckets = { otimista: [], realista: [], pessimista: [], semCenario: [] };
+    openDeals.forEach(d => {
+        const sc = afGetScenario(d);
+        if (sc) buckets[sc].push(d);
+        else buckets.semCenario.push(d);
+    });
+
+    const sumMrr = (arr) => arr.reduce((s, d) => s + afGetMRR(d), 0);
+    const sumSetup = (arr) => arr.reduce((s, d) => s + afGetSetup(d), 0);
+
+    const data = [
+        { key: 'otimista', label: 'OTIMISTA', cls: 'otimista', deals: buckets.otimista },
+        { key: 'realista', label: 'REALISTA', cls: 'realista', deals: buckets.realista },
+        { key: 'pessimista', label: 'PESSIMISTA', cls: 'pessimista', deals: buckets.pessimista }
+    ];
+
+    grid.innerHTML = data.map(s => {
+        const mrr = sumMrr(s.deals);
+        const setup = sumSetup(s.deals);
+        const pctMeta = meta > 0 ? (mrr / meta) * 100 : 0;
+        const vsMeta = meta > 0
+            ? `<div class="sc-vs-meta" style="color:${mrr >= meta ? '#22c55e' : '#ef4444'};">
+                ${mrr >= meta ? '✓ Acima da meta em ' + brlFull(mrr - meta) : 'Gap de ' + brlFull(meta - mrr) + ' (' + pctMeta.toFixed(0) + '%)'}
+              </div>`
+            : '';
+        const progressBar = meta > 0 ? `<div class="sc-progress-track"><div class="sc-progress-fill" style="width:${Math.min(pctMeta, 100)}%;"></div></div>` : '';
+        return `<div class="af-scenario-card ${s.cls}">
+            <div class="stripe"></div>
+            <div class="sc-label">${s.label}</div>
+            <div class="sc-count">${s.deals.length} ${s.deals.length === 1 ? 'deal' : 'deals'}</div>
+            <div class="sc-mrr">${brlFull(mrr)}</div>
+            <div class="sc-sub">MRR somado</div>
+            <div class="sc-setup">+ ${brlFull(setup)} Setup</div>
+            ${progressBar}
+            ${vsMeta}
+        </div>`;
+    }).join('');
+
+    // Banner resumo
+    const banner = document.getElementById('afScenariosBanner');
+    if (banner) {
+        const semCenario = buckets.semCenario.length;
+        const totalComCenario = openDeals.length - semCenario;
+        if (totalComCenario === 0) {
+            banner.style.display = 'block';
+            banner.className = 'af-banner af-banner-warn';
+            banner.querySelector('.af-banner-tag').textContent = 'ATENÇÃO';
+            banner.querySelector('.af-banner-tag').style.color = '#f59e0b';
+            document.getElementById('afScenariosBannerTitle').textContent = 'Nenhum deal tem cenário definido';
+            document.getElementById('afScenariosBannerBody').innerHTML = 'O campo <strong>Forecast</strong> (Otimista/Realista/Pessimista) não está preenchido em nenhum deal deste funil. Preencher esse campo é o que permite forecast por cenário — o vendedor avalia caso a caso a chance real de fechar.';
+        } else if (semCenario > 0) {
+            const mrrOtim = sumMrr(buckets.otimista);
+            const mrrReal = sumMrr(buckets.realista);
+            const mrrPess = sumMrr(buckets.pessimista);
+            banner.style.display = 'block';
+            banner.className = 'af-banner af-banner-dark';
+            banner.querySelector('.af-banner-tag').textContent = 'RESUMO';
+            banner.querySelector('.af-banner-tag').style.color = '#fbbf24';
+            document.getElementById('afScenariosBannerTitle').textContent = `Range: ${brlFull(mrrPess)}  →  ${brlFull(mrrReal)}  →  ${brlFull(mrrOtim)}`;
+            const semCenarioPct = (semCenario / openDeals.length) * 100;
+            document.getElementById('afScenariosBannerBody').innerHTML = `${totalComCenario} de ${openDeals.length} deals (${(100 - semCenarioPct).toFixed(0)}%) com cenário definido. ${semCenario > 0 ? `<strong>${semCenario} deals sem cenário</strong> — pedir vendedores classificarem.` : ''}`;
+        } else {
+            const mrrOtim = sumMrr(buckets.otimista);
+            const mrrReal = sumMrr(buckets.realista);
+            const mrrPess = sumMrr(buckets.pessimista);
+            banner.style.display = 'block';
+            banner.className = 'af-banner af-banner-ok';
+            banner.querySelector('.af-banner-tag').textContent = 'PIPELINE CLASSIFICADO';
+            banner.querySelector('.af-banner-tag').style.color = '#22c55e';
+            document.getElementById('afScenariosBannerTitle').textContent = `Range: ${brlFull(mrrPess)}  →  ${brlFull(mrrReal)}  →  ${brlFull(mrrOtim)}`;
+            document.getElementById('afScenariosBannerBody').innerHTML = '100% dos deals abertos têm cenário definido. Forecast por cenário é confiável.';
+        }
+    }
 }
 
 function generateAfStageInsights(m) {
