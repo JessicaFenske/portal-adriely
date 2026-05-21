@@ -1256,6 +1256,206 @@
             border-radius: 4px;
             transition: width 0.5s ease;
         }
+        /* Funil trapezoidal visual */
+        #view-analise-funil .af-funnel-viz {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+        }
+        #view-analise-funil .af-funnel-stage {
+            background: linear-gradient(135deg, var(--stage-color, #8b5cf6), var(--stage-color-light, #b794f4));
+            color: #fff;
+            border-radius: 10px;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 14px rgba(108,63,181,0.15);
+            transition: transform 0.2s ease;
+        }
+        #view-analise-funil .af-funnel-stage:hover { transform: translateY(-1px); }
+        #view-analise-funil .af-funnel-stage .stage-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        #view-analise-funil .af-funnel-stage .stage-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        #view-analise-funil .af-funnel-stage .stage-sub {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        #view-analise-funil .af-funnel-stage .stage-numbers {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        #view-analise-funil .af-funnel-stage .stage-count {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        #view-analise-funil .af-funnel-stage .stage-pct {
+            font-size: 11px;
+            background: rgba(0,0,0,0.25);
+            padding: 4px 9px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        #view-analise-funil .af-funnel-arrow {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            background: rgba(255,255,255,0.03);
+            border-left: 3px solid;
+        }
+        #view-analise-funil .af-funnel-arrow.ok { border-left-color: #22c55e; background: rgba(34,197,94,0.06); }
+        #view-analise-funil .af-funnel-arrow.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.06); }
+        #view-analise-funil .af-funnel-arrow.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
+        #view-analise-funil .af-funnel-arrow .arrow-icon {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        #view-analise-funil .af-funnel-arrow.ok .arrow-icon { color: #22c55e; }
+        #view-analise-funil .af-funnel-arrow.warn .arrow-icon { color: #f59e0b; }
+        #view-analise-funil .af-funnel-arrow.crit .arrow-icon { color: #ef4444; }
+        #view-analise-funil .af-funnel-arrow .arrow-pct {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        #view-analise-funil .af-funnel-arrow.ok .arrow-pct { color: #22c55e; }
+        #view-analise-funil .af-funnel-arrow.warn .arrow-pct { color: #f59e0b; }
+        #view-analise-funil .af-funnel-arrow.crit .arrow-pct { color: #ef4444; }
+        #view-analise-funil .af-funnel-arrow .arrow-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            color: #a0a0b8;
+        }
+        #view-analise-funil .af-funnel-arrow .arrow-detail {
+            font-size: 11px;
+            color: #8888a0;
+        }
+
+        /* Reverse engineering - 3 big cards */
+        #view-analise-funil .af-reverse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        #view-analise-funil .af-reverse-bigcard {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 18px 18px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        #view-analise-funil .af-reverse-bigcard .stripe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 4px;
+        }
+        #view-analise-funil .af-reverse-bigcard .stage-label {
+            font-size: 10.5px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        #view-analise-funil .af-reverse-bigcard .deals-label {
+            font-size: 11px;
+            color: #8888a0;
+            margin-top: 4px;
+        }
+        #view-analise-funil .af-reverse-bigcard .deals-big {
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            margin: 4px 0;
+        }
+        #view-analise-funil .af-reverse-bigcard .mrr-equiv {
+            font-size: 18px;
+            color: #fff;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin-top: 4px;
+        }
+        #view-analise-funil .af-reverse-bigcard .mrr-label {
+            font-size: 10.5px;
+            color: #6d6d85;
+            margin-top: 2px;
+        }
+        #view-analise-funil .af-reverse-bigcard .calc {
+            font-size: 10px;
+            color: #6d6d85;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        #view-analise-funil .af-reverse-bigcard .you-have {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        #view-analise-funil .af-reverse-bigcard .gap-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #view-analise-funil .af-reverse-bigcard .gap-tag.crit { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        #view-analise-funil .af-reverse-bigcard .gap-tag.ok { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+        /* Gap table */
+        #view-analise-funil .af-gap-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12.5px;
+        }
+        #view-analise-funil .af-gap-table th {
+            background: rgba(0,0,0,0.2);
+            color: #6d6d85;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #view-analise-funil .af-gap-table th.num { text-align: right; }
+        #view-analise-funil .af-gap-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #d0d0e0;
+        }
+        #view-analise-funil .af-gap-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+        #view-analise-funil .af-gap-table tr:last-child td { border-bottom: none; }
+        #view-analise-funil .af-gap-table .gap-crit { color: #ef4444; font-weight: 700; }
+        #view-analise-funil .af-gap-table .gap-ok { color: #22c55e; font-weight: 700; }
+        #view-analise-funil .af-gap-table .stage-name { font-weight: 600; color: #fff; }
+
         #view-analise-funil .af-conversion-row {
             display: grid;
             grid-template-columns: 200px 1fr 80px 110px;
@@ -3497,24 +3697,31 @@
                     </div>
                 </div>
 
-                <!-- Linha 2: Funil de conversão (full width) -->
+                <!-- Linha 2: Funil de conversão visual (trapezoidal) -->
                 <div class="dash-card" style="padding:20px;margin-top:18px;">
-                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);">&#128200;</span> Taxas de conversão entre etapas</h2>
-                    <div id="afConversion" style="margin-top:12px;"></div>
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);">&#127922;</span> Funil de conversão</h2>
+                    <div id="afFunnel" class="af-funnel-viz" style="margin-top:14px;"></div>
                 </div>
 
-                <!-- Linha 3: Histórico mensal + Reverse Engineering -->
-                <div class="af-row">
-                    <div class="dash-card af-history-card">
-                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128181;</span> Histórico de fechamentos (6 meses)</h2>
-                        <div style="position:relative;height:240px;margin-top:12px;">
-                            <canvas id="afChartHistory"></canvas>
-                        </div>
+                <!-- Linha 3: Histórico mensal -->
+                <div class="dash-card" style="padding:20px;margin-top:18px;">
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128181;</span> Histórico de fechamentos (6 meses)</h2>
+                    <div style="position:relative;height:260px;margin-top:12px;">
+                        <canvas id="afChartHistory"></canvas>
                     </div>
-                    <div class="dash-card af-reverse-card">
-                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#129518;</span> Math reverso da meta</h2>
-                        <div id="afReverse"></div>
-                    </div>
+                </div>
+
+                <!-- Linha 4: Reverse engineering - 3 big cards -->
+                <div class="dash-card" style="padding:20px;margin-top:18px;">
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#129518;</span> Math reverso: o que precisa pra bater a meta</h2>
+                    <div id="afReverseHeader" style="margin-top:8px;font-size:13px;color:#a0a0b8;"></div>
+                    <div id="afReverseCards" class="af-reverse-grid" style="margin-top:14px;"></div>
+                </div>
+
+                <!-- Linha 5: Gap analysis tabela -->
+                <div class="dash-card" style="padding:20px;margin-top:18px;">
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#128201;</span> Gap atual vs meta</h2>
+                    <div id="afGapTable" style="margin-top:12px;overflow-x:auto;"></div>
                 </div>
 
                 <!-- Linha 4: Insights & Ações (full width) -->
@@ -7932,43 +8139,59 @@ function renderAnaliseFunil() {
     // === Conversão entre etapas (histórico cumulativo) ===
     const stagesForConv = allStagesOrdered.filter(s => !/descart|loss/i.test(s));
     const histDeals = [...wonAll, ...lostAll];
-    // Conta quantos passaram em cada etapa = (deals que estao naquela etapa ou em uma posterior)
     const passedCount = {};
     stagesForConv.forEach(s => { passedCount[s] = 0; });
     [...openDeals, ...histDeals].forEach(d => {
         const ord = d.Stage?.Ordination || 0;
-        const status = d.StatusId; // 1=open, 2=won, 3=lost
+        const status = d.StatusId;
         stagesForConv.forEach(s => {
             const sOrd = stageOrdMap[s];
-            if (status === 2) { passedCount[s]++; } // won passou por todas
-            else if (status === 1 && ord >= sOrd) passedCount[s]++; // open na etapa s ou posterior
-            else if (status === 3) {
-                // perdido depois de s? compara LastStageId ord
-                const lastOrd = d.LastStageId ? (stageOrdMap[Object.keys(stageOrdMap).find(k => k)] || 0) : ord;
-                if (ord >= sOrd) passedCount[s]++;
-            }
+            if (status === 2) { passedCount[s]++; }
+            else if (status === 1 && ord >= sOrd) passedCount[s]++;
+            else if (status === 3 && ord >= sOrd) passedCount[s]++;
         });
     });
 
-    let convHtml = '';
-    for (let i = 0; i < stagesForConv.length - 1; i++) {
-        const curr = stagesForConv[i];
-        const next = stagesForConv[i + 1];
-        const c1 = passedCount[curr] || 0;
-        const c2 = passedCount[next] || 0;
-        const rate = c1 > 0 ? (c2 / c1) * 100 : 0;
-        const rateClass = rate >= 50 ? 'af-conv-ok' : rate >= 20 ? 'af-conv-warn' : 'af-conv-crit';
-        const tagClass = rate >= 50 ? 'af-conv-tag-ok' : rate >= 20 ? 'af-conv-tag-warn' : 'af-conv-tag-crit';
-        const tagText = rate >= 50 ? 'SAUDÁVEL' : rate >= 20 ? 'ATENÇÃO' : 'GARGALO';
-        const barFill = rate >= 50 ? '#22c55e' : rate >= 20 ? '#f59e0b' : '#ef4444';
-        convHtml += `<div class="af-conversion-row">
-            <div class="af-conversion-label">${curr} <span style="color:#6d6d85;"> &rarr; </span> ${next}</div>
-            <div class="af-conversion-bar-track"><div class="af-conversion-bar-fill" style="width:${Math.min(rate,100)}%;background:${barFill};"></div></div>
-            <div class="af-conversion-pct ${rateClass}">${rate.toFixed(1)}%</div>
-            <div class="af-conversion-tag ${tagClass}">${tagText}</div>
-        </div>`;
-    }
-    document.getElementById('afConversion').innerHTML = convHtml || '<div style="color:#6d6d85;padding:10px;">Sem dados suficientes para calcular conversão.</div>';
+    // === Funil visual trapezoidal (estilo PPT) ===
+    const funnelHtml = [];
+    const maxPassed = Math.max(...stagesForConv.map(s => passedCount[s] || 0), 1);
+    const palette = ['#3b82f6','#8b5cf6','#a78bfa','#22c55e','#16a34a'];
+    stagesForConv.forEach((s, i) => {
+        const count = passedCount[s] || 0;
+        const widthRatio = Math.max(0.32, count / maxPassed);
+        const widthPct = (widthRatio * 100).toFixed(0);
+        const color = palette[i] || '#8b5cf6';
+        const lightColor = i < palette.length - 1 ? palette[i+1] : '#b794f4';
+        const topPct = i === 0 ? 100 : ((count / (passedCount[stagesForConv[0]] || 1)) * 100);
+        funnelHtml.push(`<div class="af-funnel-stage" style="width:${widthPct}%;--stage-color:${color};--stage-color-light:${lightColor};">
+            <div class="stage-info">
+                <div class="stage-title">${s}</div>
+                <div class="stage-sub">${topPct.toFixed(1)}% do topo</div>
+            </div>
+            <div class="stage-numbers">
+                <div class="stage-pct">${count} deals</div>
+                <div class="stage-count">${count}</div>
+            </div>
+        </div>`);
+        // Arrow entre etapas
+        if (i < stagesForConv.length - 1) {
+            const next = stagesForConv[i + 1];
+            const c2 = passedCount[next] || 0;
+            const rate = count > 0 ? (c2 / count) * 100 : 0;
+            const cls = rate >= 50 ? 'ok' : rate >= 20 ? 'warn' : 'crit';
+            const label = rate >= 50 ? 'SAUDÁVEL' : rate >= 20 ? 'ATENÇÃO' : 'GARGALO';
+            const lost = count - c2;
+            funnelHtml.push(`<div class="af-funnel-arrow ${cls}">
+                <div class="arrow-icon">&darr;</div>
+                <div class="arrow-pct">${rate.toFixed(1)}%</div>
+                <div class="arrow-label">${label}</div>
+                <div class="arrow-detail">${c2} de ${count} avançaram${lost > 0 ? ' &middot; ' + lost + ' caíram aqui' : ''}</div>
+            </div>`);
+        }
+    });
+    document.getElementById('afFunnel').innerHTML = funnelHtml.length > 0
+        ? funnelHtml.join('')
+        : '<div style="color:#6d6d85;padding:20px;text-align:center;">Sem dados suficientes para calcular conversão.</div>';
 
     // === Histórico mensal (últimos 6 meses) ===
     const now = new Date();
@@ -8026,38 +8249,68 @@ function renderAnaliseFunil() {
         }
     });
 
-    // === Math reverso da meta ===
-    const reverseHtml = (() => {
-        if (meta <= 0 || ticketMrr <= 0) {
-            return '<div style="color:#6d6d85;font-size:12px;font-style:italic;padding:10px;">Defina uma meta MRR e tenha histórico de ganhos para calcular.</div>';
-        }
+    // === Math reverso da meta (3 big cards estilo PPT) ===
+    if (meta <= 0 || ticketMrr <= 0) {
+        document.getElementById('afReverseHeader').innerHTML = '<em style="color:#6d6d85;">Defina uma meta MRR e tenha histórico de ganhos para calcular o reverse engineering.</em>';
+        document.getElementById('afReverseCards').innerHTML = '';
+        document.getElementById('afGapTable').innerHTML = '<div style="color:#6d6d85;padding:14px;font-style:italic;">Defina uma meta MRR no topo para ver o gap.</div>';
+    } else {
         const dealsToWin = Math.ceil(meta / ticketMrr);
-        // Conversão por etapa do ponto mais próximo do ganho até a entrada
-        const stagesReverse = activeStages.slice().reverse();
-        let cumProb = 1;
-        let rows = '';
-        rows += `<div class="af-reverse-row" style="border-bottom:1px solid rgba(255,255,255,0.1);font-weight:700;">
-            <div class="stage" style="color:#fff;">Etapa</div>
-            <div class="have">Tem</div>
-            <div class="need">Precisa</div>
-        </div>`;
-        activeStages.forEach((s, idx) => {
-            const prob = afStageProb(s.name, s.ord || idx, allStagesOrdered.length);
-            const needed = prob > 0 ? Math.ceil(dealsToWin / prob) : '∞';
+        document.getElementById('afReverseHeader').innerHTML = `Para fechar <strong style="color:#fff;">${brlFull(meta)}</strong> de MRR com ticket médio de <strong style="color:#22c55e;">${brlFull(ticketMrr)}</strong>, precisa <strong style="color:#fff;">${dealsToWin} deals ganhos no mês</strong>.`;
+
+        // 3 big cards: usa estagios principais (Aprovado, Consideracao, Reconhecimento)
+        const reverseCardsData = [];
+        const stageColors = ['#22c55e','#8b5cf6','#60a5fa','#f59e0b','#ef4444'];
+        // Ordenar por probabilidade decrescente (mais próximo do ganho primeiro)
+        const stagesByProb = activeStages.slice().sort((a,b) => {
+            const pa = afStageProb(a.name, a.ord, allStagesOrdered.length);
+            const pb = afStageProb(b.name, b.ord, allStagesOrdered.length);
+            return pb - pa;
+        }).slice(0, 4);
+        stagesByProb.forEach((s, idx) => {
+            const prob = afStageProb(s.name, s.ord, allStagesOrdered.length);
+            const needed = prob > 0 ? Math.ceil(dealsToWin / prob) : null;
+            if (!needed) return;
+            const mrrEquiv = needed * ticketMrr;
             const has = s.count;
-            const gap = typeof needed === 'number' ? has - needed : 0;
-            const gapClass = typeof needed === 'number' && gap < 0 ? 'gap-crit' : 'gap-ok';
-            rows += `<div class="af-reverse-row">
-                <div class="stage">${s.name}</div>
-                <div class="have">${has}</div>
-                <div class="need ${gapClass}">${needed}</div>
-            </div>`;
+            const gap = has - needed;
+            const calc = `${dealsToWin} / ${(prob * 100).toFixed(0)}% de conversão`;
+            const color = stageColors[idx] || '#8b5cf6';
+            reverseCardsData.push({ name: s.name, needed, mrrEquiv, calc, color, has, gap });
         });
-        return `<div style="margin-top:10px;font-size:12px;color:#a0a0b8;">
-            Para fechar <strong style="color:#fff;">${brlFull(meta)}</strong> de MRR com ticket médio de <strong style="color:#22c55e;">${brlFull(ticketMrr)}</strong>, precisa <strong style="color:#fff;">${dealsToWin} deals ganhos</strong>.
-        </div>${rows}`;
-    })();
-    document.getElementById('afReverse').innerHTML = reverseHtml;
+
+        document.getElementById('afReverseCards').innerHTML = reverseCardsData.map(c => `
+            <div class="af-reverse-bigcard">
+                <div class="stripe" style="background:${c.color};"></div>
+                <div class="stage-label">${c.name}</div>
+                <div class="deals-label">Deals necessários</div>
+                <div class="deals-big" style="color:${c.color};">${c.needed}</div>
+                <div class="mrr-equiv">${brlFull(c.mrrEquiv)}</div>
+                <div class="mrr-label">MRR equivalente no pipeline</div>
+                <div class="calc">${c.calc}</div>
+                <div class="you-have">Hoje tem <strong style="color:#fff;">${c.has}</strong>${c.gap < 0 ? `<span class="gap-tag crit">gap ${c.gap}</span>` : `<span class="gap-tag ok">+${c.gap}</span>`}</div>
+            </div>
+        `).join('');
+
+        // === Gap analysis tabela ===
+        let gapHtml = '<table class="af-gap-table"><thead><tr><th>Etapa</th><th class="num">Tem hoje</th><th class="num">Precisaria</th><th class="num">Gap</th><th class="num">MRR faltante</th></tr></thead><tbody>';
+        let totalGapMrr = 0;
+        reverseCardsData.forEach(c => {
+            const missingDeals = Math.max(0, -c.gap);
+            const missingMrr = missingDeals * ticketMrr;
+            totalGapMrr += c.gap < 0 ? missingMrr : 0;
+            const gapClass = c.gap < 0 ? 'gap-crit' : 'gap-ok';
+            gapHtml += `<tr>
+                <td class="stage-name">${c.name}</td>
+                <td class="num">${c.has}</td>
+                <td class="num">${c.needed}</td>
+                <td class="num ${gapClass}">${c.gap >= 0 ? '+' + c.gap : c.gap}</td>
+                <td class="num ${gapClass}">${c.gap < 0 ? brlFull(missingMrr) : '✓'}</td>
+            </tr>`;
+        });
+        gapHtml += '</tbody></table>';
+        document.getElementById('afGapTable').innerHTML = gapHtml;
+    }
 
     // === Insights & Ações ===
     const insights = generateAfInsights({
