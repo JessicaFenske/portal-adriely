@@ -4976,6 +4976,14 @@ function renderSection7() {
 }
 
 // Reunioes da origem Intermodal
+// Pre-vendas de Novos Negocios = exclui pre-vendas de Farmer (Agnes) e Sankhya (Maja)
+// que tambem aparecem ocasionalmente no SDR Inbound mas nao sao do time de novos negocios
+const NON_NEWBIZ_SDRS = ['agnes', 'maja'];
+function isNewBizDeal(d) {
+    const owner = (d.Owner?.Name || '').toLowerCase();
+    return !NON_NEWBIZ_SDRS.some(n => owner.includes(n));
+}
+
 // --- Section Analise Pre-vendas (snapshot diario + comparativos + insights) ---
 const ANALISE_SNAP_KEY = 'analiseSnapshots';
 function getAnaliseSnapshots() {
@@ -4999,7 +5007,7 @@ function todayKey() {
 
 function computeAnaliseMetrics() {
     const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
-    const inbound = source.filter(d => d.Pipeline?.Name === 'SDR Inbound');
+    const inbound = source.filter(d => d.Pipeline?.Name === 'SDR Inbound' && isNewBizDeal(d));
     const qual = inbound.filter(d => /Qualifica/i.test(d.Stage?.Name || ''));
     const hot = inbound.filter(d => /Quente|Agendada/i.test(d.Stage?.Name || ''));
     const entrada = inbound.filter(d => /Entrada/i.test(d.Stage?.Name || ''));
@@ -5280,7 +5288,7 @@ function getStuckLeads() {
     // Fonte: dashOpenDeals quando disponivel, senao cache direto da API
     const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
     const inboundQual = source.filter(d =>
-        d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '')
+        d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '') && isNewBizDeal(d)
     );
     const noTask = [];
     const overdue = [];
