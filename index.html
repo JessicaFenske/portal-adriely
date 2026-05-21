@@ -8017,14 +8017,19 @@ function afStageStripeColor(stage, allStagesOrdered) {
 }
 
 function afStageProb(stageName, ordIdx, totalStages) {
-    // Probabilidade de fechamento conforme estagio
+    // Probabilidades alinhadas com o significado real das etapas no Funil de Vendas Lincros:
+    //   Reconhecimento = card criado apos 1a reuniao agendada, fica aqui ate proposta ser apresentada
+    //   Consideracao   = proposta ja apresentada, vendedor em follow-up
+    //   Aprovado       = cliente aprovou VERBALMENTE, trabalhando minuta/ajustes
+    //   Formalizacao   = contrato enviado pra assinatura, risco quase zero
     if (/descart|perdi|loss/i.test(stageName)) return 0;
-    if (/formaliz|aprov/i.test(stageName)) return 0.85;
-    if (/considera/i.test(stageName)) return 0.3;
-    if (/reconhe/i.test(stageName)) return 0.1;
+    if (/formaliz/i.test(stageName)) return 0.95;
+    if (/aprov/i.test(stageName)) return 0.75;
+    if (/considera/i.test(stageName)) return 0.40;
+    if (/reconhe/i.test(stageName)) return 0.15;
     // fallback proporcional
     const t = Math.max(totalStages, 1);
-    return Math.min(0.85, (ordIdx / t) * 0.85);
+    return Math.min(0.90, (ordIdx / t) * 0.90);
 }
 
 function renderAnaliseFunil() {
@@ -8132,7 +8137,7 @@ function renderAnaliseFunil() {
             <div style="font-size:11.5px;color:#6d6d85;margin-top:6px;font-style:italic;">Defina uma meta MRR no topo para ver o gap e o reverse engineering.</div>
         `}
         <div style="font-size:10.5px;color:#6d6d85;margin-top:14px;line-height:1.5;">
-            Cálculo: cada deal multiplicado pela probabilidade média da etapa (Reconhecimento 10%, Consideração 30%, Aprovado/Formalização 85%). Não inclui deals sem MRR preenchido.
+            Cálculo: cada deal multiplicado pela probabilidade média da etapa &mdash; Reconhecimento 15% (lead viu 1ª reunião), Consideração 40% (proposta apresentada), Aprovado 75% (aprovação verbal, falta minuta), Formalização 95% (contrato em assinatura). Deals sem MRR preenchido não entram no cálculo.
         </div>
     `;
 
