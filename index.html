@@ -1059,6 +1059,153 @@
         }
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
+        /* Analise Pre-vendas */
+        #secAnalise .analise-kpis {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        #secAnalise .analise-kpi {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 14px 14px 12px;
+        }
+        #secAnalise .analise-kpi .label {
+            font-size: 10px;
+            color: #8888a0;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+        }
+        #secAnalise .analise-kpi .value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 6px;
+            line-height: 1.1;
+        }
+        #secAnalise .analise-kpi .delta {
+            font-size: 11px;
+            margin-top: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-weight: 600;
+        }
+        #secAnalise .delta-up { color: #22c55e; }
+        #secAnalise .delta-down { color: #ef4444; }
+        #secAnalise .delta-flat { color: #6d6d85; }
+        #secAnalise .delta-good-down { color: #22c55e; } /* metricas onde cair eh bom */
+        #secAnalise .delta-bad-up { color: #ef4444; }
+        #secAnalise .analise-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 1100px) {
+            #secAnalise .analise-kpis { grid-template-columns: repeat(3, 1fr); }
+            #secAnalise .analise-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) { #secAnalise .analise-kpis { grid-template-columns: repeat(2, 1fr); } }
+        #secAnalise .analise-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+        #secAnalise .analise-card-head { margin-bottom: 12px; }
+        #secAnalise .analise-card-head h3 {
+            color: #fff;
+            font-size: 13px;
+            margin: 0 0 3px;
+            font-weight: 600;
+        }
+        #secAnalise .analise-sub {
+            font-size: 11px;
+            color: #6d6d85;
+            font-style: italic;
+        }
+        #secAnalise .analise-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #secAnalise .analise-bar-row {
+            display: grid;
+            grid-template-columns: 130px 1fr 60px;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+        #secAnalise .analise-bar-label {
+            color: #d0d0e0;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #secAnalise .analise-bar-track {
+            background: rgba(255,255,255,0.04);
+            border-radius: 4px;
+            height: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        #secAnalise .analise-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+            background: linear-gradient(90deg, #6c3fb5, #8b5cf6);
+        }
+        #secAnalise .analise-bar-fill.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        #secAnalise .analise-bar-fill.crit { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        #secAnalise .analise-bar-fill.ok { background: linear-gradient(90deg, #16a34a, #22c55e); }
+        #secAnalise .analise-bar-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e0e0e0;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        #secAnalise .analise-bar-sub {
+            font-size: 10px;
+            color: #6d6d85;
+            margin-left: 4px;
+        }
+        #secAnalise .analise-insights-wrap {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+        #secAnalise .analise-insights {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+        }
+        #secAnalise .insight-card {
+            padding: 12px 14px;
+            border-radius: 8px;
+            border-left: 3px solid;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        #secAnalise .insight-card .insight-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        #secAnalise .insight-card.crit { background: rgba(239,68,68,0.08); border-left-color: #ef4444; }
+        #secAnalise .insight-card.warn { background: rgba(245,158,11,0.08); border-left-color: #f59e0b; }
+        #secAnalise .insight-card.ok   { background: rgba(34,197,94,0.08); border-left-color: #22c55e; }
+        #secAnalise .insight-card.info { background: rgba(96,165,250,0.08); border-left-color: #60a5fa; }
+        #secAnalise .insight-body {
+            color: #c0c0d0;
+        }
+
         /* Leads parados - design minimal */
         #secStuck .stuck-kpis {
             display: flex;
@@ -1802,6 +1949,9 @@
                     <span class="chevron">&#9662;</span>
                 </div>
                 <div class="nav-group-items">
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secAnalise');">
+                        <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Analise Pre-vendas</span>
+                    </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secStuck');">
                         <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads Parados</span>
                     </div>
@@ -2319,6 +2469,49 @@
                         <div class="collapsible-table" id="tableLostSellerValue"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyLostSellerValue"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section Analise: Diagnostico Pre-vendas SDR Inbound -->
+                <div class="section-card" id="secAnalise">
+                    <div class="section-header">
+                        <h2 style="display:flex;align-items:center;gap:10px;">
+                            <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">&#128202;</span>
+                            Analise Pre-vendas - SDR Inbound
+                        </h2>
+                        <div class="sub-filter">
+                            <span style="color:#6d6d85;font-size:11px;" id="analiseLastUpdate">-</span>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <!-- Linha 1: 6 KPIs principais com delta vs ontem -->
+                        <div id="analiseKpis" class="analise-kpis"></div>
+
+                        <!-- Linha 2: dois cards lado a lado (Carga por SDR | Origens com conversao) -->
+                        <div class="analise-grid">
+                            <div class="analise-card">
+                                <div class="analise-card-head">
+                                    <h3>&#128100; Carga por SDR</h3>
+                                    <span class="analise-sub">Leads ativos em Qualificacao</span>
+                                </div>
+                                <div id="analiseSdrList" class="analise-bars"></div>
+                            </div>
+                            <div class="analise-card">
+                                <div class="analise-card-head">
+                                    <h3>&#127760; Origens vs Conversao</h3>
+                                    <span class="analise-sub">Em Qualif. x avancaram pra Reuniao/Leads Quentes</span>
+                                </div>
+                                <div id="analiseOriginsList" class="analise-bars"></div>
+                            </div>
+                        </div>
+
+                        <!-- Linha 3: Insights automaticos -->
+                        <div class="analise-insights-wrap">
+                            <h3 style="color:#fff;font-size:14px;margin:0 0 10px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                <span>&#128161;</span> Insights & acoes recomendadas
+                            </h3>
+                            <div id="analiseInsights" class="analise-insights"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -4783,6 +4976,285 @@ function renderSection7() {
 }
 
 // Reunioes da origem Intermodal
+// --- Section Analise Pre-vendas (snapshot diario + comparativos + insights) ---
+const ANALISE_SNAP_KEY = 'analiseSnapshots';
+function getAnaliseSnapshots() {
+    try { return JSON.parse(localStorage.getItem(ANALISE_SNAP_KEY) || '{}'); }
+    catch { return {}; }
+}
+function saveAnaliseSnapshot(date, metrics) {
+    const snaps = getAnaliseSnapshots();
+    snaps[date] = metrics;
+    // Mantem so ultimos 30 dias pra nao explodir
+    const keys = Object.keys(snaps).sort();
+    if (keys.length > 30) {
+        keys.slice(0, keys.length - 30).forEach(k => delete snaps[k]);
+    }
+    localStorage.setItem(ANALISE_SNAP_KEY, JSON.stringify(snaps));
+}
+function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function computeAnaliseMetrics() {
+    const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
+    const inbound = source.filter(d => d.Pipeline?.Name === 'SDR Inbound');
+    const qual = inbound.filter(d => /Qualifica/i.test(d.Stage?.Name || ''));
+    const hot = inbound.filter(d => /Quente|Agendada/i.test(d.Stage?.Name || ''));
+    const entrada = inbound.filter(d => /Entrada/i.test(d.Stage?.Name || ''));
+    const now = Date.now();
+
+    let totalDays = 0;
+    const aging = { '0-7d': 0, '8-15d': 0, '16-30d': 0, '30+d': 0 };
+    let ok = 0, overdue = 0, noTask = 0;
+    const sdrCount = {};
+    const originCount = {};
+
+    qual.forEach(d => {
+        const days = d.DaysInStage || 0;
+        totalDays += days;
+        if (days <= 7) aging['0-7d']++;
+        else if (days <= 15) aging['8-15d']++;
+        else if (days <= 30) aging['16-30d']++;
+        else aging['30+d']++;
+        if (!d.HasScheduledTasks) noTask++;
+        else if (d.FirstTaskDate && new Date(d.FirstTaskDate).getTime() < now) overdue++;
+        else ok++;
+        const sdr = (d.Owner?.Name || '').split(' ')[0] || '(sem)';
+        sdrCount[sdr] = (sdrCount[sdr] || 0) + 1;
+        const o = d.Origin?.Name || '(sem origem)';
+        originCount[o] = (originCount[o] || 0) + 1;
+    });
+
+    // Conversao por origem: % dos que chegaram em Hot vs total na Qualif+Hot
+    const originHotCount = {};
+    hot.forEach(d => {
+        const o = d.Origin?.Name || '(sem origem)';
+        originHotCount[o] = (originHotCount[o] || 0) + 1;
+    });
+
+    return {
+        date: todayKey(),
+        timestamp: now,
+        totalQual: qual.length,
+        totalHot: hot.length,
+        totalEntrada: entrada.length,
+        totalInbound: inbound.length,
+        avgDays: qual.length ? totalDays / qual.length : 0,
+        ok, overdue, noTask,
+        aging, sdrCount, originCount, originHotCount
+    };
+}
+
+function formatDelta(curr, prev, opts = {}) {
+    // opts.lowerIsBetter = true para metricas onde queda eh boa
+    if (prev === undefined || prev === null) return '<span class="delta delta-flat">novo</span>';
+    const diff = curr - prev;
+    if (diff === 0) return '<span class="delta delta-flat">= ' + 0 + '</span>';
+    const isUp = diff > 0;
+    const lowerIsBetter = opts.lowerIsBetter;
+    let cls;
+    if (lowerIsBetter) cls = isUp ? 'delta-bad-up' : 'delta-good-down';
+    else cls = isUp ? 'delta-up' : 'delta-down';
+    const arrow = isUp ? '&#9650;' : '&#9660;';
+    const abs = Math.abs(diff);
+    const sign = isUp ? '+' : '-';
+    const txt = opts.pct ? sign + abs.toFixed(0) + 'pp' : sign + abs;
+    return `<span class="delta ${cls}">${arrow} ${txt} <span style="color:#5a5a75;font-weight:500;font-size:10px;">vs ontem</span></span>`;
+}
+
+function generateAnaliseInsights(curr, prev) {
+    const tips = [];
+    // 1) Atrasados
+    if (curr.overdue >= 30) {
+        tips.push({ level: 'crit', title: 'Atrasados em volume alto (' + curr.overdue + ')', body: 'Mais de 30 leads com tarefa vencida. War room: bloquear 90min com cada SDR pra zerar o backlog hoje.' });
+    } else if (curr.overdue >= 15) {
+        tips.push({ level: 'warn', title: 'Backlog de atrasados (' + curr.overdue + ')', body: 'Acima de 15 = nivel preocupante. Cadencia multi-canal (whatsapp + ligacao) nos proximos 3 dias.' });
+    } else if (prev && curr.overdue < prev.overdue && curr.overdue >= 5) {
+        tips.push({ level: 'ok', title: 'Atrasados em queda (' + prev.overdue + '→' + curr.overdue + ')', body: 'Equipe respondeu. Manter o ritmo - meta zerar em 7 dias.' });
+    } else if (curr.overdue < 5) {
+        tips.push({ level: 'ok', title: 'Atrasados sob controle (' + curr.overdue + ')', body: 'Disciplina de follow-up funcionando bem.' });
+    }
+
+    // 2) Sem touch
+    if (curr.noTask >= 5) {
+        const same = prev && prev.noTask === curr.noTask;
+        tips.push({
+            level: 'crit',
+            title: 'Sem touch: ' + curr.noTask + ' leads esquecidos' + (same ? ' (sem mudanca vs ontem)' : ''),
+            body: same
+                ? 'Os mesmos leads continuam sem atividade. Reatribuir donos ou descartar com motivo.'
+                : 'Leads sem nenhuma atividade agendada = morte por inanicao. Criar atividade hoje ou descartar.'
+        });
+    }
+
+    // 3) Concentracao por SDR
+    const sdrs = Object.entries(curr.sdrCount).sort((a, b) => b[1] - a[1]);
+    if (sdrs.length >= 2) {
+        const top = sdrs[0];
+        const other = sdrs[sdrs.length - 1];
+        if (top[1] >= other[1] * 2 && top[1] >= 25) {
+            tips.push({
+                level: 'warn',
+                title: 'Carga desbalanceada (' + top[0] + ' com ' + top[1] + ' leads)',
+                body: top[0] + ' tem ' + (top[1] / other[1]).toFixed(1) + 'x a carga de ' + other[0] + ' (' + other[1] + '). Referencia saudavel: 30-35 leads por SDR. Rebalancear.'
+            });
+        }
+    }
+
+    // 4) Origem dominante com baixa conversao (Paid Search)
+    const totalQualOrig = Object.values(curr.originCount).reduce((s, n) => s + n, 0);
+    Object.entries(curr.originCount).forEach(([orig, qcount]) => {
+        if (qcount < 10) return;
+        const hcount = curr.originHotCount[orig] || 0;
+        const total = qcount + hcount;
+        const advanceRate = total > 0 ? (hcount / total) * 100 : 0;
+        if (qcount / totalQualOrig > 0.25 && advanceRate < 10) {
+            tips.push({
+                level: 'warn',
+                title: 'Origem com baixa conversao: ' + orig,
+                body: qcount + ' leads ativos mas so ' + hcount + ' avancou (' + advanceRate.toFixed(0) + '%). Auditar a campanha com Marketing - ICP do anuncio pode estar errado.'
+            });
+        }
+    });
+
+    // 5) Origem com alta conversao
+    Object.entries(curr.originHotCount).forEach(([orig, hcount]) => {
+        if (hcount < 5) return;
+        const qcount = curr.originCount[orig] || 0;
+        if (hcount >= qcount && hcount >= 5) {
+            tips.push({
+                level: 'ok',
+                title: 'Origem performando bem: ' + orig,
+                body: hcount + ' leads ja avancaram pra Reuniao. Canal de alta qualidade - replicar/investir mais.'
+            });
+        }
+    });
+
+    // 6) Aging - leads parados ha muito tempo
+    if (curr.aging['30+d'] >= 3) {
+        tips.push({
+            level: 'warn',
+            title: curr.aging['30+d'] + ' leads parados ha mais de 30d',
+            body: 'Acima de 30 dias na Qualificacao = lead morto na pratica. Decisao binaria: tentar acelerar ou descartar.'
+        });
+    }
+
+    // 7) Comparativo geral com ontem
+    if (prev) {
+        const movedOut = prev.totalQual - curr.totalQual;
+        if (movedOut > 10) {
+            tips.push({
+                level: 'ok',
+                title: 'Funil movimentou (' + prev.totalQual + ' → ' + curr.totalQual + ')',
+                body: movedOut + ' leads sairam da Qualificacao em 1 dia. Verificar se foi avanco ou descarte: se descarte > avanco, qualificacao esta superficial.'
+            });
+        }
+        if (curr.totalHot > prev.totalHot) {
+            tips.push({
+                level: 'ok',
+                title: 'Mais leads quentes (' + prev.totalHot + ' → ' + curr.totalHot + ')',
+                body: '+' + (curr.totalHot - prev.totalHot) + ' deals avancaram para Reuniao/Quentes. Boas reunioes a caminho.'
+            });
+        }
+    }
+
+    if (tips.length === 0) {
+        tips.push({ level: 'info', title: 'Tudo dentro do esperado', body: 'Carregue dados de mais dias para gerar insights de tendencia.' });
+    }
+    return tips;
+}
+
+async function renderSectionAnalise() {
+    // Garante que tem dados (compartilha cache com Stuck)
+    if ((!dashOpenDeals || !dashOpenDeals.some(d => d.Pipeline?.Name === 'SDR Inbound')) && !stuckDealsCache) {
+        try { stuckDealsCache = await fetchStuckDealsDirect(); } catch {}
+    }
+    const curr = computeAnaliseMetrics();
+    const snaps = getAnaliseSnapshots();
+
+    // Snapshot do dia anterior (ou anteanterior se nao houver ontem)
+    const today = curr.date;
+    const otherDates = Object.keys(snaps).filter(k => k < today).sort();
+    const prevKey = otherDates[otherDates.length - 1];
+    const prev = prevKey ? snaps[prevKey] : null;
+
+    // Salva snapshot de hoje (sobrescreve se ja existir)
+    saveAnaliseSnapshot(today, curr);
+
+    // KPI bar
+    const kpis = [
+        { label: 'Total Qualif.', value: curr.totalQual, color: '#60a5fa', prev: prev?.totalQual, opts: {} },
+        { label: 'Em dia (OK)', value: curr.ok, color: '#22c55e', prev: prev?.ok, opts: {} },
+        { label: 'Atrasados', value: curr.overdue, color: '#f59e0b', prev: prev?.overdue, opts: { lowerIsBetter: true } },
+        { label: 'Sem touch', value: curr.noTask, color: '#ef4444', prev: prev?.noTask, opts: { lowerIsBetter: true } },
+        { label: 'Avancaram', value: curr.totalHot, color: '#b794f4', prev: prev?.totalHot, opts: {} },
+        { label: 'Media dias', value: curr.avgDays.toFixed(1), color: '#e0e0e0', prev: prev?.avgDays, opts: { lowerIsBetter: true } }
+    ];
+    document.getElementById('analiseKpis').innerHTML = kpis.map(k =>
+        `<div class="analise-kpi">
+            <div class="label">${k.label}</div>
+            <div class="value" style="color:${k.color};">${k.value}</div>
+            ${formatDelta(typeof k.value === 'string' ? parseFloat(k.value) : k.value, k.prev !== undefined ? (typeof k.prev === 'number' ? k.prev : parseFloat(k.prev)) : undefined, k.opts)}
+        </div>`
+    ).join('');
+
+    // Carga por SDR
+    const sdrs = Object.entries(curr.sdrCount).sort((a, b) => b[1] - a[1]);
+    const maxSdr = Math.max(1, ...sdrs.map(([, v]) => v));
+    document.getElementById('analiseSdrList').innerHTML = sdrs.map(([name, qty]) => {
+        const cls = qty >= 40 ? 'crit' : qty >= 30 ? 'warn' : qty >= 10 ? '' : 'ok';
+        const pct = (qty / maxSdr) * 100;
+        const prevQty = prev?.sdrCount?.[name];
+        const delta = prevQty !== undefined ? (qty - prevQty) : null;
+        const deltaStr = delta === null ? '' : (delta === 0 ? '' : `<span class="analise-bar-sub">${delta > 0 ? '+' : ''}${delta}</span>`);
+        return `<div class="analise-bar-row">
+            <div class="analise-bar-label" title="${name}">${name}</div>
+            <div class="analise-bar-track"><div class="analise-bar-fill ${cls}" style="width:${pct}%;"></div></div>
+            <div class="analise-bar-value">${qty}${deltaStr}</div>
+        </div>`;
+    }).join('');
+
+    // Origens vs conversao
+    const allOrigins = new Set([...Object.keys(curr.originCount), ...Object.keys(curr.originHotCount)]);
+    const origData = [...allOrigins].map(o => {
+        const q = curr.originCount[o] || 0;
+        const h = curr.originHotCount[o] || 0;
+        const total = q + h;
+        const rate = total > 0 ? (h / total) * 100 : 0;
+        return { origin: o, qual: q, hot: h, total, rate };
+    }).filter(r => r.total >= 2).sort((a, b) => b.total - a.total);
+    const maxOrig = Math.max(1, ...origData.map(r => r.total));
+    document.getElementById('analiseOriginsList').innerHTML = origData.map(r => {
+        const rateCls = r.rate >= 50 ? 'ok' : r.rate >= 20 ? '' : r.rate >= 5 ? 'warn' : 'crit';
+        const pct = (r.total / maxOrig) * 100;
+        return `<div class="analise-bar-row">
+            <div class="analise-bar-label" title="${r.origin}">${r.origin}</div>
+            <div class="analise-bar-track"><div class="analise-bar-fill ${rateCls}" style="width:${pct}%;"></div></div>
+            <div class="analise-bar-value">${r.qual}<span class="analise-bar-sub">${r.rate.toFixed(0)}%</span></div>
+        </div>`;
+    }).join('');
+
+    // Insights
+    const tips = generateAnaliseInsights(curr, prev);
+    document.getElementById('analiseInsights').innerHTML = tips.map(t =>
+        `<div class="insight-card ${t.level}">
+            <div class="insight-title">${t.title}</div>
+            <div class="insight-body">${t.body}</div>
+        </div>`
+    ).join('');
+
+    // Footer
+    const upd = document.getElementById('analiseLastUpdate');
+    if (upd) {
+        const txt = prev
+            ? `Comparando com ${prevKey} (${prev ? 'snapshot anterior' : ''})`
+            : 'Primeiro snapshot - comparativos aparecem amanha';
+        upd.textContent = txt;
+    }
+}
+
 // --- Section Stuck: Leads parados em Qualificacao SDR Inbound ---
 let stuckDealsCache = null;
 async function fetchStuckDealsDirect() {
@@ -5435,7 +5907,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSectionStuck(); renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {
