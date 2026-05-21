@@ -2274,6 +2274,60 @@
                     </div>
                 </div>
 
+                <!-- Section 3: Produtos Vendidos (movida para antes das Perdas) -->
+                <div class="section-card full-width" id="sec3">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128230;</span> Produtos Vendidos (MRR vs Setup)</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="kpi-row" id="productKpis"></div>
+                        <div class="chart-container"><canvas id="chartProducts"></canvas></div>
+
+                        <!-- Vendidos por Funil -->
+                        <h3 style="color:#fff;font-size:14px;margin-top:20px;margin-bottom:12px;padding-left:4px;">Vendidos por Funil</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">MRR por Funil (Vendidos)</div>
+                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdWonMrr"></canvas></div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">Setup por Funil (Vendidos)</div>
+                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdWonSetup"></canvas></div>
+                            </div>
+                        </div>
+
+                        <!-- Perdidos por Funil -->
+                        <h3 style="color:#fff;font-size:14px;margin-top:10px;margin-bottom:12px;padding-left:4px;">Perdidos por Funil</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">MRR por Funil (Perdidos)</div>
+                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdLostMrr"></canvas></div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">Setup por Funil (Perdidos)</div>
+                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdLostSetup"></canvas></div>
+                            </div>
+                        </div>
+
+                        <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection3()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableProducts"><table><thead><tr>
+                            <th>Produto</th><th>Qtd Vendas</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                        </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
+                    </div>
+                </div>
+
                 <!-- Section 2: Oportunidades Perdidas -->
                 <div class="section-card full-width" id="sec2">
                     <div class="section-header">
@@ -2361,60 +2415,6 @@
                         <div class="collapsible-table" id="tableLostByPerson"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Funil</th><th>Qtd</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyLostByPerson"></tbody></table></div>
-                    </div>
-                </div>
-
-                <!-- Section 3: Produtos Vendidos -->
-                <div class="section-card full-width" id="sec3">
-                    <div class="section-header">
-                        <h2><span class="section-num">&#128230;</span> Produtos Vendidos (MRR vs Setup)</h2>
-                        <div class="sub-filter">
-                            <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
-                                <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mês</option>
-                                <option value="lastMonth">Mês passado</option>
-                                <option value="thisQuarter">Este trimestre</option>
-                                <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Último 6 meses</option>
-                                <option value="thisYear">Este ano</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="section-body">
-                        <div class="kpi-row" id="productKpis"></div>
-                        <div class="chart-container"><canvas id="chartProducts"></canvas></div>
-
-                        <!-- Vendidos por Funil -->
-                        <h3 style="color:#fff;font-size:14px;margin-top:20px;margin-bottom:12px;padding-left:4px;">Vendidos por Funil</h3>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">MRR por Funil (Vendidos)</div>
-                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdWonMrr"></canvas></div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">Setup por Funil (Vendidos)</div>
-                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdWonSetup"></canvas></div>
-                            </div>
-                        </div>
-
-                        <!-- Perdidos por Funil -->
-                        <h3 style="color:#fff;font-size:14px;margin-top:10px;margin-bottom:12px;padding-left:4px;">Perdidos por Funil</h3>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">MRR por Funil (Perdidos)</div>
-                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdLostMrr"></canvas></div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:12px;color:#8888a0;margin-bottom:6px;">Setup por Funil (Perdidos)</div>
-                                <div style="max-height:250px;display:flex;justify-content:center;"><canvas id="chartProdLostSetup"></canvas></div>
-                            </div>
-                        </div>
-
-                        <button class="table-toggle" onclick="toggleTable('tableProducts')">Mostrar/ocultar tabela</button>
-                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection3()">&#128229; Exportar Excel</button>
-                        <div class="collapsible-table" id="tableProducts"><table><thead><tr>
-                            <th>Produto</th><th>Qtd Vendas</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
-                        </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
                     </div>
                 </div>
 
