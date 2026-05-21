@@ -2572,6 +2572,128 @@
             #secStuck .stuck-kpi { flex: 1 1 50%; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
         }
 
+        /* Capacity Planning */
+        .cap-funnel {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1000px) { .cap-funnel { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .cap-funnel { grid-template-columns: 1fr; } }
+        .cap-stage {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 16px 18px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .cap-stage .cap-stripe {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+        }
+        .cap-stage .cap-stage-label {
+            font-size: 10.5px;
+            color: #8888a0;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        .cap-stage .cap-target {
+            font-size: 30px;
+            color: #fff;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+            margin: 4px 0;
+        }
+        .cap-stage .cap-current {
+            font-size: 11.5px;
+            color: #94a3b8;
+        }
+        .cap-stage .cap-gap {
+            font-size: 11.5px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        .cap-stage .cap-progress-track {
+            background: rgba(255,255,255,0.05);
+            height: 6px;
+            border-radius: 3px;
+            margin: 8px 0 4px;
+            overflow: hidden;
+        }
+        .cap-stage .cap-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        .cap-stage .cap-pct {
+            font-size: 10.5px;
+            color: #6d6d85;
+            font-weight: 600;
+        }
+        .cap-summary {
+            background: linear-gradient(135deg, #1A1A2E 0%, #0F0F1A 100%);
+            border-radius: 12px;
+            padding: 20px 24px;
+            border-left: 5px solid #06b6d4;
+        }
+        .cap-summary-tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #06b6d4;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .cap-summary-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        .cap-summary-body {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .cap-per-vendedor-table {
+            margin-top: 18px;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12.5px;
+        }
+        .cap-per-vendedor-table th {
+            background: rgba(0,0,0,0.2);
+            color: #6d6d85;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .cap-per-vendedor-table th.num { text-align: right; }
+        .cap-per-vendedor-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #d0d0e0;
+        }
+        .cap-per-vendedor-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .cap-per-vendedor-table .vendedor-name { font-weight: 600; color: #fff; }
+        .cap-status-ok { color: #22c55e; }
+        .cap-status-warn { color: #f59e0b; }
+        .cap-status-crit { color: #ef4444; }
+
         /* Tabs dentro de Marketing */
         .mkt-tab {
             background: transparent;
@@ -3962,6 +4084,18 @@
                         </div>
                     </div>
 
+                    <!-- LINHA CAPACITY: Capacity Planning -->
+                    <div class="dash-card" style="padding:24px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px;">
+                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#fff;">&#129518;</span>
+                                Capacity Planning — agendas necessárias pra bater a meta
+                            </h2>
+                            <button class="mql-refresh-btn" onclick="openCapacityModal()" style="background:linear-gradient(135deg,#0891b2,#06b6d4);font-size:12px;padding:8px 14px;">&#9881;&#65039; Configurar</button>
+                        </div>
+                        <div id="capacityContent"></div>
+                    </div>
+
                     <!-- LINHA 3: Performance por canal (full width) -->
                     <div class="dash-card" style="padding:20px;grid-column:span 12;">
                         <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
@@ -4299,6 +4433,45 @@
                 </div>
 
                 <div class="last-update" id="afLastUpdate" style="text-align:right;color:#6d6d85;font-size:11px;margin-top:14px;"></div>
+            </div>
+        </div>
+
+        <!-- Modal: Capacity Planning config -->
+        <div class="modal-overlay" id="capacityModal">
+            <div class="modal" style="max-width:520px;">
+                <h2>&#129518; Configurar Capacity</h2>
+                <p style="color:#a0a0b8;font-size:13px;margin:8px 0 18px;">Ajuste os parâmetros pra calcular agendas/MQLs/leads necessários pra bater a meta.</p>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Nº de vendedores ativos (closers)</label>
+                        <input id="capVendedores" type="number" min="1" step="1" placeholder="4" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Meta MRR mensal por vendedor (R$)</label>
+                        <input id="capMetaMrr" type="number" min="0" step="1000" placeholder="20000" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Ticket médio MRR (R$) <span style="color:#6d6d85;text-transform:none;letter-spacing:0;font-weight:400;font-style:italic;">— deixe 0 pra usar histórico</span></label>
+                        <input id="capTicketMrr" type="number" min="0" step="100" placeholder="0" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Taxa Reunião → Ganho (%)</label>
+                        <input id="capTaxaReuniao" type="number" min="1" max="100" step="0.5" placeholder="15" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                        <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;font-style:italic;">% das agendas que viram cliente. Padrão B2B SaaS: 10-20%.</div>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Taxa MQL → Reunião (%)</label>
+                        <input id="capTaxaMql" type="number" min="1" max="100" step="0.5" placeholder="20" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:11.5px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Taxa Lead → MQL (%)</label>
+                        <input id="capTaxaLead" type="number" min="1" max="100" step="0.5" placeholder="9" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:10px 12px;border-radius:6px;font-size:15px;font-weight:600;outline:none;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:22px;">
+                    <button class="close-btn" onclick="saveCapacityConfig()" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">Salvar</button>
+                    <button class="close-btn" onclick="document.getElementById('capacityModal').classList.remove('active')" style="background:#444;">Cancelar</button>
+                </div>
             </div>
         </div>
 
@@ -9804,6 +9977,11 @@ function renderMarketing(range, rd) {
         channels, lossCounts
     });
 
+    // Capacity Planning (Lead → MQL → Agenda → Ganho vs meta dos vendedores)
+    if (typeof renderCapacityPlanning === 'function') {
+        try { renderCapacityPlanning(range, totalLeads, totalMql, totalReun); } catch (e) { console.warn('[capacity]', e.message); }
+    }
+
     // Evolucao temporal
     renderMktTimeline(allLeadsInRange, enriched, range);
 
@@ -9970,6 +10148,168 @@ function getMktEffectiveSpend(range) {
         return { total: monthly * months, byOrigin: {}, source: 'monthly', monthly, months };
     }
     return { total: 0, byOrigin: obj, source: 'none' };
+}
+
+// ==================== CAPACITY PLANNING ====================
+const CAP_KEY = 'mktCapacityConfig';
+function getCapConfig() {
+    try {
+        const o = JSON.parse(localStorage.getItem(CAP_KEY) || '{}');
+        return {
+            vendedores: parseInt(o.vendedores) || 4,
+            metaMrr: parseFloat(o.metaMrr) || 20000,
+            ticketMrr: parseFloat(o.ticketMrr) || 0, // 0 = usa histórico
+            taxaReuniao: parseFloat(o.taxaReuniao) || 15, // % agenda → ganho
+            taxaMql: parseFloat(o.taxaMql) || 20, // % MQL → reunião
+            taxaLead: parseFloat(o.taxaLead) || 9 // % Lead → MQL
+        };
+    } catch { return { vendedores: 4, metaMrr: 20000, ticketMrr: 0, taxaReuniao: 15, taxaMql: 20, taxaLead: 9 }; }
+}
+function setCapConfig(o) { localStorage.setItem(CAP_KEY, JSON.stringify(o)); }
+function openCapacityModal() {
+    const c = getCapConfig();
+    document.getElementById('capVendedores').value = c.vendedores;
+    document.getElementById('capMetaMrr').value = c.metaMrr;
+    document.getElementById('capTicketMrr').value = c.ticketMrr || '';
+    document.getElementById('capTaxaReuniao').value = c.taxaReuniao;
+    document.getElementById('capTaxaMql').value = c.taxaMql;
+    document.getElementById('capTaxaLead').value = c.taxaLead;
+    document.getElementById('capacityModal').classList.add('active');
+}
+function saveCapacityConfig() {
+    const o = {
+        vendedores: parseInt(document.getElementById('capVendedores').value) || 4,
+        metaMrr: parseFloat(document.getElementById('capMetaMrr').value) || 20000,
+        ticketMrr: parseFloat(document.getElementById('capTicketMrr').value) || 0,
+        taxaReuniao: parseFloat(document.getElementById('capTaxaReuniao').value) || 15,
+        taxaMql: parseFloat(document.getElementById('capTaxaMql').value) || 20,
+        taxaLead: parseFloat(document.getElementById('capTaxaLead').value) || 9
+    };
+    setCapConfig(o);
+    document.getElementById('capacityModal').classList.remove('active');
+    if (typeof renderMarketing === 'function') loadMarketing();
+}
+
+function renderCapacityPlanning(range, totalLeads, totalMql, totalReunMes) {
+    const c = getCapConfig();
+    // Calcula ticket médio histórico se não foi setado manualmente
+    let ticketMrr = c.ticketMrr;
+    if (!ticketMrr || ticketMrr <= 0) {
+        const wonNovosNeg = (wonDeals || []).filter(d => d.Pipeline?.Name === 'Funil de Vendas');
+        if (wonNovosNeg.length > 0) {
+            ticketMrr = wonNovosNeg.reduce((s, d) => s + (afGetMRR ? afGetMRR(d) : 0), 0) / wonNovosNeg.length;
+        } else ticketMrr = 5096; // fallback Alan
+    }
+
+    // Reverse engineering
+    const dealsPorVendedor = c.metaMrr / ticketMrr;
+    const agendasPorVendedor = dealsPorVendedor / (c.taxaReuniao / 100);
+    const mqlsPorVendedor = agendasPorVendedor / (c.taxaMql / 100);
+    const leadsPorVendedor = mqlsPorVendedor / (c.taxaLead / 100);
+
+    const metaDeals = Math.ceil(dealsPorVendedor * c.vendedores);
+    const metaAgendas = Math.ceil(agendasPorVendedor * c.vendedores);
+    const metaMqls = Math.ceil(mqlsPorVendedor * c.vendedores);
+    const metaLeads = Math.ceil(leadsPorVendedor * c.vendedores);
+
+    // Realizado no período (mensaliza)
+    const days = range && range.from && range.to ? Math.max(1, (range.to - range.from) / 86400000) : 30;
+    const factor = 30.44 / days;
+    const leadsMes = Math.round(totalLeads * factor);
+    const mqlsMes = Math.round(totalMql * factor);
+    const reunMes = Math.round(totalReunMes * factor);
+
+    const pct = (cur, target) => target > 0 ? (cur / target) * 100 : 0;
+    const cls = (p) => p >= 90 ? 'ok' : p >= 60 ? 'warn' : 'crit';
+    const color = (p) => p >= 90 ? '#22c55e' : p >= 60 ? '#f59e0b' : '#ef4444';
+
+    const stages = [
+        { label: 'Leads (mês)', cur: leadsMes, target: metaLeads, perVend: Math.round(leadsPorVendedor), stripe: '#60a5fa' },
+        { label: 'MQLs (mês)', cur: mqlsMes, target: metaMqls, perVend: Math.round(mqlsPorVendedor), stripe: '#b794f4' },
+        { label: 'Agendas/Reuniões (mês)', cur: reunMes, target: metaAgendas, perVend: Math.round(agendasPorVendedor), stripe: '#fbbf24' },
+        { label: 'Ganhos (mês)', cur: '—', target: metaDeals, perVend: Math.round(dealsPorVendedor), stripe: '#22c55e' }
+    ];
+
+    let funnelHtml = '<div class="cap-funnel">';
+    stages.forEach(s => {
+        const p = typeof s.cur === 'number' ? pct(s.cur, s.target) : 0;
+        const gapNum = typeof s.cur === 'number' ? s.target - s.cur : null;
+        const gapTxt = gapNum === null ? '' : (gapNum > 0 ? `Faltam <strong style="color:#ef4444;">${gapNum.toLocaleString('pt-BR')}</strong>` : `<strong style="color:#22c55e;">✓ Acima da meta</strong>`);
+        funnelHtml += `<div class="cap-stage">
+            <div class="cap-stripe" style="background:${s.stripe};"></div>
+            <div class="cap-stage-label">${s.label}</div>
+            <div class="cap-target">${s.target.toLocaleString('pt-BR')}</div>
+            <div class="cap-pct">meta total (${s.perVend} por vendedor)</div>
+            ${typeof s.cur === 'number' ? `<div class="cap-progress-track"><div class="cap-progress-fill" style="width:${Math.min(p,100)}%;background:${color(p)};"></div></div>` : ''}
+            ${typeof s.cur === 'number' ? `<div class="cap-current">Atual: <strong style="color:${color(p)};">${s.cur.toLocaleString('pt-BR')}</strong> · ${p.toFixed(0)}%</div>` : ''}
+            <div class="cap-gap">${gapTxt}</div>
+        </div>`;
+    });
+    funnelHtml += '</div>';
+
+    // Resumo geral
+    const agendasPct = pct(reunMes, metaAgendas);
+    const summaryCls = cls(agendasPct);
+    const summaryColor = color(agendasPct);
+    const summaryStatus = agendasPct >= 90 ? '✅ Time abastecido' : agendasPct >= 60 ? '⚠️ Subutilizado' : '🚨 Capacidade muito ociosa';
+
+    funnelHtml += `<div class="cap-summary" style="border-left-color:${summaryColor};">
+        <div class="cap-summary-tag" style="color:${summaryColor};">${summaryStatus}</div>
+        <div class="cap-summary-title">Time de <strong>${c.vendedores} vendedores</strong> precisa de <strong style="color:#06b6d4;">${metaAgendas} agendas/mês</strong> pra bater <strong>${brl(c.metaMrr * c.vendedores)}</strong> de meta total</div>
+        <div class="cap-summary-body">
+            <strong>Ritmo atual:</strong> ~${reunMes} agendas/mês = ${(reunMes / c.vendedores).toFixed(1)} agendas/vendedor (deveria ser ${Math.round(agendasPorVendedor)}).
+            <strong style="color:${summaryColor};">${agendasPct >= 100 ? 'Time tem o volume necessário.' : 'Falta ' + (metaAgendas - reunMes) + ' agendas/mês — ' + ((metaAgendas - reunMes) / c.vendedores).toFixed(1) + ' por vendedor.'}</strong>
+            <br><br>
+            <strong>Para preencher o gap</strong> com as taxas atuais (Lead→MQL ${c.taxaLead}%, MQL→Reunião ${c.taxaMql}%, Reunião→Ganho ${c.taxaReuniao}%):
+            precisaria de <strong style="color:#fbbf24;">${(metaLeads - leadsMes).toLocaleString('pt-BR')}</strong> leads a mais por mês,
+            ${(metaMqls - mqlsMes).toLocaleString('pt-BR')} MQLs a mais,
+            ${(metaAgendas - reunMes).toLocaleString('pt-BR')} agendas a mais.
+        </div>
+    </div>`;
+
+    // Tabela por vendedor (se disponível)
+    const vendedoresNomes = ['Alan', 'Bruno', 'Emil', 'Matheus'];
+    const meetingsByCreator = {};
+    (dashMeetings || []).forEach(t => {
+        const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!t.DateTime || !range || !range.from || !range.to) return;
+        const dt = new Date(t.DateTime);
+        if (dt < range.from || dt > range.to) return;
+        meetingsByCreator[t.OwnerId || t.CreatorId] = (meetingsByCreator[t.OwnerId || t.CreatorId] || 0) + 1;
+    });
+    // Resolve OwnerId -> Nome via dashUsersById
+    const meetingsByName = {};
+    Object.entries(meetingsByCreator).forEach(([uid, cnt]) => {
+        const name = (typeof dashUsersById !== 'undefined' && dashUsersById[uid]) ? dashUsersById[uid] : '';
+        const firstName = (name || '').split(' ')[0];
+        if (vendedoresNomes.some(v => firstName.toLowerCase() === v.toLowerCase())) {
+            meetingsByName[firstName] = (meetingsByName[firstName] || 0) + cnt;
+        }
+    });
+
+    let tableHtml = '<h3 style="color:#fff;font-size:13px;margin:22px 0 10px;font-weight:600;">Distribuição por vendedor (no período)</h3>';
+    tableHtml += '<table class="cap-per-vendedor-table"><thead><tr><th>Vendedor</th><th class="num">Reuniões recebidas</th><th class="num">Por mês (proj.)</th><th class="num">Meta/mês</th><th class="num">% da meta</th><th>Status</th></tr></thead><tbody>';
+    vendedoresNomes.forEach(name => {
+        const r = meetingsByName[name] || 0;
+        const proj = Math.round(r * factor);
+        const target = Math.round(agendasPorVendedor);
+        const p = target > 0 ? (proj / target) * 100 : 0;
+        const statusCls = p >= 90 ? 'cap-status-ok' : p >= 60 ? 'cap-status-warn' : 'cap-status-crit';
+        const statusTxt = p >= 90 ? 'Abastecido' : p >= 60 ? 'Subutilizado' : 'Ocioso';
+        tableHtml += `<tr>
+            <td class="vendedor-name">${name}</td>
+            <td class="num">${r}</td>
+            <td class="num">${proj}</td>
+            <td class="num">${target}</td>
+            <td class="num ${statusCls}">${p.toFixed(0)}%</td>
+            <td><span class="${statusCls}" style="font-weight:700;">${statusTxt}</span></td>
+        </tr>`;
+    });
+    tableHtml += '</tbody></table>';
+    tableHtml += `<div style="font-size:10.5px;color:#6d6d85;margin-top:8px;font-style:italic;">Ticket médio usado: ${brl(ticketMrr)} · Meta MRR/vendedor: ${brl(c.metaMrr)}/mês · Para mudar parâmetros, clique em "Configurar".</div>`;
+
+    document.getElementById('capacityContent').innerHTML = funnelHtml + tableHtml;
 }
 
 function exportMarketing() {
