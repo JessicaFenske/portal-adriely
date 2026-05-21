@@ -731,6 +731,56 @@
         }
         .funnel-pct { flex: 0 0 70px; font-size: 12px; color: #6868a0; text-align: left; }
 
+        /* Transição visual entre etapas do funil */
+        .funnel-transition {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 6px 0 6px 190px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            border-left: 3px solid;
+        }
+        .funnel-transition.conv-ok { border-left-color: #22c55e; background: rgba(34,197,94,0.06); }
+        .funnel-transition.conv-warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.06); }
+        .funnel-transition.conv-crit { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
+        .funnel-transition .ft-arrow {
+            font-size: 22px;
+            line-height: 1;
+            color: #6d6d85;
+            font-weight: 700;
+        }
+        .funnel-transition.conv-ok .ft-arrow { color: #22c55e; }
+        .funnel-transition.conv-warn .ft-arrow { color: #f59e0b; }
+        .funnel-transition.conv-crit .ft-arrow { color: #ef4444; }
+        .funnel-transition .ft-content {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .funnel-transition .ft-pct {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .funnel-transition.conv-ok .ft-pct { color: #22c55e; }
+        .funnel-transition.conv-warn .ft-pct { color: #f59e0b; }
+        .funnel-transition.conv-crit .ft-pct { color: #ef4444; }
+        .funnel-transition .ft-sep {
+            font-size: 11px;
+            color: #a0a0b8;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+        }
+        .funnel-transition .ft-numbers {
+            font-size: 11.5px;
+            color: #8888a0;
+            margin-left: 8px;
+        }
+
         /* Pipeline selector */
         .pipeline-selector { display: flex; gap: 6px; }
         .pipeline-tab {
@@ -2189,6 +2239,41 @@
                     </div>
                 </div>
 
+                <!-- Section 4: Ranking de Vendedores (movida para 2a posicao) -->
+                <div class="section-card full-width" id="sec4">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#127942;</span> Ranking de Vendedores</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                            <div>
+                                <h3 style="color:#4ade80;font-size:15px;margin-bottom:10px;text-align:center;">&#128176; Ranking por MRR</h3>
+                                <div class="chart-container"><canvas id="chartRankingMrr"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 style="color:#818cf8;font-size:15px;margin-bottom:10px;text-align:center;">&#128181; Ranking por Setup</h3>
+                                <div class="chart-container"><canvas id="chartRankingSetup"></canvas></div>
+                            </div>
+                        </div>
+                        <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection4()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableRanking"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negócios</th>
+                        </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
+                    </div>
+                </div>
+
                 <!-- Section 2: Oportunidades Perdidas -->
                 <div class="section-card full-width" id="sec2">
                     <div class="section-header">
@@ -2330,41 +2415,6 @@
                         <div class="collapsible-table" id="tableProducts"><table><thead><tr>
                             <th>Produto</th><th>Qtd Vendas</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
                         </tr></thead><tbody id="tbodyProducts"></tbody></table></div>
-                    </div>
-                </div>
-
-                <!-- Section 4: Ranking de Vendedores -->
-                <div class="section-card full-width" id="sec4">
-                    <div class="section-header">
-                        <h2><span class="section-num">&#127942;</span> Ranking de Vendedores</h2>
-                        <div class="sub-filter">
-                            <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
-                                <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mês</option>
-                                <option value="lastMonth">Mês passado</option>
-                                <option value="thisQuarter">Este trimestre</option>
-                                <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Último 6 meses</option>
-                                <option value="thisYear">Este ano</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="section-body">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-                            <div>
-                                <h3 style="color:#4ade80;font-size:15px;margin-bottom:10px;text-align:center;">&#128176; Ranking por MRR</h3>
-                                <div class="chart-container"><canvas id="chartRankingMrr"></canvas></div>
-                            </div>
-                            <div>
-                                <h3 style="color:#818cf8;font-size:15px;margin-bottom:10px;text-align:center;">&#128181; Ranking por Setup</h3>
-                                <div class="chart-container"><canvas id="chartRankingSetup"></canvas></div>
-                            </div>
-                        </div>
-                        <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
-                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection4()">&#128229; Exportar Excel</button>
-                        <div class="collapsible-table" id="tableRanking"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negócios</th>
-                        </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
                     </div>
                 </div>
 
@@ -2710,7 +2760,7 @@
                 </div>
 
                 <!-- Section 8: Reuniões por SDR e Segmento -->
-                <div class="section-card" id="sec8">
+                <div class="section-card full-width" id="sec8">
                     <div class="section-header">
                         <h2><span class="section-num">&#127919;</span> Reuniões por SDR e Segmento</h2>
                         <div class="sub-filter">
@@ -5875,18 +5925,38 @@ function renderSection9() {
     const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
     const purpleShades = ['#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#6366f1','#818cf8','#a78bfa'];
 
-    document.getElementById('funnelContainer').innerHTML = funnelFinal.map((stage, i) => {
+    // Funil visual com transicoes explicitas entre etapas
+    const html = [];
+    funnelFinal.forEach((stage, i) => {
         const pct = maxCount > 0 ? (stage.count / maxCount * 100) : 0;
-        const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
-            ? ((funnelFinal[i + 1].count / funnelFinal[i].count) * 100).toFixed(1) + '%' : '-';
         const color = purpleShades[i % purpleShades.length];
         const escapedStage = stage.name.replace(/'/g, "\\'");
-        return `<div class="funnel-stage" style="cursor:pointer;" onclick="showStageDrilldown('${activeFunnelPipeline.replace(/'/g, "\\'")}', '${escapedStage}')">
+        html.push(`<div class="funnel-stage" style="cursor:pointer;" onclick="showStageDrilldown('${activeFunnelPipeline.replace(/'/g, "\\'")}', '${escapedStage}')">
             <div class="funnel-label">${stage.name}</div>
             <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.max(pct, 5)}%;background:${color};">${stage.count}</div></div>
-            <div class="funnel-pct">${convPct !== '-' ? convPct + ' conv.' : ''}</div>
-        </div>`;
-    }).join('');
+            <div class="funnel-pct"></div>
+        </div>`);
+        // Transicao entre etapas
+        if (i < funnelFinal.length - 1) {
+            const currCount = stage.count;
+            const nextCount = funnelFinal[i + 1].count;
+            const advanced = nextCount;
+            const lost = currCount - nextCount;
+            const convPct = currCount > 0 ? (nextCount / currCount) * 100 : 0;
+            let convClass = 'conv-ok';
+            if (convPct < 20) convClass = 'conv-crit';
+            else if (convPct < 50) convClass = 'conv-warn';
+            html.push(`<div class="funnel-transition ${convClass}">
+                <div class="ft-arrow">&darr;</div>
+                <div class="ft-content">
+                    <span class="ft-pct">${convPct.toFixed(1)}%</span>
+                    <span class="ft-sep">converteram</span>
+                    <span class="ft-numbers">${advanced} de ${currCount} avançaram${lost > 0 ? ' &middot; ' + lost + ' caíram aqui' : ''}</span>
+                </div>
+            </div>`);
+        }
+    });
+    document.getElementById('funnelContainer').innerHTML = html.join('');
 
     window._sec9_funnelData = funnelFinal.map((stage, i) => {
         const convPct = i < funnelFinal.length - 1 && funnelFinal[i].count > 0
