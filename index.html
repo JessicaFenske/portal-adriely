@@ -1450,6 +1450,14 @@
         #view-analise-funil .af-scenario-card.otimista .sc-label { color: #10b981; }
         #view-analise-funil .af-scenario-card.realista .sc-label { color: #f59e0b; }
         #view-analise-funil .af-scenario-card.pessimista .sc-label { color: #ef4444; }
+        #view-analise-funil .af-scenario-card .sc-desc {
+            font-size: 11.5px;
+            color: #94a3b8;
+            line-height: 1.4;
+            font-style: italic;
+            margin-bottom: 8px;
+            min-height: 32px;
+        }
         #view-analise-funil .af-scenario-card .sc-count {
             font-size: 13px;
             color: #94a3b8;
@@ -4245,7 +4253,7 @@
                 <!-- SLIDE 7 estilo PPT: Cenários (Otimista / Realista / Pessimista) -->
                 <div class="af-slide">
                     <h2 class="af-slide-title">7. Cenários de fechamento</h2>
-                    <div class="af-slide-sub">Somatório por cenário definido manualmente no Ploomes (campo "Forecast" do deal)</div>
+                    <div class="af-slide-sub">Classificação manual do vendedor — <strong style="color:#ef4444;">Pessimista</strong> (mínimo se nada der certo) → <strong style="color:#f59e0b;">Realista</strong> (mais provável, com risco residual) → <strong style="color:#10b981;">Otimista</strong> (teto se tudo der certo)</div>
                     <div id="afScenariosGrid" class="af-scenarios-grid" style="margin-top:14px;"></div>
                     <div id="afScenariosBanner" class="af-banner af-banner-dark" style="display:none;margin-top:14px;">
                         <div class="af-banner-tag" style="color:#fbbf24;">RESUMO</div>
@@ -9224,10 +9232,11 @@ function renderAfScenarios(openDeals, meta) {
     const sumMrr = (arr) => arr.reduce((s, d) => s + afGetMRR(d), 0);
     const sumSetup = (arr) => arr.reduce((s, d) => s + afGetSetup(d), 0);
 
+    // Ordem visual: Pessimista (mínimo) → Realista (provável) → Otimista (teto)
     const data = [
-        { key: 'otimista', label: 'OTIMISTA', cls: 'otimista', deals: buckets.otimista },
-        { key: 'realista', label: 'REALISTA', cls: 'realista', deals: buckets.realista },
-        { key: 'pessimista', label: 'PESSIMISTA', cls: 'pessimista', deals: buckets.pessimista }
+        { key: 'pessimista', label: 'PESSIMISTA', desc: 'Mínimo se nada der certo — chão garantido do mês', cls: 'pessimista', deals: buckets.pessimista },
+        { key: 'realista', label: 'REALISTA', desc: 'Tudo indica fechamento, mas com risco residual', cls: 'realista', deals: buckets.realista },
+        { key: 'otimista', label: 'OTIMISTA', desc: 'Se tudo der certo — teto e desejo do vendedor', cls: 'otimista', deals: buckets.otimista }
     ];
 
     grid.innerHTML = data.map(s => {
@@ -9243,6 +9252,7 @@ function renderAfScenarios(openDeals, meta) {
         return `<div class="af-scenario-card ${s.cls}">
             <div class="stripe"></div>
             <div class="sc-label">${s.label}</div>
+            <div class="sc-desc">${s.desc}</div>
             <div class="sc-count">${s.deals.length} ${s.deals.length === 1 ? 'deal' : 'deals'}</div>
             <div class="sc-mrr">${brlFull(mrr)}</div>
             <div class="sc-sub">MRR somado</div>
@@ -9264,27 +9274,26 @@ function renderAfScenarios(openDeals, meta) {
             banner.querySelector('.af-banner-tag').style.color = '#f59e0b';
             document.getElementById('afScenariosBannerTitle').textContent = 'Nenhum deal tem cenário definido';
             document.getElementById('afScenariosBannerBody').innerHTML = 'O campo <strong>Forecast</strong> (Otimista/Realista/Pessimista) não está preenchido em nenhum deal deste funil. Preencher esse campo é o que permite forecast por cenário — o vendedor avalia caso a caso a chance real de fechar.';
-        } else if (semCenario > 0) {
-            const mrrOtim = sumMrr(buckets.otimista);
-            const mrrReal = sumMrr(buckets.realista);
-            const mrrPess = sumMrr(buckets.pessimista);
-            banner.style.display = 'block';
-            banner.className = 'af-banner af-banner-dark';
-            banner.querySelector('.af-banner-tag').textContent = 'RESUMO';
-            banner.querySelector('.af-banner-tag').style.color = '#fbbf24';
-            document.getElementById('afScenariosBannerTitle').textContent = `Range: ${brlFull(mrrPess)}  →  ${brlFull(mrrReal)}  →  ${brlFull(mrrOtim)}`;
-            const semCenarioPct = (semCenario / openDeals.length) * 100;
-            document.getElementById('afScenariosBannerBody').innerHTML = `${totalComCenario} de ${openDeals.length} deals (${(100 - semCenarioPct).toFixed(0)}%) com cenário definido. ${semCenario > 0 ? `<strong>${semCenario} deals sem cenário</strong> — pedir vendedores classificarem.` : ''}`;
         } else {
             const mrrOtim = sumMrr(buckets.otimista);
             const mrrReal = sumMrr(buckets.realista);
             const mrrPess = sumMrr(buckets.pessimista);
+            const rangeTxt = `<strong style="color:#ef4444;">${brlFull(mrrPess)}</strong> (chão) → <strong style="color:#f59e0b;">${brlFull(mrrReal)}</strong> (provável) → <strong style="color:#10b981;">${brlFull(mrrOtim)}</strong> (teto)`;
             banner.style.display = 'block';
-            banner.className = 'af-banner af-banner-ok';
-            banner.querySelector('.af-banner-tag').textContent = 'PIPELINE CLASSIFICADO';
-            banner.querySelector('.af-banner-tag').style.color = '#22c55e';
-            document.getElementById('afScenariosBannerTitle').textContent = `Range: ${brlFull(mrrPess)}  →  ${brlFull(mrrReal)}  →  ${brlFull(mrrOtim)}`;
-            document.getElementById('afScenariosBannerBody').innerHTML = '100% dos deals abertos têm cenário definido. Forecast por cenário é confiável.';
+            if (semCenario > 0) {
+                banner.className = 'af-banner af-banner-dark';
+                banner.querySelector('.af-banner-tag').textContent = 'RESUMO';
+                banner.querySelector('.af-banner-tag').style.color = '#fbbf24';
+                document.getElementById('afScenariosBannerTitle').innerHTML = rangeTxt;
+                const semCenarioPct = (semCenario / openDeals.length) * 100;
+                document.getElementById('afScenariosBannerBody').innerHTML = `${totalComCenario} de ${openDeals.length} deals (${(100 - semCenarioPct).toFixed(0)}%) com cenário definido. <strong>${semCenario} deals sem cenário</strong> — pedir aos vendedores classificarem. Aposta segura do mês = Pessimista. Compromisso = Realista. Stretch = Otimista.`;
+            } else {
+                banner.className = 'af-banner af-banner-ok';
+                banner.querySelector('.af-banner-tag').textContent = 'PIPELINE CLASSIFICADO';
+                banner.querySelector('.af-banner-tag').style.color = '#22c55e';
+                document.getElementById('afScenariosBannerTitle').innerHTML = rangeTxt;
+                document.getElementById('afScenariosBannerBody').innerHTML = '100% dos deals abertos têm cenário definido. <strong>Aposta segura do mês = Pessimista. Compromisso = Realista. Stretch = Otimista.</strong>';
+            }
         }
     }
 }
