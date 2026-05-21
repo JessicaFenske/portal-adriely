@@ -4304,10 +4304,22 @@
 
         <!-- Modal: Investimento em mídia (fora do view pra não colidir com tabs) -->
         <div class="modal-overlay" id="mktSpendModal">
-            <div class="modal" style="max-width:520px;">
+            <div class="modal" style="max-width:560px;">
                 <h2>&#128184; Investimento em mídia</h2>
-                <p style="color:#a0a0b8;font-size:13px;margin:8px 0 14px;">Informe o valor gasto por canal no período. Os valores são salvos localmente e usados pra calcular CPL/CAC/ROI.</p>
-                <div id="mktSpendForm" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;"></div>
+
+                <!-- Opção rápida: investimento total / mensal -->
+                <div style="background:rgba(108,63,181,0.08);border:1px solid rgba(108,63,181,0.3);border-radius:10px;padding:14px 16px;margin:14px 0 18px;">
+                    <div style="font-size:11.5px;color:#b794f4;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Modo rápido (sem detalhar por canal)</div>
+                    <div style="font-size:12px;color:#cbd5e1;margin-bottom:10px;">Se você não tem o detalhamento por canal, informe o gasto mensal médio. O sistema multiplica pelos meses do período selecionado.</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:13px;color:#94a3b8;">Investimento médio MENSAL: R$</span>
+                        <input id="mktSpendMonthly" type="number" min="0" step="100" placeholder="0" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid #555;color:#fff;padding:8px 10px;border-radius:6px;font-size:14px;font-weight:600;text-align:right;outline:none;">
+                    </div>
+                    <div style="font-size:10.5px;color:#6d6d85;margin-top:8px;font-style:italic;">Ex: 15000 (15 mil/mês) — usado se não houver detalhamento por canal abaixo.</div>
+                </div>
+
+                <p style="color:#a0a0b8;font-size:12.5px;margin:0 0 12px;">Ou detalhe por canal (mais preciso — permite CPL/CAC/ROI individuais):</p>
+                <div id="mktSpendForm" style="display:flex;flex-direction:column;gap:10px;max-height:45vh;overflow-y:auto;"></div>
                 <div style="display:flex;gap:10px;margin-top:18px;">
                     <button class="close-btn" onclick="saveMktSpend()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">Salvar</button>
                     <button class="close-btn" onclick="closeMktSpendModal()" style="background:#444;">Cancelar</button>
@@ -9650,9 +9662,11 @@ function renderMarketing(range, rd) {
     const totalPerd = enriched.filter(e => e.lost).length;
     const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
 
-    // Spend total
-    const spendByOrigin = getMktSpend();
-    const totalSpend = Object.values(spendByOrigin).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    // Spend total (com fallback pra investimento mensal medio se nao houver detalhamento por canal)
+    const effSpend = getMktEffectiveSpend(range);
+    const spendByOrigin = {};
+    Object.entries(effSpend.byOrigin || {}).forEach(([k,v]) => { if (k !== '__monthly__') spendByOrigin[k] = v; });
+    const totalSpend = effSpend.total;
 
     // KPIs estrategicos
     const mqlRate = totalLeads > 0 ? (totalMql / totalLeads) * 100 : NaN;
@@ -9897,6 +9911,9 @@ function openMktSpendModal() {
     const allLeads = mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range));
     const origins = [...new Set(allLeads.map(p => p.Origin?.Name || '(sem origem)'))].sort();
     const saved = getMktSpend();
+    // Preenche o input de gasto mensal (modo rapido)
+    const monthlyInput = document.getElementById('mktSpendMonthly');
+    if (monthlyInput) monthlyInput.value = saved.__monthly__ || '';
     document.getElementById('mktSpendForm').innerHTML = origins.map(o => `
         <div style="display:flex;align-items:center;gap:10px;">
             <label style="flex:1;color:#e0e0e0;font-size:13px;">${o}</label>
@@ -9916,9 +9933,27 @@ function saveMktSpend() {
         const v = parseFloat(i.value) || 0;
         if (v > 0) obj[i.dataset.origin] = v;
     });
+    // Modo rápido: gasto mensal único
+    const monthlyVal = parseFloat(document.getElementById('mktSpendMonthly')?.value) || 0;
+    if (monthlyVal > 0) obj.__monthly__ = monthlyVal;
     setMktSpend(obj);
     closeMktSpendModal();
     loadMarketing();
+}
+
+// Calcula o spend efetivo do periodo: prioriza canais detalhados, senao usa o mensal x meses do range
+function getMktEffectiveSpend(range) {
+    const obj = getMktSpend() || {};
+    let byOriginSum = 0;
+    Object.entries(obj).forEach(([k, v]) => { if (k !== '__monthly__') byOriginSum += parseFloat(v) || 0; });
+    if (byOriginSum > 0) return { total: byOriginSum, byOrigin: obj, source: 'channels' };
+    const monthly = parseFloat(obj.__monthly__) || 0;
+    if (monthly > 0 && range && range.from && range.to) {
+        const days = Math.max(1, (range.to - range.from) / 86400000);
+        const months = days / 30.44;
+        return { total: monthly * months, byOrigin: {}, source: 'monthly', monthly, months };
+    }
+    return { total: 0, byOrigin: obj, source: 'none' };
 }
 
 function exportMarketing() {
