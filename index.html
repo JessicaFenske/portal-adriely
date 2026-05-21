@@ -8322,6 +8322,30 @@ function switchMktTab(tab) {
 
 // ==================== ANALISE DE FUNIL ====================
 const AF_SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+const AF_PIPELINE_IDS = {
+    'Funil de Vendas': 60009389,
+    'Sankhya': 60009518,
+    'Farmer': 60009513,
+    'Farmer IPCA': 60009522
+};
+let afOpenDealsCache = null;
+
+async function fetchAfOpenDealsDirect() {
+    // Busca todos deals abertos dos 4 funis de vendas via API
+    const ids = Object.values(AF_PIPELINE_IDS);
+    const filter = encodeURIComponent('StatusId eq 1 and (' + ids.map(id => 'PipelineId eq ' + id).join(' or ') + ')');
+    const expand = encodeURIComponent('Stage,Owner,Origin,Contact,Pipeline,OtherProperties');
+    const sel = encodeURIComponent('Id,Title,ContactId,ContactName,PersonId,PersonName,StageId,PipelineId,OwnerId,OriginId,DaysInStage,HasScheduledTasks,FirstTaskDate,CreateDate,LastUpdateDate,Amount');
+    let all = []; let skip = 0;
+    while (skip < 3000) {
+        const r = await fetch(`/api/Deals?%24filter=${filter}&%24expand=${expand}&%24select=${sel}&%24top=200&%24skip=${skip}`).then(r => r.json());
+        const arr = r.value || [];
+        all = all.concat(arr);
+        if (arr.length < 200) break;
+        skip += 200;
+    }
+    return all;
+}
 const AF_META_KEY = 'afMetaByPipeline';
 let afActivePipeline = 'Funil de Vendas';
 let afChartHistoryInstance = null;
@@ -8361,8 +8385,17 @@ async function loadAnaliseFunil() {
     // Reutiliza dados do dashboard se possivel
     if (!dashLoaded) {
         document.getElementById('afLoadingMsg').textContent = 'Carregando dados do dashboard...';
-        await loadDashboard();
-        dashLoaded = true;
+        try { await loadDashboard(); dashLoaded = true; } catch (e) { console.warn('[af] dashboard load failed:', e.message); }
+    }
+
+    // Fallback: se dashOpenDeals nao tem nenhum dos funis de vendas, busca direto na API
+    const hasAnyPipeline = (dashOpenDeals || []).some(d => AF_SALES_PIPELINES.includes(d.Pipeline?.Name));
+    if (!hasAnyPipeline && !afOpenDealsCache) {
+        document.getElementById('afLoadingMsg').textContent = 'Buscando deals abertos direto do Ploomes...';
+        try {
+            afOpenDealsCache = await fetchAfOpenDealsDirect();
+            console.log('[af] fallback API:', afOpenDealsCache.length, 'deals');
+        } catch (e) { console.warn('[af] fallback failed:', e.message); afOpenDealsCache = []; }
     }
 
     // Renderiza tabs de pipeline
@@ -8382,6 +8415,14 @@ async function loadAnaliseFunil() {
     renderAnaliseFunil();
 }
 
+// Retorna a fonte correta de open deals (cache do dashboard ou fallback API)
+function afGetOpenDealsSource() {
+    if (dashOpenDeals && dashOpenDeals.some(d => AF_SALES_PIPELINES.includes(d.Pipeline?.Name))) {
+        return dashOpenDeals;
+    }
+    return afOpenDealsCache || [];
+}
+
 function setAfPipeline(p) {
     afActivePipeline = p;
     document.querySelectorAll('#afPipelineTabs .af-pipeline-tab').forEach(b => {
@@ -8396,8 +8437,9 @@ function populateAfOwnerFilter() {
     const sel = document.getElementById('afOwnerFilter');
     if (!sel) return;
     const current = sel.value;
+    const openSrc = afGetOpenDealsSource();
     const owners = [...new Set(
-        [...wonDeals, ...lostDeals, ...dashOpenDeals]
+        [...(wonDeals||[]), ...(lostDeals||[]), ...openSrc]
             .filter(d => d.Pipeline?.Name === afActivePipeline)
             .map(d => d.Owner?.Name).filter(Boolean)
     )].sort();
@@ -8443,9 +8485,10 @@ function renderAnaliseFunil() {
     const ownerFilter = document.getElementById('afOwnerFilter').value;
     const pipeline = afActivePipeline;
 
-    // Filtra deals
+    // Filtra deals (fonte: dashOpenDeals OU afOpenDealsCache em fallback)
     const ownMatch = d => !ownerFilter || d.Owner?.Name === ownerFilter;
-    const openDeals = (dashOpenDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const openSrc = afGetOpenDealsSource();
+    const openDeals = openSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
     const wonAll = (wonDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
     const lostAll = (lostDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
 
