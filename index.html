@@ -2328,6 +2328,58 @@
                     </div>
                 </div>
 
+                <!-- Section 5: Propostas Enviadas (movida para antes das Perdas) -->
+                <div class="section-card" id="sec5">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128196;</span> Propostas Enviadas</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartProposals"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableProposals')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableProposals"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th>Propostas</th><th>MRR</th><th>Setup</th>
+                        </tr></thead><tbody id="tbodyProposals"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 5b: Propostas por Vendedor - Valor (movida para antes das Perdas) -->
+                <div class="section-card" id="sec5b">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128176;</span> Propostas - Valor por Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec5b" onchange="renderSection5b()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="chart-container"><canvas id="chartProposalsValue"></canvas></div>
+                        <button class="table-toggle" onclick="toggleTable('tableProposalsValue')">Mostrar/ocultar tabela</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5b()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableProposalsValue"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
+                        </tr></thead><tbody id="tbodyProposalsValue"></tbody></table></div>
+                    </div>
+                </div>
+
                 <!-- Section 2: Oportunidades Perdidas -->
                 <div class="section-card full-width" id="sec2">
                     <div class="section-header">
@@ -2418,32 +2470,6 @@
                     </div>
                 </div>
 
-                <!-- Section 5: Propostas Enviadas -->
-                <div class="section-card" id="sec5">
-                    <div class="section-header">
-                        <h2><span class="section-num">&#128196;</span> Propostas Enviadas</h2>
-                        <div class="sub-filter">
-                            <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
-                                <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mês</option>
-                                <option value="lastMonth">Mês passado</option>
-                                <option value="thisQuarter">Este trimestre</option>
-                                <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Último 6 meses</option>
-                                <option value="thisYear">Este ano</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="section-body">
-                        <div class="chart-container"><canvas id="chartProposals"></canvas></div>
-                        <button class="table-toggle" onclick="toggleTable('tableProposals')">Mostrar/ocultar tabela</button>
-                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5()">&#128229; Exportar Excel</button>
-                        <div class="collapsible-table" id="tableProposals"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Vendedor</th><th>Propostas</th><th>MRR</th><th>Setup</th>
-                        </tr></thead><tbody id="tbodyProposals"></tbody></table></div>
-                    </div>
-                </div>
-
                 <!-- Section 6: Perdidos por Vendedor -->
                 <div class="section-card" id="sec6">
                     <div class="section-header">
@@ -2467,32 +2493,6 @@
                         <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th><th>MRR</th><th>Setup</th>
                         </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
-                    </div>
-                </div>
-
-                <!-- Section 5b: Propostas por Vendedor - Valor (MRR + Setup) -->
-                <div class="section-card" id="sec5b">
-                    <div class="section-header">
-                        <h2><span class="section-num">&#128176;</span> Propostas - Valor por Vendedor</h2>
-                        <div class="sub-filter">
-                            <select class="section-period-select" id="periodSec5b" onchange="renderSection5b()">
-                                <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mês</option>
-                                <option value="lastMonth">Mês passado</option>
-                                <option value="thisQuarter">Este trimestre</option>
-                                <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Último 6 meses</option>
-                                <option value="thisYear">Este ano</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="section-body">
-                        <div class="chart-container"><canvas id="chartProposalsValue"></canvas></div>
-                        <button class="table-toggle" onclick="toggleTable('tableProposalsValue')">Mostrar/ocultar tabela</button>
-                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection5b()">&#128229; Exportar Excel</button>
-                        <div class="collapsible-table" id="tableProposalsValue"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th>
-                        </tr></thead><tbody id="tbodyProposalsValue"></tbody></table></div>
                     </div>
                 </div>
 
