@@ -1280,6 +1280,50 @@
             line-height: 1.55;
         }
 
+        /* Mini insights de pipeline (após o ALERTA) */
+        #view-analise-funil .af-mini-insights {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        #view-analise-funil .af-mini-insight {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-left: 3px solid;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        #view-analise-funil .af-mini-insight.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.05); }
+        #view-analise-funil .af-mini-insight.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.05); }
+        #view-analise-funil .af-mini-insight.ok   { border-left-color: #22c55e; background: rgba(34,197,94,0.05); }
+        #view-analise-funil .af-mini-insight.info { border-left-color: #60a5fa; background: rgba(96,165,250,0.05); }
+        #view-analise-funil .af-mini-insight .mi-icon {
+            font-size: 18px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        #view-analise-funil .af-mini-insight .mi-content { flex: 1; }
+        #view-analise-funil .af-mini-insight .mi-title {
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            line-height: 1.3;
+        }
+        #view-analise-funil .af-mini-insight .mi-body {
+            color: #c0c0d0;
+            font-size: 11.5px;
+            line-height: 1.45;
+        }
+        #view-analise-funil .af-mini-insight .mi-highlight {
+            color: #fff;
+            font-weight: 700;
+        }
+
         /* Histórico layout (chart + ticket card) */
         #view-analise-funil .af-hist-layout {
             display: grid;
@@ -4020,7 +4064,7 @@
 
             <div id="afContentArea" style="display:none;padding:0 30px 30px;">
 
-                <!-- SLIDE 2 estilo PPT: Foto atual + alert banner -->
+                <!-- SLIDE 2 estilo PPT: Foto atual + alert banner + mini insights -->
                 <div class="af-slide">
                     <h2 class="af-slide-title">1. Foto atual do pipeline</h2>
                     <div class="af-slide-sub" id="afSlide2Sub">&nbsp;</div>
@@ -4030,6 +4074,7 @@
                         <div class="af-banner-title" id="afStageAlertTitle"></div>
                         <div class="af-banner-body" id="afStageAlertBody"></div>
                     </div>
+                    <div id="afStageInsights" class="af-mini-insights"></div>
                 </div>
 
                 <!-- SLIDE 3 estilo PPT: Histórico de performance -->
@@ -8607,7 +8652,6 @@ function renderAnaliseFunil() {
         }).join('');
 
     // Banner ALERTA: deals em CONSIDERAÇÃO+ sem MRR preenchido
-    // (em Reconhecimento é normal não ter valor porque a proposta ainda não foi apresentada)
     const semValorAdv = dealsNeedingValue.length - dealsWithValueAdv;
     const alertEl = document.getElementById('afStageAlert');
     if (alertEl) {
@@ -8618,6 +8662,24 @@ function renderAnaliseFunil() {
         } else {
             alertEl.style.display = 'none';
         }
+    }
+
+    // === Mini-insights de pipeline (visão executiva/revenue) ===
+    const miniInsights = generateAfStageInsights({
+        openDeals, wonAll, lostAll, activeStages, allStagesOrdered,
+        avgCycle, ticketMrr, ownerFilter, pipeline, totalMrrPipeline
+    });
+    const stageInsEl = document.getElementById('afStageInsights');
+    if (stageInsEl) {
+        stageInsEl.innerHTML = miniInsights.map(t =>
+            `<div class="af-mini-insight ${t.level}">
+                <div class="mi-icon">${t.icon}</div>
+                <div class="mi-content">
+                    <div class="mi-title">${t.title}</div>
+                    <div class="mi-body">${t.body}</div>
+                </div>
+            </div>`
+        ).join('');
     }
 
     // === Forecast probabilístico ===
@@ -9013,6 +9075,156 @@ function renderAnaliseFunil() {
     }
 
     document.getElementById('afLastUpdate').textContent = 'Última atualização: ' + new Date().toLocaleString('pt-BR') + ' · ' + (ownerFilter || 'Todos executivos') + ' · ' + pipeline;
+}
+
+function generateAfStageInsights(m) {
+    const tips = [];
+    const now = Date.now();
+    const openDeals = m.openDeals;
+
+    // 1) Tempo medio na etapa (por estagio)
+    if (m.activeStages.length > 0) {
+        const stageWithLongest = m.activeStages
+            .map(s => {
+                const dealsInStage = openDeals.filter(d => d.Stage?.Name === s.name);
+                if (dealsInStage.length === 0) return null;
+                const avg = dealsInStage.reduce((sum, d) => sum + (d.DaysInStage || 0), 0) / dealsInStage.length;
+                return { stage: s.name, count: dealsInStage.length, avg, deals: dealsInStage };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.avg - a.avg)[0];
+        if (stageWithLongest && stageWithLongest.avg > 0) {
+            const level = stageWithLongest.avg > 30 ? 'crit' : stageWithLongest.avg > 14 ? 'warn' : 'ok';
+            tips.push({
+                icon: '⏱️', level,
+                title: `Tempo médio em "${stageWithLongest.stage}": <span class="mi-highlight">${stageWithLongest.avg.toFixed(0)} dias</span>`,
+                body: `${stageWithLongest.count} deals nessa etapa. ${stageWithLongest.avg > 30 ? 'Acima do esperado — vendedor precisa destravar ou descartar.' : stageWithLongest.avg > 14 ? 'Atenção: começando a estagnar.' : 'Velocity saudável.'}`
+            });
+        }
+    }
+
+    // 2) Deals parados ha mais de 30 dias na etapa
+    const stuck30 = openDeals.filter(d => (d.DaysInStage || 0) >= 30);
+    if (stuck30.length > 0) {
+        const stuckMrr = stuck30.reduce((s, d) => s + afGetMRR(d), 0);
+        tips.push({
+            icon: '🐌', level: 'crit',
+            title: `<span class="mi-highlight">${stuck30.length} deals parados há +30 dias</span> na etapa atual`,
+            body: `Total de <span class="mi-highlight">${brlFull(stuckMrr)}</span> em MRR estagnado. Decisão binária: acelerar com proposta agressiva ou descartar para não inflar pipeline morto.`
+        });
+    }
+
+    // 3) Idade do deal desde criacao vs ciclo medio
+    if (m.avgCycle > 0) {
+        const oldDeals = openDeals.filter(d => {
+            const days = (now - new Date(d.CreateDate).getTime()) / 86400000;
+            return days > m.avgCycle * 1.3;
+        });
+        if (oldDeals.length > 0) {
+            tips.push({
+                icon: '⏳', level: 'warn',
+                title: `<span class="mi-highlight">${oldDeals.length} deals</span> acima do ciclo médio (${m.avgCycle.toFixed(0)}d)`,
+                body: `Deals que excederam 30% do ciclo padrão tendem a morrer. Provavelmente já deveriam ter fechado ou sido descartados.`
+            });
+        }
+    }
+
+    // 4) Concentracao de MRR nos top 3 deals
+    const dealsWithMrr = openDeals.map(d => ({ d, mrr: afGetMRR(d) })).filter(x => x.mrr > 0).sort((a, b) => b.mrr - a.mrr);
+    if (dealsWithMrr.length >= 3) {
+        const top3Sum = dealsWithMrr.slice(0, 3).reduce((s, x) => s + x.mrr, 0);
+        const totalMrr = dealsWithMrr.reduce((s, x) => s + x.mrr, 0);
+        const ratio = top3Sum / totalMrr;
+        if (ratio > 0.6) {
+            const topNames = dealsWithMrr.slice(0, 3).map(x => x.d.Contact?.Name || x.d.ContactName || '?').filter(n => n !== '?').slice(0, 3);
+            tips.push({
+                icon: '⚖️', level: 'warn',
+                title: `Top 3 deals = <span class="mi-highlight">${(ratio*100).toFixed(0)}% do MRR do pipeline</span>`,
+                body: `${topNames.join(', ')}. Concentração alta — se um cair, o mês cai junto. Tratar como contas críticas.`
+            });
+        }
+    }
+
+    // 5) Etapa proxima do fechamento vazia ou com poucos deals
+    const aprovExists = m.activeStages.find(s => /aprov|formaliz/i.test(s.name));
+    if (!aprovExists || aprovExists.count <= 1) {
+        const count = aprovExists ? aprovExists.count : 0;
+        tips.push({
+            icon: '🚨', level: 'crit',
+            title: `Apenas <span class="mi-highlight">${count} deal(s)</span> em Aprovado/Formalização`,
+            body: 'Sem deals em etapas finais, fechamento do mês é improvável. Foco em acelerar deals de Consideração com proposta agressiva esta semana.'
+        });
+    }
+
+    // 6) Etapa congestionada (mais de X deals comparado as outras)
+    if (m.activeStages.length >= 2) {
+        const avgPerStage = openDeals.length / m.activeStages.length;
+        const congested = m.activeStages.find(s => s.count > avgPerStage * 2 && s.count >= 5);
+        if (congested) {
+            tips.push({
+                icon: '🚦', level: 'warn',
+                title: `Acumulo em "${congested.stage || congested.name}": <span class="mi-highlight">${congested.count} deals</span>`,
+                body: `Etapa congestionada — pode indicar que deals estão estagnando aqui. Velocity ${(congested.deals?.[0]?.daysInStage || 0).toFixed(0)}d. Forçar próximos passos ou criar critério de descarte.`
+            });
+        }
+    }
+
+    // 7) Carga por executivo (se filtro for "Todos")
+    if (!m.ownerFilter && openDeals.length >= 6) {
+        const ownerCount = {};
+        openDeals.forEach(d => { const o = d.Owner?.Name; if (o) ownerCount[o] = (ownerCount[o] || 0) + 1; });
+        const sorted = Object.entries(ownerCount).sort((a,b) => b[1] - a[1]);
+        if (sorted.length >= 2) {
+            const max = sorted[0][1];
+            const min = sorted[sorted.length-1][1];
+            if (max >= min * 2.5 && max >= 5) {
+                tips.push({
+                    icon: '👥', level: 'warn',
+                    title: `Carga desbalanceada: <span class="mi-highlight">${sorted[0][0].split(' ')[0]} com ${max} deals</span>`,
+                    body: `${sorted[sorted.length-1][0].split(' ')[0]} tem ${min}. Rebalancear melhora qualidade do follow-up — referência saudável é 25-35 deals ativos por executivo.`
+                });
+            }
+        }
+    }
+
+    // 8) Deal mais antigo com nome (acao concreta)
+    const oldest = [...openDeals].sort((a,b) => new Date(a.CreateDate) - new Date(b.CreateDate))[0];
+    if (oldest) {
+        const days = Math.floor((now - new Date(oldest.CreateDate).getTime()) / 86400000);
+        if (days >= 60) {
+            const name = oldest.Contact?.Name || oldest.ContactName || 'sem nome';
+            tips.push({
+                icon: '🪦', level: 'crit',
+                title: `Deal mais antigo: <span class="mi-highlight">${name}</span> (${days}d aberto)`,
+                body: `Em "${oldest.Stage?.Name || '?'}" há ${oldest.DaysInStage || 0}d. <a href="https://app10.ploomes.com/deal/${oldest.Id}" target="_blank" style="color:#b794f4;text-decoration:none;font-weight:600;">Abrir no Ploomes →</a>`
+            });
+        }
+    }
+
+    // 9) MRR pipeline vs meta (proporcao)
+    if (m.totalMrrPipeline > 0 && m.ticketMrr > 0) {
+        const dealsEsperadosFechar = m.totalMrrPipeline / m.ticketMrr;
+        if (dealsEsperadosFechar < 3) {
+            tips.push({
+                icon: '📉', level: 'warn',
+                title: `MRR do pipeline = apenas <span class="mi-highlight">${dealsEsperadosFechar.toFixed(1)} deals</span> do ticket médio`,
+                body: `Pipeline subdimensionado — uma única perda compromete metade do mês. Acelerar fluxo de novos leads.`
+            });
+        }
+    }
+
+    // 10) Sinal positivo (se houver) — pelo menos um insight bom
+    const formalizCount = (m.activeStages.find(s => /formaliz/i.test(s.name)) || {}).count || 0;
+    const aprovCount = (m.activeStages.find(s => /aprov/i.test(s.name)) || {}).count || 0;
+    if (formalizCount + aprovCount >= 3) {
+        tips.push({
+            icon: '🎯', level: 'ok',
+            title: `<span class="mi-highlight">${formalizCount + aprovCount} deals</span> em etapas finais (Aprovado + Formalização)`,
+            body: 'Bom volume na boca do funil. Foco: garantir agilidade na minuta e assinatura, não perder por demora burocrática.'
+        });
+    }
+
+    return tips;
 }
 
 function generateAfActionPlan(m) {
