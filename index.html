@@ -145,7 +145,7 @@
         .sidebar.collapsed .nav-sub-item { padding-left: 16px; }
         .sidebar.collapsed .sub-label { opacity: 0; pointer-events: none; }
 
-        /* Grupos colapsaveis (Vendas / Pre-vendas) */
+        /* Grupos colapsaveis (Vendas / Pré-vendas) */
         .nav-group-header {
             display: flex;
             align-items: center;
@@ -1059,7 +1059,7 @@
         }
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
-        /* Analise Pre-vendas */
+        /* Análise Pré-vendas */
         #secAnalise .analise-kpis {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -1096,7 +1096,7 @@
         #secAnalise .delta-up { color: #22c55e; }
         #secAnalise .delta-down { color: #ef4444; }
         #secAnalise .delta-flat { color: #6d6d85; }
-        #secAnalise .delta-good-down { color: #22c55e; } /* metricas onde cair eh bom */
+        #secAnalise .delta-good-down { color: #22c55e; } /* métricas onde cair eh bom */
         #secAnalise .delta-bad-up { color: #ef4444; }
         #secAnalise .analise-grid {
             display: grid;
@@ -1942,21 +1942,21 @@
                 <span class="nav-label">Dashboard</span>
             </div>
 
-            <!-- Grupo: Pre-vendas -->
+            <!-- Grupo: Pré-vendas -->
             <div class="nav-group" id="navGroupPreVendas">
                 <div class="nav-group-header" onclick="toggleNavGroup('navGroupPreVendas')">
-                    <span class="nav-group-icon"><span>&#128222;</span><span class="group-label">Pre-vendas</span></span>
+                    <span class="nav-group-icon"><span>&#128222;</span><span class="group-label">Pré-vendas</span></span>
                     <span class="chevron">&#9662;</span>
                 </div>
                 <div class="nav-group-items">
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secAnalise');">
-                        <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Analise Pre-vendas</span>
+                        <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Análise Pré-vendas</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secStuck');">
                         <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads Parados</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
-                        <span class="sub-num">&#128197;</span><span class="sub-label">Reunioes por SDR</span>
+                        <span class="sub-num">&#128197;</span><span class="sub-label">Reuniões por SDR</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7b');">
                         <span class="sub-num">&#128465;</span><span class="sub-label">Descartes por SDR</span>
@@ -1965,10 +1965,10 @@
                         <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de Descarte</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7d');">
-                        <span class="sub-num">&#127760;</span><span class="sub-label">Reunioes por Origem</span>
+                        <span class="sub-num">&#127760;</span><span class="sub-label">Reuniões por Origem</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
-                        <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reunioes</span>
+                        <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reuniões</span>
                     </div>
                 </div>
             </div>
@@ -2011,7 +2011,7 @@
                         <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos - Valor</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
-                        <span class="sub-num">&#128200;</span><span class="sub-label">Conversao por Etapa</span>
+                        <span class="sub-num">&#128200;</span><span class="sub-label">Conversão por Etapa</span>
                     </div>
                 </div>
             </div>
@@ -2134,11 +2134,11 @@
 
             <div class="period-bar">
                 <label>Periodo:</label>
-                <button class="period-btn active" onclick="setPeriod('thisMonth', this)">Este mes</button>
-                <button class="period-btn" onclick="setPeriod('lastMonth', this)">Mes passado</button>
+                <button class="period-btn active" onclick="setPeriod('thisMonth', this)">Este mês</button>
+                <button class="period-btn" onclick="setPeriod('lastMonth', this)">Mês passado</button>
                 <button class="period-btn" onclick="setPeriod('thisQuarter', this)">Este trimestre</button>
                 <button class="period-btn" onclick="setPeriod('lastQuarter', this)">Trimestre anterior</button>
-                <button class="period-btn" onclick="setPeriod('last6', this)">Ultimo 6 meses</button>
+                <button class="period-btn" onclick="setPeriod('last6', this)">Último 6 meses</button>
                 <button class="period-btn" onclick="setPeriod('thisYear', this)">Este ano</button>
                 <button class="period-btn" onclick="setPeriod('custom', this)">Personalizado</button>
                 <input type="date" class="date-input" id="dateStart" style="display:none;" onchange="applyCustomPeriod()">
@@ -2169,11 +2169,11 @@
                             </select>
                             <select class="section-period-select" id="periodSec1" onchange="renderSection1()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2202,11 +2202,11 @@
                             </select>
                             <select class="section-period-select" id="periodSec2" onchange="renderSection2()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2229,11 +2229,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec2b" onchange="renderSection2b()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2260,11 +2260,11 @@
                             </select>
                             <select class="section-period-select" id="periodSec2c" onchange="renderSection2c()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2286,11 +2286,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2340,11 +2340,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2363,7 +2363,7 @@
                         <button class="table-toggle" onclick="toggleTable('tableRanking')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection4()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableRanking"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negocios</th>
+                            <th class="rank-num">#</th><th>Vendedor</th><th class="money">MRR</th><th class="money">Setup</th><th class="money">Total</th><th>Negócios</th>
                         </tr></thead><tbody id="tbodyRanking"></tbody></table></div>
                     </div>
                 </div>
@@ -2375,11 +2375,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2401,11 +2401,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2427,11 +2427,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec5b" onchange="renderSection5b()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2453,11 +2453,11 @@
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec6b" onchange="renderSection6b()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2472,12 +2472,12 @@
                     </div>
                 </div>
 
-                <!-- Section Analise: Diagnostico Pre-vendas SDR Inbound -->
+                <!-- Section Analise: Diagnóstico Pré-vendas SDR Inbound -->
                 <div class="section-card full-width" id="secAnalise">
                     <div class="section-header">
                         <h2 style="display:flex;align-items:center;gap:10px;">
                             <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">&#128202;</span>
-                            Analise Pre-vendas - SDR Inbound
+                            Análise Pré-vendas - SDR Inbound
                         </h2>
                         <div class="sub-filter">
                             <span style="color:#6d6d85;font-size:11px;" id="analiseLastUpdate">-</span>
@@ -2492,35 +2492,35 @@
                             <div class="analise-card">
                                 <div class="analise-card-head">
                                     <h3>&#128100; Carga por SDR</h3>
-                                    <span class="analise-sub">Leads ativos em Qualificacao</span>
+                                    <span class="analise-sub">Leads ativos em Qualificação</span>
                                 </div>
                                 <div id="analiseSdrList" class="analise-bars"></div>
                             </div>
                             <div class="analise-card">
                                 <div class="analise-card-head">
-                                    <h3>&#127760; Origens vs Conversao</h3>
-                                    <span class="analise-sub">Em Qualif. x avancaram pra Reuniao/Leads Quentes</span>
+                                    <h3>&#127760; Origens vs Conversão</h3>
+                                    <span class="analise-sub">Em Qualif. x avançaram pra Reunião/Leads Quentes</span>
                                 </div>
                                 <div id="analiseOriginsList" class="analise-bars"></div>
                             </div>
                         </div>
 
-                        <!-- Linha 3: Insights automaticos -->
+                        <!-- Linha 3: Insights automáticos -->
                         <div class="analise-insights-wrap">
                             <h3 style="color:#fff;font-size:14px;margin:0 0 10px;font-weight:600;display:flex;align-items:center;gap:8px;">
-                                <span>&#128161;</span> Insights & acoes recomendadas
+                                <span>&#128161;</span> Insights & ações recomendadas
                             </h3>
                             <div id="analiseInsights" class="analise-insights"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section Stuck: Leads parados em Qualificacao SDR Inbound -->
+                <!-- Section Stuck: Leads parados em Qualificação SDR Inbound -->
                 <div class="section-card full-width" id="secStuck">
                     <div class="section-header" style="padding-bottom:6px;">
                         <h2 style="display:flex;align-items:center;gap:10px;">
                             <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#9201;&#65039;</span>
-                            Leads parados - Qualificacao SDR Inbound
+                            Leads parados - Qualificação SDR Inbound
                         </h2>
                         <div class="sub-filter">
                             <select id="stuckSdrFilter" onchange="renderSectionStuck()">
@@ -2572,19 +2572,19 @@
                     </div>
                 </div>
 
-                <!-- Section 7: Reunioes Agendadas (atividade Reuniao Agendada) -->
+                <!-- Section 7: Reuniões Agendadas (atividade Reunião Agendada) -->
                 <div style="display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;" class="meetings-grid">
                 <div class="section-card" id="sec7" style="margin-bottom:0;">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128197;</span> Reunioes Agendadas por Pre-Vendedor</h2>
+                        <h2><span class="section-num">&#128197;</span> Reuniões Agendadas por Pré-Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2594,23 +2594,23 @@
                         <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pre-Vendedor</th><th>Reunioes</th>
+                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
                     </div>
                 </div>
 
-                <!-- Section 7-Intermodal: Reunioes da origem Intermodal -->
+                <!-- Section 7-Intermodal: Reuniões da origem Intermodal -->
                 <div class="section-card" id="sec7Inter" style="margin-bottom:0;">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127919;</span> Reunioes - Origem Intermodal</h2>
+                        <h2><span class="section-num">&#127919;</span> Reuniões - Origem Intermodal</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7Inter" onchange="renderSection7Inter()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2619,24 +2619,24 @@
                         <div class="chart-container"><canvas id="chartMeetingsInter"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableMeetingsInter')">Mostrar/ocultar tabela</button>
                         <div class="collapsible-table" id="tableMeetingsInter"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pre-Vendedor</th><th>Reunioes</th>
+                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
                         </tr></thead><tbody id="tbodyMeetingsInter"></tbody></table></div>
                     </div>
                 </div>
                 </div>
 
-                <!-- Section 7b: Descartes por Pre-Vendedor -->
+                <!-- Section 7b: Descartes por Pré-Vendedor -->
                 <div class="section-card" id="sec7b">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128465;&#65039;</span> Descartes por Pre-Vendedor</h2>
+                        <h2><span class="section-num">&#128465;&#65039;</span> Descartes por Pré-Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7b" onchange="renderSection7b()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2646,7 +2646,7 @@
                         <button class="table-toggle" onclick="toggleTable('tableDiscards')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7b()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableDiscards"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pre-Vendedor</th><th>Descartes</th><th>Motivo mais comum</th>
+                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Descartes</th><th>Motivo mais comum</th>
                         </tr></thead><tbody id="tbodyDiscards"></tbody></table></div>
                     </div>
                 </div>
@@ -2661,11 +2661,11 @@
                             </select>
                             <select class="section-period-select" id="periodSec7c" onchange="renderSection7c()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2680,21 +2680,21 @@
                     </div>
                 </div>
 
-                <!-- Section 7d: Reunioes por Origem -->
+                <!-- Section 7d: Reuniões por Origem -->
                 <div class="section-card" id="sec7d">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127760;</span> Reunioes por Origem</h2>
+                        <h2><span class="section-num">&#127760;</span> Reuniões por Origem</h2>
                         <div class="sub-filter">
                             <select id="meetingsOriginSdrFilter" onchange="renderSection7d()">
                                 <option value="">Todos os pre-vendedores</option>
                             </select>
                             <select class="section-period-select" id="periodSec7d" onchange="renderSection7d()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2704,23 +2704,23 @@
                         <button class="table-toggle" onclick="toggleTable('tableMeetingsOrigin')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7d()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetingsOrigin"><table><thead><tr>
-                            <th>Origem</th><th>Reunioes</th><th>% do Total</th>
+                            <th>Origem</th><th>Reuniões</th><th>% do Total</th>
                         </tr></thead><tbody id="tbodyMeetingsOrigin"></tbody></table></div>
                     </div>
                 </div>
 
-                <!-- Section 8: Reunioes por SDR e Segmento -->
+                <!-- Section 8: Reuniões por SDR e Segmento -->
                 <div class="section-card" id="sec8">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127919;</span> Reunioes por SDR e Segmento</h2>
+                        <h2><span class="section-num">&#127919;</span> Reuniões por SDR e Segmento</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec8" onchange="renderSection8()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                         </div>
@@ -2730,26 +2730,26 @@
                         <button class="table-toggle" onclick="toggleTable('tableOrigin')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection8()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableOrigin"><table><thead><tr>
-                            <th>Pre-Vendedor</th><th>Segmento</th><th>Quantidade</th>
+                            <th>Pré-Vendedor</th><th>Segmento</th><th>Quantidade</th>
                         </tr></thead><tbody id="tbodyOrigin"></tbody></table></div>
                     </div>
                 </div>
 
-                <!-- Section 9: Conversao por Etapa -->
+                <!-- Section 9: Conversão por Etapa -->
                 <div class="section-card full-width" id="sec9">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128200;</span> Conversao por Etapa</h2>
+                        <h2><span class="section-num">&#128200;</span> Conversão por Etapa</h2>
                         <div class="sub-filter">
                             <select id="funnelOwnerFilter" onchange="renderSection9()">
                                 <option value="">Todos os executivos</option>
                             </select>
                             <select class="section-period-select" id="periodSec9" onchange="renderSection9()">
                                 <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mes</option>
-                                <option value="lastMonth">Mes passado</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                                 <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Ultimo 6 meses</option>
+                                <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
                             </select>
                             <div class="pipeline-selector" id="funnelPipelineTabs"></div>
@@ -2760,7 +2760,7 @@
                         <button class="table-toggle" onclick="toggleTable('tableFunnel')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection9()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableFunnel"><table><thead><tr>
-                            <th>Etapa</th><th>Negocios</th><th>Conversao</th>
+                            <th>Etapa</th><th>Negócios</th><th>Conversão</th>
                         </tr></thead><tbody id="tbodyFunnel"></tbody></table></div>
                     </div>
                 </div>
@@ -2774,14 +2774,14 @@
             <div class="fc-header">
                 <div>
                     <h1>Forecast</h1>
-                    <div class="subtitle">Previsao de fechamento - dados do Ploomes</div>
+                    <div class="subtitle">Previsão de fechamento - dados do Ploomes</div>
                 </div>
             </div>
 
             <div class="fc-period-bar">
                 <label>Periodo:</label>
-                <button class="fc-period-btn active" onclick="setFcPeriod('thisMonth', this)">Este mes</button>
-                <button class="fc-period-btn" onclick="setFcPeriod('lastMonth', this)">Mes passado</button>
+                <button class="fc-period-btn active" onclick="setFcPeriod('thisMonth', this)">Este mês</button>
+                <button class="fc-period-btn" onclick="setFcPeriod('lastMonth', this)">Mês passado</button>
                 <button class="fc-period-btn" onclick="setFcPeriod('custom', this)">Personalizado</button>
                 <input type="date" class="date-input" id="fcDateStart" style="display:none;" onchange="applyFcCustomPeriod()">
                 <input type="date" class="date-input" id="fcDateEnd" style="display:none;" onchange="applyFcCustomPeriod()">
@@ -2813,7 +2813,7 @@
                         <button class="export-btn" onclick="exportForecast()">&#128229; Exportar Excel</button>
                     </div>
 
-                    <!-- Inline filters bar (similar to Conversao por Etapa) -->
+                    <!-- Inline filters bar (similar to Conversão por Etapa) -->
                     <div class="fc-filters-bar">
                         <input type="text" id="fcFilterTitle" placeholder="Buscar titulo..." class="fc-filter-input" oninput="renderForecast()">
                         <select id="fcFilterOwner" class="fc-filter-select" onchange="renderForecast()">
@@ -2847,7 +2847,7 @@
                             <option value="10k-50k">Setup R$ 10k-50k</option>
                             <option value="gt50k">Setup &gt; R$ 50.000</option>
                         </select>
-                        <input type="date" id="fcFilterDateFrom" class="fc-filter-date" onchange="renderForecast()" title="Data fechamento - inicio">
+                        <input type="date" id="fcFilterDateFrom" class="fc-filter-date" onchange="renderForecast()" title="Data fechamento - início">
                         <input type="date" id="fcFilterDateTo" class="fc-filter-date" onchange="renderForecast()" title="Data fechamento - fim">
                         <button class="fc-clear-filters" onclick="clearFcFilters()">Limpar</button>
                     </div>
@@ -2863,7 +2863,7 @@
                                     <th class="money">MRR</th>
                                     <th class="money">Setup</th>
                                     <th>Data Fechamento</th>
-                                    <th>Acoes</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="fcTableBody"></tbody>
@@ -2900,7 +2900,7 @@
             <div class="op-header" style="padding-bottom:8px;justify-content:center;text-align:center;">
                 <div>
                     <h1>&#128225; Marketing</h1>
-                    <div class="subtitle">Performance + MQLs em um so lugar</div>
+                    <div class="subtitle">Performance + MQLs em um só lugar</div>
                 </div>
             </div>
 
@@ -2926,17 +2926,17 @@
                 <select id="mktFilterPeriod" class="mql-filter">
                     <option value="today">Hoje</option>
                     <option value="thisWeek">Esta semana</option>
-                    <option value="thisMonth" selected>Este mes</option>
-                    <option value="lastMonth">Mes passado</option>
-                    <option value="30">Ultimos 30 dias</option>
-                    <option value="60">Ultimos 60 dias</option>
-                    <option value="90">Ultimos 90 dias</option>
+                    <option value="thisMonth" selected>Este mês</option>
+                    <option value="lastMonth">Mês passado</option>
+                    <option value="30">Últimos 30 dias</option>
+                    <option value="60">Últimos 60 dias</option>
+                    <option value="90">Últimos 90 dias</option>
                     <option value="custom">Personalizado...</option>
                 </select>
                 <input type="date" id="mktFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <input type="date" id="mktFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <button class="mql-refresh-btn" onclick="loadMarketing()">&#128260; Atualizar</button>
-                <button class="mql-refresh-btn" onclick="openMktSpendModal()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128184; Investimento em midia</button>
+                <button class="mql-refresh-btn" onclick="openMktSpendModal()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128184; Investimento em mídia</button>
             </div>
 
             <div id="mktLoadingArea" class="dash-loading">
@@ -2959,7 +2959,7 @@
                     <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
                         <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
                             <span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128161;</span>
-                            Insights e acoes
+                            Insights e ações
                         </h2>
                         <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;max-height:480px;"></div>
                     </div>
@@ -2968,7 +2968,7 @@
                     <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
                         <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
                             <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
-                            Evolucao diaria
+                            Evolucao diária
                         </h2>
                         <div style="position:relative;flex:1;min-height:280px;">
                             <canvas id="mktChartTimeline"></canvas>
@@ -3024,7 +3024,7 @@
                                 Ver detalhe completo dos MQLs
                             </h2>
                             <div style="color:#c0c0d0;font-size:13px;line-height:1.5;">
-                                Lista completa com status (Sem card / Em atendimento / Perdido), filtros por status, origem, periodo, busca e export Excel.
+                                Lista completa com status (Sem card / Em atendimento / Perdido), filtros por status, origem, período, busca e export Excel.
                             </div>
                         </div>
                         <button onclick="switchMktTab('mqls')" class="mql-refresh-btn" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);padding:12px 22px;font-size:13px;font-weight:600;white-space:nowrap;">
@@ -3085,7 +3085,7 @@
                     <option value="90">90 dias</option>
                     <option value="custom">Personalizado...</option>
                 </select>
-                <input type="date" id="mqlFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;" title="Data de inicio">
+                <input type="date" id="mqlFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;" title="Data de início">
                 <input type="date" id="mqlFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;" title="Data de fim">
                 <input type="text" id="mqlFilterSearch" class="mql-filter mql-filter-search" placeholder="&#128269; Buscar por nome, email, empresa...">
                 <button class="mql-refresh-btn" onclick="loadMqls()">&#128260; Atualizar</button>
@@ -3101,10 +3101,10 @@
                 <div style="padding:16px 30px 0;">
                     <div style="background:rgba(108,63,181,0.08);border:1px solid rgba(108,63,181,0.3);border-radius:10px;padding:12px 16px;color:#e0e0e0;font-size:13px;line-height:1.5;">
                         <strong style="color:#b794f4;">&#128269; MQLs detectados:</strong>
-                        Leads com <strong>email corporativo + telefone</strong> preenchidos no Ploomes, excluindo clientes ja existentes. Cada MQL pode estar:
+                        Leads com <strong>email corporativo + telefone</strong> preenchidos no Ploomes, excluindo clientes já existentes. Cada MQL pode estar:
                         <span style="color:#f87171;font-weight:600;">Sem card</span> (precisa criar atendimento),
                         <span style="color:#4ade80;font-weight:600;">Em atendimento</span> (com card aberto)
-                        ou <span style="color:#a0a0b8;font-weight:600;">Perdido</span> (descartado/nao convertido).
+                        ou <span style="color:#a0a0b8;font-weight:600;">Perdido</span> (descartado/não convertido).
                     </div>
                 </div>
 
@@ -3143,11 +3143,11 @@
             </div><!-- /mktTabMqls -->
         </div><!-- /view-marketing -->
 
-        <!-- Modal: Investimento em midia (fora do view pra nao colidir com tabs) -->
+        <!-- Modal: Investimento em mídia (fora do view pra não colidir com tabs) -->
         <div class="modal-overlay" id="mktSpendModal">
             <div class="modal" style="max-width:520px;">
-                <h2>&#128184; Investimento em midia</h2>
-                <p style="color:#a0a0b8;font-size:13px;margin:8px 0 14px;">Informe o valor gasto por canal no periodo. Os valores sao salvos localmente e usados pra calcular CPL/CAC/ROI.</p>
+                <h2>&#128184; Investimento em mídia</h2>
+                <p style="color:#a0a0b8;font-size:13px;margin:8px 0 14px;">Informe o valor gasto por canal no período. Os valores são salvos localmente e usados pra calcular CPL/CAC/ROI.</p>
                 <div id="mktSpendForm" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;"></div>
                 <div style="display:flex;gap:10px;margin-top:18px;">
                     <button class="close-btn" onclick="saveMktSpend()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">Salvar</button>
@@ -3203,7 +3203,7 @@ const darkScaleOptions = {
     ticks: { color: '#6868a0' }
 };
 
-// Datalabels: numero no fim de cada barra horizontal
+// Datalabels: número no fim de cada barra horizontal
 function barEndLabel(color) {
     return {
         anchor: 'end',
@@ -3322,7 +3322,7 @@ async function fetchCached(key) {
     const stale = getStaleCache(key);
     if (stale) {
         console.log('[stale] Using cached ' + key + ' while server warms up (' + stale.length + ' items)');
-        setLoadingMsg('Servidor aquecendo... mostrando ultima versao conhecida.');
+        setLoadingMsg('Servidor aquecendo... mostrando última versao conhecida.');
         // Refresh in background
         refreshCacheInBackground(key);
         return stale;
@@ -3338,7 +3338,7 @@ async function fetchCached(key) {
     }
 
     // For big datasets keep polling cache (server is still building it) - up to 5 min
-    setLoadingMsg('Aquecendo servidor, pode levar ate 1 minuto...');
+    setLoadingMsg('Aquecendo servidor, pode levar até 1 minuto...');
     for (let i = 0; i < 150; i++) {
         try {
             const resp = await fetch('/cache/' + key, { cache: 'no-store' });
@@ -3473,7 +3473,7 @@ function toggleSidebar() {
     main.style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '240px';
 }
 
-// Colapsa/expande grupo de menu (Vendas / Pre-vendas) e persiste no localStorage
+// Colapsa/expande grupo de menu (Vendas / Pré-vendas) e persiste no localStorage
 function toggleNavGroup(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -3571,7 +3571,7 @@ async function loadDeals() {
         // Sort by DaysInStage desc (since cache is sorted by CreateDate)
         deals.sort((a, b) => (b.DaysInStage || 0) - (a.DaysInStage || 0));
 
-        loadingArea.innerHTML = `<div class="spinner"></div><div>Processando ${deals.length} negocios...</div>`;
+        loadingArea.innerHTML = `<div class="spinner"></div><div>Processando ${deals.length} negócios...</div>`;
         const contactStateMap = {};
         const contactSegmentMap = {};
         contacts.forEach(c => {
@@ -3624,7 +3624,7 @@ async function loadDeals() {
         updateStats();
 
         document.getElementById('opLastUpdate').textContent =
-            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
+            `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
 
     } catch (err) {
         console.error(err);
@@ -3793,11 +3793,11 @@ function showContact(dealId) {
     }
 
     document.getElementById('modalContent').innerHTML = `
-        <div class="field"><div class="field-label">Negocio</div><div class="field-value"><a href="${deal.ploomesUrl}" target="_blank">${deal.title}</a></div></div>
+        <div class="field"><div class="field-label">Negócio</div><div class="field-value"><a href="${deal.ploomesUrl}" target="_blank">${deal.title}</a></div></div>
         <div class="field"><div class="field-label">Contato</div><div class="field-value">${deal.contactName}</div></div>
         ${deal.contactEmail ? `<div class="field"><div class="field-label">E-mail</div><div class="field-value"><a href="mailto:${deal.contactEmail}">${deal.contactEmail}</a></div></div>` : ''}
         <div class="field"><div class="field-label">Telefone(s)</div><div class="field-value">${phonesHtml}</div></div>
-        <div class="field"><div class="field-label">Estado / Cidade</div><div class="field-value">${deal.cityName ? deal.cityName + ' - ' : ''}${deal.state || 'Nao informado'}</div></div>
+        <div class="field"><div class="field-label">Estado / Cidade</div><div class="field-value">${deal.cityName ? deal.cityName + ' - ' : ''}${deal.state || 'Não informado'}</div></div>
         <div class="field"><div class="field-label">Responsavel</div><div class="field-value">${deal.owner}</div></div>
         <div class="field"><div class="field-label">SDR</div><div class="field-value">${deal.sdr || '-'}</div></div>
         <div class="field"><div class="field-label">Funil / Estagio</div><div class="field-value">${deal.pipeline} / ${deal.stage}</div></div>
@@ -4139,7 +4139,7 @@ function renderSection1() {
     const totalIPCA = ipcaDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalSetupWon = deals.reduce((s, d) => s + getSetup(d), 0);
     document.getElementById('wonKpis').innerHTML = `
-        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios ganhos</div></div>
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negócios ganhos</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRRRegular)}</div><div class="kpi-label">MRR (novo)</div></div>
         <div class="kpi-card"><div class="kpi-value" style="color:#c084fc;">R$ ${formatMoney(totalIPCA)}</div><div class="kpi-label">IPCA (reajuste)</div></div>
         <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetupWon)}</div><div class="kpi-label">Setup</div></div>
@@ -4162,7 +4162,7 @@ function renderSection1() {
                     const mk = months[idx];
                     const pipeline = pipelines[dsIdx];
                     const clickDeals = (byMonthByPipeline[pipeline][mk] || []);
-                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'won');
+                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios)`, clickDeals, null, 'won');
                 }
             },
             scales: { x: { ...darkScaleOptions }, y: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
@@ -4181,7 +4181,7 @@ function renderSection2() {
     const deals = filteredLost(pf, sp);
     window._sec2_data = deals;
     document.getElementById('lostKpis').innerHTML = `
-        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negocios perdidos</div></div>
+        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negócios perdidos</div></div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
     const pipelines2 = SALES_PIPELINES.filter(p => !pf || p === pf);
@@ -4201,7 +4201,7 @@ function renderSection2() {
                     const mk = months[idx];
                     const pipeline = pipelines2[dsIdx];
                     const clickDeals = (byMonthByPipeline2[pipeline][mk] || []);
-                    showDrilldown(`Perdidas - ${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negocios)`, clickDeals, null, 'lost');
+                    showDrilldown(`Perdidas - ${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios)`, clickDeals, null, 'lost');
                 }
             },
             scales: { x: { stacked: true, ...darkScaleOptions }, y: { stacked: true, beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
@@ -4406,7 +4406,7 @@ function renderSection3() {
     // Mapa dealId -> deal para filtrar orders
     const wonDealIds = new Set(deals.map(d => d.Id));
 
-    // Filtra orders pelo periodo (pelos deals filtrados) e extrai produtos
+    // Filtra orders pelo período (pelos deals filtrados) e extrai produtos
     const byProduct = {};
     let totalOrders = 0;
     let usedOrderDeals = 0;
@@ -4425,7 +4425,7 @@ function renderSection3() {
         });
     });
 
-    // Deals que tem order vs deals ganhos que nao tem order (fallback: mostrar como "Sem produto vinculado")
+    // Deals que tem order vs deals ganhos que não tem order (fallback: mostrar como "Sem produto vinculado")
     const dealsComOrder = new Set((dashOrders || []).filter(o => wonDealIds.has(o.DealId)).map(o => o.DealId));
     const dealsSemOrder = deals.filter(d => !dealsComOrder.has(d.Id));
     if (dealsSemOrder.length > 0) {
@@ -4605,7 +4605,7 @@ function renderSection4() {
                 if (elements.length > 0) {
                     const seller = sortedByMrr[elements[0].index];
                     const clickDeals = sellerDealsMap[seller.name] || [];
-                    showDrilldown(`MRR - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
+                    showDrilldown(`MRR - ${seller.name} (${clickDeals.length} negócios)`, clickDeals, null, 'ranking');
                 }
             },
             scales: {
@@ -4635,7 +4635,7 @@ function renderSection4() {
                 if (elements.length > 0) {
                     const seller = sortedBySetup[elements[0].index];
                     const clickDeals = sellerDealsMap[seller.name] || [];
-                    showDrilldown(`Setup - ${seller.name} (${clickDeals.length} negocios)`, clickDeals, null, 'ranking');
+                    showDrilldown(`Setup - ${seller.name} (${clickDeals.length} negócios)`, clickDeals, null, 'ranking');
                 }
             },
             scales: {
@@ -4748,7 +4748,7 @@ function renderSection6() {
                 if (elements.length > 0) {
                     const idx = elements[0].index;
                     const seller = sorted[idx];
-                    showDrilldown(`Perdidos - ${seller.name} (${seller.deals.length} negocios)`, seller.deals, null, 'lostSeller');
+                    showDrilldown(`Perdidos - ${seller.name} (${seller.deals.length} negócios)`, seller.deals, null, 'lostSeller');
                 }
             },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
@@ -4854,7 +4854,7 @@ function renderSection6b() {
             onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const s = sorted[elements[0].index];
-                    showDrilldown(`Perdidos - ${s.name} (${s.deals.length} negocios - R$ ${formatMoney(s.total)})`, s.deals, null, 'lostSeller');
+                    showDrilldown(`Perdidos - ${s.name} (${s.deals.length} negócios - R$ ${formatMoney(s.total)})`, s.deals, null, 'lostSeller');
                 }
             },
             scales: {
@@ -4894,15 +4894,15 @@ function exportSection6b() {
     ], 'perdidos-valores');
 }
 
-// --- Section 7: Reunioes Agendadas (atividade real do Ploomes) ---
-// Helper: filtra dashMeetings pelo periodo via DateTime + Title (Reuniao Agendada)
+// --- Section 7: Reuniões Agendadas (atividade real do Ploomes) ---
+// Helper: filtra dashMeetings pelo período via DateTime + Title (Reunião Agendada)
 function meetingsForPeriod(sp) {
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const start = sp?.start || periodStart;
     const end = sp?.end || periodEnd;
     return (dashMeetings || []).filter(t => {
         const tn = norm(t.Title);
-        if (!tn.includes('reuniao agendada')) return false;
+        if (!tn.includes('reunião agendada')) return false;
         if (start && end) {
             const dt = new Date(t.DateTime);
             if (dt < start || dt > end) return false;
@@ -4924,7 +4924,7 @@ function ensureDealsIndex() {
     [...wonDeals, ...lostDeals, ...dashOpenDeals].forEach(d => { idx[d.Id] = d; });
     window._dashOpenDealsById = idx;
 }
-// Resolve Origins dos DealIds das meetings que nao estao no cache local
+// Resolve Origins dos DealIds das meetings que não estao no cache local
 async function loadMeetingDealOrigins() {
     if (window._meetingDealOriginsLoaded) return;
     ensureDealsIndex();
@@ -4951,7 +4951,7 @@ function renderSection7() {
     const sp = getSectionPeriod('sec7');
     const meetings = meetingsForPeriod(sp);
     window._sec7_meetings = meetings;
-    // SDR = quem CRIOU a atividade (CreatorId), nao quem conduz a reuniao (OwnerId)
+    // SDR = quem CRIOU a atividade (CreatorId), não quem conduz a reunião (OwnerId)
     const ownerAgg = {};
     meetings.forEach(t => {
         const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
@@ -4964,7 +4964,7 @@ function renderSection7() {
 
     destroyChart('meetings');
     charts.meetings = new Chart(document.getElementById('chartMeetings'), {
-        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
+        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reuniões', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
         plugins: [ChartDataLabels],
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
@@ -4975,16 +4975,16 @@ function renderSection7() {
         <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('');
 }
 
-// Reunioes da origem Intermodal
-// Pre-vendas de Novos Negocios = exclui pre-vendas de Farmer (Agnes) e Sankhya (Maja)
-// que tambem aparecem ocasionalmente no SDR Inbound mas nao sao do time de novos negocios
+// Reuniões da origem Intermodal
+// Pré-vendas de Novos Negócios = exclui pré-vendas de Farmer (Agnes) e Sankhya (Maja)
+// que também aparecem ocasionalmente no SDR Inbound mas não sao do time de novos negócios
 const NON_NEWBIZ_SDRS = ['agnes', 'maja'];
 function isNewBizDeal(d) {
     const owner = (d.Owner?.Name || '').toLowerCase();
     return !NON_NEWBIZ_SDRS.some(n => owner.includes(n));
 }
 
-// --- Section Analise Pre-vendas (snapshot diario + comparativos + insights) ---
+// --- Section Análise Pré-vendas (snapshot diário + comparativos + insights) ---
 const ANALISE_SNAP_KEY = 'analiseSnapshots';
 function getAnaliseSnapshots() {
     try { return JSON.parse(localStorage.getItem(ANALISE_SNAP_KEY) || '{}'); }
@@ -4993,7 +4993,7 @@ function getAnaliseSnapshots() {
 function saveAnaliseSnapshot(date, metrics) {
     const snaps = getAnaliseSnapshots();
     snaps[date] = metrics;
-    // Mantem so ultimos 30 dias pra nao explodir
+    // Mantem so últimos 30 dias pra não explodir
     const keys = Object.keys(snaps).sort();
     if (keys.length > 30) {
         keys.slice(0, keys.length - 30).forEach(k => delete snaps[k]);
@@ -5035,7 +5035,7 @@ function computeAnaliseMetrics() {
         originCount[o] = (originCount[o] || 0) + 1;
     });
 
-    // Conversao por origem: % dos que chegaram em Hot vs total na Qualif+Hot
+    // Conversão por origem: % dos que chegaram em Hot vs total na Qualif+Hot
     const originHotCount = {};
     hot.forEach(d => {
         const o = d.Origin?.Name || '(sem origem)';
@@ -5056,7 +5056,7 @@ function computeAnaliseMetrics() {
 }
 
 function formatDelta(curr, prev, opts = {}) {
-    // opts.lowerIsBetter = true para metricas onde queda eh boa
+    // opts.lowerIsBetter = true para métricas onde queda eh boa
     if (prev === undefined || prev === null) return '<span class="delta delta-flat">novo</span>';
     const diff = curr - prev;
     if (diff === 0) return '<span class="delta delta-flat">= ' + 0 + '</span>';
@@ -5078,7 +5078,7 @@ function generateAnaliseInsights(curr, prev) {
     if (curr.overdue >= 30) {
         tips.push({ level: 'crit', title: 'Atrasados em volume alto (' + curr.overdue + ')', body: 'Mais de 30 leads com tarefa vencida. War room: bloquear 90min com cada SDR pra zerar o backlog hoje.' });
     } else if (curr.overdue >= 15) {
-        tips.push({ level: 'warn', title: 'Backlog de atrasados (' + curr.overdue + ')', body: 'Acima de 15 = nivel preocupante. Cadencia multi-canal (whatsapp + ligacao) nos proximos 3 dias.' });
+        tips.push({ level: 'warn', title: 'Backlog de atrasados (' + curr.overdue + ')', body: 'Acima de 15 = nível preocupante. Cadencia multi-canal (whatsapp + ligacao) nos próximos 3 dias.' });
     } else if (prev && curr.overdue < prev.overdue && curr.overdue >= 5) {
         tips.push({ level: 'ok', title: 'Atrasados em queda (' + prev.overdue + '→' + curr.overdue + ')', body: 'Equipe respondeu. Manter o ritmo - meta zerar em 7 dias.' });
     } else if (curr.overdue < 5) {
@@ -5106,7 +5106,7 @@ function generateAnaliseInsights(curr, prev) {
             tips.push({
                 level: 'warn',
                 title: 'Carga desbalanceada (' + top[0] + ' com ' + top[1] + ' leads)',
-                body: top[0] + ' tem ' + (top[1] / other[1]).toFixed(1) + 'x a carga de ' + other[0] + ' (' + other[1] + '). Referencia saudavel: 30-35 leads por SDR. Rebalancear.'
+                body: top[0] + ' tem ' + (top[1] / other[1]).toFixed(1) + 'x a carga de ' + other[0] + ' (' + other[1] + '). Referencia saudável: 30-35 leads por SDR. Rebalancear.'
             });
         }
     }
@@ -5122,7 +5122,7 @@ function generateAnaliseInsights(curr, prev) {
             tips.push({
                 level: 'warn',
                 title: 'Origem com baixa conversao: ' + orig,
-                body: qcount + ' leads ativos mas so ' + hcount + ' avancou (' + advanceRate.toFixed(0) + '%). Auditar a campanha com Marketing - ICP do anuncio pode estar errado.'
+                body: qcount + ' leads ativos mas só ' + hcount + ' avançou (' + advanceRate.toFixed(0) + '%). Auditar a campanha com Marketing - ICP do anúncio pode estar errado.'
             });
         }
     });
@@ -5135,7 +5135,7 @@ function generateAnaliseInsights(curr, prev) {
             tips.push({
                 level: 'ok',
                 title: 'Origem performando bem: ' + orig,
-                body: hcount + ' leads ja avancaram pra Reuniao. Canal de alta qualidade - replicar/investir mais.'
+                body: hcount + ' leads já avançaram pra Reunião. Canal de alta qualidade - replicar/investir mais.'
             });
         }
     });
@@ -5145,7 +5145,7 @@ function generateAnaliseInsights(curr, prev) {
         tips.push({
             level: 'warn',
             title: curr.aging['30+d'] + ' leads parados ha mais de 30d',
-            body: 'Acima de 30 dias na Qualificacao = lead morto na pratica. Decisao binaria: tentar acelerar ou descartar.'
+            body: 'Acima de 30 dias na Qualificação = lead morto na prática. Decisão binaria: tentar acelerar ou descartar.'
         });
     }
 
@@ -5156,20 +5156,20 @@ function generateAnaliseInsights(curr, prev) {
             tips.push({
                 level: 'ok',
                 title: 'Funil movimentou (' + prev.totalQual + ' → ' + curr.totalQual + ')',
-                body: movedOut + ' leads sairam da Qualificacao em 1 dia. Verificar se foi avanco ou descarte: se descarte > avanco, qualificacao esta superficial.'
+                body: movedOut + ' leads sairam da Qualificação em 1 dia. Verificar se foi avanco ou descarte: se descarte > avanco, qualificação esta superficial.'
             });
         }
         if (curr.totalHot > prev.totalHot) {
             tips.push({
                 level: 'ok',
                 title: 'Mais leads quentes (' + prev.totalHot + ' → ' + curr.totalHot + ')',
-                body: '+' + (curr.totalHot - prev.totalHot) + ' deals avancaram para Reuniao/Quentes. Boas reunioes a caminho.'
+                body: '+' + (curr.totalHot - prev.totalHot) + ' deals avançaram para Reunião/Quentes. Boas reunioes a caminho.'
             });
         }
     }
 
     if (tips.length === 0) {
-        tips.push({ level: 'info', title: 'Tudo dentro do esperado', body: 'Carregue dados de mais dias para gerar insights de tendencia.' });
+        tips.push({ level: 'info', title: 'Tudo dentro do esperado', body: 'Carregue dados de mais dias para gerar insights de tendência.' });
     }
     return tips;
 }
@@ -5182,7 +5182,7 @@ async function renderSectionAnalise() {
     const curr = computeAnaliseMetrics();
     const snaps = getAnaliseSnapshots();
 
-    // Snapshot do dia anterior (ou anteanterior se nao houver ontem)
+    // Snapshot do dia anterior (ou anteanterior se não houver ontem)
     const today = curr.date;
     const otherDates = Object.keys(snaps).filter(k => k < today).sort();
     const prevKey = otherDates[otherDates.length - 1];
@@ -5258,12 +5258,12 @@ async function renderSectionAnalise() {
     if (upd) {
         const txt = prev
             ? `Comparando com ${prevKey} (${prev ? 'snapshot anterior' : ''})`
-            : 'Primeiro snapshot - comparativos aparecem amanha';
+            : 'Primeiro snapshot - comparativos aparecem amanhã';
         upd.textContent = txt;
     }
 }
 
-// --- Section Stuck: Leads parados em Qualificacao SDR Inbound ---
+// --- Section Stuck: Leads parados em Qualificação SDR Inbound ---
 let stuckDealsCache = null;
 async function fetchStuckDealsDirect() {
     // Pipeline SDR Inbound = 60009390 (descoberto via /Deals/60009390/funnel)
@@ -5278,14 +5278,14 @@ async function fetchStuckDealsDirect() {
         if (arr.length < 200) break;
         skip += 200;
     }
-    // Adiciona Pipeline name (que o expand nao trouxe via select)
+    // Adiciona Pipeline name (que o expand não trouxe via select)
     all.forEach(d => { d.Pipeline = { Name: 'SDR Inbound' }; });
     return all;
 }
 
 function getStuckLeads() {
     const now = Date.now();
-    // Fonte: dashOpenDeals quando disponivel, senao cache direto da API
+    // Fonte: dashOpenDeals quando disponível, senao cache direto da API
     const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
     const inboundQual = source.filter(d =>
         d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '') && isNewBizDeal(d)
@@ -5383,7 +5383,7 @@ async function renderSectionStuck() {
         <div class="stuck-kpi">
             <div class="label">Total na etapa</div>
             <div class="value" style="color:#e0e0e0;">${total}</div>
-            <div class="sub">Qualificacao SDR Inbound</div>
+            <div class="sub">Qualificação SDR Inbound</div>
         </div>
         <div class="stuck-kpi">
             <div class="label">Sem touch</div>
@@ -5448,7 +5448,7 @@ async function renderSectionStuck() {
 
     const body = document.getElementById('stuckTableBody');
     if (rows.length === 0) {
-        body.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visao</td></tr>`;
+        body.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visão</td></tr>`;
     } else {
         body.innerHTML = rows.map(renderRow).join('');
     }
@@ -5472,7 +5472,7 @@ function exportSectionStuck() {
         { header: 'Dias atraso', getValue: r => r.overdueDays },
         { header: 'DealId', getValue: r => r.id },
         { header: 'Link', getValue: r => r.link }
-    ], 'leads-parados-qualificacao');
+    ], 'leads-parados-qualificação');
 }
 
 async function renderSection7Inter() {
@@ -5489,7 +5489,7 @@ async function renderSection7Inter() {
     const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     destroyChart('meetingsInter');
     charts.meetingsInter = new Chart(document.getElementById('chartMeetingsInter'), {
-        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reunioes Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
+        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reuniões Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
         plugins: [ChartDataLabels],
         options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#22c55e') },
             scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
@@ -5498,14 +5498,14 @@ async function renderSection7Inter() {
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
         <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
         <td style="text-align:center;font-weight:700;color:#22c55e;">${s.count}</td></tr>`).join('')
-        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no periodo</td></tr>';
+        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no período</td></tr>';
 }
 
-// --- Section 7b: Descartes por Pre-Vendedor (deals perdidos nos funis SDR) ---
+// --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
 const SDR_PIPELINES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
 function renderSection7b() {
     const sp = getSectionPeriod('sec7b');
-    // Deals descartados = lostDeals em funis SDR, filtrado por periodo (FinishDate) e owner global
+    // Deals descartados = lostDeals em funis SDR, filtrado por período (FinishDate) e owner global
     const deals = lostDeals.filter(d => {
         if (!SDR_PIPELINES.includes(getPipelineName(d))) return false;
         if (!ownerMatchesGlobal(d)) return false;
@@ -5572,7 +5572,7 @@ function exportSection7b() {
     const sorted = window._sec7b_sorted || [];
     exportToExcel(sorted, [
         { header: 'Posicao', getValue: (r, i) => i + 1 },
-        { header: 'Pre-Vendedor', getValue: r => r.name },
+        { header: 'Pré-Vendedor', getValue: r => r.name },
         { header: 'Descartes', getValue: r => r.count },
         { header: 'Motivo mais comum', getValue: r => r.topReason }
     ], 'descartes-por-prevendedor');
@@ -5584,7 +5584,7 @@ function renderSection7c() {
     const ownerSel = document.getElementById('discardReasonOwnerFilter');
     const selectedOwner = ownerSel ? ownerSel.value : '';
 
-    // Base: lostDeals em funis SDR, no periodo, respeitando filtro global de responsavel
+    // Base: lostDeals em funis SDR, no período, respeitando filtro global de responsavel
     let deals = lostDeals.filter(d => {
         if (!SDR_PIPELINES.includes(getPipelineName(d))) return false;
         if (!ownerMatchesGlobal(d)) return false;
@@ -5674,7 +5674,7 @@ function exportSection7c() {
     ], 'motivos-de-descarte');
 }
 
-// --- Section 7d: Reunioes por Origem (com filtro por pre-vendedor) ---
+// --- Section 7d: Reuniões por Origem (com filtro por pre-vendedor) ---
 function renderSection7d() {
     const sp = getSectionPeriod('sec7d');
     const sdrSel = document.getElementById('meetingsOriginSdrFilter');
@@ -5718,7 +5718,7 @@ function renderSection7d() {
         data: {
             labels: sorted.map(s => s.name),
             datasets: [{
-                label: 'Reunioes',
+                label: 'Reuniões',
                 data: sorted.map(s => s.count),
                 backgroundColor: sorted.map((s, i) => palette[i % palette.length] + 'B3'),
                 borderColor: sorted.map((s, i) => palette[i % palette.length]),
@@ -5759,12 +5759,12 @@ function exportSection7d() {
     const sorted = window._sec7d_sorted || [];
     exportToExcel(sorted, [
         { header: 'Origem', getValue: r => r.name },
-        { header: 'Reunioes', getValue: r => r.count },
+        { header: 'Reuniões', getValue: r => r.count },
         { header: 'Percentual', getValue: r => r.pct.toFixed(1) + '%' }
     ], 'reunioes-por-origem');
 }
 
-// --- Section 8: Reunioes por SDR e Segmento ---
+// --- Section 8: Reuniões por SDR e Segmento ---
 function renderSection8() {
     const sp = getSectionPeriod('sec8');
     const deals = allDealsForMeetings(sp);
@@ -5822,7 +5822,7 @@ function renderSection8() {
         <td style="text-align:center;font-weight:700;color:#b794f4;">${r.count}</td></tr>`).join('');
 }
 
-// --- Section 9: Conversao por Etapa ---
+// --- Section 9: Conversão por Etapa ---
 function renderSection9() {
     const sp = getSectionPeriod('sec9');
     const tabsHtml = SALES_PIPELINES.map(p => `
@@ -5904,7 +5904,7 @@ function renderSection9() {
 
 function showStageDrilldown(pipelineName, stageName) {
     const deals = (window._sec9_stageDeals || {})[stageName] || [];
-    showDrilldown(`${pipelineName} - ${stageName} (${deals.length} negocios)`, deals, null, 'won');
+    showDrilldown(`${pipelineName} - ${stageName} (${deals.length} negócios)`, deals, null, 'won');
 }
 
 function setFunnelPipeline(p) { activeFunnelPipeline = p; renderSection9(); }
@@ -5947,7 +5947,7 @@ async function loadDashboard() {
         dashMeetings = meetings || [];
         dashUsersById = {};
         (users || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
-        // Fallback: se cache de meetings veio vazio, busca direto via API (ultimos 120d)
+        // Fallback: se cache de meetings veio vazio, busca direto via API (últimos 120d)
         if (dashMeetings.length === 0) {
             try {
                 const since = new Date(Date.now() - 120*86400000).toISOString();
@@ -5974,7 +5974,7 @@ async function loadDashboard() {
             } catch (e) { console.warn('[users] fallback failed:', e.message); }
         }
 
-        loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negocios...`;
+        loadingMsg.textContent = `Processando ${wonDeals.length + lostDeals.length + dashOpenDeals.length} negócios...`;
 
         // Build contact segment map.
         // Fonte principal: LineOfBusinessId do contato (Ramo de Atividade = Segmento no Ploomes)
@@ -5999,7 +5999,7 @@ async function loadDashboard() {
                 }
             });
 
-            // 2) Fallback: contacts com campo customizado (sobrescreve so se nao ja setado)
+            // 2) Fallback: contacts com campo customizado (sobrescreve so se não ja setado)
             (contacts || []).forEach(c => {
                 if (contactSegmentGlobal[c.Id]) return;
                 const seg = (c.OtherProperties || []).find(p => p.FieldKey === CONTACT_SEGMENT_FIELD);
@@ -6021,7 +6021,7 @@ async function loadDashboard() {
         renderAllDash();
 
         document.getElementById('dashLastUpdate').textContent =
-            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}, Abertas: ${dashOpenDeals.length}`;
+            `Última atualização: ${new Date().toLocaleString('pt-BR')} | Ganhas: ${wonDeals.length}, Perdidas: ${lostDeals.length}, Abertas: ${dashOpenDeals.length}`;
 
         // Handle pending scroll
         if (pendingScrollSection) {
@@ -6141,7 +6141,7 @@ function showDrilldown(title, deals, columns, type) {
         html += '</tr>';
     });
     html += '</tbody></table>';
-    if (deals.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negocio encontrado</p>';
+    if (deals.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negócio encontrado</p>';
 
     document.getElementById('drilldownContent').innerHTML = html;
     document.getElementById('drilldownModal').classList.add('active');
@@ -6203,7 +6203,7 @@ function exportSection4() {
         { header: 'MRR', getValue: d => d.mrr },
         { header: 'Setup', getValue: d => d.setup },
         { header: 'Total', getValue: d => d.total },
-        { header: 'Negocios', getValue: d => d.count }
+        { header: 'Negócios', getValue: d => d.count }
     ], 'ranking_vendedores');
 }
 function exportSection5() {
@@ -6226,14 +6226,14 @@ function exportSection7() {
     const data = window._sec7_sorted || [];
     exportToExcel(data, [
         { header: '#', getValue: (d, i) => i + 1 },
-        { header: 'Pre-Vendedor (SDR)', getValue: d => d.name },
-        { header: 'Reunioes', getValue: d => d.count }
+        { header: 'Pré-Vendedor (SDR)', getValue: d => d.name },
+        { header: 'Reuniões', getValue: d => d.count }
     ], 'reunioes_por_sdr');
 }
 function exportSection8() {
     const data = window._sec8_rows || [];
     exportToExcel(data, [
-        { header: 'Pre-Vendedor', getValue: d => d.sdr },
+        { header: 'Pré-Vendedor', getValue: d => d.sdr },
         { header: 'Segmento', getValue: d => d.seg },
         { header: 'Quantidade', getValue: d => d.count }
     ], 'reunioes_sdr_segmento');
@@ -6242,8 +6242,8 @@ function exportSection9() {
     const data = window._sec9_funnelData || [];
     exportToExcel(data, [
         { header: 'Etapa', getValue: d => d.name },
-        { header: 'Negocios', getValue: d => d.count },
-        { header: 'Conversao', getValue: d => d.convPct || '-' }
+        { header: 'Negócios', getValue: d => d.count },
+        { header: 'Conversão', getValue: d => d.convPct || '-' }
     ], 'conversao_por_etapa');
 }
 
@@ -6676,7 +6676,7 @@ function showFcDrilldown(scenario) {
         { header: 'Data Fechamento', getValue: d => d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-' }
     ];
     // Use a custom drilldown since these are processed objects
-    document.getElementById('drilldownTitle').textContent = `Forecast ${scenario} (${filtered.length} negocios)`;
+    document.getElementById('drilldownTitle').textContent = `Forecast ${scenario} (${filtered.length} negócios)`;
     _drilldownData = filtered;
     _drilldownColumns = columns;
     _drilldownFilename = `forecast_${scenario}`;
@@ -6694,7 +6694,7 @@ function showFcDrilldown(scenario) {
         html += '</tr>';
     });
     html += '</tbody></table>';
-    if (filtered.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negocio encontrado</p>';
+    if (filtered.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negócio encontrado</p>';
 
     document.getElementById('drilldownContent').innerHTML = html;
     document.getElementById('drilldownModal').classList.add('active');
@@ -6754,7 +6754,7 @@ async function loadForecast() {
         renderForecast();
 
         document.getElementById('fcLastUpdate').textContent =
-            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | ${fcAllDeals.length} negocios com forecast`;
+            `Última atualização: ${new Date().toLocaleString('pt-BR')} | ${fcAllDeals.length} negócios com forecast`;
 
     } catch (err) {
         console.error(err);
@@ -6842,13 +6842,13 @@ function isCorporateEmail(email) {
     return !GENERIC_EMAIL_DOMAINS.has(m[1]);
 }
 
-// Farmers / pos-venda - leads criados por estes nao devem aparecer no MQL
-// (contas existentes, nao novo negocio)
+// Farmers / pos-venda - leads criados por estes não devem aparecer no MQL
+// (contas existentes, não novo negócio)
 const FARMER_NAMES = [
     'maja','agnes','vanessa ponce','vanessa lechuk','frederico'
 ];
-// Usuarios de integracao/sistema - leads criados por eles nao sao MQLs
-// (sao contatos criados via integracao com outros sistemas, nao via marketing)
+// Usuarios de integração/sistema - leads criados por eles não sao MQLs
+// (sao contatos criados via integração com outros sistemas, não via marketing)
 const SYSTEM_CREATORS = [
     'sankhya'
 ];
@@ -6956,7 +6956,7 @@ async function loadMqls() {
         renderMqls();
 
         document.getElementById('mqlLastUpdate').textContent =
-            `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')} | ${mqlAllPeople.length} MQLs detectados`;
+            `Última atualização: ${new Date().toLocaleString('pt-BR')} | ${mqlAllPeople.length} MQLs detectados`;
 
     } catch (err) {
         console.error(err);
@@ -6964,7 +6964,7 @@ async function loadMqls() {
     }
 }
 
-// Busca pessoas direto da API (fallback quando cache nao popula)
+// Busca pessoas direto da API (fallback quando cache não popula)
 async function fetchPeopleFromAPI(loadingMsg) {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const baseUrl = `/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin&$select=Id,Name,Email,CompanyId,CreateDate,OriginId`;
@@ -7000,7 +7000,7 @@ function isSankhyaPipeline(name) {
 }
 
 // MQLs = pessoas com email corporativo + telefone preenchidos no Ploomes,
-// que NAO sao clientes (empresa nao tem deal ganho)
+// que NAO sao clientes (empresa não tem deal ganho)
 function getMqlClassified() {
     return mqlAllPeople.map(p => {
         const personDeals = mqlAllDealsLookup[p.Id] || [];
@@ -7010,12 +7010,12 @@ function getMqlClassified() {
         const isCustomer = allDeals.some(d => d.StatusId === 2);
 
         // A empresa ja esta sendo atendida? (qualquer outro contato da empresa
-        // com deal ATIVO em funil nao-Sankhya). Se sim, oculta MQL.
+        // com deal ATIVO em funil não-Sankhya). Se sim, oculta MQL.
         const companyHasActiveDeal = companyDeals.some(d =>
             d.StatusId === 1 && !isSankhyaPipeline(d.Pipeline?.Name)
         );
 
-        // Deals nao-Sankhya da pessoa
+        // Deals não-Sankhya da pessoa
         const personDealsNonSankhya = personDeals.filter(d => !isSankhyaPipeline(d.Pipeline?.Name));
 
         // Status do MQL:
@@ -7131,7 +7131,7 @@ function renderMqls() {
     const filtered = getMqlFiltered();
     window._mqlFiltered = filtered;
 
-    // KPIs - calcula sobre todos os MQLs (independente do filtro de status), respeitando periodo
+    // KPIs - calcula sobre todos os MQLs (independente do filtro de status), respeitando período
     const allClassified = getMqlClassified();
     const range = getMqlPeriodRange();
     const baseSet = (range.start || range.end)
@@ -7208,7 +7208,7 @@ if (mqlSearchEl) mqlSearchEl.addEventListener('input', renderMqls);
 
 // ==================== MARKETING ====================
 const PROP_DATE_FIELD_KEY = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E'; // Data Proposta Enviada
-const SDR_FIELD_KEY = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2'; // SDR (proxy de "reuniao agendada")
+const SDR_FIELD_KEY = 'deal_C9C69D39-2300-4C47-ACF5-38832309B7C2'; // SDR (proxy de "reunião agendada")
 
 function getMktPeriodRange() {
     const f = document.getElementById('mktFilterPeriod').value;
@@ -7217,7 +7217,7 @@ function getMktPeriodRange() {
         return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to: now };
     }
     if (f === 'thisWeek') {
-        // Semana comeca na segunda-feira
+        // Semana começa na segunda-feira
         const day = now.getDay(); // 0=Dom..6=Sab
         const diff = (day === 0 ? 6 : day - 1);
         const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
@@ -7259,13 +7259,13 @@ function dealHasProposalInRange(d, range) {
 }
 
 function dealHasMeeting(d) {
-    // Reuniao agendada = deal em funil de vendedor (nao Sankhya/SDR) com SDR preenchido
+    // Reunião agendada = deal em funil de vendedor (não Sankhya/SDR) com SDR preenchido
     const props = d.OtherProperties || [];
     const sdr = props.find(p => p.FieldKey === SDR_FIELD_KEY);
     return sdr && (sdr.ObjectValueName || sdr.ObjectValueId);
 }
 
-// Total de leads do periodo = todos os contatos TypeId=2 criados no Ploomes
+// Total de leads do período = todos os contatos TypeId=2 criados no Ploomes
 // (leads do RD ja vem sincronizados pelo conector RD<->Ploomes)
 function getTotalLeadsInRange(range) {
     return mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range)).length;
@@ -7304,7 +7304,7 @@ async function loadMarketing() {
     document.getElementById('mktLoadingArea').style.display = 'none';
     document.getElementById('mktContentArea').style.display = 'block';
     document.getElementById('mktLastUpdate').textContent =
-        `Ultima atualizacao: ${new Date().toLocaleString('pt-BR')}`;
+        `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
 }
 
 // Custom field keys
@@ -7410,16 +7410,16 @@ function renderMarketing(range, rd) {
     document.getElementById('mktKpiBar').innerHTML =
         kpi('Total leads', totalLeads.toLocaleString('pt-BR'), '#60a5fa') +
         kpi('MQLs', totalMql.toLocaleString('pt-BR'), '#b794f4', { trend: totalLeads ? `${pct(mqlRate, 1)} dos leads` : '' }) +
-        kpi('Reunioes', totalReun.toLocaleString('pt-BR'), '#fbbf24', { trend: totalMql ? `${pct(totalMql > 0 ? (totalReun/totalMql)*100 : 0, 1)} dos MQLs` : '' }) +
+        kpi('Reuniões', totalReun.toLocaleString('pt-BR'), '#fbbf24', { trend: totalMql ? `${pct(totalMql > 0 ? (totalReun/totalMql)*100 : 0, 1)} dos MQLs` : '' }) +
         kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
-        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no periodo' } : {})) +
+        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no período' } : {})) +
         kpi('ROI', isFinite(roi) ? pct(roi, 0) : '', roi >= 0 ? '#22c55e' : '#ef4444', noSpend ? { empty: emptyHint } : {});
 
     // Funil visual em forma de funil
     const funnelStages = [
         { label: 'Leads', value: totalLeads, color: '#60a5fa' },
         { label: 'MQLs', value: totalMql, color: '#b794f4' },
-        { label: 'Reunioes', value: totalReun, color: '#fbbf24' },
+        { label: 'Reuniões', value: totalReun, color: '#fbbf24' },
         { label: 'Propostas', value: totalProp, color: '#34d399' },
         { label: 'Ganhos', value: totalGanho, color: '#22c55e' }
     ];
@@ -7448,14 +7448,14 @@ function renderMarketing(range, rd) {
         if (e.hasProposal) c.prop++;
         if (e.won) { c.ganhos++; c.revenue += e.revenue; }
     });
-    // Conta tambem leads NAO-MQL por origem (todos os contatos do periodo)
+    // Conta também leads NAO-MQL por origem (todos os contatos do período)
     const allLeadsInRange = mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range));
     allLeadsInRange.forEach(p => {
         const o = p.Origin?.Name || '(sem origem)';
         if (!channels[o]) channels[o] = { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
-        // sobreescreve leads com a contagem real (nao apenas MQLs)
+        // sobreescreve leads com a contagem real (não apenas MQLs)
     });
-    // Recontar leads pelo total bruto (nao apenas MQLs)
+    // Recontar leads pelo total bruto (não apenas MQLs)
     Object.keys(channels).forEach(o => { channels[o].leads = 0; });
     allLeadsInRange.forEach(p => {
         const o = p.Origin?.Name || '(sem origem)';
@@ -7519,20 +7519,20 @@ function renderMktInsights(m) {
     const tips = [];
     // MQL rate
     if (m.totalLeads > 10) {
-        if (m.mqlRate < 20) tips.push({ level: 'crit', title: 'Taxa MQL baixa (' + pct(m.mqlRate) + ')', body: 'Poucos leads sao corporativos. Revise o copy do form (deixe claro o publico-alvo), torne campo de telefone obrigatorio, e considere validacao de email corp.' });
+        if (m.mqlRate < 20) tips.push({ level: 'crit', title: 'Taxa MQL baixa (' + pct(m.mqlRate) + ')', body: 'Poucos leads são corporativos. Revise o copy do form (deixe claro o público-alvo), torne campo de telefone obrigatório, e considere validação de email corp.' });
         else if (m.mqlRate < 35) tips.push({ level: 'warn', title: 'Taxa MQL pode melhorar (' + pct(m.mqlRate) + ')', body: 'Acima de 35% e benchmark B2B. Teste landing pages mais especificas pelo cargo/segmento.' });
-        else tips.push({ level: 'ok', title: 'Taxa MQL saudavel (' + pct(m.mqlRate) + ')', body: 'Otima qualificacao no topo do funil. Mantenha.' });
+        else tips.push({ level: 'ok', title: 'Taxa MQL saudável (' + pct(m.mqlRate) + ')', body: 'Otima qualificação no topo do funil. Mantenha.' });
     }
-    // Reuniao rate
+    // Reunião rate
     const reunRate = m.totalMql > 0 ? (m.totalReun / m.totalMql) * 100 : 0;
     if (m.totalMql > 5) {
-        if (reunRate < 25) tips.push({ level: 'crit', title: 'Conversao MQL\u2192Reuniao baixa (' + pct(reunRate) + ')', body: 'Provavel gap de SDR. Revise cadencia de outreach (multi-canal: email + ligacao + LinkedIn em 5 dias) e treine speech de qualificacao.' });
-        else if (reunRate < 45) tips.push({ level: 'warn', title: 'Conversao MQL\u2192Reuniao mediana (' + pct(reunRate) + ')', body: 'Tente personalizar mais a abordagem usando segmento/cargo do lead.' });
+        if (reunRate < 25) tips.push({ level: 'crit', title: 'Conversão MQL\u2192Reunião baixa (' + pct(reunRate) + ')', body: 'Provavel gap de SDR. Revise cadência de outreach (multi-canal: email + ligacao + LinkedIn em 5 dias) e treine speech de qualificação.' });
+        else if (reunRate < 45) tips.push({ level: 'warn', title: 'Conversão MQL\u2192Reunião mediana (' + pct(reunRate) + ')', body: 'Tente personalizar mais a abordagem usando segmento/cargo do lead.' });
     }
     // Proposta rate
     const propRate = m.totalReun > 0 ? (m.totalProp / m.totalReun) * 100 : 0;
     if (m.totalReun > 3 && propRate < 50) {
-        tips.push({ level: 'warn', title: 'Reuniao\u2192Proposta baixa (' + pct(propRate) + ')', body: 'Pode indicar qualificacao fraca - adote BANT/MEDDIC nas reunioes pra evitar levar lead nao-fit pra proposta.' });
+        tips.push({ level: 'warn', title: 'Reunião\u2192Proposta baixa (' + pct(propRate) + ')', body: 'Pode indicar qualificação fraca - adote BANT/MEDDIC nas reunioes pra evitar levar lead não-fit pra proposta.' });
     }
     // Win rate
     const winRate = m.totalProp > 0 ? (m.totalGanho / m.totalProp) * 100 : 0;
@@ -7545,20 +7545,20 @@ function renderMktInsights(m) {
     const topCh = Object.entries(m.channels).sort((a, b) => b[1].leads - a[1].leads)[0];
     if (topCh && totalLeadsCh > 30) {
         const share = (topCh[1].leads / totalLeadsCh) * 100;
-        if (share > 60) tips.push({ level: 'warn', title: 'Dependencia de "' + topCh[0] + '" (' + pct(share, 0) + ')', body: 'Mais da metade dos leads vem de um so canal - risco. Diversifique testando 1-2 canais novos esse mes.' });
+        if (share > 60) tips.push({ level: 'warn', title: 'Dependencia de "' + topCh[0] + '" (' + pct(share, 0) + ')', body: 'Mais da metade dos leads vem de um só canal - risco. Diversifique testando 1-2 canais novos esse mês.' });
     }
     // Sem origem
     const semOrigem = m.channels['(sem origem)'];
     if (semOrigem && totalLeadsCh > 30 && (semOrigem.leads / totalLeadsCh) > 0.15) {
-        tips.push({ level: 'warn', title: 'Muitos leads sem origem (' + pct((semOrigem.leads/totalLeadsCh)*100, 0) + ')', body: 'Configure UTMs em todas as campanhas e formularios. Sem origem, voce nao mede ROI.' });
+        tips.push({ level: 'warn', title: 'Muitos leads sem origem (' + pct((semOrigem.leads/totalLeadsCh)*100, 0) + ')', body: 'Configure UTMs em todas as campanhas e formulários. Sem origem, voce não mede ROI.' });
     }
     // ROI
     if (isFinite(m.roi)) {
         if (m.roi < 0) tips.push({ level: 'crit', title: 'ROI negativo (' + pct(m.roi, 0) + ')', body: 'Receita gerada esta abaixo do investido. Pause os canais de pior CAC e realoque pros de melhor ROI - veja a tabela "Performance por canal".' });
-        else if (m.roi < 100) tips.push({ level: 'warn', title: 'ROI baixo (' + pct(m.roi, 0) + ')', body: 'Ainda nao dobrou o investimento. Foque no canal com maior ROI absoluto.' });
-        else tips.push({ level: 'ok', title: 'ROI saudavel (' + pct(m.roi, 0) + ')', body: 'Ja paga o investimento. Da pra escalar mantendo o mix atual.' });
+        else if (m.roi < 100) tips.push({ level: 'warn', title: 'ROI baixo (' + pct(m.roi, 0) + ')', body: 'Ainda não dobrou o investimento. Foque no canal com maior ROI absoluto.' });
+        else tips.push({ level: 'ok', title: 'ROI saudável (' + pct(m.roi, 0) + ')', body: 'Já paga o investimento. Da pra escalar mantendo o mix atual.' });
     } else if (m.totalSpend === 0) {
-        tips.push({ level: 'info', title: 'Cadastre o investimento em midia', body: 'Clique em "Investimento em midia" no topo pra ter CAC, CPL e ROI por canal.' });
+        tips.push({ level: 'info', title: 'Cadastre o investimento em mídia', body: 'Clique em "Investimento em mídia" no topo pra ter CAC, CPL e ROI por canal.' });
     }
     // Top motivo de perda
     const topLoss = Object.entries(m.lossCounts).sort((a, b) => b[1] - a[1])[0];
@@ -7661,8 +7661,8 @@ function exportMarketing() {
         { header: 'Email', getValue: r => r.person.Email || '' },
         { header: 'CompanyId', getValue: r => r.person.CompanyId || '' },
         { header: 'Origem', getValue: r => r.origin },
-        { header: 'Reuniao', getValue: r => r.hasMeeting ? 'Sim' : 'Nao' },
-        { header: 'Proposta', getValue: r => r.hasProposal ? 'Sim' : 'Nao' },
+        { header: 'Reunião', getValue: r => r.hasMeeting ? 'Sim' : 'Não' },
+        { header: 'Proposta', getValue: r => r.hasProposal ? 'Sim' : 'Não' },
         { header: 'Status', getValue: r => r.statusLabel },
         { header: 'Motivo Perda', getValue: r => r.lossReason },
         { header: 'Criado em', getValue: r => r.person.CreateDate ? new Date(r.person.CreateDate).toLocaleDateString('pt-BR') : '' },
@@ -7703,7 +7703,7 @@ document.addEventListener('visibilitychange', () => {
         const idleTime = Date.now() - lastActiveTs;
         // If tab was hidden for more than 2 min, refresh current view
         if (idleTime > 2 * 60 * 1000) {
-            console.log('Tab voltou apos ' + Math.floor(idleTime / 1000) + 's - revalidando dados');
+            console.log('Tab voltou após ' + Math.floor(idleTime / 1000) + 's - revalidando dados');
             const activeView = document.getElementById('view-dashboard').style.display !== 'none' ? 'dashboard'
                 : document.getElementById('view-forecast').style.display !== 'none' ? 'forecast'
                 : 'oportunidades';
