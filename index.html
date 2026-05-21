@@ -1280,44 +1280,46 @@
             line-height: 1.55;
         }
 
-        /* Mini insights de pipeline (após o ALERTA) */
+        /* Insights de pipeline estilo PPT (após o ALERTA) */
         #view-analise-funil .af-mini-insights {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 10px;
-            margin-top: 14px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 18px;
         }
+        @media (max-width: 900px) { #view-analise-funil .af-mini-insights { grid-template-columns: 1fr; } }
         #view-analise-funil .af-mini-insight {
             background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.06);
-            border-left: 3px solid;
-            border-radius: 8px;
-            padding: 12px 14px;
+            border-left: 5px solid;
+            border-radius: 10px;
+            padding: 18px 22px;
             display: flex;
-            gap: 12px;
+            gap: 16px;
             align-items: flex-start;
         }
-        #view-analise-funil .af-mini-insight.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.05); }
-        #view-analise-funil .af-mini-insight.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.05); }
-        #view-analise-funil .af-mini-insight.ok   { border-left-color: #22c55e; background: rgba(34,197,94,0.05); }
-        #view-analise-funil .af-mini-insight.info { border-left-color: #60a5fa; background: rgba(96,165,250,0.05); }
+        #view-analise-funil .af-mini-insight.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.07); }
+        #view-analise-funil .af-mini-insight.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.07); }
+        #view-analise-funil .af-mini-insight.ok   { border-left-color: #22c55e; background: rgba(34,197,94,0.07); }
+        #view-analise-funil .af-mini-insight.info { border-left-color: #60a5fa; background: rgba(96,165,250,0.07); }
         #view-analise-funil .af-mini-insight .mi-icon {
-            font-size: 18px;
+            font-size: 28px;
             line-height: 1;
             flex-shrink: 0;
+            margin-top: 2px;
         }
         #view-analise-funil .af-mini-insight .mi-content { flex: 1; }
         #view-analise-funil .af-mini-insight .mi-title {
             color: #fff;
-            font-size: 12.5px;
+            font-size: 15px;
             font-weight: 700;
-            margin-bottom: 3px;
-            line-height: 1.3;
+            margin-bottom: 8px;
+            line-height: 1.35;
         }
         #view-analise-funil .af-mini-insight .mi-body {
             color: #c0c0d0;
-            font-size: 11.5px;
-            line-height: 1.45;
+            font-size: 13px;
+            line-height: 1.55;
         }
         #view-analise-funil .af-mini-insight .mi-highlight {
             color: #fff;
@@ -8375,14 +8377,13 @@ const AF_PIPELINE_IDS = {
 };
 let afOpenDealsCache = null;
 
-async function fetchAfOpenDealsDirect() {
-    // Busca todos deals abertos dos 4 funis de vendas via API
+async function fetchAfDealsByStatus(statusId, maxSkip = 3000) {
     const ids = Object.values(AF_PIPELINE_IDS);
-    const filter = encodeURIComponent('StatusId eq 1 and (' + ids.map(id => 'PipelineId eq ' + id).join(' or ') + ')');
+    const filter = encodeURIComponent(`StatusId eq ${statusId} and (` + ids.map(id => 'PipelineId eq ' + id).join(' or ') + ')');
     const expand = encodeURIComponent('Stage,Owner,Origin,Contact,Pipeline,OtherProperties');
-    const sel = encodeURIComponent('Id,Title,ContactId,ContactName,PersonId,PersonName,StageId,PipelineId,OwnerId,OriginId,DaysInStage,HasScheduledTasks,FirstTaskDate,CreateDate,LastUpdateDate,Amount');
+    const sel = encodeURIComponent('Id,Title,ContactId,ContactName,PersonId,PersonName,StageId,PipelineId,OwnerId,OriginId,DaysInStage,HasScheduledTasks,FirstTaskDate,CreateDate,LastUpdateDate,FinishDate,Amount,StatusId');
     let all = []; let skip = 0;
-    while (skip < 3000) {
+    while (skip < maxSkip) {
         const r = await fetch(`/api/Deals?%24filter=${filter}&%24expand=${expand}&%24select=${sel}&%24top=200&%24skip=${skip}`).then(r => r.json());
         const arr = r.value || [];
         all = all.concat(arr);
@@ -8391,6 +8392,11 @@ async function fetchAfOpenDealsDirect() {
     }
     return all;
 }
+async function fetchAfOpenDealsDirect() { return fetchAfDealsByStatus(1); }
+async function fetchAfWonDealsDirect() { return fetchAfDealsByStatus(2, 1500); }
+async function fetchAfLostDealsDirect() { return fetchAfDealsByStatus(3, 3000); }
+let afWonDealsCache = null;
+let afLostDealsCache = null;
 const AF_META_KEY = 'afMetaByPipeline';
 let afActivePipeline = 'Funil de Vendas';
 let afChartHistoryInstance = null;
@@ -8439,8 +8445,20 @@ async function loadAnaliseFunil() {
         document.getElementById('afLoadingMsg').textContent = 'Buscando deals abertos direto do Ploomes...';
         try {
             afOpenDealsCache = await fetchAfOpenDealsDirect();
-            console.log('[af] fallback API:', afOpenDealsCache.length, 'deals');
-        } catch (e) { console.warn('[af] fallback failed:', e.message); afOpenDealsCache = []; }
+            console.log('[af] fallback open:', afOpenDealsCache.length, 'deals');
+        } catch (e) { console.warn('[af] fallback open failed:', e.message); afOpenDealsCache = []; }
+    }
+    // Fallback won
+    if ((!wonDeals || wonDeals.length === 0) && !afWonDealsCache) {
+        document.getElementById('afLoadingMsg').textContent = 'Buscando histórico de ganhos...';
+        try { afWonDealsCache = await fetchAfWonDealsDirect(); console.log('[af] fallback won:', afWonDealsCache.length); }
+        catch (e) { console.warn('[af] fallback won failed:', e.message); afWonDealsCache = []; }
+    }
+    // Fallback lost
+    if ((!lostDeals || lostDeals.length === 0) && !afLostDealsCache) {
+        document.getElementById('afLoadingMsg').textContent = 'Buscando histórico de perdidos...';
+        try { afLostDealsCache = await fetchAfLostDealsDirect(); console.log('[af] fallback lost:', afLostDealsCache.length); }
+        catch (e) { console.warn('[af] fallback lost failed:', e.message); afLostDealsCache = []; }
     }
 
     // Renderiza tabs de pipeline
@@ -8460,12 +8478,20 @@ async function loadAnaliseFunil() {
     renderAnaliseFunil();
 }
 
-// Retorna a fonte correta de open deals (cache do dashboard ou fallback API)
+// Retorna a fonte correta de cada conjunto de deals (cache do dashboard ou fallback API)
 function afGetOpenDealsSource() {
     if (dashOpenDeals && dashOpenDeals.some(d => AF_SALES_PIPELINES.includes(d.Pipeline?.Name))) {
         return dashOpenDeals;
     }
     return afOpenDealsCache || [];
+}
+function afGetWonDealsSource() {
+    if (wonDeals && wonDeals.length > 0) return wonDeals;
+    return afWonDealsCache || [];
+}
+function afGetLostDealsSource() {
+    if (lostDeals && lostDeals.length > 0) return lostDeals;
+    return afLostDealsCache || [];
 }
 
 function setAfPipeline(p) {
@@ -8482,9 +8508,8 @@ function populateAfOwnerFilter() {
     const sel = document.getElementById('afOwnerFilter');
     if (!sel) return;
     const current = sel.value;
-    const openSrc = afGetOpenDealsSource();
     const owners = [...new Set(
-        [...(wonDeals||[]), ...(lostDeals||[]), ...openSrc]
+        [...afGetWonDealsSource(), ...afGetLostDealsSource(), ...afGetOpenDealsSource()]
             .filter(d => d.Pipeline?.Name === afActivePipeline)
             .map(d => d.Owner?.Name).filter(Boolean)
     )].sort();
@@ -8530,12 +8555,14 @@ function renderAnaliseFunil() {
     const ownerFilter = document.getElementById('afOwnerFilter').value;
     const pipeline = afActivePipeline;
 
-    // Filtra deals (fonte: dashOpenDeals OU afOpenDealsCache em fallback)
+    // Filtra deals (fonte: dashboard caches OU fallback API caches)
     const ownMatch = d => !ownerFilter || d.Owner?.Name === ownerFilter;
     const openSrc = afGetOpenDealsSource();
+    const wonSrc = afGetWonDealsSource();
+    const lostSrc = afGetLostDealsSource();
     const openDeals = openSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
-    const wonAll = (wonDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
-    const lostAll = (lostDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const wonAll = wonSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const lostAll = lostSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
 
     // === Etapas do pipeline (ordenadas) ===
     const stageOrdMap = {};
