@@ -1109,6 +1109,260 @@
         }
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
+        /* Análise de Funil (view dedicada) */
+        #view-analise-funil .af-pipeline-tab {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #8888a0;
+            padding: 8px 16px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        #view-analise-funil .af-pipeline-tab:hover { color: #fff; border-color: rgba(108,63,181,0.4); }
+        #view-analise-funil .af-pipeline-tab.active {
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(108,63,181,0.3);
+        }
+        #view-analise-funil .af-kpi-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 1100px) { #view-analise-funil .af-kpi-bar { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { #view-analise-funil .af-kpi-bar { grid-template-columns: repeat(2, 1fr); } }
+        #view-analise-funil .af-kpi {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 14px 16px;
+            min-height: 84px;
+        }
+        #view-analise-funil .af-kpi .label {
+            font-size: 10px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+        }
+        #view-analise-funil .af-kpi .value {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 8px;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+        #view-analise-funil .af-kpi .sub {
+            font-size: 10.5px;
+            color: #6d6d85;
+            margin-top: 4px;
+        }
+        #view-analise-funil .af-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 18px;
+            margin-top: 18px;
+        }
+        @media (max-width: 1000px) { #view-analise-funil .af-row { grid-template-columns: 1fr; } }
+        #view-analise-funil .dash-card { padding: 20px; }
+        #view-analise-funil .af-h2 {
+            color: #fff;
+            font-size: 15px;
+            margin: 0 0 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #view-analise-funil .af-stage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        #view-analise-funil .af-stage-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 12px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        #view-analise-funil .af-stage-card .stage-stripe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 3px;
+        }
+        #view-analise-funil .af-stage-card .stage-name {
+            font-size: 11px;
+            color: #a0a0b8;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+            min-height: 14px;
+        }
+        #view-analise-funil .af-stage-card .stage-count {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+        #view-analise-funil .af-stage-card .stage-mrr {
+            font-size: 12px;
+            color: #4ade80;
+            font-weight: 600;
+            margin-top: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+        #view-analise-funil .af-stage-card .stage-filled {
+            font-size: 10px;
+            color: #6d6d85;
+            margin-top: 4px;
+        }
+        #view-analise-funil .af-stage-card .stage-filled.warn { color: #f59e0b; }
+        #view-analise-funil .af-stage-card .stage-filled.crit { color: #ef4444; }
+
+        #view-analise-funil .af-forecast-bigval {
+            font-size: 38px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin: 8px 0 4px;
+            line-height: 1.1;
+        }
+        #view-analise-funil .af-forecast-meta {
+            font-size: 11px;
+            color: #6d6d85;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        #view-analise-funil .af-progress-track {
+            background: rgba(255,255,255,0.05);
+            height: 8px;
+            border-radius: 4px;
+            margin: 14px 0 8px;
+            overflow: hidden;
+        }
+        #view-analise-funil .af-progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        #view-analise-funil .af-conversion-row {
+            display: grid;
+            grid-template-columns: 200px 1fr 80px 110px;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        #view-analise-funil .af-conversion-row:last-child { border-bottom: none; }
+        #view-analise-funil .af-conversion-label {
+            color: #d0d0e0;
+            font-size: 12.5px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #view-analise-funil .af-conversion-bar-track {
+            background: rgba(255,255,255,0.04);
+            height: 20px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        #view-analise-funil .af-conversion-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        #view-analise-funil .af-conversion-pct {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        #view-analise-funil .af-conversion-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+        #view-analise-funil .af-conv-ok { color: #22c55e; }
+        #view-analise-funil .af-conv-warn { color: #f59e0b; }
+        #view-analise-funil .af-conv-crit { color: #ef4444; }
+        #view-analise-funil .af-conv-tag-ok { background: rgba(34,197,94,0.15); color: #4ade80; }
+        #view-analise-funil .af-conv-tag-warn { background: rgba(245,158,11,0.15); color: #fcd34d; }
+        #view-analise-funil .af-conv-tag-crit { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+        #view-analise-funil .af-reverse-row {
+            display: grid;
+            grid-template-columns: 1fr 60px 80px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 12.5px;
+        }
+        #view-analise-funil .af-reverse-row:last-child { border-bottom: none; }
+        #view-analise-funil .af-reverse-row .stage { color: #d0d0e0; font-weight: 500; }
+        #view-analise-funil .af-reverse-row .have { color: #6d6d85; text-align: right; }
+        #view-analise-funil .af-reverse-row .need { color: #fff; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #view-analise-funil .af-reverse-row .gap-crit { color: #ef4444; }
+        #view-analise-funil .af-reverse-row .gap-ok { color: #22c55e; }
+
+        #view-analise-funil .af-insights {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+        }
+        #view-analise-funil .af-insight {
+            padding: 12px 14px;
+            border-radius: 8px;
+            border-left: 3px solid;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        #view-analise-funil .af-insight .insight-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        #view-analise-funil .af-insight.crit { background: rgba(239,68,68,0.08); border-left-color: #ef4444; }
+        #view-analise-funil .af-insight.warn { background: rgba(245,158,11,0.08); border-left-color: #f59e0b; }
+        #view-analise-funil .af-insight.ok   { background: rgba(34,197,94,0.08); border-left-color: #22c55e; }
+        #view-analise-funil .af-insight.info { background: rgba(96,165,250,0.08); border-left-color: #60a5fa; }
+
+        #view-analise-funil .af-deal-row {
+            display: grid;
+            grid-template-columns: 1fr 90px 70px 30px;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 12.5px;
+        }
+        #view-analise-funil .af-deal-row:last-child { border-bottom: none; }
+        #view-analise-funil .af-deal-row .company { font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #view-analise-funil .af-deal-row .company .small { font-size: 10.5px; color: #8888a0; font-weight: 400; display: block; }
+        #view-analise-funil .af-deal-row .value { text-align: right; color: #4ade80; font-weight: 600; font-variant-numeric: tabular-nums; }
+        #view-analise-funil .af-deal-row .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-align: center; }
+        #view-analise-funil .af-deal-row .badge.hot { background: rgba(34,197,94,0.15); color: #4ade80; }
+        #view-analise-funil .af-deal-row .badge.warm { background: rgba(245,158,11,0.15); color: #fcd34d; }
+        #view-analise-funil .af-deal-row .badge.cold { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        #view-analise-funil .af-deal-link { color: #b794f4; text-decoration: none; font-size: 14px; }
+
         /* Análise Pré-vendas */
         #secAnalise .analise-kpis {
             display: grid;
@@ -1984,6 +2238,10 @@
             <div class="nav-item" data-view="marketing" onclick="showView('marketing')">
                 <span class="nav-icon">&#128225;</span>
                 <span class="nav-label">Marketing</span>
+            </div>
+            <div class="nav-item" data-view="analise-funil" onclick="showView('analise-funil')">
+                <span class="nav-icon">&#127919;</span>
+                <span class="nav-label">Análise de Funil</span>
             </div>
 
             <div class="nav-section-title" style="margin-top:20px;">Dashboard</div>
@@ -3193,6 +3451,94 @@
             </div><!-- /mktTabMqls -->
         </div><!-- /view-marketing -->
 
+        <!-- ==================== VIEW: ANÁLISE DE FUNIL ==================== -->
+        <div id="view-analise-funil" style="display:none;">
+            <div class="op-header" style="padding-bottom:10px;justify-content:center;text-align:center;">
+                <div>
+                    <h1>&#127919; Análise de Funil</h1>
+                    <div class="subtitle">Diagnóstico + forecast probabilístico do mês para acelerar fechamento</div>
+                </div>
+            </div>
+
+            <!-- Filtros (funil, executivo, meta) -->
+            <div style="padding:0 30px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                <div id="afPipelineTabs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <select id="afOwnerFilter" class="mql-filter" onchange="renderAnaliseFunil()">
+                        <option value="">Todos os executivos</option>
+                    </select>
+                    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.04);padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
+                        <span style="font-size:11px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Meta MRR mês:</span>
+                        <span style="color:#94a3b8;font-size:13px;">R$</span>
+                        <input id="afMetaInput" type="number" min="0" step="1000" placeholder="0" style="width:90px;background:transparent;border:none;color:#fff;font-weight:600;font-size:13px;outline:none;text-align:right;" oninput="onAfMetaChange()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="afLoadingArea" class="dash-loading">
+                <div class="spinner"></div>
+                <div id="afLoadingMsg">Carregando análise de funil...</div>
+            </div>
+
+            <div id="afContentArea" style="display:none;padding:0 30px 30px;">
+
+                <!-- KPI bar -->
+                <div id="afKpiBar" class="af-kpi-bar"></div>
+
+                <!-- Linha 1: Foto por etapa + Forecast -->
+                <div class="af-row">
+                    <div class="dash-card af-stage-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);">&#128202;</span> Foto atual por etapa</h2>
+                        <div id="afStageGrid" class="af-stage-grid"></div>
+                    </div>
+                    <div class="dash-card af-forecast-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">&#127919;</span> Forecast do mês</h2>
+                        <div id="afForecast"></div>
+                    </div>
+                </div>
+
+                <!-- Linha 2: Funil de conversão (full width) -->
+                <div class="dash-card" style="padding:20px;margin-top:18px;">
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);">&#128200;</span> Taxas de conversão entre etapas</h2>
+                    <div id="afConversion" style="margin-top:12px;"></div>
+                </div>
+
+                <!-- Linha 3: Histórico mensal + Reverse Engineering -->
+                <div class="af-row">
+                    <div class="dash-card af-history-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128181;</span> Histórico de fechamentos (6 meses)</h2>
+                        <div style="position:relative;height:240px;margin-top:12px;">
+                            <canvas id="afChartHistory"></canvas>
+                        </div>
+                    </div>
+                    <div class="dash-card af-reverse-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#129518;</span> Math reverso da meta</h2>
+                        <div id="afReverse"></div>
+                    </div>
+                </div>
+
+                <!-- Linha 4: Insights & Ações (full width) -->
+                <div class="dash-card" style="padding:20px;margin-top:18px;">
+                    <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);">&#128161;</span> Insights & ações para o fim do mês</h2>
+                    <div id="afInsights" class="af-insights" style="margin-top:12px;"></div>
+                </div>
+
+                <!-- Linha 5: Top deals (acelerar / atenção) -->
+                <div class="af-row">
+                    <div class="dash-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#9989;</span> Aceleradores - deals próximos do fechamento</h2>
+                        <div id="afAccelerators" style="margin-top:12px;"></div>
+                    </div>
+                    <div class="dash-card">
+                        <h2 class="af-h2"><span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#9888;&#65039;</span> Em risco - deals parados</h2>
+                        <div id="afAtRisk" style="margin-top:12px;"></div>
+                    </div>
+                </div>
+
+                <div class="last-update" id="afLastUpdate" style="text-align:right;color:#6d6d85;font-size:11px;margin-top:14px;"></div>
+            </div>
+        </div>
+
         <!-- Modal: Investimento em mídia (fora do view pra não colidir com tabs) -->
         <div class="modal-overlay" id="mktSpendModal">
             <div class="modal" style="max-width:520px;">
@@ -3473,6 +3819,7 @@ let dashLoaded = false;
 let forecastLoaded = false;
 let mqlsLoaded = false;
 let marketingLoaded = false;
+let analiseFunilLoaded = false;
 let pendingScrollSection = null;
 
 function showView(viewName) {
@@ -3481,6 +3828,8 @@ function showView(viewName) {
     document.getElementById('view-forecast').style.display = 'none';
     const mktEl = document.getElementById('view-marketing');
     if (mktEl) mktEl.style.display = 'none';
+    const afEl = document.getElementById('view-analise-funil');
+    if (afEl) afEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -3488,6 +3837,7 @@ function showView(viewName) {
     if (viewName === 'dashboard' && !dashLoaded) { loadDashboard(); dashLoaded = true; }
     if (viewName === 'forecast' && !forecastLoaded) { loadForecast(); forecastLoaded = true; }
     if (viewName === 'marketing' && !marketingLoaded) { loadMarketing(); marketingLoaded = true; }
+    if (viewName === 'analise-funil' && !analiseFunilLoaded) { loadAnaliseFunil(); analiseFunilLoaded = true; }
 
     updateSidebarActive(viewName);
 
@@ -7354,6 +7704,476 @@ function switchMktTab(tab) {
         if (perf) perf.style.display = 'block';
         if (mqls) mqls.style.display = 'none';
     }
+}
+
+// ==================== ANALISE DE FUNIL ====================
+const AF_SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+const AF_META_KEY = 'afMetaByPipeline';
+let afActivePipeline = 'Funil de Vendas';
+let afChartHistoryInstance = null;
+
+function getAfMeta(pipeline) {
+    try { const o = JSON.parse(localStorage.getItem(AF_META_KEY) || '{}'); return parseFloat(o[pipeline]) || 0; }
+    catch { return 0; }
+}
+function setAfMeta(pipeline, value) {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem(AF_META_KEY) || '{}'); } catch {}
+    o[pipeline] = value;
+    localStorage.setItem(AF_META_KEY, JSON.stringify(o));
+}
+
+function brlShort(v) {
+    if (!isFinite(v) || v === 0) return 'R$ 0';
+    if (v >= 1000000) return 'R$ ' + (v/1000000).toFixed(1) + 'M';
+    if (v >= 1000) return 'R$ ' + (v/1000).toFixed(1) + 'k';
+    return 'R$ ' + Math.round(v);
+}
+function brlFull(v) {
+    if (!isFinite(v)) return 'R$ 0';
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+}
+
+// Custom field keys
+const AF_MRR_KEY = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+const AF_SETUP_KEY = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+function afGetMRR(d) { const p = (d.OtherProperties||[]).find(x=>x.FieldKey===AF_MRR_KEY); return p?.DecimalValue || 0; }
+function afGetSetup(d) { const p = (d.OtherProperties||[]).find(x=>x.FieldKey===AF_SETUP_KEY); return p?.DecimalValue || 0; }
+
+async function loadAnaliseFunil() {
+    document.getElementById('afLoadingArea').style.display = 'flex';
+    document.getElementById('afContentArea').style.display = 'none';
+
+    // Reutiliza dados do dashboard se possivel
+    if (!dashLoaded) {
+        document.getElementById('afLoadingMsg').textContent = 'Carregando dados do dashboard...';
+        await loadDashboard();
+        dashLoaded = true;
+    }
+
+    // Renderiza tabs de pipeline
+    document.getElementById('afPipelineTabs').innerHTML = AF_SALES_PIPELINES.map(p =>
+        `<button class="af-pipeline-tab ${p === afActivePipeline ? 'active' : ''}" onclick="setAfPipeline('${p.replace(/'/g, "\\'")}')">${p}</button>`
+    ).join('');
+
+    // Popula filtro de executivo
+    populateAfOwnerFilter();
+
+    // Restaura meta salva
+    document.getElementById('afMetaInput').value = getAfMeta(afActivePipeline) || '';
+
+    document.getElementById('afLoadingArea').style.display = 'none';
+    document.getElementById('afContentArea').style.display = 'block';
+
+    renderAnaliseFunil();
+}
+
+function setAfPipeline(p) {
+    afActivePipeline = p;
+    document.querySelectorAll('#afPipelineTabs .af-pipeline-tab').forEach(b => {
+        b.classList.toggle('active', b.textContent === p);
+    });
+    populateAfOwnerFilter();
+    document.getElementById('afMetaInput').value = getAfMeta(afActivePipeline) || '';
+    renderAnaliseFunil();
+}
+
+function populateAfOwnerFilter() {
+    const sel = document.getElementById('afOwnerFilter');
+    if (!sel) return;
+    const current = sel.value;
+    const owners = [...new Set(
+        [...wonDeals, ...lostDeals, ...dashOpenDeals]
+            .filter(d => d.Pipeline?.Name === afActivePipeline)
+            .map(d => d.Owner?.Name).filter(Boolean)
+    )].sort();
+    sel.innerHTML = '<option value="">Todos os executivos</option>' +
+        owners.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
+}
+
+function onAfMetaChange() {
+    const v = parseFloat(document.getElementById('afMetaInput').value) || 0;
+    setAfMeta(afActivePipeline, v);
+    renderAnaliseFunil();
+}
+
+function afStageStripeColor(stage, allStagesOrdered) {
+    // Cores graduais conforme a etapa avanca (entrada azul -> ganho verde)
+    const idx = allStagesOrdered.indexOf(stage.name);
+    const total = Math.max(allStagesOrdered.length, 1);
+    const ratio = idx / total;
+    if (/descart|perdi|loss/i.test(stage.name)) return '#ef4444';
+    if (/formaliz|ganh|won|aprov/i.test(stage.name)) return '#22c55e';
+    if (ratio < 0.33) return '#60a5fa';
+    if (ratio < 0.66) return '#8b5cf6';
+    return '#f59e0b';
+}
+
+function afStageProb(stageName, ordIdx, totalStages) {
+    // Probabilidade de fechamento conforme estagio
+    if (/descart|perdi|loss/i.test(stageName)) return 0;
+    if (/formaliz|aprov/i.test(stageName)) return 0.85;
+    if (/considera/i.test(stageName)) return 0.3;
+    if (/reconhe/i.test(stageName)) return 0.1;
+    // fallback proporcional
+    const t = Math.max(totalStages, 1);
+    return Math.min(0.85, (ordIdx / t) * 0.85);
+}
+
+function renderAnaliseFunil() {
+    const ownerFilter = document.getElementById('afOwnerFilter').value;
+    const pipeline = afActivePipeline;
+
+    // Filtra deals
+    const ownMatch = d => !ownerFilter || d.Owner?.Name === ownerFilter;
+    const openDeals = (dashOpenDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const wonAll = (wonDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const lostAll = (lostDeals||[]).filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+
+    // === Etapas do pipeline (ordenadas) ===
+    const stageOrdMap = {};
+    [...openDeals, ...wonAll, ...lostAll].forEach(d => {
+        if (d.Stage?.Name && d.Stage.Ordination !== undefined) stageOrdMap[d.Stage.Name] = d.Stage.Ordination;
+    });
+    const allStagesOrdered = Object.entries(stageOrdMap).sort((a,b) => a[1] - b[1]).map(e => e[0]);
+
+    // === Etapas ativas (com deals abertos) ===
+    const stageData = {};
+    openDeals.forEach(d => {
+        const s = d.Stage?.Name || '(sem etapa)';
+        if (!stageData[s]) stageData[s] = { name: s, count: 0, mrr: 0, setup: 0, filled: 0, deals: [], ord: d.Stage?.Ordination || 999 };
+        stageData[s].count++;
+        const mrr = afGetMRR(d);
+        const setup = afGetSetup(d);
+        stageData[s].mrr += mrr;
+        stageData[s].setup += setup;
+        if (mrr > 0 || setup > 0) stageData[s].filled++;
+        stageData[s].deals.push({ d, mrr, setup });
+    });
+    const activeStages = Object.values(stageData).sort((a,b) => a.ord - b.ord);
+
+    // === KPIs ===
+    const totalDealsOpen = openDeals.length;
+    const totalMrrPipeline = openDeals.reduce((s,d) => s + afGetMRR(d), 0);
+    const totalSetupPipeline = openDeals.reduce((s,d) => s + afGetSetup(d), 0);
+    const dealsWithValue = openDeals.filter(d => afGetMRR(d) > 0 || afGetSetup(d) > 0).length;
+    const pctFilled = totalDealsOpen > 0 ? (dealsWithValue / totalDealsOpen) * 100 : 0;
+
+    // Win rate
+    const totalClosed = wonAll.length + lostAll.length;
+    const winRate = totalClosed > 0 ? (wonAll.length / totalClosed) * 100 : 0;
+
+    // Ticket medio MRR ganho
+    const ticketMrr = wonAll.length > 0 ? wonAll.reduce((s,d) => s + afGetMRR(d), 0) / wonAll.length : 0;
+
+    // Ciclo medio
+    const cycleDays = wonAll.map(d => {
+        if (!d.CreateDate || !d.FinishDate) return 0;
+        return (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000;
+    }).filter(c => c > 0);
+    const avgCycle = cycleDays.length > 0 ? cycleDays.reduce((s,c) => s+c, 0) / cycleDays.length : 0;
+
+    // KPI bar
+    document.getElementById('afKpiBar').innerHTML = `
+        <div class="af-kpi"><div class="label">Deals abertos</div><div class="value" style="color:#60a5fa;">${totalDealsOpen}</div><div class="sub">no funil</div></div>
+        <div class="af-kpi"><div class="label">MRR pipeline</div><div class="value" style="color:#b794f4;">${brlShort(totalMrrPipeline)}</div><div class="sub">soma potencial</div></div>
+        <div class="af-kpi"><div class="label">Qualidade dados</div><div class="value" style="color:${pctFilled < 50 ? '#ef4444' : pctFilled < 80 ? '#f59e0b' : '#22c55e'};">${pctFilled.toFixed(0)}%</div><div class="sub">${dealsWithValue}/${totalDealsOpen} com valor</div></div>
+        <div class="af-kpi"><div class="label">Win rate</div><div class="value" style="color:${winRate < 20 ? '#ef4444' : winRate < 40 ? '#f59e0b' : '#22c55e'};">${winRate.toFixed(1)}%</div><div class="sub">histórico</div></div>
+        <div class="af-kpi"><div class="label">Ticket MRR</div><div class="value" style="color:#22c55e;font-size:18px;">${brlShort(ticketMrr)}</div><div class="sub">média ganhos</div></div>
+        <div class="af-kpi"><div class="label">Ciclo médio</div><div class="value" style="color:#f59e0b;">${avgCycle.toFixed(0)}d</div><div class="sub">lead → ganho</div></div>
+    `;
+
+    // === Foto por etapa ===
+    document.getElementById('afStageGrid').innerHTML = activeStages.length === 0
+        ? '<div style="color:#6d6d85;font-size:13px;padding:20px;">Sem deals abertos no funil.</div>'
+        : activeStages.map(s => {
+            const filledClass = s.count === 0 ? '' : s.filled / s.count >= 0.7 ? '' : s.filled / s.count >= 0.4 ? 'warn' : 'crit';
+            const color = afStageStripeColor(s, allStagesOrdered);
+            return `<div class="af-stage-card">
+                <div class="stage-stripe" style="background:${color};"></div>
+                <div class="stage-name">${s.name}</div>
+                <div class="stage-count">${s.count}</div>
+                <div class="stage-mrr">${brlShort(s.mrr)}</div>
+                <div class="stage-filled ${filledClass}">${s.filled}/${s.count} com valor</div>
+            </div>`;
+        }).join('');
+
+    // === Forecast probabilístico ===
+    const meta = getAfMeta(afActivePipeline);
+    let forecastMRR = 0;
+    openDeals.forEach(d => {
+        const mrr = afGetMRR(d);
+        const stageName = d.Stage?.Name || '';
+        const ord = d.Stage?.Ordination || 0;
+        const prob = afStageProb(stageName, ord, allStagesOrdered.length);
+        forecastMRR += mrr * prob;
+    });
+    const metaPct = meta > 0 ? (forecastMRR / meta) * 100 : 0;
+    const gap = meta - forecastMRR;
+    const forecastColor = metaPct >= 90 ? '#22c55e' : metaPct >= 60 ? '#f59e0b' : '#ef4444';
+
+    document.getElementById('afForecast').innerHTML = `
+        <div class="af-forecast-meta">Forecast realista do mês</div>
+        <div class="af-forecast-bigval" style="color:${forecastColor};">${brlFull(forecastMRR)}</div>
+        ${meta > 0 ? `
+            <div style="font-size:11px;color:#6d6d85;">${metaPct.toFixed(0)}% da meta de ${brlFull(meta)}</div>
+            <div class="af-progress-track"><div class="af-progress-fill" style="width:${Math.min(metaPct,100)}%;background:${forecastColor};"></div></div>
+            <div style="font-size:13px;font-weight:600;color:${gap > 0 ? '#ef4444' : '#22c55e'};">
+                ${gap > 0 ? `Gap: ${brlFull(gap)} faltando` : `Acima da meta em ${brlFull(-gap)}`}
+            </div>
+        ` : `
+            <div style="font-size:11.5px;color:#6d6d85;margin-top:6px;font-style:italic;">Defina uma meta MRR no topo para ver o gap e o reverse engineering.</div>
+        `}
+        <div style="font-size:10.5px;color:#6d6d85;margin-top:14px;line-height:1.5;">
+            Cálculo: cada deal multiplicado pela probabilidade média da etapa (Reconhecimento 10%, Consideração 30%, Aprovado/Formalização 85%). Não inclui deals sem MRR preenchido.
+        </div>
+    `;
+
+    // === Conversão entre etapas (histórico cumulativo) ===
+    const stagesForConv = allStagesOrdered.filter(s => !/descart|loss/i.test(s));
+    const histDeals = [...wonAll, ...lostAll];
+    // Conta quantos passaram em cada etapa = (deals que estao naquela etapa ou em uma posterior)
+    const passedCount = {};
+    stagesForConv.forEach(s => { passedCount[s] = 0; });
+    [...openDeals, ...histDeals].forEach(d => {
+        const ord = d.Stage?.Ordination || 0;
+        const status = d.StatusId; // 1=open, 2=won, 3=lost
+        stagesForConv.forEach(s => {
+            const sOrd = stageOrdMap[s];
+            if (status === 2) { passedCount[s]++; } // won passou por todas
+            else if (status === 1 && ord >= sOrd) passedCount[s]++; // open na etapa s ou posterior
+            else if (status === 3) {
+                // perdido depois de s? compara LastStageId ord
+                const lastOrd = d.LastStageId ? (stageOrdMap[Object.keys(stageOrdMap).find(k => k)] || 0) : ord;
+                if (ord >= sOrd) passedCount[s]++;
+            }
+        });
+    });
+
+    let convHtml = '';
+    for (let i = 0; i < stagesForConv.length - 1; i++) {
+        const curr = stagesForConv[i];
+        const next = stagesForConv[i + 1];
+        const c1 = passedCount[curr] || 0;
+        const c2 = passedCount[next] || 0;
+        const rate = c1 > 0 ? (c2 / c1) * 100 : 0;
+        const rateClass = rate >= 50 ? 'af-conv-ok' : rate >= 20 ? 'af-conv-warn' : 'af-conv-crit';
+        const tagClass = rate >= 50 ? 'af-conv-tag-ok' : rate >= 20 ? 'af-conv-tag-warn' : 'af-conv-tag-crit';
+        const tagText = rate >= 50 ? 'SAUDÁVEL' : rate >= 20 ? 'ATENÇÃO' : 'GARGALO';
+        const barFill = rate >= 50 ? '#22c55e' : rate >= 20 ? '#f59e0b' : '#ef4444';
+        convHtml += `<div class="af-conversion-row">
+            <div class="af-conversion-label">${curr} <span style="color:#6d6d85;"> &rarr; </span> ${next}</div>
+            <div class="af-conversion-bar-track"><div class="af-conversion-bar-fill" style="width:${Math.min(rate,100)}%;background:${barFill};"></div></div>
+            <div class="af-conversion-pct ${rateClass}">${rate.toFixed(1)}%</div>
+            <div class="af-conversion-tag ${tagClass}">${tagText}</div>
+        </div>`;
+    }
+    document.getElementById('afConversion').innerHTML = convHtml || '<div style="color:#6d6d85;padding:10px;">Sem dados suficientes para calcular conversão.</div>';
+
+    // === Histórico mensal (últimos 6 meses) ===
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ key: d.toISOString().substring(0,7), label: d.toLocaleDateString('pt-BR', { month: 'short' }) + '/' + String(d.getFullYear()).slice(2) });
+    }
+    const histMrr = months.map(m => {
+        const monthsWon = wonAll.filter(d => (d.FinishDate || '').substring(0,7) === m.key);
+        return monthsWon.reduce((s,d) => s + afGetMRR(d), 0);
+    });
+    if (afChartHistoryInstance) afChartHistoryInstance.destroy();
+    const ctxH = document.getElementById('afChartHistory');
+    afChartHistoryInstance = new Chart(ctxH, {
+        type: 'bar',
+        data: {
+            labels: months.map(m => m.label),
+            datasets: [
+                {
+                    label: 'MRR fechado',
+                    data: histMrr,
+                    backgroundColor: 'rgba(34,197,94,0.7)',
+                    borderColor: '#22c55e',
+                    borderWidth: 1
+                }
+            ]
+        },
+        plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'end',
+                    color: '#fff', font: { weight: '700', size: 11 },
+                    formatter: v => v > 0 ? brlShort(v) : '',
+                    clip: false
+                },
+                annotation: meta > 0 ? {
+                    annotations: {
+                        metaLine: {
+                            type: 'line', yMin: meta, yMax: meta,
+                            borderColor: '#fbbf24', borderWidth: 2, borderDash: [6, 6],
+                            label: { content: 'Meta ' + brlShort(meta), enabled: true, color: '#fbbf24', font: { size: 10 } }
+                        }
+                    }
+                } : undefined
+            },
+            layout: { padding: { right: 30, top: 20 } },
+            scales: {
+                x: { ticks: { color: '#8888a0', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { ticks: { color: '#8888a0', font: { size: 10 }, callback: v => brlShort(v) }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true }
+            }
+        }
+    });
+
+    // === Math reverso da meta ===
+    const reverseHtml = (() => {
+        if (meta <= 0 || ticketMrr <= 0) {
+            return '<div style="color:#6d6d85;font-size:12px;font-style:italic;padding:10px;">Defina uma meta MRR e tenha histórico de ganhos para calcular.</div>';
+        }
+        const dealsToWin = Math.ceil(meta / ticketMrr);
+        // Conversão por etapa do ponto mais próximo do ganho até a entrada
+        const stagesReverse = activeStages.slice().reverse();
+        let cumProb = 1;
+        let rows = '';
+        rows += `<div class="af-reverse-row" style="border-bottom:1px solid rgba(255,255,255,0.1);font-weight:700;">
+            <div class="stage" style="color:#fff;">Etapa</div>
+            <div class="have">Tem</div>
+            <div class="need">Precisa</div>
+        </div>`;
+        activeStages.forEach((s, idx) => {
+            const prob = afStageProb(s.name, s.ord || idx, allStagesOrdered.length);
+            const needed = prob > 0 ? Math.ceil(dealsToWin / prob) : '∞';
+            const has = s.count;
+            const gap = typeof needed === 'number' ? has - needed : 0;
+            const gapClass = typeof needed === 'number' && gap < 0 ? 'gap-crit' : 'gap-ok';
+            rows += `<div class="af-reverse-row">
+                <div class="stage">${s.name}</div>
+                <div class="have">${has}</div>
+                <div class="need ${gapClass}">${needed}</div>
+            </div>`;
+        });
+        return `<div style="margin-top:10px;font-size:12px;color:#a0a0b8;">
+            Para fechar <strong style="color:#fff;">${brlFull(meta)}</strong> de MRR com ticket médio de <strong style="color:#22c55e;">${brlFull(ticketMrr)}</strong>, precisa <strong style="color:#fff;">${dealsToWin} deals ganhos</strong>.
+        </div>${rows}`;
+    })();
+    document.getElementById('afReverse').innerHTML = reverseHtml;
+
+    // === Insights & Ações ===
+    const insights = generateAfInsights({
+        totalDealsOpen, totalMrrPipeline, dealsWithValue, pctFilled, winRate, ticketMrr, avgCycle,
+        forecastMRR, meta, gap, metaPct, activeStages, openDeals, wonAll, lostAll, pipeline, ownerFilter
+    });
+    document.getElementById('afInsights').innerHTML = insights.map(t =>
+        `<div class="af-insight ${t.level}"><div class="insight-title">${t.title}</div><div>${t.body}</div></div>`
+    ).join('');
+
+    // === Top deals (Aceleradores / Em risco) ===
+    const accelerators = openDeals.map(d => ({
+        d, mrr: afGetMRR(d), stage: d.Stage?.Name||'', ord: d.Stage?.Ordination||0,
+        prob: afStageProb(d.Stage?.Name||'', d.Stage?.Ordination||0, allStagesOrdered.length),
+        days: d.DaysInStage || 0
+    }))
+    .filter(x => x.prob >= 0.3 && x.mrr > 0)
+    .sort((a,b) => (b.prob * b.mrr) - (a.prob * a.mrr))
+    .slice(0, 7);
+    document.getElementById('afAccelerators').innerHTML = accelerators.length === 0
+        ? '<div style="color:#6d6d85;font-size:12px;padding:10px;font-style:italic;">Sem deals com alta probabilidade de fechamento. Foque em fazer Considerações avançarem.</div>'
+        : accelerators.map(x => {
+            const badge = x.prob >= 0.7 ? { c:'hot', t:'QUENTE' } : x.prob >= 0.3 ? { c:'warm', t:'MORNO' } : { c:'cold', t:'FRIO' };
+            return `<div class="af-deal-row">
+                <div class="company">${x.d.Contact?.Name || x.d.ContactName || '(sem nome)'}<span class="small">${x.stage} · ${(x.d.Owner?.Name||'').split(' ')[0]}</span></div>
+                <div class="value">${brlShort(x.mrr)}</div>
+                <div class="badge ${badge.c}">${badge.t}</div>
+                <a class="af-deal-link" href="https://app10.ploomes.com/deal/${x.d.Id}" target="_blank">&rarr;</a>
+            </div>`;
+        }).join('');
+
+    const atRisk = openDeals.map(d => ({
+        d, mrr: afGetMRR(d), stage: d.Stage?.Name||'', days: d.DaysInStage || 0
+    }))
+    .filter(x => x.days >= 21 || (x.mrr === 0 && (x.d.DaysInStage||0) > 7))
+    .sort((a,b) => b.days - a.days)
+    .slice(0, 7);
+    document.getElementById('afAtRisk').innerHTML = atRisk.length === 0
+        ? '<div style="color:#4ade80;font-size:12px;padding:10px;">&#10004; Nenhum deal estagnado ou sem valor crítico.</div>'
+        : atRisk.map(x => {
+            const badge = x.days >= 30 ? { c:'cold', t:x.days+'d' } : { c:'warm', t:x.days+'d' };
+            return `<div class="af-deal-row">
+                <div class="company">${x.d.Contact?.Name || x.d.ContactName || '(sem nome)'}<span class="small">${x.stage} · ${(x.d.Owner?.Name||'').split(' ')[0]}${x.mrr === 0 ? ' · <span style=\"color:#ef4444;\">sem valor</span>' : ''}</span></div>
+                <div class="value">${x.mrr > 0 ? brlShort(x.mrr) : '-'}</div>
+                <div class="badge ${badge.c}">${badge.t}</div>
+                <a class="af-deal-link" href="https://app10.ploomes.com/deal/${x.d.Id}" target="_blank">&rarr;</a>
+            </div>`;
+        }).join('');
+
+    document.getElementById('afLastUpdate').textContent = 'Última atualização: ' + new Date().toLocaleString('pt-BR') + ' · ' + (ownerFilter || 'Todos executivos') + ' · ' + pipeline;
+}
+
+function generateAfInsights(m) {
+    const tips = [];
+    // Qualidade dos dados
+    if (m.totalDealsOpen >= 5 && m.pctFilled < 50) {
+        const semValor = m.totalDealsOpen - m.dealsWithValue;
+        tips.push({ level:'crit', title:`${semValor} deals sem MRR preenchido (${(100-m.pctFilled).toFixed(0)}%)`, body:'Forecast vira chute sem valor no card. Primeira ação: forçar preenchimento de MRR e Setup nos deals abertos.' });
+    }
+
+    // Forecast vs meta
+    if (m.meta > 0) {
+        if (m.metaPct < 50) {
+            tips.push({ level:'crit', title:`Forecast em ${m.metaPct.toFixed(0)}% da meta`, body:`Gap de ${brlFull(m.gap)}. Estratégia: 1) acelerar deals em Consideração com proposta agressiva; 2) priorizar aceleradores listados abaixo; 3) revisar deals parados e descartar os mortos.` });
+        } else if (m.metaPct < 90) {
+            tips.push({ level:'warn', title:`Forecast em ${m.metaPct.toFixed(0)}% da meta`, body:`Faltam ${brlFull(m.gap)}. Cada deal em Aprovado vale muito - garantir fechamento. Acelerar Considerações com maior MRR.` });
+        } else if (m.metaPct < 110) {
+            tips.push({ level:'ok', title:`Forecast batendo a meta (${m.metaPct.toFixed(0)}%)`, body:'Foco: não perder os deals já avançados. Garantir agilidade na proposta e formalização.' });
+        } else {
+            tips.push({ level:'ok', title:`Forecast acima da meta (${m.metaPct.toFixed(0)}%)`, body:`Sobra de ${brlFull(-m.gap)}. Considere puxar deals do próximo mês para amplificar resultado.` });
+        }
+    } else {
+        tips.push({ level:'info', title:'Defina a meta MRR do mês', body:'Sem meta, não há como medir gap nem priorizar. Configure no topo da tela.' });
+    }
+
+    // Win rate
+    if (m.winRate > 0 && m.winRate < 20) {
+        tips.push({ level:'crit', title:`Win rate baixa (${m.winRate.toFixed(1)}%)`, body:'Histórico mostra que apenas 1 em cada 5 deals fecha. Revisar pricing, prova social e qualificação. Possível problema de fit do ICP.' });
+    } else if (m.winRate >= 30) {
+        tips.push({ level:'ok', title:`Win rate forte (${m.winRate.toFixed(1)}%)`, body:'Pipeline qualificado. Foco em volume para escalar o resultado.' });
+    }
+
+    // Ciclo
+    if (m.avgCycle > 60) {
+        tips.push({ level:'warn', title:`Ciclo médio longo (${m.avgCycle.toFixed(0)}d)`, body:'Reduzir o ciclo é a alavanca de maior impacto: cada dia menos = mais deals fechados/ano. Padronizar proposta e definir SLA por etapa.' });
+    }
+
+    // Gargalo nas etapas
+    const semValorStage = m.activeStages.find(s => s.count >= 3 && s.filled / s.count < 0.4);
+    if (semValorStage) {
+        tips.push({ level:'warn', title:`Etapa "${semValorStage.name}" com pipeline cego`, body:`${semValorStage.count - semValorStage.filled} de ${semValorStage.count} deals sem valor preenchido. Bloqueia o forecast.` });
+    }
+
+    // Concentração de MRR em poucos deals
+    const sortedByMRR = m.openDeals.map(d => afGetMRR(d)).filter(v => v > 0).sort((a,b) => b - a);
+    if (sortedByMRR.length >= 3) {
+        const top3 = sortedByMRR.slice(0, 3).reduce((s,v) => s+v, 0);
+        const totalMrr = sortedByMRR.reduce((s,v) => s+v, 0);
+        if (top3 / totalMrr > 0.7) {
+            tips.push({ level:'warn', title:'Concentração alta nos top 3 deals', body:`${(top3/totalMrr*100).toFixed(0)}% do MRR do pipeline está em apenas 3 deals. Se um cair, derruba o mês inteiro. Tratar como críticos.` });
+        }
+    }
+
+    // Volume insuficiente
+    if (m.meta > 0 && m.ticketMrr > 0) {
+        const dealsToWin = Math.ceil(m.meta / m.ticketMrr);
+        const dealsNeededInPipeline = m.winRate > 0 ? Math.ceil(dealsToWin / (m.winRate/100)) : dealsToWin * 10;
+        if (m.totalDealsOpen < dealsNeededInPipeline * 0.5) {
+            tips.push({ level:'crit', title:'Pipeline subdimensionado', body:`Com win rate de ${m.winRate.toFixed(0)}%, precisaria de ~${dealsNeededInPipeline} deals para garantir a meta. Hoje tem ${m.totalDealsOpen}. Acionar SDR/marketing por mais volume.` });
+        }
+    }
+
+    if (tips.length === 0) {
+        tips.push({ level:'info', title:'Carregue mais dados para gerar insights', body:'Não há deals ou histórico suficiente neste recorte para análise.' });
+    }
+    return tips;
 }
 
 async function loadMarketing() {
