@@ -8518,8 +8518,14 @@ function renderAnaliseFunil() {
     const totalDealsOpen = openDeals.length;
     const totalMrrPipeline = openDeals.reduce((s,d) => s + afGetMRR(d), 0);
     const totalSetupPipeline = openDeals.reduce((s,d) => s + afGetSetup(d), 0);
+
+    // Qualidade dos dados = % de deals em CONSIDERAÇÃO+ com MRR/Setup preenchido
+    // Reconhecimento e Entrada são naturalmente sem valor (proposta ainda não apresentada)
+    const dealsNeedingValue = openDeals.filter(d => /considera|aprov|formaliz/i.test(d.Stage?.Name || ''));
+    const dealsWithValueAdv = dealsNeedingValue.filter(d => afGetMRR(d) > 0 || afGetSetup(d) > 0).length;
+    const pctFilled = dealsNeedingValue.length > 0 ? (dealsWithValueAdv / dealsNeedingValue.length) * 100 : 100;
+    // Compat: numeros gerais (usados em outros lugares)
     const dealsWithValue = openDeals.filter(d => afGetMRR(d) > 0 || afGetSetup(d) > 0).length;
-    const pctFilled = totalDealsOpen > 0 ? (dealsWithValue / totalDealsOpen) * 100 : 0;
 
     // Win rate
     const totalClosed = wonAll.length + lostAll.length;
@@ -8539,7 +8545,7 @@ function renderAnaliseFunil() {
     document.getElementById('afKpiBar').innerHTML = `
         <div class="af-kpi"><div class="label">Deals abertos</div><div class="value" style="color:#60a5fa;">${totalDealsOpen}</div><div class="sub">no funil</div></div>
         <div class="af-kpi"><div class="label">MRR pipeline</div><div class="value" style="color:#b794f4;">${brlShort(totalMrrPipeline)}</div><div class="sub">soma potencial</div></div>
-        <div class="af-kpi"><div class="label">Qualidade dados</div><div class="value" style="color:${pctFilled < 50 ? '#ef4444' : pctFilled < 80 ? '#f59e0b' : '#22c55e'};">${pctFilled.toFixed(0)}%</div><div class="sub">${dealsWithValue}/${totalDealsOpen} com valor</div></div>
+        <div class="af-kpi"><div class="label">Qualidade dados</div><div class="value" style="color:${pctFilled < 50 ? '#ef4444' : pctFilled < 80 ? '#f59e0b' : '#22c55e'};">${pctFilled.toFixed(0)}%</div><div class="sub">${dealsWithValueAdv}/${dealsNeedingValue.length} c/ valor em Consideração+</div></div>
         <div class="af-kpi"><div class="label">Win rate</div><div class="value" style="color:${winRate < 20 ? '#ef4444' : winRate < 40 ? '#f59e0b' : '#22c55e'};">${winRate.toFixed(1)}%</div><div class="sub">histórico</div></div>
         <div class="af-kpi"><div class="label">Ticket MRR</div><div class="value" style="color:#22c55e;font-size:18px;">${brlShort(ticketMrr)}</div><div class="sub">média ganhos</div></div>
         <div class="af-kpi"><div class="label">Ciclo médio</div><div class="value" style="color:#f59e0b;">${avgCycle.toFixed(0)}d</div><div class="sub">lead → ganho</div></div>
@@ -8600,20 +8606,23 @@ function renderAnaliseFunil() {
             </div>`;
         }).join('');
 
-    // Banner ALERTA: deals sem MRR preenchido
-    const semValor = totalDealsOpen - dealsWithValue;
+    // Banner ALERTA: deals em CONSIDERAÇÃO+ sem MRR preenchido
+    // (em Reconhecimento é normal não ter valor porque a proposta ainda não foi apresentada)
+    const semValorAdv = dealsNeedingValue.length - dealsWithValueAdv;
     const alertEl = document.getElementById('afStageAlert');
     if (alertEl) {
-        if (semValor >= 3 && pctFilled < 80) {
+        if (semValorAdv >= 2) {
             alertEl.style.display = 'block';
-            document.getElementById('afStageAlertTitle').textContent = `${semValor} de ${totalDealsOpen} deals (${(100-pctFilled).toFixed(0)}%) estão com MRR = 0`;
-            document.getElementById('afStageAlertBody').textContent = 'Sem valor no card, qualquer forecast vira chute. Primeiro passo: forçar preenchimento de MRR e Setup nos deals abertos.';
+            document.getElementById('afStageAlertTitle').textContent = `${semValorAdv} de ${dealsNeedingValue.length} deals em Consideração+ estão com MRR = 0`;
+            document.getElementById('afStageAlertBody').innerHTML = 'A partir de <strong>Consideração</strong> a proposta já foi apresentada, então MRR/Setup deveriam estar preenchidos. Sem valor no card, o forecast desses deals é zero — eles ficam invisíveis na projeção do mês.';
         } else {
             alertEl.style.display = 'none';
         }
     }
 
     // === Forecast probabilístico ===
+    // Para deals em Reconhecimento/Entrada sem MRR preenchido, usa o ticket médio histórico
+    // (e' natural não ter valor antes da proposta ser apresentada)
     const meta = getAfMeta(afActivePipeline);
     let forecastMRR = 0;
     openDeals.forEach(d => {
@@ -8621,7 +8630,10 @@ function renderAnaliseFunil() {
         const stageName = d.Stage?.Name || '';
         const ord = d.Stage?.Ordination || 0;
         const prob = afStageProb(stageName, ord, allStagesOrdered.length);
-        forecastMRR += mrr * prob;
+        const isEarlyStage = /reconhe|entrada/i.test(stageName);
+        // Se etapa inicial sem MRR, usa ticket medio como estimativa
+        const effectiveMrr = (mrr > 0) ? mrr : (isEarlyStage && ticketMrr > 0 ? ticketMrr : 0);
+        forecastMRR += effectiveMrr * prob;
     });
     const metaPct = meta > 0 ? (forecastMRR / meta) * 100 : 0;
     const gap = meta - forecastMRR;
@@ -9009,9 +9021,12 @@ function generateAfActionPlan(m) {
     const estrutural = [];
 
     // === HOJE ===
-    if (m.totalDealsOpen >= 3 && m.pctFilled < 80) {
-        const semValor = m.totalDealsOpen - m.dealsWithValue;
-        hoje.push(`<strong>Preencher MRR/Setup nos ${semValor} deals abertos sem valor.</strong> Sem isso, qualquer forecast é fantasia.`);
+    // So cobra preenchimento dos deals em Consideracao+ (em Reconhecimento e natural nao ter valor)
+    const dealsAdvSemValor = m.openDeals.filter(d =>
+        /considera|aprov|formaliz/i.test(d.Stage?.Name || '') && afGetMRR(d) === 0 && afGetSetup(d) === 0
+    ).length;
+    if (dealsAdvSemValor >= 2) {
+        hoje.push(`<strong>Preencher MRR/Setup nos ${dealsAdvSemValor} deals em Consideração+ sem valor.</strong> A partir dessa etapa a proposta já foi apresentada — sem valor preenchido, viram fantasmas no forecast.`);
     }
     if (m.meta > 0 && m.metaPct < 70) {
         const topDeal = m.openDeals.map(d => ({ d, mrr: afGetMRR(d), stage: d.Stage?.Name||'' }))
