@@ -9720,27 +9720,43 @@ function renderMarketing(range, rd) {
         </div>`;
     }).join('');
 
-    // Performance por canal
+    // Performance por canal — agora cruza com fontes REAIS do Ploomes (não só MQLs)
     const channels = {};
-    enriched.forEach(e => {
-        const c = channels[e.origin] = channels[e.origin] || { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
-        c.mql++; c.leads++; // MQL eh subset de leads
-        if (e.hasMeeting) c.reun++;
-        if (e.hasProposal) c.prop++;
-        if (e.won) { c.ganhos++; c.revenue += e.revenue; }
-    });
-    // Conta também leads NAO-MQL por origem (todos os contatos do período)
+    const ensureCh = o => channels[o] = channels[o] || { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
+
+    // 1) LEADS por canal = TODOS contatos criados no período (não só MQLs)
     const allLeadsInRange = mqlAllRawPeople.filter(p => inMktRange(p.CreateDate, range));
     allLeadsInRange.forEach(p => {
         const o = p.Origin?.Name || '(sem origem)';
-        if (!channels[o]) channels[o] = { leads: 0, mql: 0, reun: 0, prop: 0, ganhos: 0, revenue: 0 };
-        // sobreescreve leads com a contagem real (não apenas MQLs)
+        ensureCh(o).leads++;
     });
-    // Recontar leads pelo total bruto (não apenas MQLs)
-    Object.keys(channels).forEach(o => { channels[o].leads = 0; });
-    allLeadsInRange.forEach(p => {
-        const o = p.Origin?.Name || '(sem origem)';
-        if (channels[o]) channels[o].leads++;
+
+    // 2) MQLs por canal (subset filtrado: email corp + telefone + sem exclusões)
+    enriched.forEach(e => {
+        ensureCh(e.origin).mql++;
+        if (e.won) { ensureCh(e.origin).revenue += e.revenue; }
+    });
+
+    // 3) Cruza com DEALS reais do Ploomes (todos os pipelines, criados no período)
+    //    para Reuniões/Propostas/Ganhos por origem
+    ensureMeetingsSets();
+    const allDealsForPeriod = [...(wonDeals||[]), ...(lostDeals||[]), ...(dashOpenDeals||[])]
+        .filter(d => inMktRange(d.CreateDate, range));
+    allDealsForPeriod.forEach(d => {
+        const o = d.Origin?.Name || '(sem origem)';
+        const ch = ensureCh(o);
+        if (_afMeetingsDealSet.has(d.Id)) ch.reun++;
+        const hasProp = (d.OtherProperties||[]).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue && inMktRange(op.DateTimeValue, range));
+        if (hasProp) ch.prop++;
+        if (d.StatusId === 2 && inMktRange(d.FinishDate, range)) {
+            ch.ganhos++;
+            // se nao foi contado via MQL, soma a receita
+            const mrr = afGetMRR ? afGetMRR(d) : 0;
+            const setup = afGetSetup ? afGetSetup(d) : 0;
+            // só soma revenue extra se nao havia MQL com esse ganho
+            const mqlGanhoExiste = enriched.find(e => e.won && e.origin === o);
+            if (!mqlGanhoExiste) ch.revenue += (mrr * 12 + setup);
+        }
     });
 
     const channelRows = Object.entries(channels)
