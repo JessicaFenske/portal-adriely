@@ -4310,8 +4310,19 @@
 
                 <!-- SLIDE 2 estilo PPT: Taxas de conversão (funil trapezoidal) -->
                 <div class="af-slide">
-                    <h2 class="af-slide-title">2. Taxas de conversão por etapa</h2>
-                    <div class="af-slide-sub">Calculadas com base no histórico de deals do funil/executivo selecionado</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div style="flex:1;min-width:280px;">
+                            <h2 class="af-slide-title">2. Taxas de conversão por etapa</h2>
+                            <div class="af-slide-sub" id="afConvSub">Calculadas com base nos deals dos últimos 90 dias</div>
+                        </div>
+                        <select id="afConvPeriod" onchange="onAfConvPeriodChange()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(108,63,181,0.4);color:#fff;padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;outline:none;cursor:pointer;">
+                            <option value="30">Últimos 30 dias</option>
+                            <option value="90" selected>Últimos 90 dias</option>
+                            <option value="180">Últimos 6 meses</option>
+                            <option value="365">Últimos 12 meses</option>
+                            <option value="0">Todo histórico</option>
+                        </select>
+                    </div>
                     <div id="afFunnel" class="af-funnel-viz" style="margin-top:14px;"></div>
                     <div id="afFunnelInsight" class="af-banner af-banner-warn" style="display:none;">
                         <div class="af-banner-tag">DIAGNÓSTICO</div>
@@ -8730,6 +8741,13 @@ let afLostDealsCache = null;
 const AF_META_KEY = 'afMetaByPipeline';
 let afActivePipeline = 'Funil de Vendas';
 let afChartHistoryInstance = null;
+let afConvPeriodDays = 90; // default: ultimos 90 dias para taxas de conversao
+
+function onAfConvPeriodChange() {
+    const v = document.getElementById('afConvPeriod')?.value;
+    afConvPeriodDays = parseInt(v) || 0;
+    renderAnaliseFunil();
+}
 
 function getAfMeta(pipeline) {
     try { const o = JSON.parse(localStorage.getItem(AF_META_KEY) || '{}'); return parseFloat(o[pipeline]) || 0; }
@@ -9129,11 +9147,22 @@ function renderAnaliseFunil() {
         }
     }
 
-    // === Conversão entre etapas (histórico cumulativo) ===
+    // === Conversão entre etapas (filtrada por periodo selecionado) ===
     const stagesForConv = allStagesOrdered.filter(s => !/descart|loss/i.test(s));
-    const histDeals = [...wonAll, ...lostAll];
+    // Filtra deals historicos pelo periodo (FinishDate dentro do range)
+    const convCutoff = afConvPeriodDays > 0 ? Date.now() - afConvPeriodDays * 86400000 : 0;
+    const inConvPeriod = (dateStr) => {
+        if (!dateStr) return false;
+        if (convCutoff === 0) return true; // todo historico
+        return new Date(dateStr).getTime() >= convCutoff;
+    };
+    const wonInPeriod = wonAll.filter(d => inConvPeriod(d.FinishDate));
+    const lostInPeriod = lostAll.filter(d => inConvPeriod(d.FinishDate));
+    const histDeals = [...wonInPeriod, ...lostInPeriod];
     const passedCount = {};
     stagesForConv.forEach(s => { passedCount[s] = 0; });
+    // Abertos: sempre incluidos (refletem o estado atual)
+    // Won/Lost: filtrados pelo periodo
     [...openDeals, ...histDeals].forEach(d => {
         const ord = d.Stage?.Ordination || 0;
         const status = d.StatusId;
@@ -9144,6 +9173,19 @@ function renderAnaliseFunil() {
             else if (status === 3 && ord >= sOrd) passedCount[s]++;
         });
     });
+
+    // Atualiza subtitulo do slide com o periodo selecionado
+    const convSubEl = document.getElementById('afConvSub');
+    if (convSubEl) {
+        const periodLabel = afConvPeriodDays === 0 ? 'todo o histórico'
+            : afConvPeriodDays === 30 ? 'últimos 30 dias'
+            : afConvPeriodDays === 90 ? 'últimos 90 dias'
+            : afConvPeriodDays === 180 ? 'últimos 6 meses'
+            : afConvPeriodDays === 365 ? 'últimos 12 meses'
+            : `últimos ${afConvPeriodDays} dias`;
+        const totalClosed = wonInPeriod.length + lostInPeriod.length;
+        convSubEl.textContent = `Calculadas com base nos deals dos ${periodLabel} (${wonInPeriod.length} ganhos + ${lostInPeriod.length} perdidos + ${openDeals.length} abertos hoje)`;
+    }
 
     // === Funil visual trapezoidal (estilo PPT) ===
     const funnelHtml = [];
