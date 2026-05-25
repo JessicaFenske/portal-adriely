@@ -1297,6 +1297,11 @@
             display: flex;
             gap: 16px;
             align-items: flex-start;
+            transition: all 0.15s ease;
+        }
+        #view-analise-funil .af-mini-insight[onclick]:hover {
+            background: rgba(255,255,255,0.05);
+            transform: translateY(-1px);
         }
         #view-analise-funil .af-mini-insight.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.07); }
         #view-analise-funil .af-mini-insight.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.07); }
@@ -7275,6 +7280,23 @@ function showStageDrilldown(pipelineName, stageName) {
     showDrilldown(`${pipelineName} - ${stageName} (${deals.length} negócios)`, deals, null, 'won');
 }
 
+// Abre drilldown de um mini-insight da Analise de Funil
+function showAfInsightDrilldown(idx) {
+    const tip = (window._afInsightTips || [])[idx];
+    if (!tip || !tip.deals) return;
+    const columns = [
+        { header: 'Empresa', getValue: d => d.Contact?.Name || d.ContactName || '(sem nome)' },
+        { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+        { header: 'Responsável', getValue: d => d.Owner?.Name || '' },
+        { header: 'MRR', getValue: d => afGetMRR(d) },
+        { header: 'Setup', getValue: d => afGetSetup(d) },
+        { header: 'Dias na etapa', getValue: d => d.DaysInStage || 0 },
+        { header: 'Criado em', getValue: d => (d.CreateDate || '').substring(0, 10) },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+    showDrilldown(tip.drilldownTitle || 'Deals', tip.deals, columns, 'open');
+}
+
 function setFunnelPipeline(p) { activeFunnelPipeline = p; renderSection9(); }
 
 function renderAllDash() {
@@ -9006,15 +9028,21 @@ function renderAnaliseFunil() {
     });
     const stageInsEl = document.getElementById('afStageInsights');
     if (stageInsEl) {
-        stageInsEl.innerHTML = miniInsights.map(t =>
-            `<div class="af-mini-insight ${t.level}">
+        window._afInsightTips = miniInsights;
+        stageInsEl.innerHTML = miniInsights.map((t, idx) => {
+            const clickable = (t.deals && t.deals.length > 0);
+            const cursorStyle = clickable ? 'cursor:pointer;' : '';
+            const onClick = clickable ? `onclick="showAfInsightDrilldown(${idx})"` : '';
+            const arrow = clickable ? `<div style="position:absolute;top:14px;right:16px;color:#94a3b8;font-size:11px;">${t.deals.length} ${t.deals.length === 1 ? 'deal' : 'deals'} &rsaquo;</div>` : '';
+            return `<div class="af-mini-insight ${t.level}" style="position:relative;${cursorStyle}" ${onClick}>
                 <div class="mi-icon">${t.icon}</div>
                 <div class="mi-content">
                     <div class="mi-title">${t.title}</div>
                     <div class="mi-body">${t.body}</div>
                 </div>
-            </div>`
-        ).join('');
+                ${arrow}
+            </div>`;
+        }).join('');
     }
 
     // === Forecast probabilístico ===
@@ -9525,7 +9553,9 @@ function generateAfStageInsights(m) {
             tips.push({
                 icon: '⏱️', level,
                 title: `Tempo médio em "${stageWithLongest.stage}": <span class="mi-highlight">${stageWithLongest.avg.toFixed(0)} dias</span>`,
-                body: `${stageWithLongest.count} deals nessa etapa. ${stageWithLongest.avg > 30 ? 'Acima do esperado — vendedor precisa destravar ou descartar.' : stageWithLongest.avg > 14 ? 'Atenção: começando a estagnar.' : 'Velocity saudável.'}`
+                body: `${stageWithLongest.count} deals nessa etapa. ${stageWithLongest.avg > 30 ? 'Acima do esperado — vendedor precisa destravar ou descartar.' : stageWithLongest.avg > 14 ? 'Atenção: começando a estagnar.' : 'Velocity saudável.'}`,
+                deals: stageWithLongest.deals,
+                drilldownTitle: `Deals em "${stageWithLongest.stage}" (${stageWithLongest.count})`
             });
         }
     }
@@ -9537,7 +9567,9 @@ function generateAfStageInsights(m) {
         tips.push({
             icon: '🐌', level: 'crit',
             title: `<span class="mi-highlight">${stuck30.length} deals parados há +30 dias</span> na etapa atual`,
-            body: `Total de <span class="mi-highlight">${brlFull(stuckMrr)}</span> em MRR estagnado. Decisão binária: acelerar com proposta agressiva ou descartar para não inflar pipeline morto.`
+            body: `Total de <span class="mi-highlight">${brlFull(stuckMrr)}</span> em MRR estagnado. Decisão binária: acelerar com proposta agressiva ou descartar para não inflar pipeline morto.`,
+            deals: stuck30,
+            drilldownTitle: `Deals parados há +30 dias (${stuck30.length})`
         });
     }
 
@@ -9551,7 +9583,9 @@ function generateAfStageInsights(m) {
             tips.push({
                 icon: '⏳', level: 'warn',
                 title: `<span class="mi-highlight">${oldDeals.length} deals</span> acima do ciclo médio (${m.avgCycle.toFixed(0)}d)`,
-                body: `Deals que excederam 30% do ciclo padrão tendem a morrer. Provavelmente já deveriam ter fechado ou sido descartados.`
+                body: `Deals que excederam 30% do ciclo padrão tendem a morrer. Provavelmente já deveriam ter fechado ou sido descartados.`,
+                deals: oldDeals,
+                drilldownTitle: `Deals acima do ciclo médio (${oldDeals.length})`
             });
         }
     }
@@ -9563,23 +9597,29 @@ function generateAfStageInsights(m) {
         const totalMrr = dealsWithMrr.reduce((s, x) => s + x.mrr, 0);
         const ratio = top3Sum / totalMrr;
         if (ratio > 0.6) {
+            const top3Deals = dealsWithMrr.slice(0, 3).map(x => x.d);
             const topNames = dealsWithMrr.slice(0, 3).map(x => x.d.Contact?.Name || x.d.ContactName || '?').filter(n => n !== '?').slice(0, 3);
             tips.push({
                 icon: '⚖️', level: 'warn',
                 title: `Top 3 deals = <span class="mi-highlight">${(ratio*100).toFixed(0)}% do MRR do pipeline</span>`,
-                body: `${topNames.join(', ')}. Concentração alta — se um cair, o mês cai junto. Tratar como contas críticas.`
+                body: `${topNames.join(', ')}. Concentração alta — se um cair, o mês cai junto. Tratar como contas críticas.`,
+                deals: top3Deals,
+                drilldownTitle: 'Top 3 deals do pipeline (concentração crítica)'
             });
         }
     }
 
     // 5) Etapa proxima do fechamento vazia ou com poucos deals
-    const aprovExists = m.activeStages.find(s => /aprov|formaliz/i.test(s.name));
-    if (!aprovExists || aprovExists.count <= 1) {
-        const count = aprovExists ? aprovExists.count : 0;
+    const aprovStage = m.activeStages.find(s => /aprov|formaliz/i.test(s.name));
+    if (!aprovStage || aprovStage.count <= 1) {
+        const count = aprovStage ? aprovStage.count : 0;
+        const dealsAprov = openDeals.filter(d => /aprov|formaliz/i.test(d.Stage?.Name || ''));
         tips.push({
             icon: '🚨', level: 'crit',
             title: `Apenas <span class="mi-highlight">${count} deal(s)</span> em Aprovado/Formalização`,
-            body: 'Sem deals em etapas finais, fechamento do mês é improvável. Foco em acelerar deals de Consideração com proposta agressiva esta semana.'
+            body: 'Sem deals em etapas finais, fechamento do mês é improvável. Foco em acelerar deals de Consideração com proposta agressiva esta semana.',
+            deals: dealsAprov,
+            drilldownTitle: `Deals em Aprovado/Formalização (${dealsAprov.length})`
         });
     }
 
@@ -9588,10 +9628,13 @@ function generateAfStageInsights(m) {
         const avgPerStage = openDeals.length / m.activeStages.length;
         const congested = m.activeStages.find(s => s.count > avgPerStage * 2 && s.count >= 5);
         if (congested) {
+            const congDeals = openDeals.filter(d => d.Stage?.Name === congested.name);
             tips.push({
                 icon: '🚦', level: 'warn',
                 title: `Acumulo em "${congested.stage || congested.name}": <span class="mi-highlight">${congested.count} deals</span>`,
-                body: `Etapa congestionada — pode indicar que deals estão estagnando aqui. Velocity ${(congested.deals?.[0]?.daysInStage || 0).toFixed(0)}d. Forçar próximos passos ou criar critério de descarte.`
+                body: `Etapa congestionada — pode indicar que deals estão estagnando aqui. Velocity ${(congested.deals?.[0]?.daysInStage || 0).toFixed(0)}d. Forçar próximos passos ou criar critério de descarte.`,
+                deals: congDeals,
+                drilldownTitle: `Deals em "${congested.name}" (${congested.count})`
             });
         }
     }
@@ -9605,10 +9648,14 @@ function generateAfStageInsights(m) {
             const max = sorted[0][1];
             const min = sorted[sorted.length-1][1];
             if (max >= min * 2.5 && max >= 5) {
+                const topOwnerName = sorted[0][0];
+                const dealsTopOwner = openDeals.filter(d => d.Owner?.Name === topOwnerName);
                 tips.push({
                     icon: '👥', level: 'warn',
-                    title: `Carga desbalanceada: <span class="mi-highlight">${sorted[0][0].split(' ')[0]} com ${max} deals</span>`,
-                    body: `${sorted[sorted.length-1][0].split(' ')[0]} tem ${min}. Rebalancear melhora qualidade do follow-up — referência saudável é 25-35 deals ativos por executivo.`
+                    title: `Carga desbalanceada: <span class="mi-highlight">${topOwnerName.split(' ')[0]} com ${max} deals</span>`,
+                    body: `${sorted[sorted.length-1][0].split(' ')[0]} tem ${min}. Rebalancear melhora qualidade do follow-up — referência saudável é 25-35 deals ativos por executivo.`,
+                    deals: dealsTopOwner,
+                    drilldownTitle: `Deals do ${topOwnerName.split(' ')[0]} (${dealsTopOwner.length})`
                 });
             }
         }
@@ -9623,7 +9670,9 @@ function generateAfStageInsights(m) {
             tips.push({
                 icon: '🪦', level: 'crit',
                 title: `Deal mais antigo: <span class="mi-highlight">${name}</span> (${days}d aberto)`,
-                body: `Em "${oldest.Stage?.Name || '?'}" há ${oldest.DaysInStage || 0}d. <a href="https://app10.ploomes.com/deal/${oldest.Id}" target="_blank" style="color:#b794f4;text-decoration:none;font-weight:600;">Abrir no Ploomes →</a>`
+                body: `Em "${oldest.Stage?.Name || '?'}" há ${oldest.DaysInStage || 0}d. <a href="https://app10.ploomes.com/deal/${oldest.Id}" target="_blank" style="color:#b794f4;text-decoration:none;font-weight:600;">Abrir no Ploomes →</a>`,
+                deals: [oldest],
+                drilldownTitle: `Deal mais antigo: ${name}`
             });
         }
     }
@@ -9635,7 +9684,9 @@ function generateAfStageInsights(m) {
             tips.push({
                 icon: '📉', level: 'warn',
                 title: `MRR do pipeline = apenas <span class="mi-highlight">${dealsEsperadosFechar.toFixed(1)} deals</span> do ticket médio`,
-                body: `Pipeline subdimensionado — uma única perda compromete metade do mês. Acelerar fluxo de novos leads.`
+                body: `Pipeline subdimensionado — uma única perda compromete metade do mês. Acelerar fluxo de novos leads.`,
+                deals: openDeals.filter(d => afGetMRR(d) > 0),
+                drilldownTitle: 'Deals do pipeline com MRR preenchido'
             });
         }
     }
@@ -9644,10 +9695,13 @@ function generateAfStageInsights(m) {
     const formalizCount = (m.activeStages.find(s => /formaliz/i.test(s.name)) || {}).count || 0;
     const aprovCount = (m.activeStages.find(s => /aprov/i.test(s.name)) || {}).count || 0;
     if (formalizCount + aprovCount >= 3) {
+        const dealsFinal = openDeals.filter(d => /aprov|formaliz/i.test(d.Stage?.Name || ''));
         tips.push({
             icon: '🎯', level: 'ok',
             title: `<span class="mi-highlight">${formalizCount + aprovCount} deals</span> em etapas finais (Aprovado + Formalização)`,
-            body: 'Bom volume na boca do funil. Foco: garantir agilidade na minuta e assinatura, não perder por demora burocrática.'
+            body: 'Bom volume na boca do funil. Foco: garantir agilidade na minuta e assinatura, não perder por demora burocrática.',
+            deals: dealsFinal,
+            drilldownTitle: `Deals em etapas finais (${dealsFinal.length})`
         });
     }
 
