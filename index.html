@@ -3763,8 +3763,10 @@
                         </div>
                     </div>
                     <div class="section-body">
+                        <!-- KPI cards no topo: contagem agregada de todos os funis -->
+                        <div id="interTopKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;"></div>
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
-                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras pra ver quais negócios são
+                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras pra ver quais negócios são. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong> (Funil de Vendas, SDR Inbound, Farmer, Sankhya).
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
                             <div>
@@ -7071,6 +7073,80 @@ async function renderSection7Inter() {
             kpiCard('Reunião → Proposta', `${taxaProp.toFixed(1)}%`, '#60a5fa', `${propostasTotal} de ${reunioesTotal} reuniões`) +
             kpiCard('Proposta → Venda', `${taxaVenda.toFixed(1)}%`, '#b794f4', `${vendasTotal} de ${propostasTotal} propostas`);
     }
+
+    // === KPI cards TOPO: agregação por todos os funis (Funil de Vendas + SDR + Farmer + Sankhya) ===
+    // Conta TODOS os deals com origem Intermodal independente do pipeline:
+    //   - Total negócios Intermodal (todos os pipelines, no período por CreateDate)
+    //   - Propostas enviadas + MRR somado das propostas
+    //   - Vendas fechadas + MRR somado das vendas
+    //   - Pipeline breakdown (em quais funis estão)
+    const intermodalAllPeriod = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
+        .filter(d => isIntermodal(d) && inRange(d.CreateDate));
+    const propostasMrrSum = propostasDealsAll.reduce((s, d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0);
+    const propostasSetupSum = propostasDealsAll.reduce((s, d) => s + (typeof getSetup === 'function' ? getSetup(d) : 0), 0);
+    const vendasMrrSum = vendasDeals.reduce((s, d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0);
+    // Breakdown por pipeline (em quais funis as propostas Intermodal estão)
+    const propByPipeline = {};
+    propostasDealsAll.forEach(d => {
+        const p = getPipelineName(d) || '(sem pipeline)';
+        propByPipeline[p] = (propByPipeline[p] || 0) + 1;
+    });
+    const pipelinesBreakdown = Object.entries(propByPipeline)
+        .sort((a,b) => b[1] - a[1])
+        .map(([p,c]) => `${p}: ${c}`)
+        .join(' · ') || '—';
+
+    const topKpiEl = document.getElementById('interTopKpis');
+    if (topKpiEl) {
+        const fmtBRL = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const bigKpi = (label, val, color, sub, clickHandler) => `
+            <div ${clickHandler ? `onclick="${clickHandler}" style="cursor:pointer;"` : 'style=""'} class="inter-kpi" style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;transition:border-color 0.15s;${clickHandler ? 'cursor:pointer;' : ''}">
+                <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
+                <div style="font-size:26px;color:${color};font-weight:700;margin-top:6px;line-height:1;">${val}</div>
+                <div style="font-size:10.5px;color:#6d6d85;margin-top:6px;">${sub}</div>
+            </div>`;
+        topKpiEl.innerHTML =
+            bigKpi('Negócios Intermodal', intermodalAllPeriod.length, '#22c55e', 'criados no período (todos os funis)', `showIntermodalDrilldown('all')`) +
+            bigKpi('Propostas enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('MRR em propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('Vendas fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}`, `showIntermodalDrilldown('sales')`);
+    }
+
+    // Expõe pra drilldown
+    window._sec7Inter_allDeals = intermodalAllPeriod;
+    window._sec7Inter_propostas = propostasDealsAll;
+    window._sec7Inter_vendas = vendasDeals;
+}
+
+// Drilldown dos KPI cards do topo do Intermodal
+function showIntermodalDrilldown(kind) {
+    let deals = [], title = '';
+    if (kind === 'all') {
+        deals = window._sec7Inter_allDeals || [];
+        title = `Negócios Intermodal (${deals.length})`;
+    } else if (kind === 'proposals') {
+        deals = window._sec7Inter_propostas || [];
+        title = `Propostas Intermodal enviadas (${deals.length})`;
+    } else if (kind === 'sales') {
+        deals = window._sec7Inter_vendas || [];
+        title = `Vendas Intermodal fechadas (${deals.length})`;
+    }
+    if (deals.length === 0) return;
+    deals = deals.slice().sort((a,b) => (typeof getMRR === 'function' ? getMRR(b) - getMRR(a) : 0));
+    const columns = [
+        { header: 'Título', getValue: d => d.Title || '' },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+        { header: 'Responsável', getValue: d => getOwnerName(d) },
+        { header: 'SDR', getValue: d => getSDR(d) || '' },
+        { header: 'MRR', getValue: d => typeof getMRR === 'function' ? getMRR(d) : 0 },
+        { header: 'Setup', getValue: d => typeof getSetup === 'function' ? getSetup(d) : 0 },
+        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+        { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+    showDrilldown(title, deals, columns, 'open');
 }
 
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
