@@ -7070,15 +7070,17 @@ async function renderSection7Inter() {
     }
 
     // === Conversão da origem Intermodal: Reuniões → Propostas → Vendas ===
-    // Vendas Intermodal no período (won deals fechados dentro do período)
+    // Usa as MESMAS definições dos KPI cards do topo pra os números baterem:
+    //   Reuniões = deals Intermodal que ja estao em sales pipelines (SDR passou pro vendedor)
+    //   Propostas = deals Intermodal com MRR ou Setup preenchido
+    //   Vendas = won deals Intermodal
+    const allIntermodalForFunnel = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
+        .filter(d => isIntermodal(d));
+    const reunioesAgendadasForFunnel = allIntermodalForFunnel.filter(d => isSalesPipeline(d) && inRange(d.CreateDate));
     const vendasDeals = (wonDeals || []).filter(d => isIntermodal(d) && inRange(d.FinishDate));
     const vendasUnique = new Set(vendasDeals.map(d => d.Id));
 
-    // Se não houver meetings tagadas Intermodal mas houver deals criados no período, usa o
-    // total de deals criados como "Reuniões" (proxy: cada deal = 1 reunião agendada)
-    const reunioesTotal = meetings.length > 0
-        ? meetings.length
-        : sorted.reduce((sum, s) => sum + s.count, 0);
+    const reunioesTotal = reunioesAgendadasForFunnel.length;
     const propostasTotal = new Set(propostasDealsAll.map(d => d.Id)).size;
     const vendasTotal = vendasUnique.size;
 
@@ -7116,7 +7118,11 @@ async function renderSection7Inter() {
                     tooltip: {
                         callbacks: {
                             label: ctx => {
-                                const labels = ['Reuniões realizadas', 'Deals com proposta enviada', 'Deals ganhos'];
+                                const labels = [
+                                    'Reuniões agendadas (em funil de venda)',
+                                    'Deals com MRR ou Setup preenchido',
+                                    'Deals ganhos'
+                                ];
                                 return `${labels[ctx.dataIndex]}: ${ctx.parsed.x}`;
                             }
                         }
