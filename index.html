@@ -1664,6 +1664,25 @@
             padding: 12px 14px;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        #view-analise-funil .af-stage-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(108, 63, 181, 0.45);
+            background: rgba(255,255,255,0.045);
+        }
+        #view-analise-funil .af-stage-card .stage-chevron {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            font-size: 10px;
+            color: #6d6d85;
+            opacity: 0.7;
+        }
+        #view-analise-funil .af-stage-card:hover .stage-chevron {
+            opacity: 1;
+            color: #b794f4;
         }
         #view-analise-funil .af-stage-card .stage-stripe {
             position: absolute;
@@ -7310,6 +7329,33 @@ function showAfInsightDrilldown(idx) {
     showDrilldown(tip.drilldownTitle || 'Deals', tip.deals, columns, 'open');
 }
 
+// Drilldown ao clicar num card de etapa (Foto atual do pipeline)
+function showAfStageDrilldown(stageName) {
+    const stages = window._afActiveStages || [];
+    const stage = stages.find(s => s.name === stageName);
+    if (!stage || !stage.deals) return;
+    // stage.deals = [{ d, mrr, setup }, ...] — extrai o deal
+    const dealsList = stage.deals.map(x => x.d || x);
+    // Ordena por MRR desc (deals mais valiosos primeiro)
+    dealsList.sort((a, b) => afGetMRR(b) - afGetMRR(a));
+    const columns = [
+        { header: 'Empresa', getValue: d => d.Title || d.Contact?.Name || d.ContactName || '(sem nome)' },
+        { header: 'Responsável', getValue: d => d.Owner?.Name || '' },
+        { header: 'MRR', getValue: d => afGetMRR(d) },
+        { header: 'Setup', getValue: d => afGetSetup(d) },
+        { header: 'Dias na etapa', getValue: d => d.DaysInStage || 0 },
+        { header: 'Criado em', getValue: d => (d.CreateDate || '').substring(0, 10) },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+    const ctx = window._afStageCtx || {};
+    const ctxParts = [];
+    if (ctx.pipeline) ctxParts.push(ctx.pipeline);
+    if (ctx.ownerFilter) ctxParts.push(ctx.ownerFilter);
+    const suffix = ctxParts.length ? ` · ${ctxParts.join(' · ')}` : '';
+    const title = `${stageName} — ${dealsList.length} ${dealsList.length === 1 ? 'negócio aberto' : 'negócios abertos'}${suffix}`;
+    showDrilldown(title, dealsList, columns, 'open');
+}
+
 function setFunnelPipeline(p) { activeFunnelPipeline = p; renderSection9(); }
 
 function renderAllDash() {
@@ -9014,13 +9060,18 @@ function renderAnaliseFunil() {
     }
 
     // === Foto por etapa ===
+    // Expõe activeStages + contexto globalmente para o drilldown ao clicar no card
+    window._afActiveStages = activeStages;
+    window._afStageCtx = { pipeline, ownerFilter };
     document.getElementById('afStageGrid').innerHTML = activeStages.length === 0
         ? '<div style="color:#6d6d85;font-size:13px;padding:20px;">Sem deals abertos no funil.</div>'
         : activeStages.map(s => {
             const filledClass = s.count === 0 ? '' : s.filled / s.count >= 0.7 ? '' : s.filled / s.count >= 0.4 ? 'warn' : 'crit';
             const color = afStageStripeColor(s, allStagesOrdered);
-            return `<div class="af-stage-card">
+            const safeName = (s.name || '').replace(/'/g, "\\'");
+            return `<div class="af-stage-card" onclick="showAfStageDrilldown('${safeName}')" title="Clique para ver os ${s.count} ${s.count === 1 ? 'negócio' : 'negócios'} desta etapa">
                 <div class="stage-stripe" style="background:${color};"></div>
+                <div class="stage-chevron">&rsaquo;</div>
                 <div class="stage-name">${s.name}</div>
                 <div class="stage-count">${s.count}</div>
                 <div class="stage-mrr">${brlShort(s.mrr)}</div>
