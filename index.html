@@ -6370,8 +6370,16 @@ async function loadMeetingDealOrigins() {
 }
 
 // Lista de pré-vendedores (SDRs reais do time) — usada para filtrar charts que devem
-// mostrar SÓ SDR e não vendedores que apareceriam como fallback de Owner
-const SDR_NAMES_ALLOWLIST = ['samira', 'guilherme', 'adriely', 'maja', 'agnes'];
+// mostrar SÓ SDR e não vendedores que apareceriam como fallback de Owner.
+// Usa tokens únicos (não só primeiro nome) pra evitar colisão: por exemplo, "guilherme"
+// matching "Frederico Guilherme" (vendedor) em vez do "Guilherme Tomio" (SDR).
+const SDR_NAMES_ALLOWLIST = [
+    'samira',    // Samira Cristina
+    'tomio',     // Guilherme Tomio (não confundir com Frederico Guilherme)
+    'adriely',   // Adriely
+    'maja',      // Maja Siqueira
+    'agnes'      // Agnes Roberta
+];
 function isSdrName(name) {
     if (!name) return false;
     const n = name.toLowerCase();
