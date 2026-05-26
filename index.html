@@ -3763,10 +3763,12 @@
                         </div>
                     </div>
                     <div class="section-body">
+                        <!-- Botões grandes de drilldown direto -->
+                        <div id="interActionButtons" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;"></div>
                         <!-- KPI cards no topo: contagem agregada de todos os funis -->
                         <div id="interTopKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;"></div>
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
-                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras pra ver quais negócios são. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong> (Funil de Vendas, SDR Inbound, Farmer, Sankhya).
+                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras OU nos botões/cards acima pra ver os negócios. Tudo agrega <strong style="color:#b794f4;">todos os funis</strong> (Funil de Vendas, SDR Inbound, Farmer, Sankhya).
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
                             <div>
@@ -7099,17 +7101,33 @@ async function renderSection7Inter() {
     const topKpiEl = document.getElementById('interTopKpis');
     if (topKpiEl) {
         const fmtBRL = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        const bigKpi = (label, val, color, sub, clickHandler) => `
-            <div ${clickHandler ? `onclick="${clickHandler}" style="cursor:pointer;"` : 'style=""'} class="inter-kpi" style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;transition:border-color 0.15s;${clickHandler ? 'cursor:pointer;' : ''}">
+        const bigKpi = (label, val, color, sub, clickHandler) => {
+            const cursor = clickHandler ? 'cursor:pointer;' : '';
+            const onclickAttr = clickHandler ? `onclick="${clickHandler}"` : '';
+            return `<div ${onclickAttr} style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;transition:border-color 0.15s;${cursor}" onmouseover="this.style.borderColor='${color}';" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';">
                 <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
                 <div style="font-size:26px;color:${color};font-weight:700;margin-top:6px;line-height:1;">${val}</div>
                 <div style="font-size:10.5px;color:#6d6d85;margin-top:6px;">${sub}</div>
             </div>`;
+        };
         topKpiEl.innerHTML =
             bigKpi('Negócios Intermodal', intermodalAllPeriod.length, '#22c55e', 'criados no período (todos os funis)', `showIntermodalDrilldown('all')`) +
             bigKpi('Propostas enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
             bigKpi('MRR em propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
             bigKpi('Vendas fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}`, `showIntermodalDrilldown('sales')`);
+    }
+
+    // === Botões grandes de drilldown direto ===
+    const actionsEl = document.getElementById('interActionButtons');
+    if (actionsEl) {
+        const btn = (label, count, color, kind) => count > 0 ? `
+            <button onclick="showIntermodalDrilldown('${kind}')" style="background:${color}25;border:1.5px solid ${color};color:${color};padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='${color}40';" onmouseout="this.style.background='${color}25';">
+                ${label} <span style="background:${color};color:#0a0a14;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;">${count}</span>
+            </button>` : '';
+        actionsEl.innerHTML =
+            btn('&#128202; Ver negócios Intermodal', intermodalAllPeriod.length, '#22c55e', 'all') +
+            btn('&#128196; Ver propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
+            btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales');
     }
 
     // Expõe pra drilldown
