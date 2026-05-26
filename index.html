@@ -6373,18 +6373,17 @@ function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
 
-    // NOVA LÓGICA (alinhada com KPI Reuniões Agendadas do Intermodal):
     // "Reunião agendada" = deal que ja esta em sales pipeline (Funil de Vendas, Sankhya, Farmer)
-    // com SDR preenchido, criado no periodo. SDR passou o lead pro vendedor = reuniao agendada.
+    // criado no periodo. Ou seja, SDR passou o lead pro vendedor.
     // (Antes usava cache de Tasks que vinha vazio.)
     const deals = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
-        .filter(d => isSalesPipeline(d) && getSDR(d) && inPeriodSection(d.CreateDate, sp.start, sp.end));
+        .filter(d => isSalesPipeline(d) && inPeriodSection(d.CreateDate, sp.start, sp.end));
     window._sec7_deals = deals;
 
+    // Agrupamento: SDR se preenchido, senão Owner (vendedor) como proxy de "quem agendou/recebeu"
     const sdrAgg = {};
     deals.forEach(d => {
-        const name = getSDR(d);
-        if (!name) return;
+        const name = getSDR(d) || getOwnerName(d) || '(sem responsável)';
         if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
         sdrAgg[name].count++;
         sdrAgg[name].deals.push(d);
