@@ -6390,24 +6390,34 @@ function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
 
-    // "Reunião agendada" = deal que ja esta em sales pipeline (Funil de Vendas, Sankhya, Farmer)
-    // criado no periodo. Ou seja, SDR passou o lead pro vendedor.
-    // (Antes usava cache de Tasks que vinha vazio.)
+    // "Reunião agendada" tem 2 caminhos possiveis (deal vive em 1 funil de cada vez):
+    //   (1) Deal JA passou pra sales pipeline (Funil de Vendas, Sankhya, Farmer):
+    //       conta pelo campo SDR; se vazio, usa Owner se for um SDR da allowlist.
+    //   (2) Deal AINDA esta em SDR pipeline mas em etapa "Reunião Agendada" ou
+    //       "Leads Quentes" (= SDR ja conseguiu agendar mas o deal nao virou venda):
+    //       conta pelo Owner do deal (que e o SDR proprio).
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const SDR_AGENDADA_STAGES = /reuni.*agend|leads?\s*quent|agendad/i;
     const deals = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
-        .filter(d => isSalesPipeline(d) && inPeriodSection(d.CreateDate, sp.start, sp.end));
+        .filter(d => inPeriodSection(d.CreateDate, sp.start, sp.end));
     window._sec7_deals = deals;
 
-    // Agrupamento por SDR. Se SDR vazio, tenta Owner SE Owner for um dos pré-vendedores reais
-    // (Samira, Guilherme, Adriely, Maja, Agnes). Senão descarta — assim o chart mostra SÓ
-    // pré-vendedores, não vendedores.
     const sdrAgg = {};
     deals.forEach(d => {
-        const sdrField = getSDR(d);
-        const ownerName = getOwnerName(d);
+        const pipelineName = getPipelineName(d);
         let name = null;
-        if (sdrField && isSdrName(sdrField)) name = sdrField;
-        else if (ownerName && isSdrName(ownerName)) name = ownerName;
-        if (!name) return; // não é pré-vendedor → descarta
+        if (isSalesPipeline(d)) {
+            // (1) Sales pipeline — SDR field, fallback Owner
+            const sdrField = getSDR(d);
+            const ownerName = getOwnerName(d);
+            if (sdrField && isSdrName(sdrField)) name = sdrField;
+            else if (ownerName && isSdrName(ownerName)) name = ownerName;
+        } else if (SDR_PIPES.includes(pipelineName) && SDR_AGENDADA_STAGES.test(d.Stage?.Name || '')) {
+            // (2) SDR pipeline + etapa Reunião Agendada / Leads Quentes — usa Owner
+            const ownerName = getOwnerName(d);
+            if (ownerName && isSdrName(ownerName)) name = ownerName;
+        }
+        if (!name) return;
         if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
         sdrAgg[name].count++;
         sdrAgg[name].deals.push(d);
