@@ -6373,17 +6373,30 @@ async function loadMeetingDealOrigins() {
 // mostrar SÓ SDR e não vendedores que apareceriam como fallback de Owner.
 // Usa tokens únicos (não só primeiro nome) pra evitar colisão: por exemplo, "guilherme"
 // matching "Frederico Guilherme" (vendedor) em vez do "Guilherme Tomio" (SDR).
-const SDR_NAMES_ALLOWLIST = [
-    'samira',    // Samira Cristina
-    'tomio',     // Guilherme Tomio (não confundir com Frederico Guilherme)
-    'adriely',   // Adriely
-    'maja',      // Maja Siqueira
-    'agnes'      // Agnes Roberta
-];
+//
+// Mapeia token -> nome canonico exibido. Normaliza "Maja", "maja", "Maja Siqueira" tudo
+// pro mesmo "Maja Siqueira" no chart.
+const SDR_CANONICAL = {
+    'samira':   'Samira Cristina',
+    'tomio':    'Guilherme Tomio',  // não confundir com Frederico Guilherme
+    'adriely':  'Adriely',
+    'maja':     'Maja Siqueira',
+    'agnes':    'Agnes Roberta'
+};
+const SDR_NAMES_ALLOWLIST = Object.keys(SDR_CANONICAL);
 function isSdrName(name) {
     if (!name) return false;
     const n = name.toLowerCase();
     return SDR_NAMES_ALLOWLIST.some(s => n.includes(s));
+}
+// Retorna o nome canonico do SDR (ou null se nao for SDR) — agrupa variacoes
+function getCanonicalSdrName(name) {
+    if (!name) return null;
+    const n = name.toLowerCase();
+    for (const [token, canonical] of Object.entries(SDR_CANONICAL)) {
+        if (n.includes(token)) return canonical;
+    }
+    return null;
 }
 
 function renderSection7() {
@@ -6414,12 +6427,11 @@ function renderSection7() {
             // (1) Sales pipeline — SDR field, fallback Owner
             const sdrField = getSDR(d);
             const ownerName = getOwnerName(d);
-            if (sdrField && isSdrName(sdrField)) name = sdrField;
-            else if (ownerName && isSdrName(ownerName)) name = ownerName;
+            name = getCanonicalSdrName(sdrField) || getCanonicalSdrName(ownerName);
         } else if (SDR_PIPES.includes(pipelineName) && !SDR_NOT_AGENDADA_STAGES.test(stageName)) {
             // (2) SDR pipeline + etapa pos-qualificacao (= reuniao agendada) — usa Owner
             const ownerName = getOwnerName(d);
-            if (ownerName && isSdrName(ownerName)) name = ownerName;
+            name = getCanonicalSdrName(ownerName);
         }
         if (!name) return;
         if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
