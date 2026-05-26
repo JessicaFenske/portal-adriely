@@ -321,14 +321,20 @@ const server = http.createServer((req, res) => {
     fs.readFile(filePath, (err, data) => {
         if (err) { res.writeHead(404); return res.end('Not found'); }
         const contentType = mimeTypes[ext] || 'text/plain';
+        // HTML pages: no cache (sempre buscar versão nova do server) para evitar problemas de deploy stale.
+        // Assets (js/css/png): cache curto (60s).
+        const isHTML = ext === '.html' || req.url === '/';
+        const cacheControl = isHTML
+            ? 'no-cache, no-store, must-revalidate'
+            : 'public, max-age=60';
         if ((req.headers['accept-encoding'] || '').includes('gzip') && /html|javascript|css|json|svg/.test(contentType)) {
             zlib.gzip(data, (e, zipped) => {
                 if (e) { res.writeHead(200, { 'Content-Type': contentType }); return res.end(data); }
-                res.writeHead(200, { 'Content-Type': contentType, 'Content-Encoding': 'gzip', 'Cache-Control': 'public, max-age=300' });
+                res.writeHead(200, { 'Content-Type': contentType, 'Content-Encoding': 'gzip', 'Cache-Control': cacheControl });
                 res.end(zipped);
             });
         } else {
-            res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=300' });
+            res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheControl });
             res.end(data);
         }
     });
