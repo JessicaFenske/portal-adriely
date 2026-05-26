@@ -3789,6 +3789,10 @@
                             </div>
                         </div>
                         <div style="margin-top:24px;">
+                            <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Negócios por Fase do Funil <span style="color:#6d6d85;font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(mescla todos os funis · clique pra ver os negócios da fase)</span></h3>
+                            <div class="chart-container" style="cursor:pointer;min-height:340px;"><canvas id="chartStagesInter"></canvas></div>
+                        </div>
+                        <div style="margin-top:24px;">
                             <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Conversão da Origem</h3>
                             <div class="chart-container"><canvas id="chartFunnelInter"></canvas></div>
                             <div id="interFunnelKpis" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;"></div>
@@ -7069,6 +7073,95 @@ async function renderSection7Inter() {
         });
     }
 
+    // === Negócios Intermodal por Fase do Funil (mescla TODOS os funis por nome de etapa) ===
+    // Agrupa por Stage.Name + Stage.Ordination — etapas com mesmo nome em funis diferentes
+    // (ex: "Qualificação" em SDR Inbound + SDR Outbound) entram no mesmo grupo.
+    const allIntermodalForStages = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
+        .filter(d => isIntermodal(d) && inRange(d.CreateDate));
+    const stageAgg = {};
+    allIntermodalForStages.forEach(d => {
+        const name = d.Stage?.Name || '(sem etapa)';
+        const ord = d.Stage?.Ordination ?? 999;
+        if (!stageAgg[name]) stageAgg[name] = { name, ord, deals: [], mrr: 0, setup: 0, byPipeline: {} };
+        stageAgg[name].deals.push(d);
+        stageAgg[name].mrr += getMRR(d);
+        stageAgg[name].setup += getSetup(d);
+        const p = getPipelineName(d) || '(sem pipeline)';
+        stageAgg[name].byPipeline[p] = (stageAgg[name].byPipeline[p] || 0) + 1;
+    });
+    const stagesSorted = Object.values(stageAgg).sort((a, b) => a.ord - b.ord || a.name.localeCompare(b.name));
+    window._sec7Inter_stages = stagesSorted;
+
+    destroyChart('stagesInter');
+    const stagesCanvas = document.getElementById('chartStagesInter');
+    if (stagesCanvas) {
+        // Paleta por ordem do funil (entrada → ganho)
+        const stagePalette = ['#9ca3af','#60a5fa','#3b82f6','#f59e0b','#fbbf24','#a78bfa','#b794f4','#22c55e','#ef4444'];
+        const fmtBRLShort2 = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        charts.stagesInter = new Chart(stagesCanvas, {
+            type: 'bar',
+            data: {
+                labels: stagesSorted.length ? stagesSorted.map(s => s.name) : ['(sem negócios Intermodal no período)'],
+                datasets: [{
+                    label: 'Negócios',
+                    data: stagesSorted.length ? stagesSorted.map(s => s.deals.length) : [0],
+                    backgroundColor: stagesSorted.map((s, i) => stagePalette[i % stagePalette.length] + 'A0'),
+                    borderColor: stagesSorted.map((s, i) => stagePalette[i % stagePalette.length]),
+                    borderWidth: 1.5,
+                    borderRadius: 5
+                }]
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        color: '#fff',
+                        anchor: 'end',
+                        align: 'right',
+                        font: { weight: 'bold', size: 12 },
+                        formatter: (v, ctx) => {
+                            if (!stagesSorted.length) return '';
+                            const s = stagesSorted[ctx.dataIndex];
+                            const valTotal = s.mrr + s.setup;
+                            return valTotal > 0 ? `${v} · ${fmtBRLShort2(valTotal)}` : `${v}`;
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                if (!stagesSorted.length) return '';
+                                const s = stagesSorted[ctx.dataIndex];
+                                const pipelineList = Object.entries(s.byPipeline)
+                                    .sort((a,b) => b[1]-a[1])
+                                    .map(([p,c]) => `  ${p}: ${c}`);
+                                return [
+                                    `${s.deals.length} negócio${s.deals.length===1?'':'s'} nesta etapa`,
+                                    `MRR: ${fmtBRLShort2(s.mrr)} · Setup: ${fmtBRLShort2(s.setup)}`,
+                                    'Por funil:',
+                                    ...pipelineList
+                                ];
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0 && stagesSorted.length > 0) {
+                        const s = stagesSorted[elements[0].index];
+                        if (s && s.deals && s.deals.length > 0) {
+                            showIntermodalStageDrilldown(s.name);
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1, precision: 0 }, grid: darkScaleOptions.grid },
+                    y: { ...darkScaleOptions, ticks: { ...darkScaleOptions.ticks, font: { weight: 'bold' } } }
+                }
+            }
+        });
+    }
+
     // === Conversão da origem Intermodal: Reuniões → Propostas → Vendas ===
     // Usa as MESMAS definições dos KPI cards do topo pra os números baterem:
     //   Reuniões = deals Intermodal que ja estao em sales pipelines (SDR passou pro vendedor)
@@ -7239,7 +7332,6 @@ async function renderSection7Inter() {
         };
         topKpiEl.innerHTML =
             bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `passadas ao funil de venda${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
-            bigKpi('Negócios (Consid.+)', negociosAdvDeals.length, '#f59e0b', 'em Consideração da Solução, Aprovado ou Formalização', `showIntermodalDrilldown('advanced')`) +
             bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
             bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
             bigKpi('Setup em Propostas', fmtBRL(propostasSetupSum), '#c084fc', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
@@ -7257,7 +7349,6 @@ async function renderSection7Inter() {
             </button>` : '';
         actionsEl.innerHTML =
             btn('&#128197; Ver reuniões agendadas', reunioesAgendadasDeals.length, '#22c55e', 'meetings') +
-            btn('&#128202; Ver negócios em Consid.+', negociosAdvDeals.length, '#f59e0b', 'advanced') +
             btn('&#128196; Ver propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
             btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales') +
             btn('&#128465; Ver descartados (pré-vendas)', descartadosDeals.length, '#f87171', 'discards') +
@@ -7274,6 +7365,28 @@ async function renderSection7Inter() {
 }
 
 // Drilldown dos KPI cards do topo do Intermodal
+// Drilldown ao clicar numa fase do gráfico "Negócios por Fase do Funil"
+function showIntermodalStageDrilldown(stageName) {
+    const stages = window._sec7Inter_stages || [];
+    const stage = stages.find(s => s.name === stageName);
+    if (!stage || !stage.deals || stage.deals.length === 0) return;
+    const deals = stage.deals.slice().sort((a, b) => getMRR(b) - getMRR(a));
+    const columns = [
+        { header: 'Título', getValue: d => d.Title || '' },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+        { header: 'Responsável', getValue: d => getOwnerName(d) },
+        { header: 'SDR', getValue: d => getSDR(d) || '' },
+        { header: 'MRR', getValue: d => getMRR(d) },
+        { header: 'Setup', getValue: d => getSetup(d) },
+        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+        { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+    showDrilldown(`Intermodal · Etapa "${stageName}" (${deals.length} negócio${deals.length===1?'':'s'})`, deals, columns, 'open');
+}
+
 function showIntermodalDrilldown(kind) {
     let deals = [], title = '';
     let isLossKind = false;
