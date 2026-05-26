@@ -6320,12 +6320,16 @@ function exportSection6b() {
 // --- Section 7: Reuniões Agendadas (atividade real do Ploomes) ---
 // Helper: filtra dashMeetings pelo período via DateTime + Title (Reunião Agendada)
 function meetingsForPeriod(sp) {
+    // BUGFIX: normalizar TANTO o título quanto a substring de busca — antes só
+    // normalizava o título mas buscava por 'reunião agendada' com 'ã' literal, que
+    // nunca matcha depois da normalização (que tira o til).
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const target = norm('reunião agendada'); // = "reuniao agendada"
     const start = sp?.start || periodStart;
     const end = sp?.end || periodEnd;
     return (dashMeetings || []).filter(t => {
         const tn = norm(t.Title);
-        if (!tn.includes('reunião agendada')) return false;
+        if (!tn.includes(target)) return false;
         if (start && end) {
             const dt = new Date(t.DateTime);
             if (dt < start || dt > end) return false;
@@ -6403,40 +6407,24 @@ function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
 
-    // "Reunião agendada" tem 2 caminhos possiveis (deal vive em 1 funil de cada vez):
-    //   (1) Deal JA passou pra sales pipeline (Funil de Vendas, Sankhya, Farmer):
-    //       conta pelo campo SDR; se vazio, usa Owner se for um SDR da allowlist.
-    //   (2) Deal AINDA esta em SDR pipeline mas em qualquer etapa POS qualificacao
-    //       (Reuniao Agendada, Leads Quentes, etc - tudo que nao seja Entrada,
-    //       Qualificacao ou Descarte) = SDR ja agendou. Conta pelo Owner = SDR.
-    //
-    // Periodo: considera CreateDate OU LastUpdateDate (deal criado antes mas
-    // agendado/movido neste mes ainda conta).
-    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
-    const SDR_NOT_AGENDADA_STAGES = /entrada|qualific|descart|loss|perd/i;
-    const dealsInPeriod = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
-        .filter(d => inPeriodSection(d.CreateDate, sp.start, sp.end) || inPeriodSection(d.LastUpdateDate, sp.start, sp.end));
-    window._sec7_deals = dealsInPeriod;
+    // "Reunião Agendada" = atividade/Task no Ploomes com título "Reunião Agendada".
+    // O SDR que agendou = CreatorId da task. Independe do pipeline/etapa/Owner do deal.
+    // (Antes contava deals por pipeline/stage, perdendo casos onde SDR agendou num deal
+    // que ja estava em outro funil ou que voltou pro SDR.)
+    const meetings = meetingsForPeriod(sp);
+    window._sec7_meetings = meetings;
 
     const sdrAgg = {};
-    dealsInPeriod.forEach(d => {
-        const pipelineName = getPipelineName(d);
-        const stageName = d.Stage?.Name || '';
-        let name = null;
-        if (isSalesPipeline(d)) {
-            // (1) Sales pipeline — SDR field, fallback Owner
-            const sdrField = getSDR(d);
-            const ownerName = getOwnerName(d);
-            name = getCanonicalSdrName(sdrField) || getCanonicalSdrName(ownerName);
-        } else if (SDR_PIPES.includes(pipelineName) && !SDR_NOT_AGENDADA_STAGES.test(stageName)) {
-            // (2) SDR pipeline + etapa pos-qualificacao (= reuniao agendada) — usa Owner
-            const ownerName = getOwnerName(d);
-            name = getCanonicalSdrName(ownerName);
-        }
-        if (!name) return;
-        if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
-        sdrAgg[name].count++;
-        sdrAgg[name].deals.push(d);
+    meetings.forEach(t => {
+        const creatorName = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creatorName);
+        if (!canonical) return; // só SDRs da allowlist
+        if (!sdrAgg[canonical]) sdrAgg[canonical] = { count: 0, deals: [], tasks: [] };
+        sdrAgg[canonical].count++;
+        sdrAgg[canonical].tasks.push(t);
+        const dealId = t.DealId;
+        const deal = dealId ? (window._dashOpenDealsById?.[dealId]) : null;
+        if (deal) sdrAgg[canonical].deals.push(deal);
     });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
