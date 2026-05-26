@@ -3694,10 +3694,10 @@
                     </div>
                 </div>
 
-                <!-- Section 7: Reuniões Agendadas (atividade Reunião Agendada) -->
-                <div class="section-card" id="sec7">
+                <!-- Section 7: Reuniões — Agendadas | Realizadas | No Show por Pré-Vendedor -->
+                <div class="section-card full-width" id="sec7">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128197;</span> Reuniões Agendadas por Pré-Vendedor</h2>
+                        <h2><span class="section-num">&#128197;</span> Reuniões por Pré-Vendedor — Agendadas, Realizadas e No Show</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
                                 <option value="global">Global</option>
@@ -3711,11 +3711,29 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <div class="chart-container"><canvas id="chartMeetings"></canvas></div>
-                        <button class="table-toggle" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela</button>
+                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
+                            <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
+                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa marcada como concluída OU deal com proposta enviada (vendedor pulou o registro) ·
+                            <strong style="color:#ef4444;">No Show:</strong> reunião agendada não realizada (DateTime passou, tarefa não concluída e deal voltou pro SDR)
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
+                            <div>
+                                <h3 style="color:#b794f4;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">&#128197; Agendadas</h3>
+                                <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetings"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 style="color:#22c55e;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">&#9989; Realizadas</h3>
+                                <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsRealized"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 style="color:#ef4444;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">&#10060; No Show</h3>
+                                <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsNoShow"></canvas></div>
+                            </div>
+                        </div>
+                        <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela consolidada</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
+                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
                     </div>
                 </div>
@@ -6407,73 +6425,185 @@ function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
 
-    // "Reunião Agendada" = atividade/Task no Ploomes com título "Reunião Agendada".
-    // O SDR que agendou = CreatorId da task. Independe do pipeline/etapa/Owner do deal.
-    // (Antes contava deals por pipeline/stage, perdendo casos onde SDR agendou num deal
-    // que ja estava em outro funil ou que voltou pro SDR.)
+    // === Reuniões Agendadas: Tasks "Reunião Agendada" criadas no período ===
     const meetings = meetingsForPeriod(sp);
     window._sec7_meetings = meetings;
 
     const sdrAgg = {};
+    const ensureSdr = (canonical) => {
+        if (!sdrAgg[canonical]) sdrAgg[canonical] = {
+            count: 0, deals: [], tasks: [],
+            realizadasCount: 0, realizadasDeals: [], realizadasTasks: [],
+            noShowCount: 0, noShowDeals: [], noShowTasks: []
+        };
+    };
+
+    // Conjunto de dealIds que tiveram "Reunião Agendada" no período (pra detectar realizadas/noshow)
+    const dealsWithAgendada = new Set();
+    const taskBySdrDeal = {}; // canonicalSdr → dealId → task (a primeira)
     meetings.forEach(t => {
         const creatorName = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creatorName);
-        if (!canonical) return; // só SDRs da allowlist
-        if (!sdrAgg[canonical]) sdrAgg[canonical] = { count: 0, deals: [], tasks: [] };
+        if (!canonical) return;
+        ensureSdr(canonical);
         sdrAgg[canonical].count++;
         sdrAgg[canonical].tasks.push(t);
-        const dealId = t.DealId;
-        const deal = dealId ? (window._dashOpenDealsById?.[dealId]) : null;
-        if (deal) sdrAgg[canonical].deals.push(deal);
+        const deal = t.DealId ? (window._dashOpenDealsById?.[t.DealId]) : null;
+        if (deal) {
+            sdrAgg[canonical].deals.push(deal);
+            dealsWithAgendada.add(deal.Id);
+            taskBySdrDeal[canonical] = taskBySdrDeal[canonical] || {};
+            if (!taskBySdrDeal[canonical][deal.Id]) taskBySdrDeal[canonical][deal.Id] = t;
+        }
+    });
+
+    // === Reuniões Realizadas ===
+    // Caminho 1: task de Reunião Agendada concluída (Done=true) — SDR ou equipe registrou
+    // Caminho 2: task com title contendo "realizada" / "concluida" — registro explícito
+    // Caminho 3: deal teve "Reunião Agendada" no período E tem proposta enviada (MRR/Setup
+    //          ou DataProposta) — vendedor pulou a etapa de registrar realização
+    // (Sem duplicar por dealId)
+    const realizedDealIds = new Set();
+    const now = new Date();
+
+    const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    // Caminhos 1 e 2: olha todas as tasks do cache no período
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const dt = new Date(t.DateTime);
+        if (sp.start && sp.end && (dt < sp.start || dt > sp.end)) return;
+        const tn = normTitle(t.Title);
+        const tnTipoAgendada = tn.includes('reuniao agendada') || tn.includes('reunião agendada');
+        const tnTipoRealizada = /realizad|conclui[dt]|feita|aconteceu/i.test(tn);
+        let isRealized = false;
+        if (tnTipoRealizada) isRealized = true;
+        if (tnTipoAgendada && t.Done === true) isRealized = true;
+        if (!isRealized) return;
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        if (realizedDealIds.has(t.DealId)) return; // evita contar 2x o mesmo deal
+        ensureSdr(canonical);
+        sdrAgg[canonical].realizadasCount++;
+        sdrAgg[canonical].realizadasTasks.push(t);
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (deal) sdrAgg[canonical].realizadasDeals.push(deal);
+        realizedDealIds.add(t.DealId);
+    });
+    // Caminho 3: proxy via proposta enviada (vendedor esqueceu de marcar realizada)
+    meetings.forEach(t => {
+        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        // Sinal de proposta enviada: MRR > 0, Setup > 0 ou Data Proposta preenchida
+        const mrr = getMRR(deal), setup = getSetup(deal);
+        const propDate = getProposalDate(deal);
+        const propDateInPeriod = propDate && sp.start && sp.end && new Date(propDate) >= sp.start && new Date(propDate) <= sp.end;
+        const hasProposal = mrr > 0 || setup > 0 || propDateInPeriod;
+        if (!hasProposal) return;
+        ensureSdr(canonical);
+        sdrAgg[canonical].realizadasCount++;
+        sdrAgg[canonical].realizadasDeals.push(deal);
+        sdrAgg[canonical].realizadasTasks.push(t);
+        realizedDealIds.add(t.DealId);
+    });
+
+    // === No Show ===
+    // Reunião agendada no período cujo DateTime já passou, task não concluída, sem prova de
+    // realização (não está em realizedDealIds), e que o deal voltou pro SDR (Owner atual é
+    // um SDR da allowlist OU o deal está num SDR pipeline — sinal de que o vendedor devolveu).
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    meetings.forEach(t => {
+        if (!t.DealId) return;
+        if (realizedDealIds.has(t.DealId)) return;
+        const dt = new Date(t.DateTime);
+        if (dt > now) return; // ainda nao foi a hora da reuniao
+        if (t.Done === true) return; // task marcada como concluida (ja contou em realizada acima)
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        // "Voltou pro SDR" = deal atualmente em pipeline SDR ou Owner atual é SDR da allowlist
+        const inSdrPipe = SDR_PIPES.includes(getPipelineName(deal));
+        const ownerIsSdr = !!getCanonicalSdrName(getOwnerName(deal));
+        if (!inSdrPipe && !ownerIsSdr) return; // ainda em vendedor → considera como pendente (não conta como no-show ainda)
+        ensureSdr(canonical);
+        sdrAgg[canonical].noShowCount++;
+        sdrAgg[canonical].noShowDeals.push(deal);
+        sdrAgg[canonical].noShowTasks.push(t);
     });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
 
-    destroyChart('meetings');
-    charts.meetings = new Chart(document.getElementById('chartMeetings'), {
-        type: 'bar',
-        data: {
-            labels: sorted.length ? sorted.map(s => shortName(s.name)) : ['(sem reuniões no período)'],
-            datasets: [{
-                label: 'Reuniões agendadas',
-                data: sorted.length ? sorted.map(s => s.count) : [0],
-                backgroundColor: 'rgba(139, 92, 246, 0.7)',
-                borderColor: '#8b5cf6',
-                borderWidth: 1
-            }]
-        },
-        plugins: [ChartDataLabels],
-        options: {
-            responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
-            plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
-            onClick: (event, elements) => {
-                if (elements.length > 0 && sorted.length > 0) {
-                    const s = sorted[elements[0].index];
-                    if (s && s.deals && s.deals.length > 0) {
-                        const columns = [
-                            { header: 'Título', getValue: d => d.Title || '' },
-                            { header: 'Funil', getValue: d => getPipelineName(d) },
-                            { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
-                            { header: 'Responsável', getValue: d => getOwnerName(d) },
-                            { header: 'SDR', getValue: d => getSDR(d) || '' },
-                            { header: 'Origem', getValue: d => d.Origin?.Name || '' },
-                            { header: 'MRR', getValue: d => getMRR(d) },
-                            { header: 'Setup', getValue: d => getSetup(d) },
-                            { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
-                            { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
-                        ];
-                        showDrilldown(`Reuniões agendadas - ${s.name} (${s.count})`, s.deals, columns, 'open');
-                    }
-                }
+    const baseDealCols = [
+        { header: 'Título', getValue: d => d.Title || '' },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+        { header: 'Responsável', getValue: d => getOwnerName(d) },
+        { header: 'SDR', getValue: d => getSDR(d) || '' },
+        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'MRR', getValue: d => getMRR(d) },
+        { header: 'Setup', getValue: d => getSetup(d) },
+        { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+
+    const renderMeetingsChart = (canvasId, chartKey, label, color, getCount, getDeals) => {
+        destroyChart(chartKey);
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        charts[chartKey] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: sorted.length ? sorted.map(s => shortName(s.name)) : ['(sem dados)'],
+                datasets: [{
+                    label: label,
+                    data: sorted.length ? sorted.map(getCount) : [0],
+                    backgroundColor: color + 'B3',
+                    borderColor: color,
+                    borderWidth: 1
+                }]
             },
-            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } }
-        }
-    });
-    document.getElementById('tbodyMeetings').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
-        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
-        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('')
-        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reuniões agendadas no período</td></tr>';
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
+                plugins: { legend: { display: false }, datalabels: barEndLabel(color) },
+                onClick: (event, elements) => {
+                    if (elements.length > 0 && sorted.length > 0) {
+                        const s = sorted[elements[0].index];
+                        const deals = getDeals(s);
+                        if (deals && deals.length > 0) {
+                            showDrilldown(`${label} - ${s.name} (${deals.length})`, deals, baseDealCols, 'open');
+                        }
+                    }
+                },
+                scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } }
+            }
+        });
+    };
+
+    renderMeetingsChart('chartMeetings', 'meetings', 'Agendadas', '#8b5cf6', s => s.count, s => s.deals);
+    renderMeetingsChart('chartMeetingsRealized', 'meetingsRealized', 'Realizadas', '#22c55e', s => s.realizadasCount, s => s.realizadasDeals);
+    renderMeetingsChart('chartMeetingsNoShow', 'meetingsNoShow', 'No Show', '#ef4444', s => s.noShowCount, s => s.noShowDeals);
+
+    // Tabela consolidada
+    document.getElementById('tbodyMeetings').innerHTML = sorted.length ? sorted.map((s, i) => {
+        const taxa = s.count > 0 ? ((s.realizadasCount / s.count) * 100).toFixed(0) + '%' : '—';
+        const taxaColor = s.count > 0 && (s.realizadasCount / s.count) >= 0.6 ? '#22c55e' : (s.realizadasCount / s.count) >= 0.3 ? '#f59e0b' : '#ef4444';
+        return `<tr class="${rankRowClass(i + 1)}">
+            <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+            <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
+            <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td>
+            <td style="text-align:center;font-weight:700;color:#22c55e;">${s.realizadasCount}</td>
+            <td style="text-align:center;font-weight:700;color:#ef4444;">${s.noShowCount}</td>
+            <td style="text-align:center;font-weight:700;color:${taxaColor};">${taxa}</td>
+        </tr>`;
+    }).join('')
+        : '<tr><td colspan="6" style="text-align:center;color:#888;padding:14px;">Sem reuniões no período</td></tr>';
 }
 
 // Reuniões da origem Intermodal
@@ -8309,7 +8439,10 @@ function exportSection7() {
     exportToExcel(data, [
         { header: '#', getValue: (d, i) => i + 1 },
         { header: 'Pré-Vendedor (SDR)', getValue: d => d.name },
-        { header: 'Reuniões', getValue: d => d.count }
+        { header: 'Agendadas', getValue: d => d.count },
+        { header: 'Realizadas', getValue: d => d.realizadasCount },
+        { header: 'No Show', getValue: d => d.noShowCount },
+        { header: 'Taxa Realização', getValue: d => d.count > 0 ? ((d.realizadasCount / d.count) * 100).toFixed(1) + '%' : '—' }
     ], 'reunioes_por_sdr');
 }
 function exportSection8() {
