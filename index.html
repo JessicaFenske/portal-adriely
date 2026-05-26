@@ -6369,6 +6369,15 @@ async function loadMeetingDealOrigins() {
     } catch (e) { console.warn('[meeting-origins] falhou:', e.message); }
 }
 
+// Lista de pré-vendedores (SDRs reais do time) — usada para filtrar charts que devem
+// mostrar SÓ SDR e não vendedores que apareceriam como fallback de Owner
+const SDR_NAMES_ALLOWLIST = ['samira', 'guilherme', 'adriely', 'maja', 'agnes'];
+function isSdrName(name) {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return SDR_NAMES_ALLOWLIST.some(s => n.includes(s));
+}
+
 function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
@@ -6380,10 +6389,17 @@ function renderSection7() {
         .filter(d => isSalesPipeline(d) && inPeriodSection(d.CreateDate, sp.start, sp.end));
     window._sec7_deals = deals;
 
-    // Agrupamento: SDR se preenchido, senão Owner (vendedor) como proxy de "quem agendou/recebeu"
+    // Agrupamento por SDR. Se SDR vazio, tenta Owner SE Owner for um dos pré-vendedores reais
+    // (Samira, Guilherme, Adriely, Maja, Agnes). Senão descarta — assim o chart mostra SÓ
+    // pré-vendedores, não vendedores.
     const sdrAgg = {};
     deals.forEach(d => {
-        const name = getSDR(d) || getOwnerName(d) || '(sem responsável)';
+        const sdrField = getSDR(d);
+        const ownerName = getOwnerName(d);
+        let name = null;
+        if (sdrField && isSdrName(sdrField)) name = sdrField;
+        else if (ownerName && isSdrName(ownerName)) name = ownerName;
+        if (!name) return; // não é pré-vendedor → descarta
         if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
         sdrAgg[name].count++;
         sdrAgg[name].deals.push(d);
