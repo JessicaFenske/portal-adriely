@@ -3695,8 +3695,7 @@
                 </div>
 
                 <!-- Section 7: Reuniões Agendadas (atividade Reunião Agendada) -->
-                <div style="display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;" class="meetings-grid">
-                <div class="section-card" id="sec7" style="margin-bottom:0;">
+                <div class="section-card" id="sec7">
                     <div class="section-header">
                         <h2><span class="section-num">&#128197;</span> Reuniões Agendadas por Pré-Vendedor</h2>
                         <div class="sub-filter">
@@ -3719,32 +3718,6 @@
                             <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
                     </div>
-                </div>
-
-                <!-- Section 7-Intermodal: Reuniões da origem Intermodal -->
-                <div class="section-card" id="sec7Inter" style="margin-bottom:0;">
-                    <div class="section-header">
-                        <h2><span class="section-num">&#127919;</span> Reuniões - Origem Intermodal</h2>
-                        <div class="sub-filter">
-                            <select class="section-period-select" id="periodSec7Inter" onchange="renderSection7Inter()">
-                                <option value="global">Global</option>
-                                <option value="thisMonth" selected>Este mês</option>
-                                <option value="lastMonth">Mês passado</option>
-                                <option value="thisQuarter">Este trimestre</option>
-                                <option value="lastQuarter">Trimestre anterior</option>
-                                <option value="last6">Último 6 meses</option>
-                                <option value="thisYear">Este ano</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="section-body">
-                        <div class="chart-container"><canvas id="chartMeetingsInter"></canvas></div>
-                        <button class="table-toggle" onclick="toggleTable('tableMeetingsInter')">Mostrar/ocultar tabela</button>
-                        <div class="collapsible-table" id="tableMeetingsInter"><table><thead><tr>
-                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
-                        </tr></thead><tbody id="tbodyMeetingsInter"></tbody></table></div>
-                    </div>
-                </div>
                 </div>
 
                 <!-- Section 7b: Descartes por Pré-Vendedor -->
@@ -3770,6 +3743,41 @@
                         <div class="collapsible-table" id="tableDiscards"><table><thead><tr>
                             <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Descartes</th><th>Motivo mais comum</th>
                         </tr></thead><tbody id="tbodyDiscards"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 7-Intermodal: Reuniões da origem Intermodal (full-width com 2 gráficos) -->
+                <div class="section-card full-width" id="sec7Inter">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#127919;</span> Reuniões - Origem Intermodal</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec7Inter" onchange="renderSection7Inter()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+                            <div>
+                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Reuniões por Pré-Vendedor</h3>
+                                <div class="chart-container"><canvas id="chartMeetingsInter"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Conversão da Origem</h3>
+                                <div class="chart-container"><canvas id="chartFunnelInter"></canvas></div>
+                                <div id="interFunnelKpis" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;"></div>
+                            </div>
+                        </div>
+                        <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableMeetingsInter')">Mostrar/ocultar tabela</button>
+                        <div class="collapsible-table" id="tableMeetingsInter"><table><thead><tr>
+                            <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Reuniões</th>
+                        </tr></thead><tbody id="tbodyMeetingsInter"></tbody></table></div>
                     </div>
                 </div>
 
@@ -6884,6 +6892,97 @@ async function renderSection7Inter() {
         <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
         <td style="text-align:center;font-weight:700;color:#22c55e;">${s.count}</td></tr>`).join('')
         : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no período</td></tr>';
+
+    // === Conversão da origem Intermodal: Reuniões → Propostas → Vendas ===
+    // Considera deals únicos vinculados às reuniões do período + período de Propostas/Ganhos:
+    //   - "Reuniões" = nº total de reuniões da origem Intermodal no período
+    //   - "Propostas geradas" = deals únicos com origem Intermodal que tiveram proposta enviada no período
+    //   - "Vendas fechadas" = deals únicos com origem Intermodal ganhos no período
+    const periodStart_ = sp?.start || periodStart;
+    const periodEnd_ = sp?.end || periodEnd;
+    const isIntermodal = d => /intermodal/i.test(d?.Origin?.Name || '');
+    const inRange = (iso) => {
+        if (!iso) return false;
+        const dt = new Date(iso);
+        if (periodStart_ && dt < periodStart_) return false;
+        if (periodEnd_ && dt > periodEnd_) return false;
+        return true;
+    };
+    // Propostas Intermodal no período (qualquer deal: open + won + lost)
+    const allDealsForCount = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
+    const propostasDeals = allDealsForCount.filter(d => isIntermodal(d) && inRange(getProposalDate(d)));
+    const propostasUnique = new Set(propostasDeals.map(d => d.Id));
+    // Vendas Intermodal no período (won deals fechados dentro do período)
+    const vendasDeals = (wonDeals || []).filter(d => isIntermodal(d) && inRange(d.FinishDate));
+    const vendasUnique = new Set(vendasDeals.map(d => d.Id));
+
+    const reunioesTotal = meetings.length;
+    const propostasTotal = propostasUnique.size;
+    const vendasTotal = vendasUnique.size;
+
+    destroyChart('funnelInter');
+    const funnelCanvas = document.getElementById('chartFunnelInter');
+    if (funnelCanvas) {
+        charts.funnelInter = new Chart(funnelCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Reuniões', 'Propostas', 'Vendas'],
+                datasets: [{
+                    label: 'Origem Intermodal',
+                    data: [reunioesTotal, propostasTotal, vendasTotal],
+                    backgroundColor: ['rgba(34, 197, 94, 0.55)', 'rgba(96, 165, 250, 0.55)', 'rgba(183, 148, 244, 0.6)'],
+                    borderColor: ['#22c55e', '#60a5fa', '#b794f4'],
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                layout: barEndLayout(),
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        color: '#fff',
+                        anchor: 'end',
+                        align: 'right',
+                        font: { weight: 'bold', size: 13 },
+                        formatter: v => v
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const labels = ['Reuniões realizadas', 'Deals com proposta enviada', 'Deals ganhos'];
+                                return `${labels[ctx.dataIndex]}: ${ctx.parsed.x}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1, precision: 0 }, grid: darkScaleOptions.grid },
+                    y: { ...darkScaleOptions, ticks: { ...darkScaleOptions.ticks, font: { weight: 'bold' } } }
+                }
+            }
+        });
+    }
+
+    // KPIs de conversão abaixo do gráfico
+    const kpiEl = document.getElementById('interFunnelKpis');
+    if (kpiEl) {
+        const taxaProp = reunioesTotal > 0 ? (propostasTotal / reunioesTotal) * 100 : 0;
+        const taxaVenda = propostasTotal > 0 ? (vendasTotal / propostasTotal) * 100 : 0;
+        const kpiCard = (label, val, color, sub) => `
+            <div style="flex:1;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:10px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
+                <div style="font-size:20px;color:${color};font-weight:700;margin-top:4px;">${val}</div>
+                <div style="font-size:10px;color:#6d6d85;margin-top:2px;">${sub}</div>
+            </div>`;
+        kpiEl.innerHTML =
+            kpiCard('Reunião → Proposta', `${taxaProp.toFixed(1)}%`, '#60a5fa', `${propostasTotal} de ${reunioesTotal} reuniões`) +
+            kpiCard('Proposta → Venda', `${taxaVenda.toFixed(1)}%`, '#b794f4', `${vendasTotal} de ${propostasTotal} propostas`);
+    }
 }
 
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
