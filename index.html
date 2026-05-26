@@ -3776,7 +3776,7 @@
                                 <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsInter"></canvas></div>
                             </div>
                             <div>
-                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Propostas por Vendedor</h3>
+                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Propostas por Vendedor <span style="color:#6d6d85;font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(barra = MRR · label = qtd · valor)</span></h3>
                                 <div class="chart-container" style="cursor:pointer;"><canvas id="chartProposalsInter"></canvas></div>
                             </div>
                         </div>
@@ -6951,28 +6951,50 @@ async function renderSection7Inter() {
         : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no período</td></tr>';
 
     // === Propostas Intermodal por Vendedor ===
+    // Considera "proposta enviada" qualquer deal Intermodal que:
+    //   (a) tem campo Data Proposta Enviada preenchido no período, OU
+    //   (b) tem MRR ou Setup preenchido (sinal de proposta com valor),
+    //       criado no período por CreateDate
+    // Isso captura propostas que o vendedor preencheu valor mas esqueceu de marcar a data.
     const allDealsForProp = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
-    const propostasDealsAll = allDealsForProp.filter(d => isIntermodal(d) && inRange(getProposalDate(d)));
+    const propostasDealsAll = allDealsForProp.filter(d => {
+        if (!isIntermodal(d)) return false;
+        const hasProposalDate = inRange(getProposalDate(d));
+        const hasValue = ((typeof getMRR === 'function' ? getMRR(d) : 0) > 0)
+                      || ((typeof getSetup === 'function' ? getSetup(d) : 0) > 0);
+        const inPeriodByCreate = inRange(d.CreateDate);
+        return hasProposalDate || (hasValue && inPeriodByCreate);
+    });
     const propByOwner = {};
     const propDealsByOwner = {};
+    const propMrrByOwner = {};
+    const propSetupByOwner = {};
     propostasDealsAll.forEach(d => {
         const name = getOwnerName(d) || '(sem vendedor)';
-        if (!propByOwner[name]) { propByOwner[name] = 0; propDealsByOwner[name] = []; }
+        if (!propByOwner[name]) { propByOwner[name] = 0; propDealsByOwner[name] = []; propMrrByOwner[name] = 0; propSetupByOwner[name] = 0; }
         propByOwner[name]++;
         propDealsByOwner[name].push(d);
+        propMrrByOwner[name] += (typeof getMRR === 'function' ? getMRR(d) : 0);
+        propSetupByOwner[name] += (typeof getSetup === 'function' ? getSetup(d) : 0);
     });
-    const propSorted = Object.entries(propByOwner).map(([name, count]) => ({ name, count, deals: propDealsByOwner[name] })).sort((a, b) => b.count - a.count);
+    const propSorted = Object.entries(propByOwner).map(([name, count]) => ({
+        name, count,
+        deals: propDealsByOwner[name],
+        mrr: propMrrByOwner[name] || 0,
+        setup: propSetupByOwner[name] || 0
+    })).sort((a, b) => b.mrr - a.mrr || b.count - a.count);
     window._sec7Inter_propostasByOwner = propSorted;
     destroyChart('proposalsInter');
     const propCanvas = document.getElementById('chartProposalsInter');
     if (propCanvas) {
+        const fmtBRLShort = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         charts.proposalsInter = new Chart(propCanvas, {
             type: 'bar',
             data: {
                 labels: propSorted.length ? propSorted.map(s => shortName(s.name)) : ['(sem propostas no período)'],
                 datasets: [{
-                    label: 'Propostas Intermodal',
-                    data: propSorted.length ? propSorted.map(s => s.count) : [0],
+                    label: 'MRR proposto',
+                    data: propSorted.length ? propSorted.map(s => s.mrr) : [0],
                     backgroundColor: 'rgba(96, 165, 250, 0.55)',
                     borderColor: '#60a5fa',
                     borderWidth: 1.5,
@@ -6982,12 +7004,38 @@ async function renderSection7Inter() {
             plugins: [ChartDataLabels],
             options: {
                 responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
-                plugins: { legend: { display: false }, datalabels: barEndLabel('#60a5fa') },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        color: '#60a5fa',
+                        anchor: 'end',
+                        align: 'right',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (v, ctx) => {
+                            if (propSorted.length === 0) return '';
+                            const s = propSorted[ctx.dataIndex];
+                            return `${s.count} • ${fmtBRLShort(s.mrr)}`;
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                if (propSorted.length === 0) return '';
+                                const s = propSorted[ctx.dataIndex];
+                                return [
+                                    `${s.count} proposta${s.count===1?'':'s'}`,
+                                    `MRR: ${fmtBRLShort(s.mrr)}`,
+                                    `Setup: ${fmtBRLShort(s.setup)}`
+                                ];
+                            }
+                        }
+                    }
+                },
                 onClick: (event, elements) => {
                     if (elements.length > 0 && propSorted.length > 0) {
                         const s = propSorted[elements[0].index];
                         if (s && s.deals && s.deals.length > 0) {
-                            showDrilldown(`Propostas Intermodal - ${s.name} (${s.count})`, s.deals, null, 'proposals');
+                            showDrilldown(`Propostas Intermodal - ${s.name} (${s.count} • ${fmtBRLShort(s.mrr)})`, s.deals, null, 'proposals');
                         }
                     }
                 },
