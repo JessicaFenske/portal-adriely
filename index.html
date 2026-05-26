@@ -3771,9 +3771,11 @@
                             <div style="margin-bottom:4px;"><span style="color:#b794f4;">&#9755;</span> Clique nos botões, cards ou barras pra abrir a lista de negócios. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong>.</div>
                             <div style="color:#6d6d85;font-size:10.5px;">
                                 <strong>Reuniões Agendadas:</strong> Intermodal já em funil de venda (SDR passou pro vendedor) ·
-                                <strong>Negócios (Consid.+):</strong> Intermodal nas etapas Consideração da Solução, Aprovado ou Formalização ·
-                                <strong>Propostas:</strong> Intermodal com MRR ou Setup preenchido ·
-                                <strong>Vendas:</strong> ganhos
+                                <strong>Negócios (Consid.+):</strong> nas etapas Consideração da Solução, Aprovado ou Formalização ·
+                                <strong>Propostas:</strong> com MRR ou Setup preenchido ·
+                                <strong>Vendas:</strong> ganhos ·
+                                <strong>Descartados:</strong> perdidos pelo SDR no funil de qualificação ·
+                                <strong>Perdidos:</strong> perdidos pelo vendedor no funil de venda
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
@@ -7152,6 +7154,35 @@ async function renderSection7Inter() {
     const vendasMrrSum = vendasDeals.reduce((s, d) => s + getMRR(d), 0);
     const vendasSetupSum = vendasDeals.reduce((s, d) => s + getSetup(d), 0);
 
+    // 5. Descartados pelo Pré-vendas: lost deals Intermodal em SDR pipelines (FinishDate no período)
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const descartadosDeals = (lostDeals || []).filter(d =>
+        isIntermodal(d) &&
+        SDR_PIPES.includes(getPipelineName(d)) &&
+        inRange(d.FinishDate)
+    );
+    // Motivo mais comum dos descartes
+    const descMotivos = {};
+    descartadosDeals.forEach(d => {
+        const m = d.LossReason?.Name || '(sem motivo)';
+        descMotivos[m] = (descMotivos[m] || 0) + 1;
+    });
+    const topDescMotivo = Object.entries(descMotivos).sort((a,b) => b[1]-a[1])[0];
+
+    // 6. Perdidos pelos Vendedores: lost deals Intermodal em sales pipelines (FinishDate no período)
+    const perdidosDeals = (lostDeals || []).filter(d =>
+        isIntermodal(d) &&
+        isSalesPipeline(d) &&
+        inRange(d.FinishDate)
+    );
+    const perdidosMrrSum = perdidosDeals.reduce((s, d) => s + getMRR(d), 0);
+    const perdMotivos = {};
+    perdidosDeals.forEach(d => {
+        const m = d.LossReason?.Name || '(sem motivo)';
+        perdMotivos[m] = (perdMotivos[m] || 0) + 1;
+    });
+    const topPerdMotivo = Object.entries(perdMotivos).sort((a,b) => b[1]-a[1])[0];
+
     // Breakdown por pipeline pras propostas (informação útil no subtítulo)
     const propByPipeline = {};
     propostasDealsAll.forEach(d => {
@@ -7191,7 +7222,9 @@ async function renderSection7Inter() {
             bigKpi('Negócios (Consid.+)', negociosAdvDeals.length, '#f59e0b', 'em Consideração da Solução, Aprovado ou Formalização', `showIntermodalDrilldown('advanced')`) +
             bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
             bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('Vendas Fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`);
+            bigKpi('Vendas Fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`) +
+            bigKpi('Descartados (Pré-vendas)', descartadosDeals.length, '#f87171', topDescMotivo ? `Top motivo: ${topDescMotivo[0]} (${topDescMotivo[1]})` : 'sem descartes no período', `showIntermodalDrilldown('discards')`) +
+            bigKpi('Perdidos (Vendedores)', perdidosDeals.length, '#ef4444', `MRR perdido: ${fmtBRL(perdidosMrrSum)}${topPerdMotivo ? ' · Top: '+topPerdMotivo[0]+' ('+topPerdMotivo[1]+')' : ''}`, `showIntermodalDrilldown('losses')`);
     }
 
     // === Botões grandes de drilldown direto ===
@@ -7205,7 +7238,9 @@ async function renderSection7Inter() {
             btn('&#128197; Ver reuniões agendadas', reunioesAgendadasDeals.length, '#22c55e', 'meetings') +
             btn('&#128202; Ver negócios em Consid.+', negociosAdvDeals.length, '#f59e0b', 'advanced') +
             btn('&#128196; Ver propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
-            btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales');
+            btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales') +
+            btn('&#128465; Ver descartados (pré-vendas)', descartadosDeals.length, '#f87171', 'discards') +
+            btn('&#10060; Ver perdidos (vendedores)', perdidosDeals.length, '#ef4444', 'losses');
     }
 
     // Expõe pra drilldown
@@ -7213,11 +7248,14 @@ async function renderSection7Inter() {
     window._sec7Inter_advanced = negociosAdvDeals;
     window._sec7Inter_propostas = propostasDealsAll;
     window._sec7Inter_vendas = vendasDeals;
+    window._sec7Inter_descartados = descartadosDeals;
+    window._sec7Inter_perdidos = perdidosDeals;
 }
 
 // Drilldown dos KPI cards do topo do Intermodal
 function showIntermodalDrilldown(kind) {
     let deals = [], title = '';
+    let isLossKind = false;
     if (kind === 'meetings') {
         deals = window._sec7Inter_reunioes || [];
         title = `Reuniões Agendadas Intermodal — passadas ao funil de venda (${deals.length})`;
@@ -7234,10 +7272,18 @@ function showIntermodalDrilldown(kind) {
     } else if (kind === 'sales') {
         deals = window._sec7Inter_vendas || [];
         title = `Vendas Intermodal fechadas (${deals.length})`;
+    } else if (kind === 'discards') {
+        deals = window._sec7Inter_descartados || [];
+        title = `Descartados pelo Pré-vendas — Intermodal (${deals.length})`;
+        isLossKind = true;
+    } else if (kind === 'losses') {
+        deals = window._sec7Inter_perdidos || [];
+        title = `Perdidos pelos Vendedores — Intermodal (${deals.length})`;
+        isLossKind = true;
     }
     if (deals.length === 0) return;
     deals = deals.slice().sort((a,b) => (typeof getMRR === 'function' ? getMRR(b) - getMRR(a) : 0));
-    const columns = [
+    const baseColumns = [
         { header: 'Título', getValue: d => d.Title || '' },
         { header: 'Funil', getValue: d => getPipelineName(d) },
         { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
@@ -7247,10 +7293,26 @@ function showIntermodalDrilldown(kind) {
         { header: 'Setup', getValue: d => typeof getSetup === 'function' ? getSetup(d) : 0 },
         { header: 'Origem', getValue: d => d.Origin?.Name || '' },
         { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
-        { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) },
-        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+        { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) }
     ];
-    showDrilldown(title, deals, columns, 'open');
+    // Pra descartes/perdas, mostra Motivo da Perda e Data de Fechamento, e remove Proposta Enviada (não relevante)
+    const columns = isLossKind
+        ? [
+            { header: 'Título', getValue: d => d.Title || '' },
+            { header: 'Funil', getValue: d => getPipelineName(d) },
+            { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+            { header: 'Responsável', getValue: d => getOwnerName(d) },
+            { header: 'SDR', getValue: d => getSDR(d) || '' },
+            { header: 'Motivo da Perda', getValue: d => d.LossReason?.Name || '(sem motivo)' },
+            { header: 'MRR', getValue: d => getMRR(d) },
+            { header: 'Setup', getValue: d => getSetup(d) },
+            { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+            { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+            { header: 'Perdido em', getValue: d => formatDate(d.FinishDate) },
+            { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+          ]
+        : [...baseColumns, { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }];
+    showDrilldown(title, deals, columns, isLossKind ? 'lost' : 'open');
 }
 
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
