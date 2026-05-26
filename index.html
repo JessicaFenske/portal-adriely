@@ -6955,30 +6955,22 @@ async function renderSection7Inter() {
     };
 
     // === Reuniões Intermodal por Pré-Vendedor ===
-    // Fonte 1: tasks (dashMeetings) com Title=Reunião Agendada e deal com origem Intermodal
-    // Fonte 2 (fallback): deals com origem Intermodal criados no período (proxy de "reunião agendada")
-    const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
+    // MESMA DEFINIÇÃO do KPI "Reuniões Agendadas": deals Intermodal em sales pipelines
+    // (Funil de Vendas, Sankhya, Farmer) criados no período. Total bate 1:1 com o KPI.
+    //
+    // Agrupamento por SDR: usa campo SDR. Se vazio, usa Owner como proxy (vendedor que
+    // recebeu — útil quando a equipe esquece de preencher o campo SDR mas a posse do
+    // deal mostra quem agendou/passou).
+    const reunioesParaChart = [...(dashOpenDeals||[]), ...(wonDeals||[]), ...(lostDeals||[])]
+        .filter(d => isIntermodal(d) && isSalesPipeline(d) && inRange(d.CreateDate));
     const ownerAgg = {};
     const ownerDealsAgg = {};
-    meetings.forEach(t => {
-        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
+    reunioesParaChart.forEach(d => {
+        const name = getSDR(d) || getOwnerName(d) || '(sem responsável)';
         if (!ownerAgg[name]) { ownerAgg[name] = { count: 0 }; ownerDealsAgg[name] = []; }
         ownerAgg[name].count++;
-        const dealId = t.DealId;
-        const d = dealId ? (window._dashOpenDealsById?.[dealId]) : null;
-        if (d) ownerDealsAgg[name].push(d);
+        ownerDealsAgg[name].push(d);
     });
-    // Fallback: se nenhuma meeting encontrada, usa deals Intermodal (com SDR) criados no período
-    if (Object.keys(ownerAgg).length === 0) {
-        const interDeals = [...(dashOpenDeals||[]), ...(wonDeals||[]), ...(lostDeals||[])]
-            .filter(d => isIntermodal(d) && inRange(d.CreateDate));
-        interDeals.forEach(d => {
-            const name = getSDR(d) || '(sem SDR)';
-            if (!ownerAgg[name]) { ownerAgg[name] = { count: 0 }; ownerDealsAgg[name] = []; }
-            ownerAgg[name].count++;
-            ownerDealsAgg[name].push(d);
-        });
-    }
     const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, count: v.count, deals: ownerDealsAgg[name] || [] })).sort((a, b) => b.count - a.count);
     window._sec7Inter_meetingsByOwner = sorted;
     destroyChart('meetingsInter');
