@@ -3767,8 +3767,14 @@
                         <div id="interActionButtons" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;"></div>
                         <!-- KPI cards no topo: contagem agregada de todos os funis -->
                         <div id="interTopKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;"></div>
-                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
-                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras OU nos botões/cards acima pra ver os negócios. Tudo agrega <strong style="color:#b794f4;">todos os funis</strong> (Funil de Vendas, SDR Inbound, Farmer, Sankhya).
+                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
+                            <div style="margin-bottom:4px;"><span style="color:#b794f4;">&#9755;</span> Clique nos botões, cards ou barras pra abrir a lista de negócios. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong>.</div>
+                            <div style="color:#6d6d85;font-size:10.5px;">
+                                <strong>Reuniões Agendadas:</strong> Intermodal já em funil de venda (SDR passou pro vendedor) ·
+                                <strong>Negócios (Consid.+):</strong> Intermodal nas etapas Consideração da Solução, Aprovado ou Formalização ·
+                                <strong>Propostas:</strong> Intermodal com MRR ou Setup preenchido ·
+                                <strong>Vendas:</strong> ganhos
+                            </div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
                             <div>
@@ -7124,24 +7130,46 @@ async function renderSection7Inter() {
             kpiCard('Proposta → Venda', `${taxaVenda.toFixed(1)}%`, '#b794f4', `${vendasTotal} de ${propostasTotal} propostas`);
     }
 
-    // === KPI cards TOPO: agregação por todos os funis (Funil de Vendas + SDR + Farmer + Sankhya) ===
-    // Conta TODOS os deals com origem Intermodal independente do pipeline:
-    //   - Total negócios Intermodal (todos os pipelines, no período por CreateDate)
-    //   - Propostas enviadas + MRR somado das propostas
-    //   - Vendas fechadas + MRR somado das vendas
-    //   - Pipeline breakdown (em quais funis estão)
-    const intermodalAllPeriod = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
-        .filter(d => isIntermodal(d) && inRange(d.CreateDate));
-    const propostasMrrSum = propostasDealsAll.reduce((s, d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0);
-    const propostasSetupSum = propostasDealsAll.reduce((s, d) => s + (typeof getSetup === 'function' ? getSetup(d) : 0), 0);
-    const vendasMrrSum = vendasDeals.reduce((s, d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0);
-    // Breakdown por pipeline (em quais funis as propostas Intermodal estão)
+    // === KPI cards TOPO: 5 métricas com semântica correta ===
+    // Universo: deals com origem Intermodal, em qualquer pipeline (Funil de Vendas + SDR + Farmer + Sankhya)
+    const allIntermodalDeals = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
+        .filter(d => isIntermodal(d));
+
+    // 1. Reuniões Agendadas: deals Intermodal que estão em sales pipelines (foram passados pelo SDR aos vendedores)
+    //    Critério: pipeline é de venda (Funil de Vendas / Sankhya / Farmer) e CreateDate no período
+    const reunioesAgendadasDeals = allIntermodalDeals.filter(d => isSalesPipeline(d) && inRange(d.CreateDate));
+
+    // 2. Negócios em Consideração+: deals Intermodal nas etapas Consideração da Solução, Aprovado ou Formalização
+    const stagePropRegex = /considera|aprov|formaliz/i;
+    const negociosAdvDeals = allIntermodalDeals.filter(d => stagePropRegex.test(d.Stage?.Name || '') && inRange(d.CreateDate));
+
+    // 3. Propostas Enviadas: Intermodal com MRR > 0 OU Setup > 0 (valor preenchido = proposta gerada)
+    //    propostasDealsAll já calculado acima usa essa regra
+    const propostasMrrSum = propostasDealsAll.reduce((s, d) => s + getMRR(d), 0);
+    const propostasSetupSum = propostasDealsAll.reduce((s, d) => s + getSetup(d), 0);
+
+    // 4. Vendas Fechadas: won deals Intermodal com FinishDate no período (já calculado em vendasDeals)
+    const vendasMrrSum = vendasDeals.reduce((s, d) => s + getMRR(d), 0);
+    const vendasSetupSum = vendasDeals.reduce((s, d) => s + getSetup(d), 0);
+
+    // Breakdown por pipeline pras propostas (informação útil no subtítulo)
     const propByPipeline = {};
     propostasDealsAll.forEach(d => {
         const p = getPipelineName(d) || '(sem pipeline)';
         propByPipeline[p] = (propByPipeline[p] || 0) + 1;
     });
     const pipelinesBreakdown = Object.entries(propByPipeline)
+        .sort((a,b) => b[1] - a[1])
+        .map(([p,c]) => `${p}: ${c}`)
+        .join(' · ') || '—';
+
+    // Breakdown por pipeline pras Reuniões Agendadas (em qual funil de venda estão)
+    const reuniaoByPipeline = {};
+    reunioesAgendadasDeals.forEach(d => {
+        const p = getPipelineName(d) || '(sem pipeline)';
+        reuniaoByPipeline[p] = (reuniaoByPipeline[p] || 0) + 1;
+    });
+    const reuniaoBreakdown = Object.entries(reuniaoByPipeline)
         .sort((a,b) => b[1] - a[1])
         .map(([p,c]) => `${p}: ${c}`)
         .join(' · ') || '—';
@@ -7159,10 +7187,11 @@ async function renderSection7Inter() {
             </div>`;
         };
         topKpiEl.innerHTML =
-            bigKpi('Negócios Intermodal', intermodalAllPeriod.length, '#22c55e', 'criados no período (todos os funis)', `showIntermodalDrilldown('all')`) +
-            bigKpi('Propostas enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('MRR em propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('Vendas fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}`, `showIntermodalDrilldown('sales')`);
+            bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `passadas ao funil de venda${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
+            bigKpi('Negócios (Consid.+)', negociosAdvDeals.length, '#f59e0b', 'em Consideração da Solução, Aprovado ou Formalização', `showIntermodalDrilldown('advanced')`) +
+            bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('Vendas Fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`);
     }
 
     // === Botões grandes de drilldown direto ===
@@ -7173,13 +7202,15 @@ async function renderSection7Inter() {
                 ${label} <span style="background:${color};color:#0a0a14;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;">${count}</span>
             </button>` : '';
         actionsEl.innerHTML =
-            btn('&#128202; Ver negócios Intermodal', intermodalAllPeriod.length, '#22c55e', 'all') +
+            btn('&#128197; Ver reuniões agendadas', reunioesAgendadasDeals.length, '#22c55e', 'meetings') +
+            btn('&#128202; Ver negócios em Consid.+', negociosAdvDeals.length, '#f59e0b', 'advanced') +
             btn('&#128196; Ver propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
             btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales');
     }
 
     // Expõe pra drilldown
-    window._sec7Inter_allDeals = intermodalAllPeriod;
+    window._sec7Inter_reunioes = reunioesAgendadasDeals;
+    window._sec7Inter_advanced = negociosAdvDeals;
     window._sec7Inter_propostas = propostasDealsAll;
     window._sec7Inter_vendas = vendasDeals;
 }
@@ -7187,9 +7218,16 @@ async function renderSection7Inter() {
 // Drilldown dos KPI cards do topo do Intermodal
 function showIntermodalDrilldown(kind) {
     let deals = [], title = '';
-    if (kind === 'all') {
-        deals = window._sec7Inter_allDeals || [];
-        title = `Negócios Intermodal (${deals.length})`;
+    if (kind === 'meetings') {
+        deals = window._sec7Inter_reunioes || [];
+        title = `Reuniões Agendadas Intermodal — passadas ao funil de venda (${deals.length})`;
+    } else if (kind === 'advanced') {
+        deals = window._sec7Inter_advanced || [];
+        title = `Negócios Intermodal em Consideração+ (${deals.length})`;
+    } else if (kind === 'all') {
+        // Compat: ainda exposto em algumas chamadas antigas — usa reunioes como melhor proxy de "todos relevantes"
+        deals = window._sec7Inter_reunioes || [];
+        title = `Reuniões Agendadas Intermodal (${deals.length})`;
     } else if (kind === 'proposals') {
         deals = window._sec7Inter_propostas || [];
         title = `Propostas Intermodal enviadas (${deals.length})`;
