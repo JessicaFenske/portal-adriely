@@ -6372,30 +6372,71 @@ async function loadMeetingDealOrigins() {
 function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
-    const meetings = meetingsForPeriod(sp);
-    window._sec7_meetings = meetings;
-    // SDR = quem CRIOU a atividade (CreatorId), não quem conduz a reunião (OwnerId)
-    const ownerAgg = {};
-    meetings.forEach(t => {
-        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
-        if (!ownerAgg[name]) ownerAgg[name] = { count: 0, items: [] };
-        ownerAgg[name].count++;
-        ownerAgg[name].items.push(t);
+
+    // NOVA LÓGICA (alinhada com KPI Reuniões Agendadas do Intermodal):
+    // "Reunião agendada" = deal que ja esta em sales pipeline (Funil de Vendas, Sankhya, Farmer)
+    // com SDR preenchido, criado no periodo. SDR passou o lead pro vendedor = reuniao agendada.
+    // (Antes usava cache de Tasks que vinha vazio.)
+    const deals = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
+        .filter(d => isSalesPipeline(d) && getSDR(d) && inPeriodSection(d.CreateDate, sp.start, sp.end));
+    window._sec7_deals = deals;
+
+    const sdrAgg = {};
+    deals.forEach(d => {
+        const name = getSDR(d);
+        if (!name) return;
+        if (!sdrAgg[name]) sdrAgg[name] = { count: 0, deals: [] };
+        sdrAgg[name].count++;
+        sdrAgg[name].deals.push(d);
     });
-    const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
+    const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
 
     destroyChart('meetings');
     charts.meetings = new Chart(document.getElementById('chartMeetings'), {
-        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reuniões', data: sorted.map(s => s.count), backgroundColor: 'rgba(139, 92, 246, 0.7)', borderColor: '#8b5cf6', borderWidth: 1 }] },
+        type: 'bar',
+        data: {
+            labels: sorted.length ? sorted.map(s => shortName(s.name)) : ['(sem reuniões no período)'],
+            datasets: [{
+                label: 'Reuniões agendadas',
+                data: sorted.length ? sorted.map(s => s.count) : [0],
+                backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                borderColor: '#8b5cf6',
+                borderWidth: 1
+            }]
+        },
         plugins: [ChartDataLabels],
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
-            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
+            plugins: { legend: { display: false }, datalabels: barEndLabel('#b794f4') },
+            onClick: (event, elements) => {
+                if (elements.length > 0 && sorted.length > 0) {
+                    const s = sorted[elements[0].index];
+                    if (s && s.deals && s.deals.length > 0) {
+                        const columns = [
+                            { header: 'Título', getValue: d => d.Title || '' },
+                            { header: 'Funil', getValue: d => getPipelineName(d) },
+                            { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+                            { header: 'Responsável', getValue: d => getOwnerName(d) },
+                            { header: 'SDR', getValue: d => getSDR(d) || '' },
+                            { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+                            { header: 'MRR', getValue: d => getMRR(d) },
+                            { header: 'Setup', getValue: d => getSetup(d) },
+                            { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+                            { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+                        ];
+                        showDrilldown(`Reuniões agendadas - ${s.name} (${s.count})`, s.deals, columns, 'open');
+                    }
+                }
+            },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } }
+        }
     });
-    document.getElementById('tbodyMeetings').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+    document.getElementById('tbodyMeetings').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
         <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
-        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('');
+        <td style="text-align:center;font-weight:700;color:#b794f4;">${s.count}</td></tr>`).join('')
+        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reuniões agendadas no período</td></tr>';
 }
 
 // Reuniões da origem Intermodal
