@@ -3763,16 +3763,23 @@
                         </div>
                     </div>
                     <div class="section-body">
+                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+                            <span style="color:#b794f4;">&#9755;</span> Clique nas barras pra ver quais negócios são
+                        </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
                             <div>
                                 <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Reuniões por Pré-Vendedor</h3>
-                                <div class="chart-container"><canvas id="chartMeetingsInter"></canvas></div>
+                                <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsInter"></canvas></div>
                             </div>
                             <div>
-                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Conversão da Origem</h3>
-                                <div class="chart-container"><canvas id="chartFunnelInter"></canvas></div>
-                                <div id="interFunnelKpis" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;"></div>
+                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Propostas por Vendedor</h3>
+                                <div class="chart-container" style="cursor:pointer;"><canvas id="chartProposalsInter"></canvas></div>
                             </div>
+                        </div>
+                        <div style="margin-top:24px;">
+                            <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Conversão da Origem</h3>
+                            <div class="chart-container"><canvas id="chartFunnelInter"></canvas></div>
+                            <div id="interFunnelKpis" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;"></div>
                         </div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableMeetingsInter')">Mostrar/ocultar tabela</button>
                         <div class="collapsible-table" id="tableMeetingsInter"><table><thead><tr>
@@ -3830,7 +3837,10 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <div class="chart-container"><canvas id="chartMeetingsOrigin"></canvas></div>
+                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                            <span style="color:#b794f4;">&#9755;</span> Clique numa barra pra ver os negócios daquela origem
+                        </div>
+                        <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsOrigin"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableMeetingsOrigin')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7d()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableMeetingsOrigin"><table><thead><tr>
@@ -5467,10 +5477,14 @@ function filteredOpen(secPeriod) {
         return inPeriodSection(d.CreateDate, sp.start, sp.end);
     });
 }
-function allDealsForMeetings(secPeriod) {
+function allDealsForMeetings(secPeriod, opts) {
     const sp = secPeriod || { start: periodStart, end: periodEnd };
+    const includeAllPipelines = opts && opts.includeAllPipelines;
     return [...wonDeals, ...lostDeals, ...dashOpenDeals].filter(d => {
-        if (!isSalesPipeline(d)) return false;
+        // sec7d (Reuniões por Origem) inclui SDR pipelines também — pra origens como
+        // Intermodal que vivem em SDR Inbound aparecerem. Outras secs (sec7, sec8) mantêm
+        // só sales pipelines pra contar deals que avançaram.
+        if (!includeAllPipelines && !isSalesPipeline(d)) return false;
         if (!getSDR(d)) return false;
         if (!ownerMatchesGlobal(d)) return false;
         // Match by CreateDate OR LastUpdateDate (when SDR may have been added)
@@ -6872,32 +6886,6 @@ async function renderSection7Inter() {
     ensureDealsIndex();
     await loadMeetingDealOrigins();
     const sp = getSectionPeriod('sec7Inter');
-    const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
-    const ownerAgg = {};
-    meetings.forEach(t => {
-        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
-        if (!ownerAgg[name]) ownerAgg[name] = { count: 0 };
-        ownerAgg[name].count++;
-    });
-    const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
-    destroyChart('meetingsInter');
-    charts.meetingsInter = new Chart(document.getElementById('chartMeetingsInter'), {
-        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reuniões Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
-        plugins: [ChartDataLabels],
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(), plugins: { legend: { display: false }, datalabels: barEndLabel('#22c55e') },
-            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
-    });
-    document.getElementById('tbodyMeetingsInter').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
-        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
-        <td style="text-align:center;font-weight:700;color:#22c55e;">${s.count}</td></tr>`).join('')
-        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no período</td></tr>';
-
-    // === Conversão da origem Intermodal: Reuniões → Propostas → Vendas ===
-    // Considera deals únicos vinculados às reuniões do período + período de Propostas/Ganhos:
-    //   - "Reuniões" = nº total de reuniões da origem Intermodal no período
-    //   - "Propostas geradas" = deals únicos com origem Intermodal que tiveram proposta enviada no período
-    //   - "Vendas fechadas" = deals únicos com origem Intermodal ganhos no período
     const periodStart_ = sp?.start || periodStart;
     const periodEnd_ = sp?.end || periodEnd;
     const isIntermodal = d => /intermodal/i.test(d?.Origin?.Name || '');
@@ -6908,16 +6896,116 @@ async function renderSection7Inter() {
         if (periodEnd_ && dt > periodEnd_) return false;
         return true;
     };
-    // Propostas Intermodal no período (qualquer deal: open + won + lost)
-    const allDealsForCount = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
-    const propostasDeals = allDealsForCount.filter(d => isIntermodal(d) && inRange(getProposalDate(d)));
-    const propostasUnique = new Set(propostasDeals.map(d => d.Id));
+
+    // === Reuniões Intermodal por Pré-Vendedor ===
+    // Fonte 1: tasks (dashMeetings) com Title=Reunião Agendada e deal com origem Intermodal
+    // Fonte 2 (fallback): deals com origem Intermodal criados no período (proxy de "reunião agendada")
+    const meetings = meetingsForPeriod(sp).filter(t => /intermodal/i.test(getMeetingOrigin(t)));
+    const ownerAgg = {};
+    const ownerDealsAgg = {};
+    meetings.forEach(t => {
+        const name = dashUsersById[t.CreatorId] || ('Usuario ' + t.CreatorId);
+        if (!ownerAgg[name]) { ownerAgg[name] = { count: 0 }; ownerDealsAgg[name] = []; }
+        ownerAgg[name].count++;
+        const dealId = t.DealId;
+        const d = dealId ? (window._dashOpenDealsById?.[dealId]) : null;
+        if (d) ownerDealsAgg[name].push(d);
+    });
+    // Fallback: se nenhuma meeting encontrada, usa deals Intermodal (com SDR) criados no período
+    if (Object.keys(ownerAgg).length === 0) {
+        const interDeals = [...(dashOpenDeals||[]), ...(wonDeals||[]), ...(lostDeals||[])]
+            .filter(d => isIntermodal(d) && inRange(d.CreateDate));
+        interDeals.forEach(d => {
+            const name = getSDR(d) || '(sem SDR)';
+            if (!ownerAgg[name]) { ownerAgg[name] = { count: 0 }; ownerDealsAgg[name] = []; }
+            ownerAgg[name].count++;
+            ownerDealsAgg[name].push(d);
+        });
+    }
+    const sorted = Object.entries(ownerAgg).map(([name, v]) => ({ name, count: v.count, deals: ownerDealsAgg[name] || [] })).sort((a, b) => b.count - a.count);
+    window._sec7Inter_meetingsByOwner = sorted;
+    destroyChart('meetingsInter');
+    charts.meetingsInter = new Chart(document.getElementById('chartMeetingsInter'), {
+        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [{ label: 'Reuniões Intermodal', data: sorted.map(s => s.count), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1 }] },
+        plugins: [ChartDataLabels],
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
+            plugins: { legend: { display: false }, datalabels: barEndLabel('#22c55e') },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const s = sorted[elements[0].index];
+                    if (s && s.deals && s.deals.length > 0) {
+                        showDrilldown(`Reuniões Intermodal - ${s.name} (${s.count})`, s.deals, null, 'meetings');
+                    }
+                }
+            },
+            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+    });
+    document.getElementById('tbodyMeetingsInter').innerHTML = sorted.length ? sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
+        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
+        <td style="text-align:center;font-weight:700;color:#22c55e;">${s.count}</td></tr>`).join('')
+        : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px;">Sem reunioes Intermodal no período</td></tr>';
+
+    // === Propostas Intermodal por Vendedor ===
+    const allDealsForProp = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
+    const propostasDealsAll = allDealsForProp.filter(d => isIntermodal(d) && inRange(getProposalDate(d)));
+    const propByOwner = {};
+    const propDealsByOwner = {};
+    propostasDealsAll.forEach(d => {
+        const name = getOwnerName(d) || '(sem vendedor)';
+        if (!propByOwner[name]) { propByOwner[name] = 0; propDealsByOwner[name] = []; }
+        propByOwner[name]++;
+        propDealsByOwner[name].push(d);
+    });
+    const propSorted = Object.entries(propByOwner).map(([name, count]) => ({ name, count, deals: propDealsByOwner[name] })).sort((a, b) => b.count - a.count);
+    window._sec7Inter_propostasByOwner = propSorted;
+    destroyChart('proposalsInter');
+    const propCanvas = document.getElementById('chartProposalsInter');
+    if (propCanvas) {
+        charts.proposalsInter = new Chart(propCanvas, {
+            type: 'bar',
+            data: {
+                labels: propSorted.length ? propSorted.map(s => shortName(s.name)) : ['(sem propostas no período)'],
+                datasets: [{
+                    label: 'Propostas Intermodal',
+                    data: propSorted.length ? propSorted.map(s => s.count) : [0],
+                    backgroundColor: 'rgba(96, 165, 250, 0.55)',
+                    borderColor: '#60a5fa',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y', layout: barEndLayout(),
+                plugins: { legend: { display: false }, datalabels: barEndLabel('#60a5fa') },
+                onClick: (event, elements) => {
+                    if (elements.length > 0 && propSorted.length > 0) {
+                        const s = propSorted[elements[0].index];
+                        if (s && s.deals && s.deals.length > 0) {
+                            showDrilldown(`Propostas Intermodal - ${s.name} (${s.count})`, s.deals, null, 'proposals');
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1, precision: 0 }, grid: darkScaleOptions.grid },
+                    y: { ...darkScaleOptions }
+                }
+            }
+        });
+    }
+
+    // === Conversão da origem Intermodal: Reuniões → Propostas → Vendas ===
     // Vendas Intermodal no período (won deals fechados dentro do período)
     const vendasDeals = (wonDeals || []).filter(d => isIntermodal(d) && inRange(d.FinishDate));
     const vendasUnique = new Set(vendasDeals.map(d => d.Id));
 
-    const reunioesTotal = meetings.length;
-    const propostasTotal = propostasUnique.size;
+    // Se não houver meetings tagadas Intermodal mas houver deals criados no período, usa o
+    // total de deals criados como "Reuniões" (proxy: cada deal = 1 reunião agendada)
+    const reunioesTotal = meetings.length > 0
+        ? meetings.length
+        : sorted.reduce((sum, s) => sum + s.count, 0);
+    const propostasTotal = new Set(propostasDealsAll.map(d => d.Id)).size;
     const vendasTotal = vendasUnique.size;
 
     destroyChart('funnelInter');
@@ -7164,8 +7252,8 @@ function renderSection7d() {
     const sdrSel = document.getElementById('meetingsOriginSdrFilter');
     const selectedSdr = sdrSel ? sdrSel.value : '';
 
-    // Base: mesma regra do sec7/sec8 (deals em funis de vendas com SDR)
-    let deals = allDealsForMeetings(sp);
+    // Inclui SDR pipelines também pra origens em qualificação (ex: Intermodal) aparecerem
+    let deals = allDealsForMeetings(sp, { includeAllPipelines: true });
 
     // Popula dropdown de pre-vendedores
     if (sdrSel) {
