@@ -3784,7 +3784,7 @@
                                 <div class="chart-container" style="cursor:pointer;"><canvas id="chartMeetingsInter"></canvas></div>
                             </div>
                             <div>
-                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Propostas por Vendedor <span style="color:#6d6d85;font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(barra = MRR · label = qtd · valor)</span></h3>
+                                <h3 style="color:#a0a0b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 10px;">Propostas por Vendedor <span style="color:#6d6d85;font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(barra = MRR + Setup · label = qtd · MRR · Setup)</span></h3>
                                 <div class="chart-container" style="cursor:pointer;"><canvas id="chartProposalsInter"></canvas></div>
                             </div>
                         </div>
@@ -6996,13 +6996,15 @@ async function renderSection7Inter() {
     const propCanvas = document.getElementById('chartProposalsInter');
     if (propCanvas) {
         const fmtBRLShort = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        // Bar mostra MRR+Setup total (somando), label dentro mostra qtd · MRR · Setup
+        const maxBarVal = propSorted.length ? Math.max(...propSorted.map(s => s.mrr + s.setup)) : 1;
         charts.proposalsInter = new Chart(propCanvas, {
             type: 'bar',
             data: {
                 labels: propSorted.length ? propSorted.map(s => shortName(s.name)) : ['(sem propostas no período)'],
                 datasets: [{
-                    label: 'MRR proposto',
-                    data: propSorted.length ? propSorted.map(s => s.mrr) : [0],
+                    label: 'MRR + Setup proposto',
+                    data: propSorted.length ? propSorted.map(s => s.mrr + s.setup) : [0],
                     backgroundColor: 'rgba(96, 165, 250, 0.55)',
                     borderColor: '#60a5fa',
                     borderWidth: 1.5,
@@ -7015,14 +7017,26 @@ async function renderSection7Inter() {
                 plugins: {
                     legend: { display: false },
                     datalabels: {
-                        color: '#60a5fa',
-                        anchor: 'end',
+                        // Label DENTRO da barra (canto esquerdo) com fundo claro pra contraste
+                        color: '#0a0a14',
+                        backgroundColor: 'rgba(186, 215, 255, 0.95)',
+                        borderRadius: 4,
+                        padding: { top: 3, bottom: 3, left: 6, right: 6 },
+                        anchor: 'start',
                         align: 'right',
+                        offset: 4,
                         font: { weight: 'bold', size: 11 },
                         formatter: (v, ctx) => {
                             if (propSorted.length === 0) return '';
                             const s = propSorted[ctx.dataIndex];
-                            return `${s.count} • ${fmtBRLShort(s.mrr)}`;
+                            // Barra muito pequena: cai pra label fora
+                            const barFrac = (s.mrr + s.setup) / maxBarVal;
+                            if (barFrac < 0.25) return `${s.count} • MRR ${fmtBRLShort(s.mrr)} • Setup ${fmtBRLShort(s.setup)}`;
+                            return `${s.count} proposta${s.count===1?'':'s'}   MRR ${fmtBRLShort(s.mrr)}   Setup ${fmtBRLShort(s.setup)}`;
+                        },
+                        display: (ctx) => {
+                            if (propSorted.length === 0) return false;
+                            return true;
                         }
                     },
                     tooltip: {
@@ -7221,7 +7235,8 @@ async function renderSection7Inter() {
             bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `passadas ao funil de venda${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
             bigKpi('Negócios (Consid.+)', negociosAdvDeals.length, '#f59e0b', 'em Consideração da Solução, Aprovado ou Formalização', `showIntermodalDrilldown('advanced')`) +
             bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `Setup: ${fmtBRL(propostasSetupSum)}`, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('Setup em Propostas', fmtBRL(propostasSetupSum), '#c084fc', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
             bigKpi('Vendas Fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`) +
             bigKpi('Descartados (Pré-vendas)', descartadosDeals.length, '#f87171', topDescMotivo ? `Top motivo: ${topDescMotivo[0]} (${topDescMotivo[1]})` : 'sem descartes no período', `showIntermodalDrilldown('discards')`) +
             bigKpi('Perdidos (Vendedores)', perdidosDeals.length, '#ef4444', `MRR perdido: ${fmtBRL(perdidosMrrSum)}${topPerdMotivo ? ' · Top: '+topPerdMotivo[0]+' ('+topPerdMotivo[1]+')' : ''}`, `showIntermodalDrilldown('losses')`);
