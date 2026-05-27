@@ -4995,9 +4995,14 @@ function buildScrollspyMap() {
 
 let _scrollspyTicking = false;
 function updateScrollspy() {
-    // Só roda quando o dashboard está visível
+    // Só roda quando o dashboard está visível.
+    // Se nao estiver, limpa highlight remanescente (defesa pra evitar fantasma).
     const dashView = document.getElementById('view-dashboard');
-    if (!dashView || dashView.style.display === 'none') return;
+    if (!dashView || dashView.style.display === 'none') {
+        document.querySelectorAll('.nav-sub-item.scrollspy-active')
+            .forEach(el => el.classList.remove('scrollspy-active'));
+        return;
+    }
     const map = buildScrollspyMap();
     if (map.length === 0) return;
 
