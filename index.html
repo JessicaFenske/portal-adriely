@@ -3799,9 +3799,26 @@
                         </div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableMeetings')">Mostrar/ocultar tabela consolidada</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7()">&#128229; Exportar Excel</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;background:rgba(250,204,21,0.15);border:1px solid #facc15;color:#facc15;" onclick="openInvestigateModal()">&#128269; Investigar deals</button>
                         <div class="collapsible-table" id="tableMeetings"><table><thead><tr>
                             <th class="rank-num">#</th><th>Pré-Vendedor</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th>
                         </tr></thead><tbody id="tbodyMeetings"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Modal de Investigação de deals (auditoria de Realizadas) -->
+                <div id="investigateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;">
+                    <div style="background:#0f0f1e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;width:100%;max-width:1100px;padding:24px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h2 style="color:#facc15;font-size:18px;margin:0;">&#128269; Investigar deals — por que cada um é/não é "Realizada"?</h2>
+                            <button onclick="closeInvestigateModal()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#e0e0e0;padding:6px 14px;border-radius:6px;cursor:pointer;">Fechar</button>
+                        </div>
+                        <div style="font-size:12px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
+                            Cole IDs de deal (números) ou URLs completas (uma por linha ou separados por vírgula/espaço). Vai mostrar o estado atual, atividades vinculadas e por que cada deal está/não está contando como realizada no relatório.
+                        </div>
+                        <textarea id="investigateInput" placeholder="605069900&#10;https://app10.ploomes.com/deal/604914654&#10;..." style="width:100%;min-height:120px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:12px;font-family:monospace;font-size:12px;margin-bottom:12px;"></textarea>
+                        <button onclick="runInvestigate()" style="background:#facc15;color:#0a0a14;font-weight:700;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;">Analisar</button>
+                        <div id="investigateResults" style="margin-top:18px;"></div>
                     </div>
                 </div>
 
@@ -8663,6 +8680,167 @@ function exportSection6() {
         { header: 'Perdidos', getValue: d => d.count }
     ], 'perdidos_por_vendedor');
 }
+// === Investigar deals (auditoria de Realizadas) ===
+function openInvestigateModal() {
+    document.getElementById('investigateModal').style.display = 'flex';
+}
+function closeInvestigateModal() {
+    document.getElementById('investigateModal').style.display = 'none';
+}
+function runInvestigate() {
+    const raw = document.getElementById('investigateInput').value || '';
+    // Extrai IDs numericos de URLs ou texto
+    const ids = [...new Set((raw.match(/\d{7,}/g) || []).map(Number))];
+    const resultsEl = document.getElementById('investigateResults');
+    if (ids.length === 0) {
+        resultsEl.innerHTML = '<div style="color:#ef4444;padding:12px;">Nenhum ID válido detectado. Cole IDs ou URLs.</div>';
+        return;
+    }
+
+    ensureDealsIndex();
+    const sp = getSectionPeriod('sec7');
+    const allDealsIdx = window._dashOpenDealsById || {};
+    const meetings = dashMeetings || [];
+
+    const rows = ids.map(id => {
+        const deal = allDealsIdx[id];
+        const dealTasks = meetings.filter(t => t.DealId === id);
+        const reuniaoTasks = dealTasks.filter(t => {
+            const tn = (t.Title||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+            return tn.includes('reuniao agendada') || tn.includes('reunião agendada');
+        });
+        const realizadaTasks = dealTasks.filter(t => {
+            const tn = (t.Title||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+            return /realizad|conclui[dt]|feita|aconteceu/i.test(tn);
+        });
+
+        if (!deal) {
+            return {
+                id, found: false,
+                why: `Deal ${id} não encontrado no cache (won/lost/open). Pode estar em pipeline não carregado ou ter sido criado depois do último refresh.`
+            };
+        }
+
+        const stageName = deal.Stage?.Name || '(sem etapa)';
+        const pipelineName = getPipelineName(deal);
+        const ownerName = getOwnerName(deal);
+        const mrr = getMRR(deal), setup = getSetup(deal);
+
+        // Quais tasks de Reunião Agendada estão DENTRO do período (= contam agendadas)?
+        const tasksInPeriod = reuniaoTasks.filter(t => {
+            const dt = new Date(t.DateTime);
+            return (!sp.start || dt >= sp.start) && (!sp.end || dt <= sp.end);
+        });
+        const sdrsInPeriod = [...new Set(tasksInPeriod.map(t => {
+            const cn = dashUsersById[t.CreatorId] || '';
+            return getCanonicalSdrName(cn) || cn || '(sem SDR canonico)';
+        }))];
+
+        // Sinais de realizada
+        const sig1 = tasksInPeriod.some(t => t.Done === true);
+        const sig2 = realizadaTasks.some(t => {
+            const dt = new Date(t.DateTime);
+            return (!sp.start || dt >= sp.start) && (!sp.end || dt <= sp.end);
+        });
+        const POST_MEETING_STAGES = /quent|considera|aprov|formaliz|ganho|negocia/i;
+        const PRE_MEETING_STAGES = /entrada|qualific|reuni.*agend|descart|loss|perd/i;
+        const inSales = isSalesPipeline(deal);
+        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
+        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
+        const sig3 = inSales || advancedInSdr || isClosed;
+        const propDate = getProposalDate(deal);
+        const propInPeriod = propDate && (!sp.start || new Date(propDate) >= sp.start) && (!sp.end || new Date(propDate) <= sp.end);
+        const sig4 = mrr > 0 || setup > 0 || propInPeriod;
+
+        const agendadaCount = tasksInPeriod.length > 0;
+        const realizadaCount = agendadaCount && (sig1 || sig2 || sig3 || sig4);
+
+        // Diagnóstico em texto
+        let diag = '';
+        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0) {
+            const oldest = reuniaoTasks[0];
+            diag = `⚠️ Tem ${reuniaoTasks.length} task(s) "Reunião Agendada" mas FORA do período atual (DateTime: ${formatDate(oldest.DateTime)}). Por isso não conta nem como agendada nem como realizada neste mês.`;
+        } else if (tasksInPeriod.length === 0 && reuniaoTasks.length === 0) {
+            diag = `⚠️ Deal NÃO tem nenhuma task "Reunião Agendada" no cache (últimos 120d). Não pode contar nem como agendada.`;
+        } else if (realizadaCount) {
+            const sigs = [];
+            if (sig1) sigs.push('1 (task Done=true)');
+            if (sig2) sigs.push('2 (task "Realizada")');
+            if (sig3) sigs.push(`3 (deal avançou — stage="${stageName}", pipeline="${pipelineName}")`);
+            if (sig4) sigs.push('4 (MRR/Setup/proposta)');
+            diag = `✅ Conta como realizada via sinal(is): ${sigs.join(', ')}`;
+        } else if (agendadaCount) {
+            diag = `❌ Conta como AGENDADA mas NÃO realizada. Razão: stage="${stageName}" (não avançou), pipeline="${pipelineName}", sem task Done, sem proposta. Status=${deal.StatusId === 1 ? 'aberto' : deal.StatusId}.`;
+        }
+
+        return {
+            id, found: true,
+            title: deal.Title || '(sem nome)',
+            pipeline: pipelineName, stage: stageName, owner: ownerName,
+            mrr, setup,
+            tasksTotal: reuniaoTasks.length,
+            tasksInPeriod: tasksInPeriod.length,
+            sdrsInPeriod,
+            realizadaTasks: realizadaTasks.length,
+            sig1, sig2, sig3, sig4,
+            agendadaCount, realizadaCount,
+            diag
+        };
+    });
+
+    const fmtBRLi = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const html = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.04);text-align:left;">
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">ID</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Título</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Funil</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Etapa</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Owner</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">MRR/Setup</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Tasks (período/total)</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">SDR(s)</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Sinais</th>
+                    <th style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);">Diagnóstico</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map(r => r.found ? `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:8px;font-family:monospace;"><a href="https://app10.ploomes.com/deal/${r.id}" target="_blank" style="color:#60a5fa;">${r.id}</a></td>
+                        <td style="padding:8px;color:#e0e0e0;">${r.title}</td>
+                        <td style="padding:8px;color:#a0a0b8;">${r.pipeline}</td>
+                        <td style="padding:8px;color:#a0a0b8;">${r.stage}</td>
+                        <td style="padding:8px;color:#a0a0b8;">${r.owner || '—'}</td>
+                        <td style="padding:8px;font-size:11px;">MRR: ${fmtBRLi(r.mrr)}<br>Setup: ${fmtBRLi(r.setup)}</td>
+                        <td style="padding:8px;text-align:center;">${r.tasksInPeriod}/${r.tasksTotal}</td>
+                        <td style="padding:8px;font-size:11px;">${r.sdrsInPeriod.join(', ') || '—'}</td>
+                        <td style="padding:8px;text-align:center;font-family:monospace;font-size:11px;">
+                            <span style="color:${r.sig1?'#22c55e':'#6d6d85'};">1${r.sig1?'✓':'✗'}</span>
+                            <span style="color:${r.sig2?'#22c55e':'#6d6d85'};margin-left:4px;">2${r.sig2?'✓':'✗'}</span>
+                            <span style="color:${r.sig3?'#22c55e':'#6d6d85'};margin-left:4px;">3${r.sig3?'✓':'✗'}</span>
+                            <span style="color:${r.sig4?'#22c55e':'#6d6d85'};margin-left:4px;">4${r.sig4?'✓':'✗'}</span>
+                        </td>
+                        <td style="padding:8px;font-size:11px;line-height:1.5;color:${r.realizadaCount?'#22c55e':r.agendadaCount?'#f59e0b':'#ef4444'};">${r.diag}</td>
+                    </tr>
+                ` : `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:8px;font-family:monospace;color:#ef4444;">${r.id}</td>
+                        <td colspan="9" style="padding:8px;color:#ef4444;font-style:italic;">${r.why}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(96,165,250,0.05);border-left:3px solid #60a5fa;border-radius:6px;font-size:11.5px;color:#a0a0b8;">
+            <strong style="color:#60a5fa;">Legenda dos sinais:</strong>
+            1 = task com Done=true · 2 = task com title "realizada/concluída" · 3 = deal avançou de etapa (sales pipeline / Leads Quentes / Aprovado etc, ou foi fechado) · 4 = MRR/Setup/Data Proposta preenchidos.
+            <br>Resumo: <strong style="color:#22c55e;">${rows.filter(r => r.found && r.realizadaCount).length}</strong> contam como realizada · <strong style="color:#f59e0b;">${rows.filter(r => r.found && r.agendadaCount && !r.realizadaCount).length}</strong> só agendada · <strong style="color:#ef4444;">${rows.filter(r => r.found && !r.agendadaCount).length}</strong> nem agendada (task fora do período ou inexistente).
+        </div>
+    `;
+    resultsEl.innerHTML = html;
+}
+
 function exportSection7() {
     const data = window._sec7_sorted || [];
     exportToExcel(data, [
