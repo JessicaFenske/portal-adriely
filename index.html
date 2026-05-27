@@ -130,6 +130,18 @@
             transition: all 0.2s ease;
         }
         .nav-sub-item:hover { color: #4da6ff; background: rgba(30, 144, 255, 0.04); }
+        /* Scrollspy: realça o item da seção atualmente visível no dashboard */
+        .nav-sub-item.scrollspy-active {
+            background: rgba(250, 204, 21, 0.18);
+            color: #fde68a;
+            border-left: 3px solid #facc15;
+            padding-left: 41px; /* 44 - 3 da borda */
+        }
+        .nav-sub-item.scrollspy-active .sub-num {
+            background: rgba(250, 204, 21, 0.3);
+            color: #fde047;
+        }
+        .nav-sub-item.scrollspy-active .sub-label { color: #fde68a; }
         .nav-sub-item .sub-num {
             width: 18px; height: 18px;
             border-radius: 50%;
@@ -4898,6 +4910,75 @@ function scrollToDashSection(secId) {
         if (el) el.scrollIntoView({ behavior: 'smooth' });
     }
 }
+
+// === Scrollspy: realça na sidebar o item do relatório atualmente visível ===
+// Mapeia cada nav-sub-item pro secId que ele aponta (extraído do onclick).
+// Em scroll, identifica qual seção está mais perto do topo da viewport e aplica
+// classe .scrollspy-active no nav item correspondente.
+let _scrollspyMap = null;
+function buildScrollspyMap() {
+    if (_scrollspyMap) return _scrollspyMap;
+    _scrollspyMap = [];
+    document.querySelectorAll('.nav-sub-item').forEach(item => {
+        const onclick = item.getAttribute('onclick') || '';
+        const m = onclick.match(/scrollToDashSection\(['"]([^'"]+)['"]\)/);
+        if (m) {
+            _scrollspyMap.push({ secId: m[1], navEl: item });
+        }
+    });
+    return _scrollspyMap;
+}
+
+let _scrollspyTicking = false;
+function updateScrollspy() {
+    // Só roda quando o dashboard está visível
+    const dashView = document.getElementById('view-dashboard');
+    if (!dashView || dashView.style.display === 'none') return;
+    const map = buildScrollspyMap();
+    if (map.length === 0) return;
+
+    // Encontra a seção cujo topo está mais próximo (mas acima) do offset de referência
+    const refY = 120; // px do topo (margem pro header)
+    let bestSecId = null;
+    let bestDistance = Infinity;
+    map.forEach(({ secId }) => {
+        const el = document.getElementById(secId);
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Considera seções cujo topo já passou o refY (estão acima ou na linha)
+        // e pega a mais recente (menor distância negativa)
+        const distance = rect.top - refY;
+        if (distance <= 0 && Math.abs(distance) < Math.abs(bestDistance)) {
+            bestDistance = distance;
+            bestSecId = secId;
+        } else if (bestSecId === null && distance > 0 && distance < bestDistance) {
+            // Fallback: nenhuma seção passou ainda — pega a mais próxima abaixo
+            bestDistance = distance;
+            bestSecId = secId;
+        }
+    });
+
+    // Aplica classe ativa só no item correspondente
+    map.forEach(({ secId, navEl }) => {
+        if (secId === bestSecId) navEl.classList.add('scrollspy-active');
+        else navEl.classList.remove('scrollspy-active');
+    });
+}
+
+function onScrollspyScroll() {
+    if (_scrollspyTicking) return;
+    _scrollspyTicking = true;
+    requestAnimationFrame(() => {
+        updateScrollspy();
+        _scrollspyTicking = false;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('scroll', onScrollspyScroll, { passive: true });
+    // Também atualiza quando troca de view (ex: clica em Análise de Funil e volta pro Dashboard)
+    setTimeout(updateScrollspy, 500);
+});
 
 // Sidebar collapse
 function toggleSidebar() {
