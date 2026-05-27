@@ -4941,6 +4941,19 @@ function showView(viewName) {
 
     updateSidebarActive(viewName);
 
+    // Limpa scrollspy quando muda pra qualquer view que NAO seja dashboard.
+    // Se voltar pro dashboard, recomputa apos o reflow.
+    if (viewName !== 'dashboard') {
+        document.querySelectorAll('.nav-sub-item.scrollspy-active')
+            .forEach(el => el.classList.remove('scrollspy-active'));
+    } else {
+        setTimeout(() => { if (typeof updateScrollspy === 'function') updateScrollspy(); }, 100);
+    }
+
+    // Volta ao topo da pagina quando muda de view — evita ficar com scroll fantasma
+    // (ex: estava no fim do Dashboard, clica em Analise de Funil e parecia que "nao foi").
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('sidebarOverlay').classList.remove('active');
