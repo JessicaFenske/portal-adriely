@@ -11358,36 +11358,25 @@ function buildEnrichedMqls(range) {
     });
 }
 
-// === Helper: Reuniões realizadas no período (FLOW, qualquer safra) ===
-// Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate cair no período + sinal de realização.
-// Sem duplicar por dealId.
+// === Helper: Reuniões agendadas no período (FLOW, qualquer safra) ===
+// Conta tasks "Reuniao Agendada" cujo DateTime caiu no período, unique por DealId.
+// Não filtra por sinal de realização: pra marketing, queremos visibilidade de TODAS
+// as reuniões marcadas (passadas ou futuras dentro do mês), independente da safra do lead.
+// (Análise de realização vs no-show fica na sec7 SDR.)
 function computeFlowMeetingsForMkt(range) {
-    if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
     const meetings = window.dashMeetings || [];
     const seen = new Set();
     let count = 0;
     const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    const POST = /quent|considera|aprov|formaliz|ganho|negocia/i;
     meetings.forEach(t => {
         if (!t.DealId || seen.has(t.DealId)) return;
         const tn = normT(t.Title);
-        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
-        const dt = new Date(t.DateTime);
-        const ed = t.EndDate ? new Date(t.EndDate) : null;
+        if (!tn.includes('reuniao agendada')) return;
         const dtIn = inMktRange(t.DateTime, range);
-        const edIn = ed && inMktRange(t.EndDate, range);
+        const edIn = t.EndDate && inMktRange(t.EndDate, range);
         if (!dtIn && !edIn) return;
-        // sinal de realização
-        const deal = window._dashOpenDealsById && window._dashOpenDealsById[t.DealId];
-        let realized = false;
-        if (t.Done === true) realized = true;
-        else if (deal) {
-            const stageName = (deal.Stage && deal.Stage.Name) || '';
-            const inSales = typeof isSalesPipeline === 'function' && isSalesPipeline(deal);
-            const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
-            if (inSales || isClosed || POST.test(stageName)) realized = true;
-        }
-        if (realized) { count++; seen.add(t.DealId); }
+        count++;
+        seen.add(t.DealId);
     });
     return count;
 }
@@ -11444,7 +11433,7 @@ function renderMarketing(range, rd) {
     document.getElementById('mktKpiBar').innerHTML =
         kpi('Total leads', totalLeads.toLocaleString('pt-BR'), '#60a5fa') +
         kpi('MQLs', totalMql.toLocaleString('pt-BR'), '#b794f4', { trend: totalLeads ? `${pct(mqlRate, 1)} dos leads` : '' }) +
-        kpi('Reuniões realizadas', flowReun.toLocaleString('pt-BR'), '#fbbf24', { trend: reunFromPriorSafras > 0 ? `${reunFromPriorSafras} de safras anteriores (${pct(pctPriorSafras, 0)})` : 'todas da safra do mês' }) +
+        kpi('Reuniões do mês', flowReun.toLocaleString('pt-BR'), '#fbbf24', { trend: reunFromPriorSafras > 0 ? `${reunFromPriorSafras} de safras anteriores (${pct(pctPriorSafras, 0)})` : (flowReun > 0 ? 'todas da safra do mês' : 'sem reuniões agendadas') }) +
         kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
         kpi('Custo/Reunião', isFinite(cpmFlow) ? brl(cpmFlow) : '', '#f59e0b', noSpend ? { empty: emptyHint } : (flowReun === 0 ? { empty: 'Sem reuniões' } : { trend: 'Inv. do mês / Reuniões do mês' })) +
         kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no período' } : {})) +
