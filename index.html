@@ -3080,6 +3080,9 @@
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secAnalise');">
                         <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Análise Pré-vendas</span>
                     </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secMetaReverse');">
+                        <span class="sub-num" style="background:rgba(250,204,21,0.2);color:#facc15;">&#127919;</span><span class="sub-label">Cálculo Reverso de Meta</span>
+                    </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secStuck');">
                         <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads Parados</span>
                     </div>
@@ -3646,6 +3649,33 @@
                             </h3>
                             <div id="analiseInsights" class="analise-insights"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Section: Cálculo Reverso de Meta — Pré-vendas -->
+                <div class="section-card full-width" id="secMetaReverse">
+                    <div class="section-header">
+                        <h2><span class="section-num" style="background:linear-gradient(135deg,#facc15,#f59e0b);">&#127919;</span> Cálculo Reverso de Meta — Pré-vendas</h2>
+                        <div class="sub-filter" style="gap:8px;">
+                            <select id="metaReverseSdr" onchange="renderMetaReverse()" style="min-width:170px;">
+                                <option value="">Geral (média do time)</option>
+                                <option value="Samira Cristina">Samira</option>
+                                <option value="Guilherme Tomio">Guilherme</option>
+                                <option value="Adriely">Adriely</option>
+                                <option value="Maja Siqueira">Maja</option>
+                                <option value="Agnes Roberta">Agnes</option>
+                            </select>
+                            <label style="font-size:12px;color:#8888a0;display:flex;align-items:center;gap:6px;">
+                                Meta/mês:
+                                <input type="number" id="metaReverseTarget" value="25" min="1" max="500" onchange="renderMetaReverse()" oninput="renderMetaReverse()" style="width:72px;padding:6px 8px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-weight:700;">
+                                <span style="color:#facc15;">reuniões realizadas</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div id="metaReverseRates" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px;"></div>
+                        <div id="metaReverseFunnel" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;"></div>
+                        <div id="metaReverseInsight" style="background:rgba(250,204,21,0.06);border-left:3px solid #facc15;border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.6;color:#e0e0e0;"></div>
                     </div>
                 </div>
 
@@ -8208,7 +8238,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {
@@ -8525,6 +8555,160 @@ function exportSection7() {
         { header: 'No Show', getValue: d => d.noShowCount },
         { header: 'Taxa Realização', getValue: d => d.count > 0 ? ((d.realizadasCount / d.count) * 100).toFixed(1) + '%' : '—' }
     ], 'reunioes_por_sdr');
+}
+
+// === Cálculo Reverso de Meta — Pré-vendas ===
+// Dada a meta de N reuniões realizadas/mês e as taxas de conversão atuais do SDR (ou
+// da média do time), calcula: quantos leads entrar, quantas reuniões agendar e quantas
+// realizar — por mês, semana e dia útil.
+function computeEntradasParaSdr(sdrCanonical, sp) {
+    // Entradas = deals criados no período em SDR pipelines (qualquer etapa) cujo Owner
+    // canonical bate com o SDR pedido. Se sdrCanonical = null, conta TODOS os SDRs da allowlist.
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
+    return all.filter(d => {
+        if (!SDR_PIPES.includes(getPipelineName(d))) return false;
+        if (!inPeriodSection(d.CreateDate, sp.start, sp.end)) return false;
+        const canon = getCanonicalSdrName(getOwnerName(d));
+        if (!canon) return false;
+        if (sdrCanonical && canon !== sdrCanonical) return false;
+        return true;
+    });
+}
+
+function renderMetaReverse() {
+    const sdrFilter = document.getElementById('metaReverseSdr').value;
+    const metaInput = document.getElementById('metaReverseTarget');
+    const meta = Math.max(1, parseFloat(metaInput.value) || 25);
+
+    // Usa "Este mês" como referência (com fallback se sp.start/end não existirem)
+    const sp = (typeof getSectionPeriod === 'function') ? getSectionPeriod('sec7') : { start: periodStart, end: periodEnd };
+
+    // Dados reais do mês
+    const sec7Data = window._sec7_sorted || [];
+    let agendadas = 0, realizadas = 0;
+    if (sdrFilter) {
+        const row = sec7Data.find(s => s.name === sdrFilter);
+        agendadas = row?.count || 0;
+        realizadas = row?.realizadasCount || 0;
+    } else {
+        agendadas = sec7Data.reduce((s, x) => s + (x.count || 0), 0);
+        realizadas = sec7Data.reduce((s, x) => s + (x.realizadasCount || 0), 0);
+    }
+    const entradasDeals = computeEntradasParaSdr(sdrFilter || null, sp);
+    const entradas = entradasDeals.length;
+
+    // Taxas
+    const taxaEA = entradas > 0 ? agendadas / entradas : 0;   // Entrada → Agendada
+    const taxaAR = agendadas > 0 ? realizadas / agendadas : 0; // Agendada → Realizada
+    const taxaER = entradas > 0 ? realizadas / entradas : 0;   // Entrada → Realizada (composta)
+
+    // Meta dividida — quando filtra 1 SDR, meta é N. Quando geral, meta = N × nº de SDRs reais
+    const numSDRs = sdrFilter ? 1 : (sec7Data.filter(s => s.count > 0).length || 5);
+    const metaTotal = sdrFilter ? meta : meta * numSDRs;
+
+    // Cálculo reverso
+    const agendadasNeeded = taxaAR > 0 ? metaTotal / taxaAR : null;
+    const entradasNeeded = (taxaAR > 0 && taxaEA > 0) ? agendadasNeeded / taxaEA : null;
+
+    // Por dia útil / semana (22 dias úteis ~ 4.33 semanas no mês)
+    const DIAS_UTEIS = 22;
+    const SEMANAS = 4.33;
+
+    const fmt = v => v == null ? '—' : Math.ceil(v).toLocaleString('pt-BR');
+    const pct = v => (v * 100).toFixed(1) + '%';
+
+    // === Linha 1: Taxas atuais ===
+    const rateCard = (label, val, sub, color) => `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
+            <div style="font-size:22px;color:${color};font-weight:700;margin-top:4px;line-height:1;">${val}</div>
+            <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;">${sub}</div>
+        </div>`;
+    document.getElementById('metaReverseRates').innerHTML =
+        rateCard('Taxa Entrada → Agendada', pct(taxaEA), `${agendadas} agendadas de ${entradas} entradas`, '#60a5fa') +
+        rateCard('Taxa Agendada → Realizada', pct(taxaAR), `${realizadas} realizadas de ${agendadas} agendadas`, '#22c55e') +
+        rateCard('Taxa Entrada → Realizada', pct(taxaER), `composta · ${realizadas} de ${entradas}`, '#b794f4') +
+        rateCard('Meta do mês', `${Math.ceil(metaTotal)}`, sdrFilter ? `realizar/SDR (${sdrFilter.split(' ')[0]})` : `time todo (${numSDRs} SDRs × ${Math.ceil(meta)})`, '#facc15');
+
+    // === Linha 2: Funil reverso (3 cards) ===
+    const stageCard = (label, mes, semana, dia, atual, color, gap) => {
+        const gapVal = atual - mes;
+        const gapColor = gapVal >= 0 ? '#22c55e' : '#ef4444';
+        const gapText = gapVal >= 0 ? `▲ ${Math.abs(gapVal).toFixed(0)} acima` : `▼ ${Math.abs(gapVal).toFixed(0)} faltam`;
+        return `
+        <div style="background:rgba(255,255,255,0.025);border:1px solid ${color};border-radius:10px;padding:16px;">
+            <div style="font-size:11px;color:${color};text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:8px;">${label}</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+                <div style="text-align:center;background:rgba(255,255,255,0.03);padding:8px;border-radius:6px;">
+                    <div style="font-size:10px;color:#8888a0;text-transform:uppercase;font-weight:600;">Mês</div>
+                    <div style="font-size:22px;color:${color};font-weight:700;line-height:1;margin-top:4px;">${mes}</div>
+                </div>
+                <div style="text-align:center;background:rgba(255,255,255,0.03);padding:8px;border-radius:6px;">
+                    <div style="font-size:10px;color:#8888a0;text-transform:uppercase;font-weight:600;">Semana</div>
+                    <div style="font-size:18px;color:#e0e0e0;font-weight:700;line-height:1;margin-top:4px;">${semana}</div>
+                </div>
+                <div style="text-align:center;background:rgba(255,255,255,0.03);padding:8px;border-radius:6px;">
+                    <div style="font-size:10px;color:#8888a0;text-transform:uppercase;font-weight:600;">Dia útil</div>
+                    <div style="font-size:18px;color:#e0e0e0;font-weight:700;line-height:1;margin-top:4px;">${dia}</div>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
+                <div style="font-size:11px;color:#8888a0;">Hoje no mês: <strong style="color:#e0e0e0;">${atual}</strong></div>
+                <div style="font-size:11px;color:${gapColor};font-weight:600;">${mes !== '—' ? gapText : '—'}</div>
+            </div>
+        </div>`;
+    };
+
+    document.getElementById('metaReverseFunnel').innerHTML =
+        stageCard('1️⃣ Entrada (leads novos)',
+            fmt(entradasNeeded),
+            entradasNeeded ? fmt(entradasNeeded / SEMANAS) : '—',
+            entradasNeeded ? fmt(entradasNeeded / DIAS_UTEIS) : '—',
+            entradas, '#60a5fa') +
+        stageCard('2️⃣ Reuniões Agendadas',
+            fmt(agendadasNeeded),
+            agendadasNeeded ? fmt(agendadasNeeded / SEMANAS) : '—',
+            agendadasNeeded ? fmt(agendadasNeeded / DIAS_UTEIS) : '—',
+            agendadas, '#b794f4') +
+        stageCard('3️⃣ Reuniões Realizadas',
+            fmt(metaTotal),
+            fmt(metaTotal / SEMANAS),
+            fmt(metaTotal / DIAS_UTEIS),
+            realizadas, '#22c55e');
+
+    // === Insight ===
+    const insightEl = document.getElementById('metaReverseInsight');
+    if (entradas === 0 && agendadas === 0) {
+        insightEl.innerHTML = `<strong style="color:#facc15;">Sem dados suficientes</strong> pra calcular o reverso. Aguardando carga de reuniões/deals do período.`;
+    } else if (taxaAR === 0) {
+        insightEl.innerHTML = `<strong style="color:#ef4444;">Conversão Agendada → Realizada = 0%.</strong> Sem reuniões marcadas como realizadas no período, o cálculo reverso não tem âncora. Verifique se as SDRs estão marcando as atividades como concluídas no Ploomes (ou se há proposta enviada que sirva como proxy).`;
+    } else {
+        const gapRealizada = metaTotal - realizadas;
+        const gapAgendada = (agendadasNeeded || 0) - agendadas;
+        const gapEntrada = (entradasNeeded || 0) - entradas;
+        const dimensao = sdrFilter ? `<strong style="color:#facc15;">${sdrFilter}</strong>` : `<strong style="color:#facc15;">o time (${numSDRs} SDRs)</strong>`;
+        let body = `Pra ${dimensao} bater <strong style="color:#22c55e;">${Math.ceil(metaTotal)} reuniões realizadas/mês</strong> com as taxas atuais (`;
+        body += `Entrada→Agendada <strong>${pct(taxaEA)}</strong>, Agendada→Realizada <strong>${pct(taxaAR)}</strong>): `;
+        body += `precisa de <strong style="color:#60a5fa;">${fmt(entradasNeeded)} leads novos</strong>, `;
+        body += `<strong style="color:#b794f4;">${fmt(agendadasNeeded)} reuniões agendadas</strong> e <strong style="color:#22c55e;">${Math.ceil(metaTotal)} realizadas</strong>.<br><br>`;
+        if (gapRealizada > 0) {
+            body += `📌 <strong>Gap atual:</strong> faltam <strong style="color:#ef4444;">${Math.ceil(gapRealizada)} realizadas</strong>, `;
+            body += `<strong style="color:#ef4444;">${Math.max(0, Math.ceil(gapAgendada))} agendadas</strong> e `;
+            body += `<strong style="color:#ef4444;">${Math.max(0, Math.ceil(gapEntrada))} entradas</strong> pra fechar o mês na meta. `;
+        } else {
+            body += `🎉 <strong>Meta batida</strong> em realizadas! `;
+        }
+        // Diagnóstico
+        if (taxaAR < 0.5) {
+            body += `<br>⚠️ <strong>Taxa Agendada→Realizada baixa (${pct(taxaAR)})</strong>: muitas marcações no Ploomes podem estar faltando OU no-show alto. Audite o registro de "Reunião Realizada" e investigue motivos de no-show.`;
+        } else if (taxaEA < 0.15) {
+            body += `<br>⚠️ <strong>Taxa Entrada→Agendada baixa (${pct(taxaEA)})</strong>: pode indicar qualidade ruim dos leads na entrada ou cadência fraca de prospecção. Revise origens e processos.`;
+        } else {
+            body += `<br>✅ Taxas saudáveis — execução é o caminho mais rápido pra meta. `;
+        }
+        insightEl.innerHTML = body;
+    }
 }
 function exportSection8() {
     const data = window._sec8_rows || [];
