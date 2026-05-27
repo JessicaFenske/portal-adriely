@@ -2348,6 +2348,10 @@
             vertical-align: middle;
         }
         #secStuck .stuck-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+        #secStuck .sortable-header:hover { color: #b794f4; background: rgba(183,148,244,0.05); }
+        #secStuck .sortable-header.active-sort { color: #b794f4; }
+        #secStuck .sort-indicator { display: inline-block; margin-left: 4px; opacity: 0.5; font-size: 10px; }
+        #secStuck .sortable-header.active-sort .sort-indicator { opacity: 1; color: #b794f4; }
         #secStuck .stripe { padding: 0 !important; }
         #secStuck .stripe-inner {
             display: block;
@@ -3746,8 +3750,8 @@
                                     <th>Contato</th>
                                     <th>SDR</th>
                                     <th>Origem</th>
-                                    <th style="text-align:right;">Etapa</th>
-                                    <th style="text-align:right;">Atraso</th>
+                                    <th class="sortable-header" data-stuck-sort="daysInStage" style="text-align:right;cursor:pointer;user-select:none;" title="Clique para ordenar">Etapa <span class="sort-indicator" data-sort-key="daysInStage"></span></th>
+                                    <th class="sortable-header" data-stuck-sort="overdueDays" style="text-align:right;cursor:pointer;user-select:none;" title="Clique para ordenar">Atraso <span class="sort-indicator" data-sort-key="overdueDays"></span></th>
                                     <th>Status</th>
                                     <th></th>
                                 </tr></thead>
@@ -7130,11 +7134,25 @@ function initials(name) {
 }
 
 let _stuckTab = 'all';
+// Estado de sort do "Leads parados": qual coluna + direção (asc/desc).
+// Default mantém comportamento antigo: agrupado por tipo (notask antes), desc no _sortKey.
+let _stuckSort = { key: null, dir: 'asc' };
 function setStuckTab(tab) {
     _stuckTab = tab;
     document.querySelectorAll('#secStuck .stuck-tab').forEach(b =>
         b.classList.toggle('active', b.dataset.stuckTab === tab)
     );
+    renderSectionStuck();
+}
+
+function setStuckSort(key) {
+    if (_stuckSort.key === key) {
+        // Toggle direção se mesma coluna
+        _stuckSort.dir = _stuckSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _stuckSort.key = key;
+        _stuckSort.dir = 'asc'; // crescente por padrão (pedido do usuário)
+    }
     renderSectionStuck();
 }
 
@@ -7194,9 +7212,39 @@ async function renderSectionStuck() {
     if (_stuckTab === 'all') rows = [...noTaskRows, ...overdueRows];
     else if (_stuckTab === 'notask') rows = noTaskRows;
     else if (_stuckTab === 'overdue') rows = overdueRows;
-    rows.sort((a, b) => {
-        if (a._type !== b._type) return a._type === 'notask' ? -1 : 1;
-        return b._sortKey - a._sortKey;
+
+    if (_stuckSort.key) {
+        // Sort por coluna escolhida pelo usuário (daysInStage = Etapa, overdueDays = Atraso)
+        // Linhas sem o campo (ex: overdueDays em notask) vão pro fim na ordem asc, e pro fim na desc também
+        const mult = _stuckSort.dir === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+            const av = a[_stuckSort.key];
+            const bv = b[_stuckSort.key];
+            const aHas = typeof av === 'number' && !isNaN(av);
+            const bHas = typeof bv === 'number' && !isNaN(bv);
+            if (!aHas && !bHas) return 0;
+            if (!aHas) return 1;  // sem valor sempre vai pro fim
+            if (!bHas) return -1;
+            return (av - bv) * mult;
+        });
+    } else {
+        // Default: agrupado por tipo (sem touch antes), depois desc no _sortKey
+        rows.sort((a, b) => {
+            if (a._type !== b._type) return a._type === 'notask' ? -1 : 1;
+            return b._sortKey - a._sortKey;
+        });
+    }
+
+    // Atualiza indicador visual nos headers
+    document.querySelectorAll('#secStuck .sortable-header').forEach(th => {
+        const key = th.dataset.stuckSort;
+        const indicator = th.querySelector('.sort-indicator');
+        th.classList.toggle('active-sort', _stuckSort.key === key);
+        if (indicator) {
+            indicator.textContent = _stuckSort.key === key
+                ? (_stuckSort.dir === 'asc' ? '▲' : '▼')
+                : '⇅';
+        }
     });
 
     const renderRow = (r) => {
@@ -7232,6 +7280,14 @@ async function renderSectionStuck() {
         body.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:#4ade80;">&#10004; Tudo em dia nessa visão</td></tr>`;
     } else {
         body.innerHTML = rows.map(renderRow).join('');
+    }
+
+    // Attach click handlers nos headers ordenaveis (idempotente)
+    if (!window._stuckSortHandlersAttached) {
+        document.querySelectorAll('#secStuck .sortable-header').forEach(th => {
+            th.addEventListener('click', () => setStuckSort(th.dataset.stuckSort));
+        });
+        window._stuckSortHandlersAttached = true;
     }
 
     window._stuckData = { noTask: noTaskF, overdue: overdueF };
