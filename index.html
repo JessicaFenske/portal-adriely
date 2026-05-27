@@ -11358,15 +11358,61 @@ function buildEnrichedMqls(range) {
     });
 }
 
+// === Helper: Reuniões realizadas no período (FLOW, qualquer safra) ===
+// Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate cair no período + sinal de realização.
+// Sem duplicar por dealId.
+function computeFlowMeetingsForMkt(range) {
+    if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
+    const meetings = window.dashMeetings || [];
+    const seen = new Set();
+    let count = 0;
+    const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const POST = /quent|considera|aprov|formaliz|ganho|negocia/i;
+    meetings.forEach(t => {
+        if (!t.DealId || seen.has(t.DealId)) return;
+        const tn = normT(t.Title);
+        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
+        const dt = new Date(t.DateTime);
+        const ed = t.EndDate ? new Date(t.EndDate) : null;
+        const dtIn = inMktRange(t.DateTime, range);
+        const edIn = ed && inMktRange(t.EndDate, range);
+        if (!dtIn && !edIn) return;
+        // sinal de realização
+        const deal = window._dashOpenDealsById && window._dashOpenDealsById[t.DealId];
+        let realized = false;
+        if (t.Done === true) realized = true;
+        else if (deal) {
+            const stageName = (deal.Stage && deal.Stage.Name) || '';
+            const inSales = typeof isSalesPipeline === 'function' && isSalesPipeline(deal);
+            const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
+            if (inSales || isClosed || POST.test(stageName)) realized = true;
+        }
+        if (realized) { count++; seen.add(t.DealId); }
+    });
+    return count;
+}
+
 function renderMarketing(range, rd) {
     const enriched = buildEnrichedMqls(range);
     const totalLeads = rd.count;
     const totalMql = enriched.length;
-    const totalReun = enriched.filter(e => e.hasMeeting).length;
+    const totalReun = enriched.filter(e => e.hasMeeting).length;       // COHORT: reuniões dos MQLs desta safra
     const totalProp = enriched.filter(e => e.hasProposal).length;
     const totalGanho = enriched.filter(e => e.won).length;
     const totalPerd = enriched.filter(e => e.lost).length;
     const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
+
+    // === FLOW: reuniões REALIZADAS no período (qualquer safra de lead) ===
+    // Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate caiu no período E houve
+    // sinal de realização (Done=true OU deal avançou pra estágio pós-reunião).
+    const flowReun = computeFlowMeetingsForMkt(range);
+    const reunFromPriorSafras = Math.max(0, flowReun - totalReun);
+    const pctPriorSafras = flowReun > 0 ? (reunFromPriorSafras / flowReun) * 100 : 0;
+
+    // Cohort em maturação: leads desta safra ainda em qualificação (sem reunião e nem perdidos)
+    const cohortStillPending = enriched.filter(e => !e.hasMeeting && !e.lost && !e.won).length;
+    // Também: leads totais desta safra (não só MQLs) que ainda podem virar reunião nos próximos meses
+    const leadsThisMonthStillFresh = totalLeads - totalMql - 0; // proxy: não-MQLs que podem amadurecer
 
     // Spend total (com fallback pra investimento mensal medio se nao houver detalhamento por canal)
     const effSpend = getMktEffectiveSpend(range);
@@ -11394,19 +11440,23 @@ function renderMarketing(range, rd) {
     };
     const noSpend = totalSpend === 0;
     const emptyHint = 'Defina o investimento';
+    const cpmFlow = totalSpend > 0 && flowReun > 0 ? totalSpend / flowReun : NaN; // Custo por reunião (FLOW)
     document.getElementById('mktKpiBar').innerHTML =
         kpi('Total leads', totalLeads.toLocaleString('pt-BR'), '#60a5fa') +
         kpi('MQLs', totalMql.toLocaleString('pt-BR'), '#b794f4', { trend: totalLeads ? `${pct(mqlRate, 1)} dos leads` : '' }) +
-        kpi('Reuniões', totalReun.toLocaleString('pt-BR'), '#fbbf24', { trend: totalMql ? `${pct(totalMql > 0 ? (totalReun/totalMql)*100 : 0, 1)} dos MQLs` : '' }) +
+        kpi('Reuniões realizadas', flowReun.toLocaleString('pt-BR'), '#fbbf24', { trend: reunFromPriorSafras > 0 ? `${reunFromPriorSafras} de safras anteriores (${pct(pctPriorSafras, 0)})` : 'todas da safra do mês' }) +
         kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
+        kpi('Custo/Reunião', isFinite(cpmFlow) ? brl(cpmFlow) : '', '#f59e0b', noSpend ? { empty: emptyHint } : (flowReun === 0 ? { empty: 'Sem reuniões' } : { trend: 'Inv. do mês / Reuniões do mês' })) +
         kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no período' } : {})) +
         kpi('ROI', isFinite(roi) ? pct(roi, 0) : '', roi >= 0 ? '#22c55e' : '#ef4444', noSpend ? { empty: emptyHint } : {});
 
-    // Funil visual em forma de funil
+    // Funil visual — visão SAFRA: leads/MQLs/Reuniões/Propostas/Ganhos derivados da SAFRA do mês
+    // (lead criado no período + conversões eventuais). Diferente das "Reuniões realizadas" do KPI
+    // que é FLOW (qualquer safra, contadas no mês em que aconteceram).
     const funnelStages = [
         { label: 'Leads', value: totalLeads, color: '#60a5fa' },
         { label: 'MQLs', value: totalMql, color: '#b794f4' },
-        { label: 'Reuniões', value: totalReun, color: '#fbbf24' },
+        { label: 'Reuniões', value: totalReun, color: '#fbbf24', tip: 'Reuniões realizadas com leads desta safra (qualquer mês). KPI "Reuniões realizadas" no topo é FLOW (qualquer safra, contadas no mês).' },
         { label: 'Propostas', value: totalProp, color: '#34d399' },
         { label: 'Ganhos', value: totalGanho, color: '#22c55e' }
     ];
@@ -11507,7 +11557,8 @@ function renderMarketing(range, rd) {
     renderMktInsights({
         totalLeads, totalMql, totalReun, totalProp, totalGanho, totalPerd,
         mqlRate, cpl, cac, roi, totalSpend, revenueWon,
-        channels, lossCounts
+        channels, lossCounts,
+        flowReun, reunFromPriorSafras, pctPriorSafras, cohortStillPending
     });
 
     // Capacity Planning (Lead → MQL → Agenda → Ganho vs meta dos vendedores)
@@ -11525,6 +11576,31 @@ function renderMarketing(range, rd) {
 
 function renderMktInsights(m) {
     const tips = [];
+
+    // === Cross-indicators: Flow vs Cohort (prioritários no topo) ===
+    if (m.flowReun > 0 && typeof m.reunFromPriorSafras === 'number') {
+        if (m.reunFromPriorSafras > 0) {
+            tips.push({
+                level: 'info',
+                title: 'Backlog ativo: ' + m.reunFromPriorSafras + ' de ' + m.flowReun + ' reuniões (' + pct(m.pctPriorSafras, 0) + ') vieram de safras anteriores',
+                body: 'A operação está colhendo leads gerados em meses passados. Bom sinal de maturação — sua geração de mídia tem efeito cauda. Mas atenção: se essa % crescer demais (>50%), pode indicar que a safra ATUAL está convertendo devagar.'
+            });
+        } else {
+            tips.push({
+                level: 'ok',
+                title: 'Todas as ' + m.flowReun + ' reuniões deste mês vieram da safra atual',
+                body: 'Conversão rápida do mês corrente. Pode indicar leads quentes/já maduros entrando — ótima sinergia entre marketing e SDR.'
+            });
+        }
+    }
+    if (m.cohortStillPending > 0) {
+        tips.push({
+            level: 'info',
+            title: 'Pipeline futuro: ' + m.cohortStillPending + ' MQLs desta safra ainda em qualificação',
+            body: 'Esses leads entraram no mês e ainda não viraram reunião. Vão amadurecer nos próximos 30-60 dias = reuniões futuras "garantidas". Cobre SDR pra trabalhar esse backlog antes de cair a temperatura do lead.'
+        });
+    }
+
     // MQL rate
     if (m.totalLeads > 10) {
         if (m.mqlRate < 20) tips.push({ level: 'crit', title: 'Taxa MQL baixa (' + pct(m.mqlRate) + ')', body: 'Poucos leads são corporativos. Revise o copy do form (deixe claro o público-alvo), torne campo de telefone obrigatório, e considere validação de email corp.' });
