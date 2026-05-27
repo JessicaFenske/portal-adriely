@@ -3780,8 +3780,8 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
-                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa concluída OU deal avançou de etapa (Leads Quentes/Consideração+) OU passou pra funil de venda OU tem proposta com valor (4 sinais combinados) ·
-                            <strong style="color:#ef4444;">No Show:</strong> agendada não realizada (DateTime passou, sem sinal de avanço, deal voltou pro SDR)
+                            <strong style="color:#22c55e;">Realizadas:</strong> task concluída no período (DateTime ou EndDate), título "realizada", deal avançou de etapa, foi pra funil de venda, tem proposta com valor, OU deal atualizado no período já em estágio pós-reunião — 6 sinais combinados ·
+                            <strong style="color:#ef4444;">No Show:</strong> agendada não realizada (DateTime passou, sem sinal, deal voltou pro SDR)
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -6705,6 +6705,49 @@ function renderSection7() {
         markRealizada(canonical, t, deal);
     });
 
+    // === Caminhos 5 e 6: data de REALIZAÇÃO no período (mesmo task agendada antes) ===
+    // Captura casos onde a SDR agendou em Mês anterior e a reuniao aconteceu no mes atual.
+    const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+
+    // Caminho 5: task "Reuniao Agendada" com Done=true E EndDate (conclusao) no periodo
+    // (mesmo que DateTime estivesse fora do periodo)
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
+        if (t.Done !== true || !t.EndDate || !inPeriod(t.EndDate)) return;
+        const tn = normTitle(t.Title);
+        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
+    });
+
+    // Caminho 6: deal com QUALQUER task Reuniao Agendada (mesmo fora do periodo),
+    // LastUpdateDate do deal no periodo, e deal em estado pos-reuniao.
+    // Sinal de "agendou antes e realizou este mes" pelo movimento do card.
+    // Cuidado: pra evitar contar 2x se ja foi marcada em meses anteriores, requer que
+    // o deal nao esteja com proposta enviada em mes anterior (heuristica frouxa).
+    const seenForP6 = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
+        if (seenForP6.has(t.DealId)) return;
+        const tn = normTitle(t.Title);
+        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        if (!inPeriod(deal.LastUpdateDate)) return;
+        const stageName = deal.Stage?.Name || '';
+        const inSales = isSalesPipeline(deal);
+        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
+        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
+        if (!(inSales || advancedInSdr || isClosed)) return;
+        seenForP6.add(t.DealId);
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        markRealizada(canonical, t, deal);
+    });
+
     // === No Show ===
     // Reunião agendada no período cujo DateTime já passou, task não concluída, sem prova de
     // realização (não está em realizedDealIds), e que o deal voltou pro SDR (Owner atual é
@@ -8751,23 +8794,32 @@ function runInvestigate() {
         const propDate = getProposalDate(deal);
         const propInPeriod = propDate && (!sp.start || new Date(propDate) >= sp.start) && (!sp.end || new Date(propDate) <= sp.end);
         const sig4 = mrr > 0 || setup > 0 || propInPeriod;
+        // Sinal 5: task com EndDate (conclusao) no periodo (mesmo task agendada antes)
+        const sig5 = reuniaoTasks.some(t => t.Done === true && t.EndDate &&
+            (!sp.start || new Date(t.EndDate) >= sp.start) && (!sp.end || new Date(t.EndDate) <= sp.end));
+        // Sinal 6: deal atualizado no periodo + tem task Reuniao Agendada (qualquer data) + esta avancado
+        const lastUpdateInPeriod = deal.LastUpdateDate &&
+            (!sp.start || new Date(deal.LastUpdateDate) >= sp.start) && (!sp.end || new Date(deal.LastUpdateDate) <= sp.end);
+        const sig6 = reuniaoTasks.length > 0 && lastUpdateInPeriod && (inSales || advancedInSdr || isClosed);
 
         const agendadaCount = tasksInPeriod.length > 0;
-        const realizadaCount = agendadaCount && (sig1 || sig2 || sig3 || sig4);
+        const realizadaCount = (agendadaCount && (sig1 || sig2 || sig3 || sig4)) || sig5 || sig6;
 
         // Diagnóstico em texto
         let diag = '';
-        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0) {
+        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0 && !realizadaCount) {
             const oldest = reuniaoTasks[0];
-            diag = `⚠️ Tem ${reuniaoTasks.length} task(s) "Reunião Agendada" mas FORA do período atual (DateTime: ${formatDate(oldest.DateTime)}). Por isso não conta nem como agendada nem como realizada neste mês.`;
+            diag = `⚠️ Tem ${reuniaoTasks.length} task(s) "Reunião Agendada" mas FORA do período atual (DateTime: ${formatDate(oldest.DateTime)}). Sinais 5 e 6 também não bateram.`;
         } else if (tasksInPeriod.length === 0 && reuniaoTasks.length === 0) {
-            diag = `⚠️ Deal NÃO tem nenhuma task "Reunião Agendada" no cache (últimos 120d). Não pode contar nem como agendada.`;
+            diag = `⚠️ Deal NÃO tem nenhuma task "Reunião Agendada" no cache (últimos 120d). Não pode contar nem como agendada nem realizada.`;
         } else if (realizadaCount) {
             const sigs = [];
-            if (sig1) sigs.push('1 (task Done=true)');
+            if (sig1) sigs.push('1 (task Done=true no período)');
             if (sig2) sigs.push('2 (task "Realizada")');
-            if (sig3) sigs.push(`3 (deal avançou — stage="${stageName}", pipeline="${pipelineName}")`);
+            if (sig3) sigs.push(`3 (deal avançou — stage="${stageName}")`);
             if (sig4) sigs.push('4 (MRR/Setup/proposta)');
+            if (sig5) sigs.push('5 (task EndDate no período)');
+            if (sig6) sigs.push('6 (deal updated no período + avançado)');
             diag = `✅ Conta como realizada via sinal(is): ${sigs.join(', ')}`;
         } else if (agendadaCount) {
             diag = `❌ Conta como AGENDADA mas NÃO realizada. Razão: stage="${stageName}" (não avançou), pipeline="${pipelineName}", sem task Done, sem proposta. Status=${deal.StatusId === 1 ? 'aberto' : deal.StatusId}.`;
@@ -8782,7 +8834,7 @@ function runInvestigate() {
             tasksInPeriod: tasksInPeriod.length,
             sdrsInPeriod,
             realizadaTasks: realizadaTasks.length,
-            sig1, sig2, sig3, sig4,
+            sig1, sig2, sig3, sig4, sig5, sig6,
             agendadaCount, realizadaCount,
             diag
         };
@@ -8821,6 +8873,8 @@ function runInvestigate() {
                             <span style="color:${r.sig2?'#22c55e':'#6d6d85'};margin-left:4px;">2${r.sig2?'✓':'✗'}</span>
                             <span style="color:${r.sig3?'#22c55e':'#6d6d85'};margin-left:4px;">3${r.sig3?'✓':'✗'}</span>
                             <span style="color:${r.sig4?'#22c55e':'#6d6d85'};margin-left:4px;">4${r.sig4?'✓':'✗'}</span>
+                            <span style="color:${r.sig5?'#22c55e':'#6d6d85'};margin-left:4px;">5${r.sig5?'✓':'✗'}</span>
+                            <span style="color:${r.sig6?'#22c55e':'#6d6d85'};margin-left:4px;">6${r.sig6?'✓':'✗'}</span>
                         </td>
                         <td style="padding:8px;font-size:11px;line-height:1.5;color:${r.realizadaCount?'#22c55e':r.agendadaCount?'#f59e0b':'#ef4444'};">${r.diag}</td>
                     </tr>
@@ -8834,7 +8888,7 @@ function runInvestigate() {
         </table>
         <div style="margin-top:14px;padding:10px 12px;background:rgba(96,165,250,0.05);border-left:3px solid #60a5fa;border-radius:6px;font-size:11.5px;color:#a0a0b8;">
             <strong style="color:#60a5fa;">Legenda dos sinais:</strong>
-            1 = task com Done=true · 2 = task com title "realizada/concluída" · 3 = deal avançou de etapa (sales pipeline / Leads Quentes / Aprovado etc, ou foi fechado) · 4 = MRR/Setup/Data Proposta preenchidos.
+            1 = task Done=true no período · 2 = task title "realizada/concluída" · 3 = deal avançou de etapa (sales pipeline / Leads Quentes / Aprovado etc, ou foi fechado) · 4 = MRR/Setup/Data Proposta preenchidos · <strong>5 = task EndDate no período</strong> (concluída neste mês mesmo se agendada antes) · <strong>6 = deal LastUpdateDate no período + estágio pós-reunião</strong> (deal movimentado neste mês).
             <br>Resumo: <strong style="color:#22c55e;">${rows.filter(r => r.found && r.realizadaCount).length}</strong> contam como realizada · <strong style="color:#f59e0b;">${rows.filter(r => r.found && r.agendadaCount && !r.realizadaCount).length}</strong> só agendada · <strong style="color:#ef4444;">${rows.filter(r => r.found && !r.agendadaCount).length}</strong> nem agendada (task fora do período ou inexistente).
         </div>
     `;
