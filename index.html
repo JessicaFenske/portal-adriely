@@ -3780,8 +3780,8 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
-                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa marcada como concluída OU deal com proposta enviada (vendedor pulou o registro) ·
-                            <strong style="color:#ef4444;">No Show:</strong> reunião agendada não realizada (DateTime passou, tarefa não concluída e deal voltou pro SDR)
+                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa concluída OU deal avançou de etapa (Leads Quentes/Consideração+) OU passou pra funil de venda OU tem proposta com valor (4 sinais combinados) ·
+                            <strong style="color:#ef4444;">No Show:</strong> agendada não realizada (DateTime passou, sem sinal de avanço, deal voltou pro SDR)
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -6612,15 +6612,28 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // Caminho 1: task de Reunião Agendada concluída (Done=true) — SDR ou equipe registrou
-    // Caminho 2: task com title contendo "realizada" / "concluida" — registro explícito
-    // Caminho 3: deal teve "Reunião Agendada" no período E tem proposta enviada (MRR/Setup
-    //          ou DataProposta) — vendedor pulou a etapa de registrar realização
-    // (Sem duplicar por dealId)
+    // 4 caminhos pra detectar uma reuniao realizada (sem duplicar por dealId):
+    //   1) Task Reuniao Agendada com Done=true
+    //   2) Task com title contendo "realizada"/"concluida"/"feita"/"aconteceu"
+    //   3) NOVO: deal SAIU da etapa "Reuniao Agendada" pra etapa pos-reuniao
+    //      (Leads Quentes, Consideracao, Aprovado, Formalizacao) OU mudou pra sales
+    //      pipeline (Funil de Vendas, Sankhya, Farmer). Sinal forte de que reuniao
+    //      aconteceu mesmo que SDR/vendedor nao tenha marcado a task como Done.
+    //   4) Proxy: deal tem MRR/Setup preenchido ou Data Proposta no periodo —
+    //      vendedor pulou registro de realizada e foi direto pra proposta.
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const markRealizada = (canonical, t, deal) => {
+        if (!canonical || realizedDealIds.has(t.DealId)) return;
+        ensureSdr(canonical);
+        sdrAgg[canonical].realizadasCount++;
+        sdrAgg[canonical].realizadasTasks.push(t);
+        if (deal) sdrAgg[canonical].realizadasDeals.push(deal);
+        realizedDealIds.add(t.DealId);
+    };
+
     // Caminhos 1 e 2: olha todas as tasks do cache no período
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
@@ -6635,16 +6648,32 @@ function renderSection7() {
         if (!isRealized) return;
         const creator = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creator);
-        if (!canonical) return;
-        if (realizedDealIds.has(t.DealId)) return; // evita contar 2x o mesmo deal
-        ensureSdr(canonical);
-        sdrAgg[canonical].realizadasCount++;
-        sdrAgg[canonical].realizadasTasks.push(t);
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (deal) sdrAgg[canonical].realizadasDeals.push(deal);
-        realizedDealIds.add(t.DealId);
+        markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
     });
-    // Caminho 3: proxy via proposta enviada (vendedor esqueceu de marcar realizada)
+
+    // Caminho 3: deal saiu de "Reuniao Agendada" pra etapa pos-reuniao OU mudou pra sales pipeline
+    // Considera apenas deals que tiveram task Reuniao Agendada criada no periodo (= dealsWithAgendada)
+    const POST_MEETING_STAGES = /quent|considera|aprov|formaliz|ganho|negocia/i;
+    const PRE_MEETING_STAGES = /entrada|qualific|reuni.*agend|descart|loss|perd/i;
+    meetings.forEach(t => {
+        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const stageName = deal.Stage?.Name || '';
+        const pipelineName = getPipelineName(deal);
+        // Se ja esta em sales pipeline = SDR passou pro vendedor = reuniao aconteceu
+        const inSales = isSalesPipeline(deal);
+        // Ou se subiu de etapa dentro do SDR pipe (Leads Quentes, etc - tirando Descarte/Loss)
+        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
+        // Won/lost (StatusId != 1) tambem implica reuniao ja teve
+        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
+        if (!(inSales || advancedInSdr || isClosed)) return;
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        markRealizada(canonical, t, deal);
+    });
+
+    // Caminho 4: proxy via proposta enviada / valor preenchido
     meetings.forEach(t => {
         if (!t.DealId || realizedDealIds.has(t.DealId)) return;
         const creator = dashUsersById[t.CreatorId] || '';
@@ -6652,17 +6681,11 @@ function renderSection7() {
         if (!canonical) return;
         const deal = window._dashOpenDealsById?.[t.DealId];
         if (!deal) return;
-        // Sinal de proposta enviada: MRR > 0, Setup > 0 ou Data Proposta preenchida
         const mrr = getMRR(deal), setup = getSetup(deal);
         const propDate = getProposalDate(deal);
         const propDateInPeriod = propDate && sp.start && sp.end && new Date(propDate) >= sp.start && new Date(propDate) <= sp.end;
-        const hasProposal = mrr > 0 || setup > 0 || propDateInPeriod;
-        if (!hasProposal) return;
-        ensureSdr(canonical);
-        sdrAgg[canonical].realizadasCount++;
-        sdrAgg[canonical].realizadasDeals.push(deal);
-        sdrAgg[canonical].realizadasTasks.push(t);
-        realizedDealIds.add(t.DealId);
+        if (!(mrr > 0 || setup > 0 || propDateInPeriod)) return;
+        markRealizada(canonical, t, deal);
     });
 
     // === No Show ===
