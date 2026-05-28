@@ -3780,8 +3780,8 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
-                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa "Reunião Realizada" marcada como concluída no mês vigente — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
-                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR (sales pipeline + Owner SDR) OU agendada vencida sem realização
+                            <strong style="color:#22c55e;">Realizadas:</strong> qualquer atividade de reunião (Agendada ou Realizada) marcada como concluída (Done=true) no mês vigente — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
+                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR OU agendada vencida sem realização
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -6644,17 +6644,19 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // REGRA SIMPLES E ESTRITA: task com título "Reunião Realizada" marcada como Done=true,
-    // com EndDate (data de conclusão) OU DateTime dentro do mês vigente.
-    // Atribui ao SDR creator da task (= quem conduziu a reunião).
+    // REGRA: qualquer atividade de reunião marcada como concluída (Done=true) no mês.
+    // Pega 2 fluxos comuns no time:
+    //   1) Task "Reunião Agendada" marcada como Done=true (SDR concluiu a task da agenda)
+    //   2) Task "Reunião Realizada" criada e marcada como Done=true (atividade separada)
+    // Em ambos: EndDate (conclusão) OU DateTime no mês vigente.
+    // Atribui pelo CreatorId da task = quem conduziu.
     //
-    // OVERRIDE: se o card foi DEVOLVIDO pro SDR (sales pipeline + Owner = SDR), interpreta
-    // como NO-SHOW por regra de negócio — não conta como realizada mesmo com task Done.
+    // OVERRIDE: card devolvido pro SDR (sales pipeline + Owner = SDR) → no-show por
+    // regra de negócio, anula realizada.
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    // Predicate: card foi devolvido pro SDR (= no-show por regra de negócio).
     const cardReturnedToSdr = (deal) => {
         if (!deal) return false;
         if (!isSalesPipeline(deal)) return false;
@@ -6662,7 +6664,7 @@ function renderSection7() {
     };
     const markRealizada = (canonical, t, deal) => {
         if (!canonical || realizedDealIds.has(t.DealId)) return;
-        if (cardReturnedToSdr(deal)) return; // card devolvido → no-show, nao realizada
+        if (cardReturnedToSdr(deal)) return;
         ensureSdr(canonical);
         sdrAgg[canonical].realizadasCount++;
         sdrAgg[canonical].realizadasTasks.push(t);
@@ -6671,13 +6673,17 @@ function renderSection7() {
     };
 
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    const isReuniaoTitle = (title) => {
+        const tn = normTitle(title);
+        return tn.includes('reuniao agendada') || tn.includes('reunião agendada')
+            || tn.includes('reuniao realizada') || tn.includes('reunião realizada');
+    };
 
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
-        // Apenas tasks com título "Reunião Realizada"
-        const tn = normTitle(t.Title);
-        if (!(tn.includes('reuniao realizada') || tn.includes('reunião realizada'))) return;
-        // Tem que estar concluída (Done=true)
+        // Qualquer atividade de reunião (agendada OU realizada)
+        if (!isReuniaoTitle(t.Title)) return;
+        // Tem que estar concluída (Done=true) — sinal de que a reunião aconteceu
         if (t.Done !== true) return;
         // Data de conclusão no período (EndDate se existir, senão DateTime)
         const refDate = t.EndDate || t.DateTime;
@@ -8736,9 +8742,12 @@ function runInvestigate() {
             return getCanonicalSdrName(cn) || cn || '(sem SDR canonico)';
         }))];
 
-        // === Sinais de realizada (regra simples) ===
-        // Realizada = task "Reunião Realizada" com Done=true E EndDate/DateTime no período
-        const realizadaTaskInPeriod = realizadaTasks.find(t => {
+        // === Sinais de realizada (regra atual) ===
+        // Realizada = QUALQUER atividade de reunião (agendada OU realizada) com Done=true
+        // E EndDate/DateTime no período. Pega o caso "task agendada marcada como concluída"
+        // e o caso "task realizada criada separadamente".
+        const allReuniaoForRealizada = [...reuniaoTasks, ...realizadaTasks];
+        const realizadaTaskInPeriod = allReuniaoForRealizada.find(t => {
             if (t.Done !== true) return false;
             const refDate = t.EndDate || t.DateTime;
             if (!refDate) return false;
