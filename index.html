@@ -3780,8 +3780,8 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
-                            <strong style="color:#22c55e;">Realizadas:</strong> 6 sinais combinados (task concluída, deal avançou, proposta com valor etc) — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
-                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR (sales pipeline + Owner SDR) OU agendada vencida sem realização — vendedor devolve pra SDR remarcar/salvar
+                            <strong style="color:#22c55e;">Realizadas:</strong> tarefa "Reunião Realizada" marcada como concluída no mês vigente — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
+                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR (sales pipeline + Owner SDR) OU agendada vencida sem realização
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -6644,26 +6644,25 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // 6 caminhos pra detectar uma reuniao realizada (sem duplicar por dealId).
+    // REGRA SIMPLES E ESTRITA: task com título "Reunião Realizada" marcada como Done=true,
+    // com EndDate (data de conclusão) OU DateTime dentro do mês vigente.
+    // Atribui ao SDR creator da task (= quem conduziu a reunião).
     //
-    // REGRA OVERRIDE: se o card foi DEVOLVIDO pro SDR (Owner atual é SDR da allowlist
-    // E deal está em sales pipeline), interpreta-se como NO-SHOW per regra de negocio —
-    // o vendedor devolveu pra SDR remarcar/salvar o lead. Não conta como realizada.
+    // OVERRIDE: se o card foi DEVOLVIDO pro SDR (sales pipeline + Owner = SDR), interpreta
+    // como NO-SHOW por regra de negócio — não conta como realizada mesmo com task Done.
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    // Predicate: card foi devolvido pro SDR (= no-show por regra de negocio).
-    // Sales pipeline + Owner atual = SDR → vendedor devolveu o card.
+    // Predicate: card foi devolvido pro SDR (= no-show por regra de negócio).
     const cardReturnedToSdr = (deal) => {
         if (!deal) return false;
-        if (!isSalesPipeline(deal)) return false; // SDR pipeline = nunca passou pra vendedor
+        if (!isSalesPipeline(deal)) return false;
         return !!getCanonicalSdrName(getOwnerName(deal));
     };
     const markRealizada = (canonical, t, deal) => {
         if (!canonical || realizedDealIds.has(t.DealId)) return;
-        // Override: card devolvido pro SDR → no-show, nao realizada
-        if (cardReturnedToSdr(deal)) return;
+        if (cardReturnedToSdr(deal)) return; // card devolvido → no-show, nao realizada
         ensureSdr(canonical);
         sdrAgg[canonical].realizadasCount++;
         sdrAgg[canonical].realizadasTasks.push(t);
@@ -6671,101 +6670,22 @@ function renderSection7() {
         realizedDealIds.add(t.DealId);
     };
 
-    // Caminhos 1 e 2: olha todas as tasks do cache no período
-    (dashMeetings || []).forEach(t => {
-        if (!t.DealId) return;
-        const dt = new Date(t.DateTime);
-        if (sp.start && sp.end && (dt < sp.start || dt > sp.end)) return;
-        const tn = normTitle(t.Title);
-        const tnTipoAgendada = tn.includes('reuniao agendada') || tn.includes('reunião agendada');
-        const tnTipoRealizada = /realizad|conclui[dt]|feita|aconteceu/i.test(tn);
-        let isRealized = false;
-        if (tnTipoRealizada) isRealized = true;
-        if (tnTipoAgendada && t.Done === true) isRealized = true;
-        if (!isRealized) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
-        markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
-    });
-
-    // Caminho 3: deal saiu de "Reuniao Agendada" pra etapa pos-reuniao OU mudou pra sales pipeline
-    // Considera apenas deals que tiveram task Reuniao Agendada criada no periodo (= dealsWithAgendada)
-    const POST_MEETING_STAGES = /quent|considera|aprov|formaliz|ganho|negocia/i;
-    const PRE_MEETING_STAGES = /entrada|qualific|reuni.*agend|descart|loss|perd/i;
-    meetings.forEach(t => {
-        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        const stageName = deal.Stage?.Name || '';
-        const pipelineName = getPipelineName(deal);
-        // Se ja esta em sales pipeline = SDR passou pro vendedor = reuniao aconteceu
-        const inSales = isSalesPipeline(deal);
-        // Ou se subiu de etapa dentro do SDR pipe (Leads Quentes, etc - tirando Descarte/Loss)
-        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
-        // Won/lost (StatusId != 1) tambem implica reuniao ja teve
-        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
-        if (!(inSales || advancedInSdr || isClosed)) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
-        markRealizada(canonical, t, deal);
-    });
-
-    // Caminho 4: proxy via proposta enviada / valor preenchido
-    meetings.forEach(t => {
-        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
-        if (!canonical) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        const mrr = getMRR(deal), setup = getSetup(deal);
-        const propDate = getProposalDate(deal);
-        const propDateInPeriod = propDate && sp.start && sp.end && new Date(propDate) >= sp.start && new Date(propDate) <= sp.end;
-        if (!(mrr > 0 || setup > 0 || propDateInPeriod)) return;
-        markRealizada(canonical, t, deal);
-    });
-
-    // === Caminhos 5 e 6: data de REALIZAÇÃO no período (mesmo task agendada antes) ===
-    // Captura casos onde a SDR agendou em Mês anterior e a reuniao aconteceu no mes atual.
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
 
-    // Caminho 5: task "Reuniao Agendada" com Done=true E EndDate (conclusao) no periodo
-    // (mesmo que DateTime estivesse fora do periodo)
     (dashMeetings || []).forEach(t => {
-        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
-        if (t.Done !== true || !t.EndDate || !inPeriod(t.EndDate)) return;
+        if (!t.DealId) return;
+        // Apenas tasks com título "Reunião Realizada"
         const tn = normTitle(t.Title);
-        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
+        if (!(tn.includes('reuniao realizada') || tn.includes('reunião realizada'))) return;
+        // Tem que estar concluída (Done=true)
+        if (t.Done !== true) return;
+        // Data de conclusão no período (EndDate se existir, senão DateTime)
+        const refDate = t.EndDate || t.DateTime;
+        if (!inPeriod(refDate)) return;
         const creator = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creator);
         if (!canonical) return;
         markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
-    });
-
-    // Caminho 6: deal com QUALQUER task Reuniao Agendada (mesmo fora do periodo),
-    // LastUpdateDate do deal no periodo, e deal em estado pos-reuniao.
-    // Sinal de "agendou antes e realizou este mes" pelo movimento do card.
-    // Cuidado: pra evitar contar 2x se ja foi marcada em meses anteriores, requer que
-    // o deal nao esteja com proposta enviada em mes anterior (heuristica frouxa).
-    const seenForP6 = new Set();
-    (dashMeetings || []).forEach(t => {
-        if (!t.DealId || realizedDealIds.has(t.DealId)) return;
-        if (seenForP6.has(t.DealId)) return;
-        const tn = normTitle(t.Title);
-        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        if (!inPeriod(deal.LastUpdateDate)) return;
-        const stageName = deal.Stage?.Name || '';
-        const inSales = isSalesPipeline(deal);
-        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
-        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
-        if (!(inSales || advancedInSdr || isClosed)) return;
-        seenForP6.add(t.DealId);
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
-        if (!canonical) return;
-        markRealizada(canonical, t, deal);
     });
 
     // === No Show ===
@@ -8816,57 +8736,47 @@ function runInvestigate() {
             return getCanonicalSdrName(cn) || cn || '(sem SDR canonico)';
         }))];
 
-        // Sinais de realizada
-        const sig1 = tasksInPeriod.some(t => t.Done === true);
-        const sig2 = realizadaTasks.some(t => {
-            const dt = new Date(t.DateTime);
-            return (!sp.start || dt >= sp.start) && (!sp.end || dt <= sp.end);
+        // === Sinais de realizada (regra simples) ===
+        // Realizada = task "Reunião Realizada" com Done=true E EndDate/DateTime no período
+        const realizadaTaskInPeriod = realizadaTasks.find(t => {
+            if (t.Done !== true) return false;
+            const refDate = t.EndDate || t.DateTime;
+            if (!refDate) return false;
+            const d = new Date(refDate);
+            return (!sp.start || d >= sp.start) && (!sp.end || d <= sp.end);
         });
-        const POST_MEETING_STAGES = /quent|considera|aprov|formaliz|ganho|negocia/i;
-        const PRE_MEETING_STAGES = /entrada|qualific|reuni.*agend|descart|loss|perd/i;
+        const sigRealizada = !!realizadaTaskInPeriod;
+
         const inSales = isSalesPipeline(deal);
-        const advancedInSdr = !inSales && POST_MEETING_STAGES.test(stageName) && !PRE_MEETING_STAGES.test(stageName);
-        const isClosed = deal.StatusId === 2 || deal.StatusId === 3;
-        const sig3 = inSales || advancedInSdr || isClosed;
-        const propDate = getProposalDate(deal);
-        const propInPeriod = propDate && (!sp.start || new Date(propDate) >= sp.start) && (!sp.end || new Date(propDate) <= sp.end);
-        const sig4 = mrr > 0 || setup > 0 || propInPeriod;
-        // Sinal 5: task com EndDate (conclusao) no periodo (mesmo task agendada antes)
-        const sig5 = reuniaoTasks.some(t => t.Done === true && t.EndDate &&
-            (!sp.start || new Date(t.EndDate) >= sp.start) && (!sp.end || new Date(t.EndDate) <= sp.end));
-        // Sinal 6: deal atualizado no periodo + tem task Reuniao Agendada (qualquer data) + esta avancado
-        const lastUpdateInPeriod = deal.LastUpdateDate &&
-            (!sp.start || new Date(deal.LastUpdateDate) >= sp.start) && (!sp.end || new Date(deal.LastUpdateDate) <= sp.end);
-        const sig6 = reuniaoTasks.length > 0 && lastUpdateInPeriod && (inSales || advancedInSdr || isClosed);
 
         // REGRA OVERRIDE: card devolvido pro SDR = no-show, anula realizada
         const cardReturnedNoShow = inSales && !!getCanonicalSdrName(ownerName);
 
         const agendadaCount = tasksInPeriod.length > 0;
-        const realizadaCountRaw = (agendadaCount && (sig1 || sig2 || sig3 || sig4)) || sig5 || sig6;
+        const realizadaCountRaw = sigRealizada;
         const realizadaCount = realizadaCountRaw && !cardReturnedNoShow;
         const noShowCount = cardReturnedNoShow || (agendadaCount && !realizadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Done !== true));
 
         // Diagnóstico em texto
         let diag = '';
-        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0 && !realizadaCount && !cardReturnedNoShow) {
-            const oldest = reuniaoTasks[0];
-            diag = `⚠️ Tem ${reuniaoTasks.length} task(s) "Reunião Agendada" mas FORA do período atual (DateTime: ${formatDate(oldest.DateTime)}). Sinais 5 e 6 também não bateram.`;
-        } else if (tasksInPeriod.length === 0 && reuniaoTasks.length === 0) {
-            diag = `⚠️ Deal NÃO tem nenhuma task "Reunião Agendada" no cache (últimos 120d). Não pode contar nem como agendada nem realizada.`;
-        } else if (cardReturnedNoShow) {
-            diag = `🔁 NO-SHOW por regra de negócio: card está em "${pipelineName}" (sales pipeline) com Owner = "${ownerName}" (pré-vendedor) — vendedor devolveu pro SDR. Mesmo com sinais ${realizadaCountRaw ? 'de realização presentes' : 'ausentes'}, conta como no-show.`;
+        if (cardReturnedNoShow) {
+            diag = `🔁 NO-SHOW: card está em "${pipelineName}" (sales pipeline) com Owner = "${ownerName}" (pré-vendedor) — vendedor devolveu pro SDR. ${realizadaTaskInPeriod ? 'Mesmo com task Reunião Realizada Done=true, ' : ''}conta como no-show por regra de negócio.`;
         } else if (realizadaCount) {
-            const sigs = [];
-            if (sig1) sigs.push('1 (task Done=true no período)');
-            if (sig2) sigs.push('2 (task "Realizada")');
-            if (sig3) sigs.push(`3 (deal avançou — stage="${stageName}")`);
-            if (sig4) sigs.push('4 (MRR/Setup/proposta)');
-            if (sig5) sigs.push('5 (task EndDate no período)');
-            if (sig6) sigs.push('6 (deal updated no período + avançado)');
-            diag = `✅ Conta como realizada via sinal(is): ${sigs.join(', ')}`;
+            const t = realizadaTaskInPeriod;
+            const refDate = t.EndDate || t.DateTime;
+            diag = `✅ Conta como REALIZADA: task "Reunião Realizada" marcada como concluída em ${formatDate(refDate)}.`;
+        } else if (realizadaTasks.length > 0 && !sigRealizada) {
+            const t = realizadaTasks[0];
+            const refDate = t.EndDate || t.DateTime;
+            diag = `⚠️ Tem task "Reunião Realizada" mas ${t.Done !== true ? 'NÃO está marcada como concluída (Done=false)' : 'data fora do período (' + formatDate(refDate) + ')'}.`;
+        } else if (agendadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Done !== true)) {
+            diag = `❌ NO-SHOW: tem task "Reunião Agendada" vencida (não concluída) e não há atividade "Reunião Realizada" concluída no mês.`;
         } else if (agendadaCount) {
-            diag = `❌ Conta como AGENDADA mas NÃO realizada. Razão: stage="${stageName}" (não avançou), pipeline="${pipelineName}", sem task Done, sem proposta. Status=${deal.StatusId === 1 ? 'aberto' : deal.StatusId}.`;
+            diag = `⏳ Conta como AGENDADA. Ainda não foi a hora da reunião OU foi marcada mas sem task "Reunião Realizada" Done=true ainda.`;
+        } else if (reuniaoTasks.length > 0) {
+            diag = `⚠️ Tem task "Reunião Agendada" mas FORA do período atual.`;
+        } else {
+            diag = `⚠️ Deal NÃO tem nenhuma task "Reunião" no cache (últimos 120d).`;
         }
 
         return {
@@ -8878,7 +8788,7 @@ function runInvestigate() {
             tasksInPeriod: tasksInPeriod.length,
             sdrsInPeriod,
             realizadaTasks: realizadaTasks.length,
-            sig1, sig2, sig3, sig4, sig5, sig6,
+            sigRealizada, cardReturnedNoShow,
             agendadaCount, realizadaCount,
             diag
         };
@@ -8913,12 +8823,8 @@ function runInvestigate() {
                         <td style="padding:8px;text-align:center;">${r.tasksInPeriod}/${r.tasksTotal}</td>
                         <td style="padding:8px;font-size:11px;">${r.sdrsInPeriod.join(', ') || '—'}</td>
                         <td style="padding:8px;text-align:center;font-family:monospace;font-size:11px;">
-                            <span style="color:${r.sig1?'#22c55e':'#6d6d85'};">1${r.sig1?'✓':'✗'}</span>
-                            <span style="color:${r.sig2?'#22c55e':'#6d6d85'};margin-left:4px;">2${r.sig2?'✓':'✗'}</span>
-                            <span style="color:${r.sig3?'#22c55e':'#6d6d85'};margin-left:4px;">3${r.sig3?'✓':'✗'}</span>
-                            <span style="color:${r.sig4?'#22c55e':'#6d6d85'};margin-left:4px;">4${r.sig4?'✓':'✗'}</span>
-                            <span style="color:${r.sig5?'#22c55e':'#6d6d85'};margin-left:4px;">5${r.sig5?'✓':'✗'}</span>
-                            <span style="color:${r.sig6?'#22c55e':'#6d6d85'};margin-left:4px;">6${r.sig6?'✓':'✗'}</span>
+                            <span style="color:${r.sigRealizada?'#22c55e':'#6d6d85'};">RR${r.sigRealizada?'✓':'✗'}</span>
+                            <span style="color:${r.cardReturnedNoShow?'#ef4444':'#6d6d85'};margin-left:6px;">DEV${r.cardReturnedNoShow?'✓':'✗'}</span>
                         </td>
                         <td style="padding:8px;font-size:11px;line-height:1.5;color:${r.realizadaCount?'#22c55e':r.agendadaCount?'#f59e0b':'#ef4444'};">${r.diag}</td>
                     </tr>
@@ -8932,7 +8838,7 @@ function runInvestigate() {
         </table>
         <div style="margin-top:14px;padding:10px 12px;background:rgba(96,165,250,0.05);border-left:3px solid #60a5fa;border-radius:6px;font-size:11.5px;color:#a0a0b8;">
             <strong style="color:#60a5fa;">Legenda dos sinais:</strong>
-            1 = task Done=true no período · 2 = task title "realizada/concluída" · 3 = deal avançou de etapa (sales pipeline / Leads Quentes / Aprovado etc, ou foi fechado) · 4 = MRR/Setup/Data Proposta preenchidos · <strong>5 = task EndDate no período</strong> (concluída neste mês mesmo se agendada antes) · <strong>6 = deal LastUpdateDate no período + estágio pós-reunião</strong> (deal movimentado neste mês).
+            <strong style="color:#22c55e;">RR ✓</strong> = tem task "Reunião Realizada" com Done=true e EndDate/DateTime no período · <strong style="color:#ef4444;">DEV ✓</strong> = card devolvido pro SDR (sales pipeline + Owner pré-vendedor), anula realizada e conta como no-show.
             <br>Resumo: <strong style="color:#22c55e;">${rows.filter(r => r.found && r.realizadaCount).length}</strong> contam como realizada · <strong style="color:#f59e0b;">${rows.filter(r => r.found && r.agendadaCount && !r.realizadaCount).length}</strong> só agendada · <strong style="color:#ef4444;">${rows.filter(r => r.found && !r.agendadaCount).length}</strong> nem agendada (task fora do período ou inexistente).
         </div>
     `;
