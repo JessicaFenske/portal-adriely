@@ -6644,14 +6644,22 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // REGRA ÚNICA E SIMPLES: task com título contendo "Reunião Realizada" + Done=true
-    // + EndDate (data de conclusão) ou DateTime dentro do mês vigente.
-    // Atribui pelo CreatorId = quem conduziu a reunião.
-    // Sem overrides, sem outros sinais — apenas o que está marcado explicitamente no Ploomes.
+    // Regra: task "Reunião Realizada" Finished=true + FinishDate/DateTime no mês.
+    // Atribuição: Creator da Realizada se SDR; senão fallback pra Creator da Agendada
+    // do mesmo deal (Realizada é frequentemente criada por automação do Ploomes).
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+    // Predicate usado no No-Show: card foi DEVOLVIDO pro SDR
+    // (sales pipeline + Owner atual = SDR da allowlist).
+    const cardReturnedToSdr = (deal) => {
+        if (!deal) return false;
+        if (!isSalesPipeline(deal)) return false;
+        return !!getCanonicalSdrName(getOwnerName(deal));
+    };
+
     const markRealizada = (canonical, t, deal) => {
         if (!canonical || realizedDealIds.has(t.DealId)) return;
         ensureSdr(canonical);
