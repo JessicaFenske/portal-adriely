@@ -6673,17 +6673,16 @@ function renderSection7() {
     };
 
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    // Aceita qualquer task de reunião (Agendada, Realizada, Concluída, etc) — basta começar com "Reuni"
     const isReuniaoTitle = (title) => {
         const tn = normTitle(title);
-        return tn.includes('reuniao agendada') || tn.includes('reunião agendada')
-            || tn.includes('reuniao realizada') || tn.includes('reunião realizada');
+        return tn.startsWith('reuni');
     };
 
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
-        // Qualquer atividade de reunião (agendada OU realizada)
         if (!isReuniaoTitle(t.Title)) return;
-        // Tem que estar concluída (Done=true) — sinal de que a reunião aconteceu
+        // Tem que estar concluída (Done=true)
         if (t.Done !== true) return;
         // Data de conclusão no período (EndDate se existir, senão DateTime)
         const refDate = t.EndDate || t.DateTime;
@@ -8799,6 +8798,7 @@ function runInvestigate() {
             realizadaTasks: realizadaTasks.length,
             sigRealizada, cardReturnedNoShow,
             agendadaCount, realizadaCount,
+            allTasks: dealTasks, // todas as tasks de reuniao linkadas a esse deal
             diag
         };
     });
@@ -8821,8 +8821,28 @@ function runInvestigate() {
                 </tr>
             </thead>
             <tbody>
-                ${rows.map(r => r.found ? `
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                ${rows.map(r => {
+                    if (!r.found) {
+                        return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <td style="padding:8px;font-family:monospace;color:#ef4444;">${r.id}</td>
+                            <td colspan="9" style="padding:8px;color:#ef4444;font-style:italic;">${r.why}</td>
+                        </tr>`;
+                    }
+                    const tasksDetail = (r.allTasks || []).length === 0
+                        ? '<span style="color:#6d6d85;">Nenhuma task de reunião linkada no cache</span>'
+                        : r.allTasks.map(t => {
+                            const creatorName = dashUsersById[t.CreatorId] || ('id ' + t.CreatorId);
+                            const dt = t.DateTime ? formatDate(t.DateTime) : '—';
+                            const ed = t.EndDate ? formatDate(t.EndDate) : '—';
+                            const doneColor = t.Done === true ? '#22c55e' : '#f59e0b';
+                            return `<div style="background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:4px;margin-bottom:3px;font-size:11px;line-height:1.4;">
+                                <strong style="color:#e0e0e0;">${t.Title || '(sem título)'}</strong> ·
+                                <span style="color:${doneColor};">Done=${t.Done === true ? 'true' : (t.Done === false ? 'false' : 'null')}</span> ·
+                                DateTime: ${dt} · EndDate: ${ed} ·
+                                Creator: <span style="color:#60a5fa;">${creatorName}</span>
+                            </div>`;
+                        }).join('');
+                    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                         <td style="padding:8px;font-family:monospace;"><a href="https://app10.ploomes.com/deal/${r.id}" target="_blank" style="color:#60a5fa;">${r.id}</a></td>
                         <td style="padding:8px;color:#e0e0e0;">${r.title}</td>
                         <td style="padding:8px;color:#a0a0b8;">${r.pipeline}</td>
@@ -8837,12 +8857,13 @@ function runInvestigate() {
                         </td>
                         <td style="padding:8px;font-size:11px;line-height:1.5;color:${r.realizadaCount?'#22c55e':r.agendadaCount?'#f59e0b':'#ef4444'};">${r.diag}</td>
                     </tr>
-                ` : `
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <td style="padding:8px;font-family:monospace;color:#ef4444;">${r.id}</td>
-                        <td colspan="9" style="padding:8px;color:#ef4444;font-style:italic;">${r.why}</td>
-                    </tr>
-                `).join('')}
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <td colspan="10" style="padding:6px 16px 10px 16px;background:rgba(255,255,255,0.015);">
+                            <div style="font-size:10.5px;color:#8888a0;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">📋 Tasks de reunião linkadas a este deal (do cache):</div>
+                            ${tasksDetail}
+                        </td>
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>
         <div style="margin-top:14px;padding:10px 12px;background:rgba(96,165,250,0.05);border-left:3px solid #60a5fa;border-radius:6px;font-size:11.5px;color:#a0a0b8;">
