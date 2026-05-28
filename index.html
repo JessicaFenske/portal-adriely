@@ -6663,18 +6663,33 @@ function renderSection7() {
 
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
 
+    // Index das tasks "Reunião Agendada" por DealId — pra atribuir corretamente a Realizada
+    // ao SDR criador da Agendada (já que a task "Reunião Realizada" é frequentemente
+    // criada por automação do Ploomes, não pelo SDR direto).
+    const agendadaByDeal = new Map();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
-        // Só task com título "Reunião Realizada"
+        const tn = normTitle(t.Title);
+        if (!tn.includes('reuniao agendada')) return;
+        if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
+    });
+
+    // Realizada = task "Reunião Realizada" Finished=true + FinishDate/DateTime no período.
+    // Atribuição: Creator da Realizada se for SDR; senão Creator da Agendada do mesmo deal.
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
         const tn = normTitle(t.Title);
         if (!tn.includes('reuniao realizada')) return;
-        // Tem que estar concluída (Ploomes usa `Finished`, não `Done`)
         if (t.Finished !== true) return;
-        // Data de conclusão no período (FinishDate é o campo de Ploomes; fallback DateTime)
         const refDate = t.FinishDate || t.DateTime;
         if (!inPeriod(refDate)) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
+        // Tenta Creator da Realizada (geralmente "Automação")
+        let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        // Fallback: Creator da Agendada do mesmo deal (esse é o SDR real)
+        if (!canonical) {
+            const ag = agendadaByDeal.get(t.DealId);
+            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
         if (!canonical) return;
         markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
     });
@@ -8728,8 +8743,9 @@ function runInvestigate() {
         }))];
 
         // === Sinais de realizada (regra atual) ===
-        // Realizada = task "Reunião Realizada" com Finished=true E FinishDate/DateTime no período.
-        // (Ploomes usa Finished/FinishDate, não Done/EndDate.)
+        // Realizada = task "Reunião Realizada" Finished=true + FinishDate/DateTime no período.
+        // SDR derivado via Agendada do mesmo deal (já que Realizada é frequentemente
+        // criada por automação do Ploomes, não pelo SDR).
         const realizadaTaskInPeriod = realizadaTasks.find(t => {
             if (t.Finished !== true) return false;
             const refDate = t.FinishDate || t.DateTime;
@@ -8737,7 +8753,18 @@ function runInvestigate() {
             const d = new Date(refDate);
             return (!sp.start || d >= sp.start) && (!sp.end || d <= sp.end);
         });
-        const sigRealizada = !!realizadaTaskInPeriod;
+        // SDR efetivo: usa creator da Realizada se for SDR, senão da Agendada
+        let sdrFromRealizada = null;
+        if (realizadaTaskInPeriod) {
+            const creatorReal = dashUsersById[realizadaTaskInPeriod.CreatorId] || '';
+            sdrFromRealizada = getCanonicalSdrName(creatorReal);
+            if (!sdrFromRealizada) {
+                // Fallback: Creator da Agendada do mesmo deal
+                const ag = reuniaoTasks[0]; // primeira Agendada do deal
+                if (ag) sdrFromRealizada = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+            }
+        }
+        const sigRealizada = !!realizadaTaskInPeriod && !!sdrFromRealizada;
 
         const inSales = isSalesPipeline(deal);
         const cardReturnedNoShow = inSales && !!getCanonicalSdrName(ownerName);
@@ -8751,7 +8778,9 @@ function runInvestigate() {
         if (realizadaCount) {
             const t = realizadaTaskInPeriod;
             const refDate = t.FinishDate || t.DateTime;
-            diag = `✅ Conta como REALIZADA: task "Reunião Realizada" concluída em ${formatDate(refDate)} por ${dashUsersById[t.CreatorId] || ('id ' + t.CreatorId)}.`;
+            const taskCreator = dashUsersById[t.CreatorId] || ('id ' + t.CreatorId);
+            const attribViaAg = !getCanonicalSdrName(taskCreator);
+            diag = `✅ Conta como REALIZADA: task "Reunião Realizada" Finished=true em ${formatDate(refDate)}, criada por <strong>${taskCreator}</strong>. Atribuída ao SDR <strong style="color:#22c55e;">${sdrFromRealizada}</strong>${attribViaAg ? ' (via Agendada do mesmo deal)' : ' (Creator da Realizada)'}.`;
         } else if (cardReturnedNoShow && agendadaCount) {
             diag = `🔁 NO-SHOW por regra de negócio: card devolvido pro SDR (sales pipeline + Owner ${ownerName}). Sem task "Reunião Realizada" Finished=true no mês.`;
         } else if (realizadaTasks.length > 0 && !sigRealizada) {
