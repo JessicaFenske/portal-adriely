@@ -11,7 +11,7 @@ const RD_PUBLIC_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Marketing toke
 const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing token privado (API legada)
 const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 9; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 10; // Bump to invalidate disk cache after schema changes
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -169,11 +169,10 @@ async function refreshAll() {
     refreshOne('people', odataEncode(`/Contacts?$filter=TypeId eq 2 and Email ne null and CreateDate ge ${ninetyDaysAgo}&$expand=Phones,Origin,Owner($select=Id,Name),Creator($select=Id,Name)&$select=Id,Name,Email,CompanyId,CreateDate,OriginId,OwnerId,CreatorId`));
     // Atividades "Reuniao Agendada" / "Reuniao Realizada"
     // Pega ultimos 120 dias de tasks com Title comecando com Reun.
-    // Sem $select pra trazer todos os campos da Task — incluindo Status, FinishDate,
-    // etc. (Tentamos $select com Done,EndDate antes mas a API retornou 403 — fields
-    // bloqueados pela API key. Sem $select funciona.)
+    // Filtragem case-sensitive simples (Reun maiusculo cobre os dois tipos comuns).
+    // Sem $select pra trazer todos os campos (Finished, FinishDate, etc).
     const oneTwentyDaysAgo = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
-    refreshOne('meetings', odataEncode(`/Tasks?$filter=DateTime ge ${oneTwentyDaysAgo} and (startswith(Title,'Reuni') or startswith(Title,'reuni'))&$orderby=DateTime desc`));
+    refreshOne('meetings', odataEncode(`/Tasks?$filter=DateTime ge ${oneTwentyDaysAgo} and startswith(Title,'Reun')&$orderby=DateTime desc`));
     // Lista de usuarios para resolver OwnerId -> Name nas atividades
     refreshOne('users', odataEncode('/Users?$select=Id,Name'));
 }
