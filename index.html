@@ -3780,8 +3780,8 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
-                            <strong style="color:#22c55e;">Realizadas:</strong> task concluída no período (DateTime ou EndDate), título "realizada", deal avançou de etapa, foi pra funil de venda, tem proposta com valor, OU deal atualizado no período já em estágio pós-reunião — 6 sinais combinados ·
-                            <strong style="color:#ef4444;">No Show:</strong> agendada não realizada (DateTime passou, sem sinal, deal voltou pro SDR)
+                            <strong style="color:#22c55e;">Realizadas:</strong> 6 sinais combinados (task concluída, deal avançou, proposta com valor etc) — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
+                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR (sales pipeline + Owner SDR) OU agendada vencida sem realização — vendedor devolve pra SDR remarcar/salvar
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -6644,21 +6644,26 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // 4 caminhos pra detectar uma reuniao realizada (sem duplicar por dealId):
-    //   1) Task Reuniao Agendada com Done=true
-    //   2) Task com title contendo "realizada"/"concluida"/"feita"/"aconteceu"
-    //   3) NOVO: deal SAIU da etapa "Reuniao Agendada" pra etapa pos-reuniao
-    //      (Leads Quentes, Consideracao, Aprovado, Formalizacao) OU mudou pra sales
-    //      pipeline (Funil de Vendas, Sankhya, Farmer). Sinal forte de que reuniao
-    //      aconteceu mesmo que SDR/vendedor nao tenha marcado a task como Done.
-    //   4) Proxy: deal tem MRR/Setup preenchido ou Data Proposta no periodo —
-    //      vendedor pulou registro de realizada e foi direto pra proposta.
+    // 6 caminhos pra detectar uma reuniao realizada (sem duplicar por dealId).
+    //
+    // REGRA OVERRIDE: se o card foi DEVOLVIDO pro SDR (Owner atual é SDR da allowlist
+    // E deal está em sales pipeline), interpreta-se como NO-SHOW per regra de negocio —
+    // o vendedor devolveu pra SDR remarcar/salvar o lead. Não conta como realizada.
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    // Predicate: card foi devolvido pro SDR (= no-show por regra de negocio).
+    // Sales pipeline + Owner atual = SDR → vendedor devolveu o card.
+    const cardReturnedToSdr = (deal) => {
+        if (!deal) return false;
+        if (!isSalesPipeline(deal)) return false; // SDR pipeline = nunca passou pra vendedor
+        return !!getCanonicalSdrName(getOwnerName(deal));
+    };
     const markRealizada = (canonical, t, deal) => {
         if (!canonical || realizedDealIds.has(t.DealId)) return;
+        // Override: card devolvido pro SDR → no-show, nao realizada
+        if (cardReturnedToSdr(deal)) return;
         ensureSdr(canonical);
         sdrAgg[canonical].realizadasCount++;
         sdrAgg[canonical].realizadasTasks.push(t);
@@ -6764,29 +6769,46 @@ function renderSection7() {
     });
 
     // === No Show ===
-    // Reunião agendada no período cujo DateTime já passou, task não concluída, sem prova de
-    // realização (não está em realizedDealIds), e que o deal voltou pro SDR (Owner atual é
-    // um SDR da allowlist OU o deal está num SDR pipeline — sinal de que o vendedor devolveu).
+    // Dois caminhos pra um deal contar como no-show:
+    //   A) REGRA DE NEGOCIO: card foi DEVOLVIDO pro SDR (sales pipeline + Owner = SDR).
+    //      Conta SEMPRE como no-show, independente de Done ou DateTime — vendedor
+    //      retornou o deal pra SDR remarcar/salvar o lead.
+    //   B) No-show classico: task agendada vencida (DateTime passou) + nao concluida +
+    //      card com SDR (Owner SDR OU pipeline SDR).
+    // Dedup por dealId: 1 deal = 1 no-show, mesmo com varias tasks de reagendamento.
     const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const noShowDealIds = new Set();
+    const addNoShow = (canonical, t, deal) => {
+        if (!canonical || noShowDealIds.has(t.DealId)) return;
+        ensureSdr(canonical);
+        sdrAgg[canonical].noShowCount++;
+        sdrAgg[canonical].noShowDeals.push(deal);
+        sdrAgg[canonical].noShowTasks.push(t);
+        noShowDealIds.add(t.DealId);
+    };
     meetings.forEach(t => {
         if (!t.DealId) return;
         if (realizedDealIds.has(t.DealId)) return;
-        const dt = new Date(t.DateTime);
-        if (dt > now) return; // ainda nao foi a hora da reuniao
-        if (t.Done === true) return; // task marcada como concluida (ja contou em realizada acima)
         const creator = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creator);
         if (!canonical) return;
         const deal = window._dashOpenDealsById?.[t.DealId];
         if (!deal) return;
-        // "Voltou pro SDR" = deal atualmente em pipeline SDR ou Owner atual é SDR da allowlist
+
+        // (A) Card devolvido pro SDR → no-show garantido
+        if (cardReturnedToSdr(deal)) {
+            addNoShow(canonical, t, deal);
+            return;
+        }
+
+        // (B) No-show classico
+        const dt = new Date(t.DateTime);
+        if (dt > now) return;
+        if (t.Done === true) return;
         const inSdrPipe = SDR_PIPES.includes(getPipelineName(deal));
         const ownerIsSdr = !!getCanonicalSdrName(getOwnerName(deal));
-        if (!inSdrPipe && !ownerIsSdr) return; // ainda em vendedor → considera como pendente (não conta como no-show ainda)
-        ensureSdr(canonical);
-        sdrAgg[canonical].noShowCount++;
-        sdrAgg[canonical].noShowDeals.push(deal);
-        sdrAgg[canonical].noShowTasks.push(t);
+        if (!inSdrPipe && !ownerIsSdr) return;
+        addNoShow(canonical, t, deal);
     });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
@@ -8817,16 +8839,23 @@ function runInvestigate() {
             (!sp.start || new Date(deal.LastUpdateDate) >= sp.start) && (!sp.end || new Date(deal.LastUpdateDate) <= sp.end);
         const sig6 = reuniaoTasks.length > 0 && lastUpdateInPeriod && (inSales || advancedInSdr || isClosed);
 
+        // REGRA OVERRIDE: card devolvido pro SDR = no-show, anula realizada
+        const cardReturnedNoShow = inSales && !!getCanonicalSdrName(ownerName);
+
         const agendadaCount = tasksInPeriod.length > 0;
-        const realizadaCount = (agendadaCount && (sig1 || sig2 || sig3 || sig4)) || sig5 || sig6;
+        const realizadaCountRaw = (agendadaCount && (sig1 || sig2 || sig3 || sig4)) || sig5 || sig6;
+        const realizadaCount = realizadaCountRaw && !cardReturnedNoShow;
+        const noShowCount = cardReturnedNoShow || (agendadaCount && !realizadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Done !== true));
 
         // Diagnóstico em texto
         let diag = '';
-        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0 && !realizadaCount) {
+        if (tasksInPeriod.length === 0 && reuniaoTasks.length > 0 && !realizadaCount && !cardReturnedNoShow) {
             const oldest = reuniaoTasks[0];
             diag = `⚠️ Tem ${reuniaoTasks.length} task(s) "Reunião Agendada" mas FORA do período atual (DateTime: ${formatDate(oldest.DateTime)}). Sinais 5 e 6 também não bateram.`;
         } else if (tasksInPeriod.length === 0 && reuniaoTasks.length === 0) {
             diag = `⚠️ Deal NÃO tem nenhuma task "Reunião Agendada" no cache (últimos 120d). Não pode contar nem como agendada nem realizada.`;
+        } else if (cardReturnedNoShow) {
+            diag = `🔁 NO-SHOW por regra de negócio: card está em "${pipelineName}" (sales pipeline) com Owner = "${ownerName}" (pré-vendedor) — vendedor devolveu pro SDR. Mesmo com sinais ${realizadaCountRaw ? 'de realização presentes' : 'ausentes'}, conta como no-show.`;
         } else if (realizadaCount) {
             const sigs = [];
             if (sig1) sigs.push('1 (task Done=true no período)');
