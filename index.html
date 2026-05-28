@@ -6665,13 +6665,13 @@ function renderSection7() {
 
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
-        // Só task com título "Reunião Realizada" (sem normalização agressiva — match no normalizado)
+        // Só task com título "Reunião Realizada"
         const tn = normTitle(t.Title);
         if (!tn.includes('reuniao realizada')) return;
-        // Tem que estar concluída
-        if (t.Done !== true) return;
-        // Data de conclusão no período
-        const refDate = t.EndDate || t.DateTime;
+        // Tem que estar concluída (Ploomes usa `Finished`, não `Done`)
+        if (t.Finished !== true) return;
+        // Data de conclusão no período (FinishDate é o campo de Ploomes; fallback DateTime)
+        const refDate = t.FinishDate || t.DateTime;
         if (!inPeriod(refDate)) return;
         const creator = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creator);
@@ -6715,7 +6715,7 @@ function renderSection7() {
         // (B) No-show classico
         const dt = new Date(t.DateTime);
         if (dt > now) return;
-        if (t.Done === true) return;
+        if (t.Finished === true) return; // Ploomes: campo é "Finished", não "Done"
         const inSdrPipe = SDR_PIPES.includes(getPipelineName(deal));
         const ownerIsSdr = !!getCanonicalSdrName(getOwnerName(deal));
         if (!inSdrPipe && !ownerIsSdr) return;
@@ -8728,13 +8728,11 @@ function runInvestigate() {
         }))];
 
         // === Sinais de realizada (regra atual) ===
-        // Realizada = QUALQUER atividade de reunião (agendada OU realizada) com Done=true
-        // E EndDate/DateTime no período. Pega o caso "task agendada marcada como concluída"
-        // e o caso "task realizada criada separadamente".
-        const allReuniaoForRealizada = [...reuniaoTasks, ...realizadaTasks];
-        const realizadaTaskInPeriod = allReuniaoForRealizada.find(t => {
-            if (t.Done !== true) return false;
-            const refDate = t.EndDate || t.DateTime;
+        // Realizada = task "Reunião Realizada" com Finished=true E FinishDate/DateTime no período.
+        // (Ploomes usa Finished/FinishDate, não Done/EndDate.)
+        const realizadaTaskInPeriod = realizadaTasks.find(t => {
+            if (t.Finished !== true) return false;
+            const refDate = t.FinishDate || t.DateTime;
             if (!refDate) return false;
             const d = new Date(refDate);
             return (!sp.start || d >= sp.start) && (!sp.end || d <= sp.end);
@@ -8742,31 +8740,28 @@ function runInvestigate() {
         const sigRealizada = !!realizadaTaskInPeriod;
 
         const inSales = isSalesPipeline(deal);
-
-        // REGRA OVERRIDE: card devolvido pro SDR = no-show, anula realizada
         const cardReturnedNoShow = inSales && !!getCanonicalSdrName(ownerName);
 
         const agendadaCount = tasksInPeriod.length > 0;
-        const realizadaCountRaw = sigRealizada;
-        const realizadaCount = realizadaCountRaw && !cardReturnedNoShow;
-        const noShowCount = cardReturnedNoShow || (agendadaCount && !realizadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Done !== true));
+        const realizadaCount = sigRealizada && !cardReturnedNoShow;
+        const noShowCount = (agendadaCount && !realizadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Finished !== true));
 
         // Diagnóstico em texto
         let diag = '';
-        if (cardReturnedNoShow) {
-            diag = `🔁 NO-SHOW: card está em "${pipelineName}" (sales pipeline) com Owner = "${ownerName}" (pré-vendedor) — vendedor devolveu pro SDR. ${realizadaTaskInPeriod ? 'Mesmo com task Reunião Realizada Done=true, ' : ''}conta como no-show por regra de negócio.`;
-        } else if (realizadaCount) {
+        if (realizadaCount) {
             const t = realizadaTaskInPeriod;
-            const refDate = t.EndDate || t.DateTime;
-            diag = `✅ Conta como REALIZADA: task "Reunião Realizada" marcada como concluída em ${formatDate(refDate)}.`;
+            const refDate = t.FinishDate || t.DateTime;
+            diag = `✅ Conta como REALIZADA: task "Reunião Realizada" concluída em ${formatDate(refDate)} por ${dashUsersById[t.CreatorId] || ('id ' + t.CreatorId)}.`;
+        } else if (cardReturnedNoShow && agendadaCount) {
+            diag = `🔁 NO-SHOW por regra de negócio: card devolvido pro SDR (sales pipeline + Owner ${ownerName}). Sem task "Reunião Realizada" Finished=true no mês.`;
         } else if (realizadaTasks.length > 0 && !sigRealizada) {
             const t = realizadaTasks[0];
-            const refDate = t.EndDate || t.DateTime;
-            diag = `⚠️ Tem task "Reunião Realizada" mas ${t.Done !== true ? 'NÃO está marcada como concluída (Done=false)' : 'data fora do período (' + formatDate(refDate) + ')'}.`;
-        } else if (agendadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Done !== true)) {
-            diag = `❌ NO-SHOW: tem task "Reunião Agendada" vencida (não concluída) e não há atividade "Reunião Realizada" concluída no mês.`;
+            const refDate = t.FinishDate || t.DateTime;
+            diag = `⚠️ Tem task "Reunião Realizada" mas ${t.Finished !== true ? 'NÃO está marcada como concluída (Finished=false)' : 'concluída fora do período (' + formatDate(refDate) + ')'}.`;
+        } else if (agendadaCount && tasksInPeriod.some(t => new Date(t.DateTime) <= new Date() && t.Finished !== true)) {
+            diag = `❌ NO-SHOW: task "Reunião Agendada" vencida (não concluída) e sem task "Reunião Realizada" Finished=true no mês.`;
         } else if (agendadaCount) {
-            diag = `⏳ Conta como AGENDADA. Ainda não foi a hora da reunião OU foi marcada mas sem task "Reunião Realizada" Done=true ainda.`;
+            diag = `⏳ Conta como AGENDADA. Reunião futura OU sem task "Reunião Realizada" Finished=true ainda.`;
         } else if (reuniaoTasks.length > 0) {
             diag = `⚠️ Tem task "Reunião Agendada" mas FORA do período atual.`;
         } else {
@@ -8819,12 +8814,12 @@ function runInvestigate() {
                         : r.allTasks.map(t => {
                             const creatorName = dashUsersById[t.CreatorId] || ('id ' + t.CreatorId);
                             const dt = t.DateTime ? formatDate(t.DateTime) : '—';
-                            const ed = t.EndDate ? formatDate(t.EndDate) : '—';
-                            const doneColor = t.Done === true ? '#22c55e' : '#f59e0b';
+                            const fd = t.FinishDate ? formatDate(t.FinishDate) : '—';
+                            const finishedColor = t.Finished === true ? '#22c55e' : '#f59e0b';
                             return `<div style="background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:4px;margin-bottom:3px;font-size:11px;line-height:1.4;">
                                 <strong style="color:#e0e0e0;">${t.Title || '(sem título)'}</strong> ·
-                                <span style="color:${doneColor};">Done=${t.Done === true ? 'true' : (t.Done === false ? 'false' : 'null')}</span> ·
-                                DateTime: ${dt} · EndDate: ${ed} ·
+                                <span style="color:${finishedColor};">Finished=${t.Finished === true ? 'true' : (t.Finished === false ? 'false' : 'null')}</span> ·
+                                DateTime: ${dt} · FinishDate: ${fd} ·
                                 Creator: <span style="color:#60a5fa;">${creatorName}</span>
                             </div>`;
                         }).join('');
@@ -8854,7 +8849,7 @@ function runInvestigate() {
         </table>
         <div style="margin-top:14px;padding:10px 12px;background:rgba(96,165,250,0.05);border-left:3px solid #60a5fa;border-radius:6px;font-size:11.5px;color:#a0a0b8;">
             <strong style="color:#60a5fa;">Legenda dos sinais:</strong>
-            <strong style="color:#22c55e;">RR ✓</strong> = tem task "Reunião Realizada" com Done=true e EndDate/DateTime no período · <strong style="color:#ef4444;">DEV ✓</strong> = card devolvido pro SDR (sales pipeline + Owner pré-vendedor), anula realizada e conta como no-show.
+            <strong style="color:#22c55e;">RR ✓</strong> = tem task "Reunião Realizada" com Finished=true e FinishDate/DateTime no período · <strong style="color:#ef4444;">DEV ✓</strong> = card devolvido pro SDR (sales pipeline + Owner pré-vendedor).
             <br>Resumo: <strong style="color:#22c55e;">${rows.filter(r => r.found && r.realizadaCount).length}</strong> contam como realizada · <strong style="color:#f59e0b;">${rows.filter(r => r.found && r.agendadaCount && !r.realizadaCount).length}</strong> só agendada · <strong style="color:#ef4444;">${rows.filter(r => r.found && !r.agendadaCount).length}</strong> nem agendada (task fora do período ou inexistente).
         </div>
     `;
@@ -11339,8 +11334,8 @@ function computeFlowMeetingsForMkt(range) {
         const tn = normT(t.Title);
         if (!tn.includes('reuniao agendada')) return;
         const dtIn = inMktRange(t.DateTime, range);
-        const edIn = t.EndDate && inMktRange(t.EndDate, range);
-        if (!dtIn && !edIn) return;
+        const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
+        if (!dtIn && !fdIn) return;
         count++;
         seen.add(t.DealId);
     });
