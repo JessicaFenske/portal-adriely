@@ -6644,27 +6644,16 @@ function renderSection7() {
     });
 
     // === Reuniões Realizadas ===
-    // REGRA: qualquer atividade de reunião marcada como concluída (Done=true) no mês.
-    // Pega 2 fluxos comuns no time:
-    //   1) Task "Reunião Agendada" marcada como Done=true (SDR concluiu a task da agenda)
-    //   2) Task "Reunião Realizada" criada e marcada como Done=true (atividade separada)
-    // Em ambos: EndDate (conclusão) OU DateTime no mês vigente.
-    // Atribui pelo CreatorId da task = quem conduziu.
-    //
-    // OVERRIDE: card devolvido pro SDR (sales pipeline + Owner = SDR) → no-show por
-    // regra de negócio, anula realizada.
+    // REGRA ÚNICA E SIMPLES: task com título contendo "Reunião Realizada" + Done=true
+    // + EndDate (data de conclusão) ou DateTime dentro do mês vigente.
+    // Atribui pelo CreatorId = quem conduziu a reunião.
+    // Sem overrides, sem outros sinais — apenas o que está marcado explicitamente no Ploomes.
     const realizedDealIds = new Set();
     const now = new Date();
 
     const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    const cardReturnedToSdr = (deal) => {
-        if (!deal) return false;
-        if (!isSalesPipeline(deal)) return false;
-        return !!getCanonicalSdrName(getOwnerName(deal));
-    };
     const markRealizada = (canonical, t, deal) => {
         if (!canonical || realizedDealIds.has(t.DealId)) return;
-        if (cardReturnedToSdr(deal)) return;
         ensureSdr(canonical);
         sdrAgg[canonical].realizadasCount++;
         sdrAgg[canonical].realizadasTasks.push(t);
@@ -6673,18 +6662,15 @@ function renderSection7() {
     };
 
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
-    // Aceita qualquer task de reunião (Agendada, Realizada, Concluída, etc) — basta começar com "Reuni"
-    const isReuniaoTitle = (title) => {
-        const tn = normTitle(title);
-        return tn.startsWith('reuni');
-    };
 
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
-        if (!isReuniaoTitle(t.Title)) return;
-        // Tem que estar concluída (Done=true)
+        // Só task com título "Reunião Realizada" (sem normalização agressiva — match no normalizado)
+        const tn = normTitle(t.Title);
+        if (!tn.includes('reuniao realizada')) return;
+        // Tem que estar concluída
         if (t.Done !== true) return;
-        // Data de conclusão no período (EndDate se existir, senão DateTime)
+        // Data de conclusão no período
         const refDate = t.EndDate || t.DateTime;
         if (!inPeriod(refDate)) return;
         const creator = dashUsersById[t.CreatorId] || '';
