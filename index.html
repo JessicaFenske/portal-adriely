@@ -6810,29 +6810,6 @@ function renderSection7() {
         if (!inSdrPipe && !ownerIsSdr) return;
         addNoShow(canonical, t, deal);
     });
-
-    // (C) No-show retroativo: card devolvido AGORA mas agendamento original era de mes
-    // anterior. Itera todas as tasks "Reuniao Agendada" do cache (qualquer DateTime).
-    // Conta como no-show DESTE mes se: cardReturnedToSdr=true E deal.LastUpdateDate
-    // (= quando o card foi movimentado) está no período.
-    (dashMeetings || []).forEach(t => {
-        if (!t.DealId) return;
-        if (realizedDealIds.has(t.DealId) || noShowDealIds.has(t.DealId)) return;
-        const tn = normTitle(t.Title);
-        if (!(tn.includes('reuniao agendada') || tn.includes('reunião agendada'))) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        if (!cardReturnedToSdr(deal)) return;
-        // Deal foi devolvido recentemente = LastUpdateDate dentro do período
-        if (!deal.LastUpdateDate) return;
-        const lu = new Date(deal.LastUpdateDate);
-        if (sp.start && lu < sp.start) return;
-        if (sp.end && lu > sp.end) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        const canonical = getCanonicalSdrName(creator);
-        if (!canonical) return;
-        addNoShow(canonical, t, deal);
-    });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec7_sorted = sorted;
 
