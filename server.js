@@ -180,12 +180,175 @@ async function refreshAll() {
 refreshAll();
 setInterval(refreshAll, 5 * 60 * 1000);
 
+// ==================== Sankhya Public API (Bearer auth) ====================
+// Token configuravel via env var SANKHYA_API_TOKEN. Default abaixo eh um fallback
+// (gerado aleatoriamente — substitua pelo Render env var antes de compartilhar).
+const SANKHYA_API_TOKEN = process.env.SANKHYA_API_TOKEN
+    || 'sk_lincros_2026_xQ7n4mBz9LpVtR2yH8eK3jW6sFcGdA';
+const SANKHYA_PIPELINES = ['SDR Sankhya', 'Sankhya']; // pipelines considerados "Sankhya"
+
+function isSankhyaDeal(d) {
+    return SANKHYA_PIPELINES.includes(d.Pipeline?.Name || '');
+}
+
+function dealOriginName(d) {
+    return d.Origin?.Name || '(sem origem)';
+}
+
+function getDealOtherProp(deal, fieldKey) {
+    return (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
+}
+// Field keys do Ploomes (mesmos usados no front)
+const FIELD_KEY_MRR_NOVO = 'deal_FFC0BC11-4F38-44B0-B6F0-CE5E70B5E12D';
+const FIELD_KEY_SETUP = 'deal_72B86F1D-3F1F-419D-A574-19A3D6F4B6E1';
+const FIELD_KEY_PROP_DATE = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E';
+function getDealMRR(d) { return getDealOtherProp(d, FIELD_KEY_MRR_NOVO)?.DecimalValue || 0; }
+function getDealSetup(d) { return getDealOtherProp(d, FIELD_KEY_SETUP)?.DecimalValue || 0; }
+function getDealPropDate(d) { return getDealOtherProp(d, FIELD_KEY_PROP_DATE)?.DateTimeValue || null; }
+
+function checkSankhyaAuth(req) {
+    const auth = req.headers['authorization'] || '';
+    const m = auth.match(/^Bearer\s+(.+)$/);
+    if (!m) return false;
+    return m[1] === SANKHYA_API_TOKEN;
+}
+
+function unauthorized(res) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+        error: 'Unauthorized',
+        message: 'Inclua o header: Authorization: Bearer <token>'
+    }));
+}
+
+function buildSankhyaLead(d, hasMeeting) {
+    const status = d.StatusId === 2 ? 'won' : (d.StatusId === 3 ? 'lost' : 'open');
+    const mrr = getDealMRR(d), setup = getDealSetup(d);
+    const propDate = getDealPropDate(d);
+    const hasProposal = mrr > 0 || setup > 0 || !!propDate;
+    return {
+        dealId: d.Id,
+        title: d.Title || '',
+        channel: dealOriginName(d),
+        pipeline: d.Pipeline?.Name || '',
+        stage: d.Stage?.Name || '',
+        owner: d.Owner?.Name || '',
+        status,
+        hasMeeting: !!hasMeeting,
+        hasProposal,
+        mrr,
+        setup,
+        lossReason: d.LossReason?.Name || null,
+        createDate: d.CreateDate || null,
+        finishDate: d.FinishDate || null,
+        proposalDate: propDate,
+        ploomesLink: 'https://app10.ploomes.com/deal/' + d.Id
+    };
+}
+
+function sankhyaDataReady() {
+    return cache.won && cache.lost && cache.open && cache.meetings;
+}
+
+function buildSankhyaPayload() {
+    if (!sankhyaDataReady()) return null;
+    const allDeals = [...(cache.open||[]), ...(cache.won||[]), ...(cache.lost||[])]
+        .filter(isSankhyaDeal);
+    // Set de DealIds com task "Reuniao Agendada" no cache (qualquer data — = ja teve reuniao agendada algum dia)
+    const dealsWithMeeting = new Set();
+    (cache.meetings||[]).forEach(t => {
+        const tn = (t.Title||'').toLowerCase();
+        if (tn.startsWith('reuni') && t.DealId) dealsWithMeeting.add(t.DealId);
+    });
+    const leads = allDeals.map(d => buildSankhyaLead(d, dealsWithMeeting.has(d.Id)));
+    return { leads, dealsWithMeeting };
+}
+
+function aggregateByChannel(leads) {
+    const ch = {};
+    leads.forEach(l => {
+        const k = l.channel;
+        if (!ch[k]) ch[k] = {
+            name: k, totalLeads: 0, withMeeting: 0, withProposal: 0,
+            won: 0, lost: 0, openNoMeeting: 0, mrrWon: 0, setupWon: 0
+        };
+        ch[k].totalLeads++;
+        if (l.hasMeeting) ch[k].withMeeting++;
+        if (l.hasProposal) ch[k].withProposal++;
+        if (l.status === 'won') { ch[k].won++; ch[k].mrrWon += l.mrr; ch[k].setupWon += l.setup; }
+        if (l.status === 'lost') ch[k].lost++;
+        if (l.status === 'open' && !l.hasMeeting) ch[k].openNoMeeting++;
+    });
+    return Object.values(ch).sort((a, b) => b.totalLeads - a.totalLeads);
+}
+
+function handleSankhyaApi(req, res, pathname, query) {
+    if (!checkSankhyaAuth(req)) return unauthorized(res);
+    if (!sankhyaDataReady()) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            error: 'ServiceUnavailable',
+            message: 'Cache de deals ainda carregando. Tente em alguns segundos.'
+        }));
+    }
+    const payload = buildSankhyaPayload();
+    const asOf = new Date().toISOString();
+
+    if (pathname === '/api/sankhya/v1/channels') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            asOf,
+            totalLeads: payload.leads.length,
+            channels: aggregateByChannel(payload.leads)
+        }));
+    }
+
+    if (pathname === '/api/sankhya/v1/leads') {
+        let filtered = payload.leads;
+        if (query.channel) filtered = filtered.filter(l => l.channel === query.channel);
+        if (query.status) filtered = filtered.filter(l => l.status === query.status);
+        if (query.hasMeeting === 'true') filtered = filtered.filter(l => l.hasMeeting);
+        if (query.hasMeeting === 'false') filtered = filtered.filter(l => !l.hasMeeting);
+        if (query.hasProposal === 'true') filtered = filtered.filter(l => l.hasProposal);
+        if (query.hasProposal === 'false') filtered = filtered.filter(l => !l.hasProposal);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            asOf, count: filtered.length, leads: filtered
+        }));
+    }
+
+    if (pathname === '/api/sankhya/v1/leads/no-meeting') {
+        const filtered = payload.leads.filter(l => !l.hasMeeting && l.status === 'open');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            asOf, count: filtered.length, leads: filtered
+        }));
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+        error: 'NotFound',
+        availableEndpoints: [
+            'GET /api/sankhya/v1/channels',
+            'GET /api/sankhya/v1/leads?channel=X&status=open|won|lost&hasMeeting=true|false',
+            'GET /api/sankhya/v1/leads/no-meeting'
+        ]
+    }));
+}
+
 // ==================== HTTP server ====================
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+
+    // Sankhya API (autenticada)
+    if (req.url.startsWith('/api/sankhya/')) {
+        const u = new URL(req.url, 'http://localhost');
+        const query = Object.fromEntries(u.searchParams);
+        return handleSankhyaApi(req, res, u.pathname, query);
+    }
 
     if (req.url === '/keepalive') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
