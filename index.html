@@ -3872,7 +3872,7 @@
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
                             <div style="margin-bottom:4px;"><span style="color:#b794f4;">&#9755;</span> Clique nos botões, cards ou barras pra abrir a lista de negócios. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong>.</div>
                             <div style="color:#6d6d85;font-size:10.5px;">
-                                <strong>Reuniões Agendadas:</strong> Intermodal já em funil de venda (SDR passou pro vendedor) ·
+                                <strong>Reuniões Agendadas:</strong> Intermodal com task "Reunião Agendada" no período (qualquer funil) ·
                                 <strong>Negócios (Consid.+):</strong> nas etapas Consideração da Solução, Aprovado ou Formalização ·
                                 <strong>Propostas:</strong> com MRR ou Setup preenchido ·
                                 <strong>Vendas:</strong> ganhos ·
@@ -7710,9 +7710,21 @@ async function renderSection7Inter() {
     const allIntermodalDeals = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])]
         .filter(d => isIntermodal(d));
 
-    // 1. Reuniões Agendadas: deals Intermodal que estão em sales pipelines (foram passados pelo SDR aos vendedores)
-    //    Critério: pipeline é de venda (Funil de Vendas / Sankhya / Farmer) e CreateDate no período
-    const reunioesAgendadasDeals = allIntermodalDeals.filter(d => isSalesPipeline(d) && inRange(d.CreateDate));
+    // 1. Reuniões Agendadas: TODOS os deals Intermodal que têm task "Reunião Agendada"
+    //    com DateTime no período (qualquer pipeline — SDR ou Sales). Definição broader pra
+    //    capturar "tudo que teve origem Intermodal".
+    const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const dealsWithAgInPeriod = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = normT(t.Title);
+        if (!tn.includes('reuniao agendada')) return;
+        const dt = new Date(t.DateTime);
+        if (periodStart_ && dt < periodStart_) return;
+        if (periodEnd_ && dt > periodEnd_) return;
+        dealsWithAgInPeriod.add(t.DealId);
+    });
+    const reunioesAgendadasDeals = allIntermodalDeals.filter(d => dealsWithAgInPeriod.has(d.Id));
 
     // 2. Negócios em Consideração+: deals Intermodal nas etapas Consideração da Solução, Aprovado ou Formalização
     const stagePropRegex = /considera|aprov|formaliz/i;
@@ -7791,7 +7803,7 @@ async function renderSection7Inter() {
             </div>`;
         };
         topKpiEl.innerHTML =
-            bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `passadas ao funil de venda${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
+            bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `Intermodal com task no período${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
             bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
             bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
             bigKpi('Setup em Propostas', fmtBRL(propostasSetupSum), '#c084fc', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
