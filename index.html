@@ -3183,27 +3183,136 @@
             /* Charts em donut (Produtos Vendidos) — limita altura pra nao gigantes */
             .section-body canvas { max-height: 240px !important; }
 
-            /* ==================== FORECAST VIEW (mobile fixes) ==================== */
-            /* Hamburger nao sobrepoe titulo (padding-left compensa) */
+            /* ==================== FORECAST VIEW — REDESIGN MOBILE ====================
+               Princípio: números BEM grandes (esses cards são o "headline" do dash),
+               grupos com hierarquia clara (Otimista/Realista/Pessimista em cards distintos,
+               Total Geral em destaque), e gráfico em altura confortável (não miniatura). */
+
+            /* Header */
             #view-forecast .fc-header {
-                padding: 16px 14px 16px 64px !important;
+                padding: 14px 14px 14px 60px !important;
                 flex-wrap: wrap;
             }
-            #view-forecast .fc-header h1 { font-size: 18px !important; }
-            #view-forecast .fc-header .subtitle { font-size: 11.5px !important; padding-left: 50px; }
-            /* Period bar */
-            .fc-period-bar { padding: 10px 14px !important; gap: 6px; }
-            .fc-period-btn { font-size: 11px; padding: 5px 10px; }
-            /* Scenarios e totals pairs (1fr 1fr internos) → 1 col no mobile */
-            .fc-total-pair, .fc-scenario-pair { grid-template-columns: 1fr !important; gap: 8px; }
-            /* Cards mais compactos (reduz altura vazia) */
-            .fc-total-card, .fc-kpi-card { padding: 10px 12px !important; }
-            .fc-total-card .fc-total-value { font-size: clamp(16px, 5vw, 22px) !important; }
-            .fc-kpi-card .fc-kpi-value { font-size: clamp(15px, 4.5vw, 20px) !important; }
-            .fc-total-card .fc-total-label, .fc-kpi-card .fc-kpi-label { font-size: 9.5px !important; }
-            /* Containers do forecast com padding menor */
-            .fc-totals-grid, .fc-kpi-grid { padding: 14px !important; gap: 12px !important; }
-            .fc-summary-grid { padding: 0 14px 14px !important; gap: 12px !important; }
+            #view-forecast .fc-header h1 { font-size: 19px !important; line-height: 1.2; }
+            #view-forecast .fc-header .subtitle { font-size: 11.5px !important; margin-top: 2px !important; padding-left: 0 !important; }
+
+            /* Period bar — botões maiores, fáceis de tocar */
+            .fc-period-bar { padding: 12px 14px !important; gap: 8px; flex-wrap: wrap; }
+            .fc-period-bar label { font-size: 12px !important; width: 100%; margin: 0 0 6px 0; }
+            .fc-period-btn { font-size: 13px !important; padding: 8px 16px !important; }
+
+            /* Containers com padding mais compacto (mais espaço pros cards) */
+            .fc-section { padding: 16px 14px !important; }
+            .fc-kpi-grid { padding: 16px 14px !important; gap: 12px !important; }
+            .fc-totals-grid { padding: 0 14px 16px !important; gap: 14px !important; }
+            .fc-summary-grid { padding: 0 14px 16px !important; gap: 14px !important; }
+
+            /* GRUPO de cenário (Otimista, Realista, Pessimista, Total, Conservador) */
+            .fc-total-group {
+                padding: 18px 16px !important;
+                border-radius: 14px !important;
+                background: rgba(26, 26, 46, 0.65) !important;
+            }
+            .fc-total-title {
+                font-size: 14px !important;
+                letter-spacing: 1px !important;
+                margin-bottom: 14px !important;
+                padding-bottom: 10px !important;
+            }
+            /* Pair MRR + Setup: empilhado vertical, mais espaço entre */
+            .fc-total-pair { grid-template-columns: 1fr !important; gap: 10px !important; }
+            /* Cards INTERNOS de MRR / Setup: GRANDES e respiráveis */
+            .fc-total-card {
+                padding: 16px 14px !important;
+                border-radius: 10px !important;
+                text-align: left !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px;
+            }
+            .fc-total-card .fc-total-value {
+                font-size: 28px !important;
+                font-weight: 800 !important;
+                line-height: 1.1 !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .fc-total-card .fc-total-label {
+                font-size: 11px !important;
+                margin-top: 0 !important;
+                letter-spacing: 1px !important;
+                order: -1; /* label antes do valor */
+                opacity: 0.7;
+            }
+
+            /* Scenario pair (KPI cards na fc-kpi-grid) */
+            .fc-scenario-pair { grid-template-columns: 1fr !important; gap: 10px !important; }
+            .fc-kpi-card {
+                padding: 16px 14px !important;
+                text-align: left !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px;
+            }
+            .fc-kpi-card .fc-kpi-value {
+                font-size: 26px !important;
+                font-weight: 800 !important;
+                line-height: 1.1 !important;
+            }
+            .fc-kpi-card .fc-kpi-label {
+                font-size: 11px !important;
+                letter-spacing: 1px !important;
+                order: -1;
+                opacity: 0.7;
+            }
+
+            /* TOTAL GERAL — visual de destaque (gradient sutil).
+               TOTAL eh o 4o fc-total-group dentro do .fc-totals-grid
+               (Otimista, Realista, Pessimista, TOTAL, Conservador) */
+            .fc-totals-grid > .fc-total-group:nth-child(4) {
+                background: linear-gradient(135deg, rgba(108, 63, 181, 0.18), rgba(16, 185, 129, 0.12)) !important;
+                border: 1px solid rgba(108, 63, 181, 0.3) !important;
+            }
+            .fc-total-subtitle {
+                font-size: 11px !important;
+                margin-top: 8px !important;
+            }
+
+            /* Gráfico principal: ALTURA generosa pra ler valores */
+            .fc-chart-container {
+                padding: 14px 12px !important;
+                margin-bottom: 16px;
+                border-radius: 14px !important;
+            }
+            .fc-chart-container canvas { max-height: 320px !important; height: 320px !important; }
+
+            /* Section titles dentro das sections */
+            .fc-section-title {
+                font-size: 15px !important;
+                margin-bottom: 12px !important;
+            }
+            #view-forecast .fc-section > div[style*="justify-content:space-between"] {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+
+            /* Summary cards (Por Vendedor / Por Funil) */
+            .fc-summary-card { padding: 16px 14px !important; border-radius: 14px !important; }
+            .fc-summary-card h3 { font-size: 15px !important; margin-bottom: 14px !important; }
+            .fc-summary-card canvas { max-height: 240px !important; height: 240px !important; margin-bottom: 12px; }
+
+            /* Filtros — empilhados, full width, fáceis de tocar */
+            .fc-filters-bar { padding: 12px 10px !important; gap: 8px !important; flex-direction: column; }
+            .fc-filters-bar > * { width: 100% !important; min-width: 0 !important; flex: none !important; }
+            .fc-filter-input, .fc-filter-select, .fc-filter-date {
+                min-width: 0 !important;
+                width: 100% !important;
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }
+            .fc-clear-filters { width: 100% !important; padding: 10px !important; font-size: 14px !important; }
 
             /* ==================== OPORTUNIDADES HEADER (igual ao Forecast — hamburger) ==================== */
             #view-oportunidades .op-header,
