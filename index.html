@@ -3314,6 +3314,81 @@
             }
             .fc-clear-filters { width: 100% !important; padding: 10px !important; font-size: 14px !important; }
 
+            /* ===== TABELAS DO FORECAST EM CARD VIEW NO MOBILE ===== */
+            /* Cada linha vira um card com label visivel acima do valor.
+               Aplicado em #fcTableBody (detalhes), #fcVendedorBody, #fcFunilBody. */
+            #view-forecast table {
+                display: block !important;
+                width: 100% !important;
+                white-space: normal !important;
+                overflow-x: visible !important;
+            }
+            #view-forecast thead { display: none !important; }
+            #view-forecast tbody { display: block !important; }
+            #view-forecast tbody tr {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px 14px !important;
+                background: rgba(255, 255, 255, 0.025) !important;
+                border: 1px solid rgba(108, 63, 181, 0.15) !important;
+                border-left: 3px solid #6c3fb5 !important;
+                border-radius: 10px !important;
+                padding: 14px 12px !important;
+                margin-bottom: 10px !important;
+            }
+            #view-forecast tbody tr:hover { background: rgba(255, 255, 255, 0.04) !important; }
+            #view-forecast tbody td {
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 0 !important;
+                border: none !important;
+                font-size: 14px !important;
+                min-width: 0;
+                overflow: hidden;
+            }
+            #view-forecast tbody td::before {
+                content: attr(data-label);
+                font-size: 10px;
+                font-weight: 700;
+                color: #8888a0;
+                text-transform: uppercase;
+                letter-spacing: 0.6px;
+                margin-bottom: 3px;
+                opacity: 0.8;
+            }
+            /* Titulo ocupa as duas colunas (mais espaco pra ler o nome) */
+            #view-forecast tbody td[data-label="Título"] {
+                grid-column: 1 / -1;
+                font-weight: 600;
+            }
+            #view-forecast tbody td[data-label="Título"]::before { color: #6c3fb5; }
+            /* Acoes vazias (sem botao reset) ocultas */
+            #view-forecast tbody td[data-label="Ações"]:empty,
+            #view-forecast tbody td[data-label="Ações"]:not(:has(button)) { display: none !important; }
+            /* Linha de detalhes do forecast: ranking # vai junto com Vendedor/Funil — esconder */
+            #fcVendedorBody tr td[data-label="#"],
+            #fcFunilBody tr td[data-label="#"] {
+                grid-column: 1 / -1;
+                flex-direction: row !important;
+                align-items: center;
+                gap: 6px;
+            }
+            #fcVendedorBody tr td[data-label="#"]::before,
+            #fcFunilBody tr td[data-label="#"]::before {
+                display: none;
+            }
+            /* "Vendedor"/"Funil" tambem ocupa 2 colunas pra ler nome */
+            #fcVendedorBody tr td[data-label="Vendedor"],
+            #fcFunilBody tr td[data-label="Funil"] {
+                grid-column: 1 / -1;
+                font-size: 15px !important;
+            }
+            /* Valores R$ ficam mais destacados */
+            #view-forecast tbody td.money {
+                font-weight: 700 !important;
+                font-size: 15px !important;
+            }
+
             /* ==================== OPORTUNIDADES HEADER (igual ao Forecast — hamburger) ==================== */
             #view-oportunidades .op-header,
             #view-marketing .op-header,
@@ -9762,7 +9837,7 @@ function renderForecast() {
         }
     });
 
-    // Main Table
+    // Main Table — data-label permite CSS converter linhas em cards no mobile
     document.getElementById('fcTableBody').innerHTML = filtered.map(d => {
         const hasMrrOv = getFcOverride(d.id, 'mrr') !== null;
         const hasSetupOv = getFcOverride(d.id, 'setup') !== null;
@@ -9770,19 +9845,19 @@ function renderForecast() {
         const mrrVal = getFcMrr(d);
         const setupVal = getFcSetup(d);
         return `<tr>
-            <td><a href="https://app10.ploomes.com/deal/${d.id}" target="_blank" class="deal-link">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
-            <td style="white-space:nowrap;" title="${d.owner}">${shortName(d.owner)}</td>
-            <td><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
-            <td>${d.stage ? `<span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span>` : '-'}</td>
-            <td>${getScenarioBadge(d.forecast)}</td>
-            <td class="money editable-cell ${hasMrrOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'mrr', ${d.mrr})">
+            <td data-label="Título"><a href="https://app10.ploomes.com/deal/${d.id}" target="_blank" class="deal-link">${d.title.length > 40 ? d.title.substring(0,40)+'...' : d.title}</a></td>
+            <td data-label="Vendedor" style="white-space:nowrap;" title="${d.owner}">${shortName(d.owner)}</td>
+            <td data-label="Funil"><span class="badge ${getPipelineClass(d.pipeline)}">${d.pipeline}</span></td>
+            <td data-label="Etapa">${d.stage ? `<span class="stage-badge ${getStageClass(d.stage)}">${d.stage}</span>` : '-'}</td>
+            <td data-label="Cenário">${getScenarioBadge(d.forecast)}</td>
+            <td data-label="MRR" class="money editable-cell ${hasMrrOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'mrr', ${d.mrr})">
                 ${formatMoney(mrrVal)}${hasMrrOv ? ' &#9998;' : ''}
             </td>
-            <td class="money editable-cell ${hasSetupOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'setup', ${d.setup})">
+            <td data-label="Setup" class="money editable-cell ${hasSetupOv ? 'overridden' : ''}" onclick="startFcEdit(this, ${d.id}, 'setup', ${d.setup})">
                 ${formatMoney(setupVal)}${hasSetupOv ? ' &#9998;' : ''}
             </td>
-            <td>${d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-'}</td>
-            <td>${hasAnyOv ? `<button class="fc-reset-btn" onclick="resetFcOverride(${d.id})">Resetar</button>` : ''}</td>
+            <td data-label="Fechamento">${d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-'}</td>
+            <td data-label="Ações">${hasAnyOv ? `<button class="fc-reset-btn" onclick="resetFcOverride(${d.id})">Resetar</button>` : ''}</td>
         </tr>`;
     }).join('');
 
@@ -9817,12 +9892,12 @@ function renderForecast() {
         }
     });
     document.getElementById('fcVendedorBody').innerHTML = vendSorted.map((v, i) => `<tr class="${rankRowClass(i + 1)}">
-        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${v.name}">${shortName(v.name)}</td>
-        <td class="money" style="color:#4ade80;">${formatMoney(v.mrr)}</td>
-        <td class="money" style="color:#818cf8;">${formatMoney(v.setup)}</td>
-        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(v.mrr + v.setup)}</td>
-        <td style="text-align:center;">${v.count}</td>
+        <td data-label="#" class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td data-label="Vendedor" style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${v.name}">${shortName(v.name)}</td>
+        <td data-label="MRR" class="money" style="color:#4ade80;">${formatMoney(v.mrr)}</td>
+        <td data-label="Setup" class="money" style="color:#818cf8;">${formatMoney(v.setup)}</td>
+        <td data-label="Total" class="money" style="font-weight:700;color:#b794f4;">${formatMoney(v.mrr + v.setup)}</td>
+        <td data-label="Deals" style="text-align:center;">${v.count}</td>
     </tr>`).join('');
 
     // Summary by Funil
@@ -9856,12 +9931,12 @@ function renderForecast() {
         }
     });
     document.getElementById('fcFunilBody').innerHTML = funilSorted.map((f, i) => `<tr class="${rankRowClass(i + 1)}">
-        <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;">${f.name}</td>
-        <td class="money" style="color:#4ade80;">${formatMoney(f.mrr)}</td>
-        <td class="money" style="color:#818cf8;">${formatMoney(f.setup)}</td>
-        <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(f.mrr + f.setup)}</td>
-        <td style="text-align:center;">${f.count}</td>
+        <td data-label="#" class="rank-num">${medalFor(i + 1)}${i + 1}</td>
+        <td data-label="Funil" style="font-weight:600;color:#e0e0e0;">${f.name}</td>
+        <td data-label="MRR" class="money" style="color:#4ade80;">${formatMoney(f.mrr)}</td>
+        <td data-label="Setup" class="money" style="color:#818cf8;">${formatMoney(f.setup)}</td>
+        <td data-label="Total" class="money" style="font-weight:700;color:#b794f4;">${formatMoney(f.mrr + f.setup)}</td>
+        <td data-label="Deals" style="text-align:center;">${f.count}</td>
     </tr>`).join('');
 }
 
