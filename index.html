@@ -6225,7 +6225,7 @@ function renderSection1() {
     // Metric selector: count | mrr | setup | mrr_setup
     const metric = (document.getElementById('wonMetricFilter') || {}).value || 'mrr_setup';
     const isMoney = metric !== 'count';
-    const isStacked = metric === 'mrr_setup';
+    const isDual = metric === 'mrr_setup'; // 2 barras lado a lado (MRR + Setup) por pipeline
     const sumMRR = (arr) => arr.reduce((s, d) => s + getMRR(d), 0);
     const sumSetup = (arr) => arr.reduce((s, d) => s + getSetup(d), 0);
     const singleMetricValue = (dealsArr) => {
@@ -6238,13 +6238,12 @@ function renderSection1() {
     // Lighten a rgba(R,G,B,0.7) by reducing alpha to 0.3 for Setup stack
     const lighten = (rgba) => rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, 'rgba($1,$2,$3,0.3)');
     let datasets;
-    if (isStacked) {
-        // 2 datasets por pipeline: MRR (cor cheia) + Setup (cor clara), empilhados no mesmo stack por pipeline
+    if (isDual) {
+        // 2 datasets por pipeline (MRR + Setup), barras LADO A LADO (sem stack)
         datasets = [];
         pipelines.forEach(pipeline => {
             datasets.push({
                 label: `${pipeline} — MRR`,
-                stack: pipeline,
                 data: months.map(mk => sumMRR(byMonthByPipeline[pipeline][mk] || [])),
                 backgroundColor: PIPELINE_COLORS[pipeline].bg,
                 borderColor: PIPELINE_COLORS[pipeline].border,
@@ -6254,7 +6253,6 @@ function renderSection1() {
             });
             datasets.push({
                 label: `${pipeline} — Setup`,
-                stack: pipeline,
                 data: months.map(mk => sumSetup(byMonthByPipeline[pipeline][mk] || [])),
                 backgroundColor: lighten(PIPELINE_COLORS[pipeline].bg),
                 borderColor: PIPELINE_COLORS[pipeline].border,
@@ -6305,15 +6303,14 @@ function renderSection1() {
                     const pipeline = chart.data.datasets[dsIdx]._pipeline;
                     const clickDeals = (byMonthByPipeline[pipeline][mk] || []);
                     const mrrV = sumMRR(clickDeals); const setV = sumSetup(clickDeals);
-                    const breakdown = isStacked ? `MRR ${moneyTick(mrrV)} · Setup ${moneyTick(setV)}` : `${metricLabel}: ${isMoney ? moneyTick(singleMetricValue(clickDeals)) : clickDeals.length}`;
+                    const breakdown = isDual ? `MRR ${moneyTick(mrrV)} · Setup ${moneyTick(setV)}` : `${metricLabel}: ${isMoney ? moneyTick(singleMetricValue(clickDeals)) : clickDeals.length}`;
                     showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios · ${breakdown})`, clickDeals, null, 'won');
                 }
             },
             scales: {
-                x: { ...darkScaleOptions, stacked: isStacked },
+                x: { ...darkScaleOptions },
                 y: {
                     beginAtZero: true,
-                    stacked: isStacked,
                     ticks: {
                         ...darkScaleOptions.ticks,
                         ...(isMoney ? { callback: moneyTick } : { stepSize: 1 })
