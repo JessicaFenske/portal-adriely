@@ -3180,8 +3180,8 @@
             .dash-card div[style*="grid-template-columns: 1fr 1fr"] {
                 grid-template-columns: 1fr !important;
             }
-            /* Charts em donut (Produtos Vendidos) — limita altura pra nao gigantes */
-            .section-body canvas { max-height: 240px !important; }
+            /* (max-height global em canvas removido — estava alterando estilo dos
+               graficos de Ranking. Charts voltam a usar tamanho do Chart.js padrao.) */
 
             /* ==================== FORECAST VIEW — REDESIGN MOBILE ====================
                Princípio: números BEM grandes (esses cards são o "headline" do dash),
