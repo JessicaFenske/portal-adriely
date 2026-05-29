@@ -185,26 +185,46 @@ setInterval(refreshAll, 5 * 60 * 1000);
 // (gerado aleatoriamente — substitua pelo Render env var antes de compartilhar).
 const SANKHYA_API_TOKEN = process.env.SANKHYA_API_TOKEN
     || 'sk_lincros_2026_xQ7n4mBz9LpVtR2yH8eK3jW6sFcGdA';
-const SANKHYA_PIPELINES = ['SDR Sankhya', 'Sankhya']; // pipelines considerados "Sankhya"
 
+// Field keys do Ploomes (descobertos via /Fields)
+const FIELD_KEY_CANAL    = 'deal_D796B31C-4382-431C-AB1B-62398F7841BF'; // Canal (Sankhya)
+const FIELD_KEY_SDR      = 'deal_55DF811B-D677-40FE-895C-4BDBE5C277DA'; // SDR (User ref)
+const FIELD_KEY_MRR      = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03'; // MRR
+const FIELD_KEY_SETUP    = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3'; // Setup
+const FIELD_KEY_PROP_DT  = 'deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A'; // Data Marcador Proposta
+const FIELD_KEY_MRR_NOVO = 'deal_FFC0BC11-4F38-44B0-B6F0-CE5E70B5E12D'; // MRR Novo (fallback)
+const FIELD_KEY_SETUP_ALT= 'deal_72B86F1D-3F1F-419D-A574-19A3D6F4B6E1'; // Setup (fallback)
+const FIELD_KEY_PROP_DT_ALT = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E'; // Data Proposta Enviada (fallback)
+
+function getDealOtherProp(deal, fieldKey) {
+    return (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
+}
+function getDealCanal(d) { return getDealOtherProp(d, FIELD_KEY_CANAL)?.StringValue || null; }
+function getDealMRR(d) {
+    return getDealOtherProp(d, FIELD_KEY_MRR)?.DecimalValue
+        || getDealOtherProp(d, FIELD_KEY_MRR_NOVO)?.DecimalValue
+        || 0;
+}
+function getDealSetup(d) {
+    return getDealOtherProp(d, FIELD_KEY_SETUP)?.DecimalValue
+        || getDealOtherProp(d, FIELD_KEY_SETUP_ALT)?.DecimalValue
+        || 0;
+}
+function getDealPropDate(d) {
+    return getDealOtherProp(d, FIELD_KEY_PROP_DT)?.DateTimeValue
+        || getDealOtherProp(d, FIELD_KEY_PROP_DT_ALT)?.DateTimeValue
+        || null;
+}
+
+// "Sankhya" = deal com o campo customizado "Canal" preenchido
 function isSankhyaDeal(d) {
-    return SANKHYA_PIPELINES.includes(d.Pipeline?.Name || '');
+    const canal = getDealCanal(d);
+    return !!(canal && canal.trim());
 }
 
 function dealOriginName(d) {
     return d.Origin?.Name || '(sem origem)';
 }
-
-function getDealOtherProp(deal, fieldKey) {
-    return (deal.OtherProperties || []).find(p => p.FieldKey === fieldKey);
-}
-// Field keys do Ploomes (mesmos usados no front)
-const FIELD_KEY_MRR_NOVO = 'deal_FFC0BC11-4F38-44B0-B6F0-CE5E70B5E12D';
-const FIELD_KEY_SETUP = 'deal_72B86F1D-3F1F-419D-A574-19A3D6F4B6E1';
-const FIELD_KEY_PROP_DATE = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E';
-function getDealMRR(d) { return getDealOtherProp(d, FIELD_KEY_MRR_NOVO)?.DecimalValue || 0; }
-function getDealSetup(d) { return getDealOtherProp(d, FIELD_KEY_SETUP)?.DecimalValue || 0; }
-function getDealPropDate(d) { return getDealOtherProp(d, FIELD_KEY_PROP_DATE)?.DateTimeValue || null; }
 
 function checkSankhyaAuth(req) {
     const auth = req.headers['authorization'] || '';
@@ -226,10 +246,12 @@ function buildSankhyaLead(d, hasMeeting) {
     const mrr = getDealMRR(d), setup = getDealSetup(d);
     const propDate = getDealPropDate(d);
     const hasProposal = mrr > 0 || setup > 0 || !!propDate;
+    const canal = getDealCanal(d);
     return {
         dealId: d.Id,
         title: d.Title || '',
-        channel: dealOriginName(d),
+        canal,                          // valor do campo customizado "Canal"
+        origin: dealOriginName(d),      // Origin do Ploomes (separado)
         pipeline: d.Pipeline?.Name || '',
         stage: d.Stage?.Name || '',
         owner: d.Owner?.Name || '',
@@ -267,10 +289,11 @@ function buildSankhyaPayload() {
 function aggregateByChannel(leads) {
     const ch = {};
     leads.forEach(l => {
-        const k = l.channel;
+        const k = l.canal || '(sem canal)';
         if (!ch[k]) ch[k] = {
-            name: k, totalLeads: 0, withMeeting: 0, withProposal: 0,
-            won: 0, lost: 0, openNoMeeting: 0, mrrWon: 0, setupWon: 0
+            canal: k, totalLeads: 0, withMeeting: 0, withProposal: 0,
+            won: 0, lost: 0, openNoMeeting: 0, mrrWon: 0, setupWon: 0,
+            mrrPipeline: 0, setupPipeline: 0 // potencial em propostas abertas
         };
         ch[k].totalLeads++;
         if (l.hasMeeting) ch[k].withMeeting++;
@@ -278,6 +301,7 @@ function aggregateByChannel(leads) {
         if (l.status === 'won') { ch[k].won++; ch[k].mrrWon += l.mrr; ch[k].setupWon += l.setup; }
         if (l.status === 'lost') ch[k].lost++;
         if (l.status === 'open' && !l.hasMeeting) ch[k].openNoMeeting++;
+        if (l.status === 'open' && l.hasProposal) { ch[k].mrrPipeline += l.mrr; ch[k].setupPipeline += l.setup; }
     });
     return Object.values(ch).sort((a, b) => b.totalLeads - a.totalLeads);
 }
@@ -305,7 +329,9 @@ function handleSankhyaApi(req, res, pathname, query) {
 
     if (pathname === '/api/sankhya/v1/leads') {
         let filtered = payload.leads;
-        if (query.channel) filtered = filtered.filter(l => l.channel === query.channel);
+        // Filtros: canal (preferido), channel (alias retrocompat), status, hasMeeting, hasProposal
+        const canalQ = query.canal || query.channel;
+        if (canalQ) filtered = filtered.filter(l => l.canal === canalQ);
         if (query.status) filtered = filtered.filter(l => l.status === query.status);
         if (query.hasMeeting === 'true') filtered = filtered.filter(l => l.hasMeeting);
         if (query.hasMeeting === 'false') filtered = filtered.filter(l => !l.hasMeeting);
@@ -330,9 +356,10 @@ function handleSankhyaApi(req, res, pathname, query) {
         error: 'NotFound',
         availableEndpoints: [
             'GET /api/sankhya/v1/channels',
-            'GET /api/sankhya/v1/leads?channel=X&status=open|won|lost&hasMeeting=true|false',
+            'GET /api/sankhya/v1/leads?canal=X&status=open|won|lost&hasMeeting=true|false&hasProposal=true|false',
             'GET /api/sankhya/v1/leads/no-meeting'
-        ]
+        ],
+        notes: '"Sankhya" = deal com campo customizado "Canal" preenchido no Ploomes. Canal e o valor desse campo (ex: "Espirito Santo", "Sul", etc).'
     }));
 }
 
