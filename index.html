@@ -11034,8 +11034,10 @@ function renderAfSankhya() {
         .filter(d => !!afGetCanal(d));
 
     // ============ SEÇÃO 1: Reuniões Agendadas vs Realizadas por Canal ============
-    // Pra cada deal Sankhya, ver tasks "Reuniao Agendada" e "Reuniao Realizada" no período
-    const meetings = window.dashMeetings || [];
+    // Pra cada deal Sankhya, ver tasks "Reuniao Agendada" e "Reuniao Realizada" no período.
+    // dashMeetings é declarada com `let` no scope do <script>, então não está em window —
+    // referência direta funciona quando este código também está no mesmo script.
+    const meetings = (typeof dashMeetings !== 'undefined' && dashMeetings) ? dashMeetings : [];
     const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const dealsById = new Map();
     allDeals.forEach(d => dealsById.set(d.Id, d));
