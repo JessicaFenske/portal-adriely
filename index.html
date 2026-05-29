@@ -3225,9 +3225,10 @@
             .fc-total-card {
                 padding: 16px 14px !important;
                 border-radius: 10px !important;
-                text-align: left !important;
+                text-align: center !important;
                 display: flex !important;
                 flex-direction: column !important;
+                align-items: center !important;
                 gap: 4px;
             }
             .fc-total-card .fc-total-value {
@@ -3237,6 +3238,7 @@
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                text-align: center !important;
             }
             .fc-total-card .fc-total-label {
                 font-size: 11px !important;
@@ -3244,27 +3246,31 @@
                 letter-spacing: 1px !important;
                 order: -1; /* label antes do valor */
                 opacity: 0.7;
+                text-align: center !important;
             }
 
             /* Scenario pair (KPI cards na fc-kpi-grid) */
             .fc-scenario-pair { grid-template-columns: 1fr !important; gap: 10px !important; }
             .fc-kpi-card {
                 padding: 16px 14px !important;
-                text-align: left !important;
+                text-align: center !important;
                 display: flex !important;
                 flex-direction: column !important;
+                align-items: center !important;
                 gap: 4px;
             }
             .fc-kpi-card .fc-kpi-value {
                 font-size: 26px !important;
                 font-weight: 800 !important;
                 line-height: 1.1 !important;
+                text-align: center !important;
             }
             .fc-kpi-card .fc-kpi-label {
                 font-size: 11px !important;
                 letter-spacing: 1px !important;
                 order: -1;
                 opacity: 0.7;
+                text-align: center !important;
             }
 
             /* TOTAL GERAL — visual de destaque (gradient sutil).
