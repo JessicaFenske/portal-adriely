@@ -4620,6 +4620,55 @@
                     </div>
                 </div>
 
+                <!-- SEÇÕES EXTRAS SANKHYA (visíveis apenas quando pipeline = Sankhya) -->
+                <div id="afSankhyaSection" style="display:none;">
+
+                    <!-- Sankhya 1: Reuniões Agendadas vs Realizadas por Canal -->
+                    <div class="af-slide">
+                        <h2 class="af-slide-title">📅 Reuniões por Canal Sankhya</h2>
+                        <div class="af-slide-sub">Agendadas vs Realizadas por canal — filtros aplicam período e executivo escolhidos acima</div>
+                        <div style="display:flex;gap:10px;margin:10px 0 14px;align-items:center;flex-wrap:wrap;">
+                            <label style="color:#94a3b8;font-size:12px;">Período:</label>
+                            <select id="afSankhyaPeriod" onchange="renderAfSankhya()" class="mql-filter">
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Últimos 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                                <option value="global">Global (sem filtro de data)</option>
+                            </select>
+                        </div>
+                        <div id="afSankhyaMeetingsKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
+                        <div class="chart-container" style="cursor:pointer;min-height:340px;"><canvas id="afSankhyaMeetingsChart"></canvas></div>
+                    </div>
+
+                    <!-- Sankhya 2: Propostas (MRR + Setup) por Canal -->
+                    <div class="af-slide">
+                        <h2 class="af-slide-title">💰 Propostas por Canal Sankhya</h2>
+                        <div class="af-slide-sub">MRR + Setup das propostas enviadas por canal, no período</div>
+                        <div id="afSankhyaPropKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;"></div>
+                        <div class="chart-container" style="cursor:pointer;min-height:380px;"><canvas id="afSankhyaPropChart"></canvas></div>
+                    </div>
+
+                    <!-- Sankhya 3: Capilaridade + Conversão -->
+                    <div class="af-slide">
+                        <h2 class="af-slide-title">🎯 Capilaridade + Conversão — onde atacar</h2>
+                        <div class="af-slide-sub">Diagnóstico estratégico: ranking de canais por capilaridade (volume de leads) e eficiência (conversão Reunião → Ganho)</div>
+                        <div id="afSankhyaCapilarityInsight" class="af-banner af-banner-warn" style="display:none;margin-bottom:14px;">
+                            <div class="af-banner-icon">🧠</div>
+                            <div class="af-banner-title" id="afSankhyaCapilarityTitle"></div>
+                            <div class="af-banner-body" id="afSankhyaCapilarityBody"></div>
+                        </div>
+                        <div class="chart-container" style="cursor:pointer;min-height:400px;"><canvas id="afSankhyaQuadrantChart"></canvas></div>
+                        <div style="font-size:11.5px;color:#8888a0;margin-top:8px;line-height:1.5;">
+                            Cada bolha é um canal. <strong style="color:#60a5fa;">Eixo X</strong> = volume total de leads (capilaridade). <strong style="color:#22c55e;">Eixo Y</strong> = taxa de conversão Reunião → Ganho (%). <strong>Tamanho</strong> = MRR ganho. Os 4 quadrantes ajudam a decidir: <strong style="color:#22c55e;">Top-direita</strong> = mantenedores (alto volume + alta conversão); <strong style="color:#f59e0b;">Top-esquerda</strong> = ouro escondido (alta conversão, pouco volume — escalar); <strong style="color:#60a5fa;">Bottom-direita</strong> = inflar funil mas converte pouco (treinar); <strong style="color:#ef4444;">Bottom-esquerda</strong> = revisar parceria.
+                        </div>
+                        <div id="afSankhyaActionTable" style="margin-top:18px;"></div>
+                    </div>
+
+                </div>
+
                 <div class="last-update" id="afLastUpdate" style="text-align:right;color:#6d6d85;font-size:11px;margin-top:14px;"></div>
             </div>
         </div>
@@ -10930,6 +10979,375 @@ function renderAnaliseFunil() {
     }
 
     document.getElementById('afLastUpdate').textContent = 'Última atualização: ' + new Date().toLocaleString('pt-BR') + ' · ' + (ownerFilter || 'Todos executivos') + ' · ' + pipeline;
+
+    // Show/hide seção Sankhya extras (canais)
+    const sankhyaSec = document.getElementById('afSankhyaSection');
+    if (sankhyaSec) {
+        if (pipeline === 'Sankhya') {
+            sankhyaSec.style.display = 'block';
+            renderAfSankhya();
+        } else {
+            sankhyaSec.style.display = 'none';
+        }
+    }
+}
+
+// === Sankhya channels analytics (3 secoes) ===
+// Campo Canal custom: deal_D796B31C-4382-431C-AB1B-62398F7841BF
+const AF_CANAL_FIELD = 'deal_D796B31C-4382-431C-AB1B-62398F7841BF';
+function afGetCanal(d) {
+    const p = (d.OtherProperties || []).find(x => x.FieldKey === AF_CANAL_FIELD);
+    return p?.StringValue || null;
+}
+function afGetSankhyaPeriodRange() {
+    const sel = document.getElementById('afSankhyaPeriod');
+    const v = sel ? sel.value : 'thisMonth';
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    if (v === 'thisMonth') return { start: new Date(y, m, 1), end: new Date(y, m + 1, 0, 23, 59, 59) };
+    if (v === 'lastMonth') return { start: new Date(y, m - 1, 1), end: new Date(y, m, 0, 23, 59, 59) };
+    if (v === 'thisQuarter') { const q = Math.floor(m / 3); return { start: new Date(y, q * 3, 1), end: new Date(y, q * 3 + 3, 0, 23, 59, 59) }; }
+    if (v === 'lastQuarter') { const q = Math.floor(m / 3) - 1; const yy = q < 0 ? y - 1 : y; const qq = q < 0 ? 3 : q; return { start: new Date(yy, qq * 3, 1), end: new Date(yy, qq * 3 + 3, 0, 23, 59, 59) }; }
+    if (v === 'last6') return { start: new Date(y, m - 5, 1), end: new Date(y, m + 1, 0, 23, 59, 59) };
+    if (v === 'thisYear') return { start: new Date(y, 0, 1), end: new Date(y, 11, 31, 23, 59, 59) };
+    return { start: null, end: null }; // global
+}
+function inAfSankhyaRange(iso, range) {
+    if (!iso) return false;
+    if (!range.start || !range.end) return true; // global
+    const d = new Date(iso);
+    return d >= range.start && d <= range.end;
+}
+
+let _afSankhyaCharts = { meetings: null, prop: null, quadrant: null };
+function _afDestroyChart(key) {
+    if (_afSankhyaCharts[key]) { _afSankhyaCharts[key].destroy(); _afSankhyaCharts[key] = null; }
+}
+
+function renderAfSankhya() {
+    const ownerFilter = document.getElementById('afOwnerFilter').value;
+    const range = afGetSankhyaPeriodRange();
+
+    // === Deals: TODOS Sankhya (campo Canal preenchido) ===
+    const allDeals = [...afGetOpenDealsSource(), ...afGetWonDealsSource(), ...afGetLostDealsSource()]
+        .filter(d => !ownerFilter || d.Owner?.Name === ownerFilter)
+        .filter(d => !!afGetCanal(d));
+
+    // ============ SEÇÃO 1: Reuniões Agendadas vs Realizadas por Canal ============
+    // Pra cada deal Sankhya, ver tasks "Reuniao Agendada" e "Reuniao Realizada" no período
+    const meetings = window.dashMeetings || [];
+    const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const dealsById = new Map();
+    allDeals.forEach(d => dealsById.set(d.Id, d));
+
+    const channelMeetings = {}; // canal → { agendadas, realizadas, agDealsSet, realDealsSet }
+    const ensureChM = (c) => {
+        if (!channelMeetings[c]) channelMeetings[c] = {
+            canal: c, agendadas: 0, realizadas: 0,
+            agDealsSet: new Set(), realDealsSet: new Set()
+        };
+        return channelMeetings[c];
+    };
+
+    meetings.forEach(t => {
+        if (!t.DealId) return;
+        const deal = dealsById.get(t.DealId);
+        if (!deal) return;
+        const canal = afGetCanal(deal);
+        if (!canal) return;
+        const tn = normT(t.Title);
+        const isAg = tn.includes('reuniao agendada');
+        const isReal = tn.includes('reuniao realizada');
+        if (!isAg && !isReal) return;
+        // Agendada: DateTime no período
+        if (isAg && inAfSankhyaRange(t.DateTime, range)) {
+            const ch = ensureChM(canal);
+            if (!ch.agDealsSet.has(t.DealId)) { ch.agendadas++; ch.agDealsSet.add(t.DealId); }
+        }
+        // Realizada: Finished=true + FinishDate (ou DateTime) no período
+        if (isReal && t.Finished === true) {
+            const refDate = t.FinishDate || t.DateTime;
+            if (inAfSankhyaRange(refDate, range)) {
+                const ch = ensureChM(canal);
+                if (!ch.realDealsSet.has(t.DealId)) { ch.realizadas++; ch.realDealsSet.add(t.DealId); }
+            }
+        }
+    });
+
+    const meetRows = Object.values(channelMeetings).sort((a,b) => (b.agendadas + b.realizadas) - (a.agendadas + a.realizadas));
+    const totalAg = meetRows.reduce((s,r) => s + r.agendadas, 0);
+    const totalReal = meetRows.reduce((s,r) => s + r.realizadas, 0);
+    const taxaReal = totalAg > 0 ? (totalReal / totalAg * 100) : 0;
+
+    // KPIs Sankhya Meetings
+    const meetKpiHtml = (label, val, sub, color) => `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
+            <div style="font-size:22px;color:${color};font-weight:700;margin-top:4px;line-height:1;">${val}</div>
+            <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;">${sub}</div>
+        </div>`;
+    document.getElementById('afSankhyaMeetingsKpis').innerHTML =
+        meetKpiHtml('Reuniões Agendadas', totalAg, 'todos os canais', '#b794f4') +
+        meetKpiHtml('Reuniões Realizadas', totalReal, 'task Finished=true', '#22c55e') +
+        meetKpiHtml('Taxa Realização', taxaReal.toFixed(1) + '%', `${totalReal} de ${totalAg} agendadas`, taxaReal >= 60 ? '#22c55e' : (taxaReal >= 30 ? '#f59e0b' : '#ef4444')) +
+        meetKpiHtml('Canais Ativos', meetRows.length, 'com atividade no período', '#60a5fa');
+
+    // Chart: barras agrupadas por canal (agendadas + realizadas)
+    _afDestroyChart('meetings');
+    const ctxM = document.getElementById('afSankhyaMeetingsChart');
+    if (ctxM && meetRows.length > 0) {
+        _afSankhyaCharts.meetings = new Chart(ctxM, {
+            type: 'bar',
+            data: {
+                labels: meetRows.map(r => r.canal),
+                datasets: [
+                    { label: 'Agendadas', data: meetRows.map(r => r.agendadas), backgroundColor: 'rgba(183, 148, 244, 0.6)', borderColor: '#b794f4', borderWidth: 1.5 },
+                    { label: 'Realizadas', data: meetRows.map(r => r.realizadas), backgroundColor: 'rgba(34, 197, 94, 0.6)', borderColor: '#22c55e', borderWidth: 1.5 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: { legend: { display: true, labels: { color: '#e0e0e0' } } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#e0e0e0', font: { weight: 'bold', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ============ SEÇÃO 2: Propostas (MRR + Setup) por Canal ============
+    // Propostas = deals com MRR > 0 ou Setup > 0, com CreateDate OU data proposta no período
+    const channelProp = {};
+    const ensureChP = (c) => {
+        if (!channelProp[c]) channelProp[c] = { canal: c, count: 0, mrr: 0, setup: 0, deals: [] };
+        return channelProp[c];
+    };
+    allDeals.forEach(d => {
+        const canal = afGetCanal(d);
+        if (!canal) return;
+        const mrr = afGetMRR(d), setup = afGetSetup(d);
+        if (mrr === 0 && setup === 0) return;
+        // Inclui se proposta foi no período (data proposta) OU deal criado no período (broader)
+        const propDate = (d.OtherProperties||[]).find(p => p.FieldKey === 'deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A')?.DateTimeValue;
+        const inByProp = propDate && inAfSankhyaRange(propDate, range);
+        const inByCreate = inAfSankhyaRange(d.CreateDate, range);
+        if (!range.start || inByProp || inByCreate) {
+            const ch = ensureChP(canal);
+            ch.count++;
+            ch.mrr += mrr;
+            ch.setup += setup;
+            ch.deals.push(d);
+        }
+    });
+
+    const propRows = Object.values(channelProp).sort((a,b) => (b.mrr + b.setup) - (a.mrr + a.setup));
+    const totalPropMrr = propRows.reduce((s,r) => s + r.mrr, 0);
+    const totalPropSetup = propRows.reduce((s,r) => s + r.setup, 0);
+    const totalPropCount = propRows.reduce((s,r) => s + r.count, 0);
+    const fmtBRL = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    document.getElementById('afSankhyaPropKpis').innerHTML =
+        meetKpiHtml('Propostas (qtd)', totalPropCount, `em ${propRows.length} canais`, '#60a5fa') +
+        meetKpiHtml('MRR Total Proposto', fmtBRL(totalPropMrr), 'receita recorrente', '#a78bfa') +
+        meetKpiHtml('Setup Total Proposto', fmtBRL(totalPropSetup), 'one-time fee', '#c084fc') +
+        meetKpiHtml('Ticket Médio', fmtBRL(totalPropCount > 0 ? (totalPropMrr + totalPropSetup) / totalPropCount : 0), 'MRR+Setup / proposta', '#fbbf24');
+
+    _afDestroyChart('prop');
+    const ctxP = document.getElementById('afSankhyaPropChart');
+    if (ctxP && propRows.length > 0) {
+        _afSankhyaCharts.prop = new Chart(ctxP, {
+            type: 'bar',
+            data: {
+                labels: propRows.map(r => r.canal),
+                datasets: [
+                    { label: 'MRR (R$)', data: propRows.map(r => r.mrr), backgroundColor: 'rgba(167, 139, 250, 0.6)', borderColor: '#a78bfa', borderWidth: 1.5 },
+                    { label: 'Setup (R$)', data: propRows.map(r => r.setup), backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: '#c084fc', borderWidth: 1.5 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: {
+                    legend: { display: true, labels: { color: '#e0e0e0' } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.x)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: false, beginAtZero: true, ticks: { color: '#aaa', callback: v => fmtBRL(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#e0e0e0', font: { weight: 'bold', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ============ SEÇÃO 3: Capilaridade + Conversão (quadrante estratégico) ============
+    // Pra cada canal: totalLeads, totalReun, won, mrrWon → calc taxa Reun→Won
+    const channelStrat = {};
+    const ensureChS = (c) => {
+        if (!channelStrat[c]) channelStrat[c] = { canal: c, totalLeads: 0, won: 0, mrrWon: 0, agendadas: 0 };
+        return channelStrat[c];
+    };
+    allDeals.forEach(d => {
+        const canal = afGetCanal(d);
+        if (!canal) return;
+        // Total leads: deals criados no período
+        if (inAfSankhyaRange(d.CreateDate, range)) {
+            ensureChS(canal).totalLeads++;
+        }
+        // Won no período (FinishDate)
+        if (d.StatusId === 2 && inAfSankhyaRange(d.FinishDate, range)) {
+            const ch = ensureChS(canal);
+            ch.won++;
+            ch.mrrWon += afGetMRR(d);
+        }
+    });
+    // Agendadas vem do channelMeetings calculado acima
+    Object.values(channelMeetings).forEach(cm => {
+        const cs = ensureChS(cm.canal);
+        cs.agendadas = cm.agendadas;
+    });
+
+    const stratRows = Object.values(channelStrat).filter(r => r.totalLeads > 0 || r.agendadas > 0);
+
+    // Quadrante: X = totalLeads (capilaridade), Y = taxa Reun→Won %, size = mrrWon
+    const bubbleData = stratRows.map(r => {
+        const taxa = r.agendadas > 0 ? (r.won / r.agendadas * 100) : 0;
+        return {
+            x: r.totalLeads,
+            y: taxa,
+            r: Math.max(6, Math.min(30, 6 + Math.sqrt(r.mrrWon / 1000))), // raio proporcional ao MRR
+            canal: r.canal,
+            mrrWon: r.mrrWon,
+            won: r.won,
+            ag: r.agendadas
+        };
+    });
+
+    // Médias pra dividir os 4 quadrantes
+    const avgX = bubbleData.length > 0 ? bubbleData.reduce((s,b) => s + b.x, 0) / bubbleData.length : 0;
+    const avgY = bubbleData.length > 0 ? bubbleData.reduce((s,b) => s + b.y, 0) / bubbleData.length : 0;
+
+    // Cor por quadrante
+    const quadColor = (b) => {
+        const hiVol = b.x >= avgX, hiConv = b.y >= avgY;
+        if (hiVol && hiConv) return 'rgba(34, 197, 94, 0.75)';   // mantenedores
+        if (!hiVol && hiConv) return 'rgba(251, 191, 36, 0.75)';  // ouro escondido
+        if (hiVol && !hiConv) return 'rgba(96, 165, 250, 0.75)';  // inflar funil
+        return 'rgba(239, 68, 68, 0.65)';                          // revisar parceria
+    };
+
+    _afDestroyChart('quadrant');
+    const ctxQ = document.getElementById('afSankhyaQuadrantChart');
+    if (ctxQ && bubbleData.length > 0) {
+        _afSankhyaCharts.quadrant = new Chart(ctxQ, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Canais Sankhya',
+                    data: bubbleData,
+                    backgroundColor: bubbleData.map(quadColor),
+                    borderColor: bubbleData.map(b => quadColor(b).replace(/[\d.]+\)$/, '1)')),
+                    borderWidth: 1.5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const b = ctx.raw;
+                                return [
+                                    `${b.canal}`,
+                                    `Leads: ${b.x}`,
+                                    `Taxa Reun→Won: ${b.y.toFixed(1)}%`,
+                                    `Ganhos: ${b.won}`,
+                                    `MRR ganho: ${fmtBRL(b.mrrWon)}`
+                                ];
+                            }
+                        }
+                    },
+                    annotation: avgX > 0 ? {
+                        annotations: {
+                            vLine: { type: 'line', xMin: avgX, xMax: avgX, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [5,5] },
+                            hLine: { type: 'line', yMin: avgY, yMax: avgY, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [5,5] }
+                        }
+                    } : undefined
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Volume de Leads (Capilaridade)', color: '#94a3b8' },
+                        ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Taxa Reunião → Ganho (%)', color: '#94a3b8' },
+                        ticks: { color: '#aaa', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Tabela de ação por quadrante
+    const quadrant = (b) => {
+        const hiVol = b.x >= avgX, hiConv = b.y >= avgY;
+        if (hiVol && hiConv) return { name: 'MANTENEDOR', color: '#22c55e', action: 'Manter cadência. Replicar prática.' };
+        if (!hiVol && hiConv) return { name: 'OURO ESCONDIDO', color: '#fbbf24', action: 'Escalar volume — alta conversão desperdiçada.' };
+        if (hiVol && !hiConv) return { name: 'INFLAR FUNIL', color: '#60a5fa', action: 'Treinar qualificação + speech. Volume bom, conversão fraca.' };
+        return { name: 'REVISAR PARCERIA', color: '#ef4444', action: 'Baixo volume + baixa conversão. Reavaliar parceria ou substituir.' };
+    };
+    const byQuadrant = { 'MANTENEDOR': [], 'OURO ESCONDIDO': [], 'INFLAR FUNIL': [], 'REVISAR PARCERIA': [] };
+    bubbleData.forEach(b => {
+        const q = quadrant(b);
+        byQuadrant[q.name].push({ ...b, q });
+    });
+    const tableHtml = `
+        <h3 style="color:#e0e0e0;font-size:13px;font-weight:700;margin:18px 0 10px;text-transform:uppercase;letter-spacing:0.5px;">Ranking por quadrante estratégico</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+            ${Object.entries(byQuadrant).map(([qName, items]) => {
+                if (items.length === 0) return '';
+                const q = items[0].q;
+                return `<div style="background:rgba(255,255,255,0.03);border:1px solid ${q.color}55;border-left:4px solid ${q.color};border-radius:8px;padding:12px 14px;">
+                    <div style="color:${q.color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">${qName}</div>
+                    <div style="color:#8888a0;font-size:11px;margin:4px 0 10px;font-style:italic;">${q.action}</div>
+                    ${items.sort((a,b) => b.mrrWon - a.mrrWon).map(b => `
+                        <div style="font-size:12px;padding:4px 0;border-top:1px solid rgba(255,255,255,0.05);">
+                            <strong style="color:#e0e0e0;">${b.canal}</strong> · ${b.x} leads · ${b.y.toFixed(0)}% conv · ${fmtBRL(b.mrrWon)} MRR
+                        </div>
+                    `).join('')}
+                </div>`;
+            }).filter(Boolean).join('')}
+        </div>`;
+    document.getElementById('afSankhyaActionTable').innerHTML = tableHtml;
+
+    // Insight automático no topo
+    const insightEl = document.getElementById('afSankhyaCapilarityInsight');
+    if (bubbleData.length === 0) {
+        insightEl.style.display = 'none';
+    } else {
+        insightEl.style.display = 'block';
+        // Ouro escondido = melhor candidato pra atacar
+        const ouroEscondido = bubbleData.filter(b => b.x < avgX && b.y >= avgY).sort((a,b) => b.y - a.y);
+        const revisar = bubbleData.filter(b => b.x < avgX && b.y < avgY);
+        const inflar = bubbleData.filter(b => b.x >= avgX && b.y < avgY);
+        let body = '';
+        if (ouroEscondido.length > 0) {
+            const top = ouroEscondido[0];
+            body = `<strong>Onde atacar primeiro:</strong> "<strong style="color:#fbbf24;">${top.canal}</strong>" tem ${top.y.toFixed(0)}% de conversão Reunião→Ganho (acima da média ${avgY.toFixed(0)}%) mas só ${top.x} leads no período. <strong>Escalar volume aqui</strong> dá retorno garantido — a conversão já está provada.`;
+            document.getElementById('afSankhyaCapilarityTitle').textContent = `Ouro escondido detectado: ${ouroEscondido.length} canal(is) com alta conversão e pouco volume`;
+        } else if (inflar.length > 0) {
+            body = `Canais com volume mas baixa conversão: <strong>${inflar.slice(0,3).map(b=>b.canal).join(', ')}</strong>. Investigar speech/qualificação — o lead chega, mas não fecha.`;
+            document.getElementById('afSankhyaCapilarityTitle').textContent = `Atenção: gargalo de conversão em ${inflar.length} canal(is)`;
+        } else {
+            body = `Distribuição saudável dos canais ativos. Acompanhar os ${revisar.length} canais no quadrante "Revisar Parceria" pra decisão de continuar ou substituir.`;
+            document.getElementById('afSankhyaCapilarityTitle').textContent = `Mix de canais saudável`;
+        }
+        document.getElementById('afSankhyaCapilarityBody').innerHTML = body;
+    }
 }
 
 function afGetScenario(d) {
