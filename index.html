@@ -4655,6 +4655,19 @@
                         <div class="chart-container" style="cursor:pointer;min-height:380px;"><canvas id="afSankhyaPropChart"></canvas></div>
                     </div>
 
+                    <!-- Sankhya 4: Compliance de Tasks (cobrança de atualização do Ploomes) -->
+                    <div class="af-slide">
+                        <h2 class="af-slide-title">📋 Compliance de Tasks — pra cobrar atualização</h2>
+                        <div class="af-slide-sub">
+                            Deals do funil Sankhya que <strong>deveriam ter</strong> as tasks "Reunião Agendada" / "Reunião Realizada" preenchidas, mas <strong>não têm</strong>. Use pra cobrar os executivos pra atualizarem no Ploomes — igual a equipe de Novos Negócios faz.
+                        </div>
+                        <div id="afSankhyaComplianceKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;"></div>
+                        <h3 style="color:#e0e0e0;font-size:13px;font-weight:700;margin:18px 0 10px;text-transform:uppercase;letter-spacing:0.5px;">Ranking de compliance por executivo</h3>
+                        <div id="afSankhyaComplianceByExec" style="overflow-x:auto;"></div>
+                        <h3 style="color:#e0e0e0;font-size:13px;font-weight:700;margin:24px 0 10px;text-transform:uppercase;letter-spacing:0.5px;">Deals que precisam de atualização (top 30 mais antigos)</h3>
+                        <div id="afSankhyaComplianceDeals" style="overflow-x:auto;"></div>
+                    </div>
+
                     <!-- Sankhya 3: Capilaridade + Conversão -->
                     <div class="af-slide">
                         <h2 class="af-slide-title">🎯 Capilaridade + Conversão — onde atacar</h2>
@@ -11353,6 +11366,170 @@ function renderAfSankhya() {
             }).filter(Boolean).join('')}
         </div>`;
     document.getElementById('afSankhyaActionTable').innerHTML = tableHtml;
+
+    // ============ SEÇÃO 4: Compliance de Tasks (cobrança de atualização) ============
+    // Identifica deals que DEVERIAM ter task de Reunião Agendada/Realizada mas NÃO TÊM,
+    // pra cobrar os executivos a preencherem (igual equipe de Novos Negócios faz).
+    //
+    // Critérios:
+    //  - Sem Agendada = deal em pipeline Sankhya com Owner ≠ Maja (= já foi passado pro
+    //    executivo, deveria ter task agendada) E sem task "Reuniao Agendada" no cache
+    //  - Sem Realizada = deal qualifica como "realizada" pelo nosso proxy (1ª fase com
+    //    valor OU 2ª+ não Descarte) E sem task "Reuniao Realizada" Finished=true no cache
+    //
+    // Filtrado por período do seletor + executivo do filtro principal da AF.
+    const dealsWithAgTask = new Set();
+    const dealsWithRealTaskFinished = new Set();
+    meetings.forEach(t => {
+        if (!t.DealId) return;
+        const tn = normT(t.Title);
+        if (tn.includes('reuniao agendada')) dealsWithAgTask.add(t.DealId);
+        if (tn.includes('reuniao realizada') && t.Finished === true) dealsWithRealTaskFinished.add(t.DealId);
+    });
+
+    const compMissingAg = [];      // deals que deveriam ter agendada mas não têm
+    const compMissingReal = [];    // deals que deveriam ter realizada mas não têm
+    sankPipelineDeals.forEach(d => {
+        if (!inPeriodDeal(d)) return;
+        const ownerName = d.Owner?.Name || '';
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const isDescarte = SANKHYA_STAGE_NAME_DESCARTE.test(stageName);
+        const mrr = afGetMRR(d), setup = afGetSetup(d);
+
+        // Deve ter Agendada?
+        if (!isMaja(ownerName) && !dealsWithAgTask.has(d.Id)) {
+            compMissingAg.push(d);
+        }
+        // Deve ter Realizada?
+        if (!isDescarte) {
+            const shouldHaveReal = (stageOrd === 0 && (mrr > 0 || setup > 0)) || stageOrd >= 1;
+            if (shouldHaveReal && !dealsWithRealTaskFinished.has(d.Id)) {
+                compMissingReal.push(d);
+            }
+        }
+    });
+
+    // KPIs Compliance
+    const totalShouldAg = sankPipelineDeals.filter(d => inPeriodDeal(d) && !isMaja(d.Owner?.Name)).length;
+    const totalShouldReal = sankPipelineDeals.filter(d => {
+        if (!inPeriodDeal(d)) return false;
+        const ord = d.Stage?.Ordination ?? -1;
+        if (SANKHYA_STAGE_NAME_DESCARTE.test(d.Stage?.Name || '')) return false;
+        return (ord === 0 && (afGetMRR(d) > 0 || afGetSetup(d) > 0)) || ord >= 1;
+    }).length;
+    const coberturaAg = totalShouldAg > 0 ? ((totalShouldAg - compMissingAg.length) / totalShouldAg * 100) : 0;
+    const coberturaReal = totalShouldReal > 0 ? ((totalShouldReal - compMissingReal.length) / totalShouldReal * 100) : 0;
+
+    document.getElementById('afSankhyaComplianceKpis').innerHTML =
+        meetKpiHtml('Sem task Agendada', compMissingAg.length, `de ${totalShouldAg} que deveriam ter`, '#ef4444') +
+        meetKpiHtml('Cobertura Agendada', coberturaAg.toFixed(0) + '%', coberturaAg >= 80 ? 'ok' : (coberturaAg >= 50 ? 'precisa melhorar' : 'crítico'), coberturaAg >= 80 ? '#22c55e' : (coberturaAg >= 50 ? '#f59e0b' : '#ef4444')) +
+        meetKpiHtml('Sem task Realizada', compMissingReal.length, `de ${totalShouldReal} que deveriam ter`, '#ef4444') +
+        meetKpiHtml('Cobertura Realizada', coberturaReal.toFixed(0) + '%', coberturaReal >= 80 ? 'ok' : (coberturaReal >= 50 ? 'precisa melhorar' : 'crítico'), coberturaReal >= 80 ? '#22c55e' : (coberturaReal >= 50 ? '#f59e0b' : '#ef4444'));
+
+    // Ranking por executivo
+    const execAgg = {};
+    sankPipelineDeals.forEach(d => {
+        if (!inPeriodDeal(d)) return;
+        const owner = d.Owner?.Name || '(sem owner)';
+        if (isMaja(owner)) return; // Maja não conta (ela é a SDR, deals dela ainda não foram passados)
+        if (!execAgg[owner]) execAgg[owner] = { name: owner, totalAg: 0, missingAg: 0, totalReal: 0, missingReal: 0 };
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const isDescarte = SANKHYA_STAGE_NAME_DESCARTE.test(stageName);
+
+        execAgg[owner].totalAg++;
+        if (!dealsWithAgTask.has(d.Id)) execAgg[owner].missingAg++;
+
+        if (!isDescarte) {
+            const mrr = afGetMRR(d), setup = afGetSetup(d);
+            const shouldHaveReal = (stageOrd === 0 && (mrr > 0 || setup > 0)) || stageOrd >= 1;
+            if (shouldHaveReal) {
+                execAgg[owner].totalReal++;
+                if (!dealsWithRealTaskFinished.has(d.Id)) execAgg[owner].missingReal++;
+            }
+        }
+    });
+    const execRows = Object.values(execAgg)
+        .filter(r => r.totalAg > 0 || r.totalReal > 0)
+        .sort((a,b) => (b.missingAg + b.missingReal) - (a.missingAg + a.missingReal));
+
+    const tableRowBg = (pct) => pct >= 80 ? 'rgba(34,197,94,0.06)' : (pct >= 50 ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.08)');
+    const tableColor = (pct) => pct >= 80 ? '#22c55e' : (pct >= 50 ? '#f59e0b' : '#ef4444');
+    const execTableHtml = `
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#e0e0e0;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.04);">
+                    <th style="padding:10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Executivo</th>
+                    <th style="padding:10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">Total Deals</th>
+                    <th style="padding:10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);color:#ef4444;">Sem Agendada</th>
+                    <th style="padding:10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">Cobertura Agendada</th>
+                    <th style="padding:10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);color:#ef4444;">Sem Realizada</th>
+                    <th style="padding:10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">Cobertura Realizada</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${execRows.length === 0 ? '<tr><td colspan="6" style="padding:14px;text-align:center;color:#6d6d85;">Sem dados no período</td></tr>' :
+                execRows.map(r => {
+                    const covAg = r.totalAg > 0 ? ((r.totalAg - r.missingAg) / r.totalAg * 100) : 100;
+                    const covReal = r.totalReal > 0 ? ((r.totalReal - r.missingReal) / r.totalReal * 100) : 100;
+                    return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:${tableRowBg((covAg + covReal)/2)};">
+                        <td style="padding:10px;font-weight:600;">${r.name}</td>
+                        <td style="padding:10px;text-align:center;">${r.totalAg}</td>
+                        <td style="padding:10px;text-align:center;color:#ef4444;font-weight:700;">${r.missingAg}</td>
+                        <td style="padding:10px;text-align:center;color:${tableColor(covAg)};font-weight:700;">${covAg.toFixed(0)}%</td>
+                        <td style="padding:10px;text-align:center;color:#ef4444;font-weight:700;">${r.missingReal}</td>
+                        <td style="padding:10px;text-align:center;color:${tableColor(covReal)};font-weight:700;">${covReal.toFixed(0)}%</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+    document.getElementById('afSankhyaComplianceByExec').innerHTML = execTableHtml;
+
+    // Tabela com deals top 30 (mais antigos) — pra acionar SDR/executivos
+    const allMissingDeals = new Map(); // dealId → {deal, missing: [{type, ...}]}
+    compMissingAg.forEach(d => {
+        if (!allMissingDeals.has(d.Id)) allMissingDeals.set(d.Id, { deal: d, missing: [] });
+        allMissingDeals.get(d.Id).missing.push('Agendada');
+    });
+    compMissingReal.forEach(d => {
+        if (!allMissingDeals.has(d.Id)) allMissingDeals.set(d.Id, { deal: d, missing: [] });
+        allMissingDeals.get(d.Id).missing.push('Realizada');
+    });
+    const dealsMissingList = Array.from(allMissingDeals.values())
+        .sort((a,b) => new Date(a.deal.CreateDate) - new Date(b.deal.CreateDate)) // mais antigos primeiro
+        .slice(0, 30);
+
+    const dealsTableHtml = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px;color:#e0e0e0;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.04);">
+                    <th style="padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Deal</th>
+                    <th style="padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Canal</th>
+                    <th style="padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Executivo</th>
+                    <th style="padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Etapa</th>
+                    <th style="padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">Criado</th>
+                    <th style="padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);">Falta</th>
+                    <th style="padding:8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.1);">Ploomes</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${dealsMissingList.length === 0 ? '<tr><td colspan="7" style="padding:14px;text-align:center;color:#22c55e;">🎉 Todas as tasks estão preenchidas!</td></tr>' :
+                dealsMissingList.map(({deal, missing}) => `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <td style="padding:8px;font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(deal.Title||'').replace(/"/g,'&quot;')}">${deal.Title || '(sem título)'}</td>
+                        <td style="padding:8px;color:#b794f4;">${afGetCanal(deal) || '—'}</td>
+                        <td style="padding:8px;color:#a0a0b8;">${deal.Owner?.Name || '—'}</td>
+                        <td style="padding:8px;color:#a0a0b8;font-size:11px;">${deal.Stage?.Name || '—'}</td>
+                        <td style="padding:8px;text-align:center;color:#8888a0;font-size:11px;">${deal.CreateDate ? new Date(deal.CreateDate).toLocaleDateString('pt-BR') : '—'}</td>
+                        <td style="padding:8px;text-align:center;">${missing.map(m => `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:700;margin:0 2px;">${m}</span>`).join('')}</td>
+                        <td style="padding:8px;text-align:right;"><a href="https://app10.ploomes.com/deal/${deal.Id}" target="_blank" style="color:#60a5fa;text-decoration:none;font-size:11.5px;">Abrir &raquo;</a></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ${allMissingDeals.size > 30 ? `<div style="text-align:center;color:#8888a0;font-size:11.5px;margin-top:10px;font-style:italic;">+ ${allMissingDeals.size - 30} outros deals com tasks faltando (limitado a 30 mais antigos)</div>` : ''}`;
+    document.getElementById('afSankhyaComplianceDeals').innerHTML = dealsTableHtml;
 
     // Insight automático no topo
     const insightEl = document.getElementById('afSankhyaCapilarityInsight');
