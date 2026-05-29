@@ -4626,7 +4626,11 @@
                     <!-- Sankhya 1: Reuniões Agendadas vs Realizadas por Canal -->
                     <div class="af-slide">
                         <h2 class="af-slide-title">📅 Reuniões por Canal Sankhya</h2>
-                        <div class="af-slide-sub">Agendadas vs Realizadas por canal — filtros aplicam período e executivo escolhidos acima</div>
+                        <div class="af-slide-sub">
+                            <strong>Agendadas</strong> = Maja já passou o deal pro executivo (Owner ≠ Maja) ·
+                            <strong>Realizadas</strong> = 1ª fase do funil com MRR/Setup preenchido (= falaram de valores) OU 2ª fase em diante (= se moveu, conversou).
+                            Equipe Sankhya não preenche tasks de reunião — usamos esses proxies.
+                        </div>
                         <div style="display:flex;gap:10px;margin:10px 0 14px;align-items:center;flex-wrap:wrap;">
                             <label style="color:#94a3b8;font-size:12px;">Período:</label>
                             <select id="afSankhyaPeriod" onchange="renderAfSankhya()" class="mql-filter">
@@ -11034,15 +11038,30 @@ function renderAfSankhya() {
         .filter(d => !!afGetCanal(d));
 
     // ============ SEÇÃO 1: Reuniões Agendadas vs Realizadas por Canal ============
-    // Pra cada deal Sankhya, ver tasks "Reuniao Agendada" e "Reuniao Realizada" no período.
-    // dashMeetings é declarada com `let` no scope do <script>, então não está em window —
-    // referência direta funciona quando este código também está no mesmo script.
-    const meetings = (typeof dashMeetings !== 'undefined' && dashMeetings) ? dashMeetings : [];
-    const normT = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    const dealsById = new Map();
-    allDeals.forEach(d => dealsById.set(d.Id, d));
+    // PROXY ESPECIAL pro Sankhya: a equipe NÃO preenche as tasks de reunião como
+    // Novos Negócios faz (0,4% vs 29,7% no Funil de Vendas). Então usamos sinais do
+    // próprio deal:
+    //  - Reunião Agendada = deal no pipeline Sankhya cujo Owner atual NÃO é a Maja
+    //    (= Maja já passou pra um executivo)
+    //  - Reunião Realizada =
+    //      (a) stage "Reconhecimento do Problema" (ord 0) E tem MRR ou Setup > 0
+    //          (= falaram de valores)
+    //      OU
+    //      (b) stage da 2ª fase em diante (Consideração, Aprovado, Formalização)
+    //          (= se moveu, conversou). Exclui Descarte.
+    // Período: aplicado sobre CreateDate OU LastUpdateDate do deal (broader).
+    const MAJA_NAME_TOKENS = ['maja']; // matcher case-insensitive
+    const isMaja = (name) => {
+        const n = (name||'').toLowerCase();
+        return MAJA_NAME_TOKENS.some(t => n.includes(t));
+    };
+    const SANKHYA_STAGE_ORD_PRIMEIRA = 0; // Reconhecimento do Problema
+    const SANKHYA_STAGE_NAME_DESCARTE = /descart/i;
 
-    const channelMeetings = {}; // canal → { agendadas, realizadas, agDealsSet, realDealsSet }
+    // Filtro de deals Sankhya com pipeline = "Sankhya" pra aplicar regra de stages
+    const sankPipelineDeals = allDeals.filter(d => d.Pipeline?.Name === 'Sankhya');
+
+    const channelMeetings = {};
     const ensureChM = (c) => {
         if (!channelMeetings[c]) channelMeetings[c] = {
             canal: c, agendadas: 0, realizadas: 0,
@@ -11050,28 +11069,37 @@ function renderAfSankhya() {
         };
         return channelMeetings[c];
     };
+    const inPeriodDeal = (d) => {
+        // global → sempre passa; senao CreateDate OU LastUpdateDate no range
+        if (!range.start || !range.end) return true;
+        return inAfSankhyaRange(d.CreateDate, range) || inAfSankhyaRange(d.LastUpdateDate, range);
+    };
 
-    meetings.forEach(t => {
-        if (!t.DealId) return;
-        const deal = dealsById.get(t.DealId);
-        if (!deal) return;
-        const canal = afGetCanal(deal);
+    sankPipelineDeals.forEach(d => {
+        const canal = afGetCanal(d);
         if (!canal) return;
-        const tn = normT(t.Title);
-        const isAg = tn.includes('reuniao agendada');
-        const isReal = tn.includes('reuniao realizada');
-        if (!isAg && !isReal) return;
-        // Agendada: DateTime no período
-        if (isAg && inAfSankhyaRange(t.DateTime, range)) {
+        if (!inPeriodDeal(d)) return;
+        const ownerName = d.Owner?.Name || '';
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const isDescarte = SANKHYA_STAGE_NAME_DESCARTE.test(stageName);
+        const mrr = afGetMRR(d), setup = afGetSetup(d);
+
+        // AGENDADA: Maja passou pro executivo (Owner != Maja)
+        if (!isMaja(ownerName)) {
             const ch = ensureChM(canal);
-            if (!ch.agDealsSet.has(t.DealId)) { ch.agendadas++; ch.agDealsSet.add(t.DealId); }
+            ch.agendadas++;
+            ch.agDealsSet.add(d.Id);
         }
-        // Realizada: Finished=true + FinishDate (ou DateTime) no período
-        if (isReal && t.Finished === true) {
-            const refDate = t.FinishDate || t.DateTime;
-            if (inAfSankhyaRange(refDate, range)) {
+
+        // REALIZADA: (a) 1ª fase + valor OU (b) 2ª fase em diante (não descarte)
+        if (!isDescarte) {
+            const isPrimeiraFaseComValor = stageOrd === SANKHYA_STAGE_ORD_PRIMEIRA && (mrr > 0 || setup > 0);
+            const isSegundaOuMais = stageOrd >= 1;
+            if (isPrimeiraFaseComValor || isSegundaOuMais) {
                 const ch = ensureChM(canal);
-                if (!ch.realDealsSet.has(t.DealId)) { ch.realizadas++; ch.realDealsSet.add(t.DealId); }
+                ch.realizadas++;
+                ch.realDealsSet.add(d.Id);
             }
         }
     });
@@ -11089,8 +11117,8 @@ function renderAfSankhya() {
             <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;">${sub}</div>
         </div>`;
     document.getElementById('afSankhyaMeetingsKpis').innerHTML =
-        meetKpiHtml('Reuniões Agendadas', totalAg, 'todos os canais', '#b794f4') +
-        meetKpiHtml('Reuniões Realizadas', totalReal, 'task Finished=true', '#22c55e') +
+        meetKpiHtml('Reuniões Agendadas', totalAg, 'Maja passou pro executivo', '#b794f4') +
+        meetKpiHtml('Reuniões Realizadas', totalReal, '1ª fase com valor OU 2ª+ (não Descarte)', '#22c55e') +
         meetKpiHtml('Taxa Realização', taxaReal.toFixed(1) + '%', `${totalReal} de ${totalAg} agendadas`, taxaReal >= 60 ? '#22c55e' : (taxaReal >= 30 ? '#f59e0b' : '#ef4444')) +
         meetKpiHtml('Canais Ativos', meetRows.length, 'com atividade no período', '#60a5fa');
 
