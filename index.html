@@ -6225,16 +6225,55 @@ function renderSection1() {
     // Metric selector: count | mrr | setup | mrr_setup
     const metric = (document.getElementById('wonMetricFilter') || {}).value || 'mrr_setup';
     const isMoney = metric !== 'count';
-    const metricValue = (dealsArr) => {
+    const isStacked = metric === 'mrr_setup';
+    const sumMRR = (arr) => arr.reduce((s, d) => s + getMRR(d), 0);
+    const sumSetup = (arr) => arr.reduce((s, d) => s + getSetup(d), 0);
+    const singleMetricValue = (dealsArr) => {
         if (metric === 'count') return dealsArr.length;
-        if (metric === 'mrr') return dealsArr.reduce((s, d) => s + getMRR(d), 0);
-        if (metric === 'setup') return dealsArr.reduce((s, d) => s + getSetup(d), 0);
-        return dealsArr.reduce((s, d) => s + getMRR(d) + getSetup(d), 0); // mrr_setup
+        if (metric === 'mrr') return sumMRR(dealsArr);
+        if (metric === 'setup') return sumSetup(dealsArr);
+        return sumMRR(dealsArr) + sumSetup(dealsArr);
     };
     const metricLabel = metric === 'count' ? 'Quantidade' : metric === 'mrr' ? 'MRR' : metric === 'setup' ? 'Setup' : 'MRR + Setup';
-    const datasets = pipelines.map(pipeline => {
-        return { label: pipeline, data: months.map(mk => metricValue(byMonthByPipeline[pipeline][mk] || [])), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
-    });
+    // Lighten a rgba(R,G,B,0.7) by reducing alpha to 0.3 for Setup stack
+    const lighten = (rgba) => rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, 'rgba($1,$2,$3,0.3)');
+    let datasets;
+    if (isStacked) {
+        // 2 datasets por pipeline: MRR (cor cheia) + Setup (cor clara), empilhados no mesmo stack por pipeline
+        datasets = [];
+        pipelines.forEach(pipeline => {
+            datasets.push({
+                label: `${pipeline} — MRR`,
+                stack: pipeline,
+                data: months.map(mk => sumMRR(byMonthByPipeline[pipeline][mk] || [])),
+                backgroundColor: PIPELINE_COLORS[pipeline].bg,
+                borderColor: PIPELINE_COLORS[pipeline].border,
+                borderWidth: 1,
+                _metric: 'mrr',
+                _pipeline: pipeline
+            });
+            datasets.push({
+                label: `${pipeline} — Setup`,
+                stack: pipeline,
+                data: months.map(mk => sumSetup(byMonthByPipeline[pipeline][mk] || [])),
+                backgroundColor: lighten(PIPELINE_COLORS[pipeline].bg),
+                borderColor: PIPELINE_COLORS[pipeline].border,
+                borderWidth: 1,
+                borderDash: [4, 3],
+                _metric: 'setup',
+                _pipeline: pipeline
+            });
+        });
+    } else {
+        datasets = pipelines.map(pipeline => ({
+            label: pipeline,
+            data: months.map(mk => singleMetricValue(byMonthByPipeline[pipeline][mk] || [])),
+            backgroundColor: PIPELINE_COLORS[pipeline].bg,
+            borderColor: PIPELINE_COLORS[pipeline].border,
+            borderWidth: 1,
+            _pipeline: pipeline
+        }));
+    }
     destroyChart('won');
     const moneyTick = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     charts.won = new Chart(document.getElementById('chartWon'), {
@@ -6251,7 +6290,8 @@ function renderSection1() {
                         afterLabel: (ctx) => {
                             if (!isMoney) return '';
                             const mk = months[ctx.dataIndex];
-                            const dealsForBar = byMonthByPipeline[ctx.dataset.label][mk] || [];
+                            const pl = ctx.dataset._pipeline;
+                            const dealsForBar = (byMonthByPipeline[pl] || {})[mk] || [];
                             return `${dealsForBar.length} negócio(s)`;
                         }
                     }
@@ -6262,15 +6302,18 @@ function renderSection1() {
                     const idx = elements[0].index;
                     const dsIdx = elements[0].datasetIndex;
                     const mk = months[idx];
-                    const pipeline = pipelines[dsIdx];
+                    const pipeline = chart.data.datasets[dsIdx]._pipeline;
                     const clickDeals = (byMonthByPipeline[pipeline][mk] || []);
-                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios · ${metricLabel}: ${isMoney ? moneyTick(metricValue(clickDeals)) : clickDeals.length})`, clickDeals, null, 'won');
+                    const mrrV = sumMRR(clickDeals); const setV = sumSetup(clickDeals);
+                    const breakdown = isStacked ? `MRR ${moneyTick(mrrV)} · Setup ${moneyTick(setV)}` : `${metricLabel}: ${isMoney ? moneyTick(singleMetricValue(clickDeals)) : clickDeals.length}`;
+                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios · ${breakdown})`, clickDeals, null, 'won');
                 }
             },
             scales: {
-                x: { ...darkScaleOptions },
+                x: { ...darkScaleOptions, stacked: isStacked },
                 y: {
                     beginAtZero: true,
+                    stacked: isStacked,
                     ticks: {
                         ...darkScaleOptions.ticks,
                         ...(isMoney ? { callback: moneyTick } : { stepSize: 1 })
