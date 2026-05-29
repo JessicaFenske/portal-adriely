@@ -6237,30 +6237,49 @@ function renderSection1() {
     const metricLabel = metric === 'count' ? 'Quantidade' : metric === 'mrr' ? 'MRR' : metric === 'setup' ? 'Setup' : 'MRR + Setup';
     // Lighten a rgba(R,G,B,0.7) by reducing alpha to 0.3 for Setup stack
     const lighten = (rgba) => rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, 'rgba($1,$2,$3,0.3)');
+    // Detecta mobile (≤ 600px) pra encurtar labels e adaptar layout
+    const isMobile = (typeof window !== 'undefined' && window.innerWidth <= 600);
+    const shortPipeline = (p) => {
+        if (!isMobile) return p;
+        return p === 'Funil de Vendas' ? 'FdV' : p === 'Farmer IPCA' ? 'IPCA' : p;
+    };
     let datasets;
     if (isDual) {
         // 2 datasets por pipeline (MRR + Setup), barras LADO A LADO (sem stack)
+        // Filtra pipelines sem nenhum valor no período (evita legenda inflada com itens vazios)
+        const activePipelines = pipelines.filter(p => {
+            return months.some(mk => {
+                const arr = byMonthByPipeline[p][mk] || [];
+                return arr.length > 0 && (sumMRR(arr) > 0 || sumSetup(arr) > 0);
+            });
+        });
         datasets = [];
-        pipelines.forEach(pipeline => {
-            datasets.push({
-                label: `${pipeline} — MRR`,
-                data: months.map(mk => sumMRR(byMonthByPipeline[pipeline][mk] || [])),
-                backgroundColor: PIPELINE_COLORS[pipeline].bg,
-                borderColor: PIPELINE_COLORS[pipeline].border,
-                borderWidth: 1,
-                _metric: 'mrr',
-                _pipeline: pipeline
-            });
-            datasets.push({
-                label: `${pipeline} — Setup`,
-                data: months.map(mk => sumSetup(byMonthByPipeline[pipeline][mk] || [])),
-                backgroundColor: lighten(PIPELINE_COLORS[pipeline].bg),
-                borderColor: PIPELINE_COLORS[pipeline].border,
-                borderWidth: 1,
-                borderDash: [4, 3],
-                _metric: 'setup',
-                _pipeline: pipeline
-            });
+        activePipelines.forEach(pipeline => {
+            const mrrData = months.map(mk => sumMRR(byMonthByPipeline[pipeline][mk] || []));
+            const setupData = months.map(mk => sumSetup(byMonthByPipeline[pipeline][mk] || []));
+            if (mrrData.some(v => v > 0)) {
+                datasets.push({
+                    label: `${shortPipeline(pipeline)} — MRR`,
+                    data: mrrData,
+                    backgroundColor: PIPELINE_COLORS[pipeline].bg,
+                    borderColor: PIPELINE_COLORS[pipeline].border,
+                    borderWidth: 1,
+                    _metric: 'mrr',
+                    _pipeline: pipeline
+                });
+            }
+            if (setupData.some(v => v > 0)) {
+                datasets.push({
+                    label: `${shortPipeline(pipeline)} — Setup`,
+                    data: setupData,
+                    backgroundColor: lighten(PIPELINE_COLORS[pipeline].bg),
+                    borderColor: PIPELINE_COLORS[pipeline].border,
+                    borderWidth: 1,
+                    borderDash: [4, 3],
+                    _metric: 'setup',
+                    _pipeline: pipeline
+                });
+            }
         });
     } else {
         datasets = pipelines.map(pipeline => ({
@@ -6278,7 +6297,10 @@ function renderSection1() {
         type: 'bar', data: { labels: months.map(monthLabel), datasets },
         options: { responsive: true, maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' },
+                legend: {
+                    position: 'top',
+                    labels: isMobile ? { boxWidth: 12, padding: 6, font: { size: 10 } } : { boxWidth: 20, padding: 10 }
+                },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
