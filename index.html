@@ -3182,6 +3182,55 @@
             }
             /* Charts em donut (Produtos Vendidos) — limita altura pra nao gigantes */
             .section-body canvas { max-height: 240px !important; }
+
+            /* ==================== FORECAST VIEW (mobile fixes) ==================== */
+            /* Hamburger nao sobrepoe titulo (padding-left compensa) */
+            #view-forecast .fc-header {
+                padding: 16px 14px 16px 64px !important;
+                flex-wrap: wrap;
+            }
+            #view-forecast .fc-header h1 { font-size: 18px !important; }
+            #view-forecast .fc-header .subtitle { font-size: 11.5px !important; padding-left: 50px; }
+            /* Period bar */
+            .fc-period-bar { padding: 10px 14px !important; gap: 6px; }
+            .fc-period-btn { font-size: 11px; padding: 5px 10px; }
+            /* Scenarios e totals pairs (1fr 1fr internos) → 1 col no mobile */
+            .fc-total-pair, .fc-scenario-pair { grid-template-columns: 1fr !important; gap: 8px; }
+            /* Cards mais compactos (reduz altura vazia) */
+            .fc-total-card, .fc-kpi-card { padding: 10px 12px !important; }
+            .fc-total-card .fc-total-value { font-size: clamp(16px, 5vw, 22px) !important; }
+            .fc-kpi-card .fc-kpi-value { font-size: clamp(15px, 4.5vw, 20px) !important; }
+            .fc-total-card .fc-total-label, .fc-kpi-card .fc-kpi-label { font-size: 9.5px !important; }
+            /* Containers do forecast com padding menor */
+            .fc-totals-grid, .fc-kpi-grid { padding: 14px !important; gap: 12px !important; }
+            .fc-summary-grid { padding: 0 14px 14px !important; gap: 12px !important; }
+
+            /* ==================== OPORTUNIDADES HEADER (igual ao Forecast — hamburger) ==================== */
+            #view-oportunidades .op-header,
+            #view-marketing .op-header,
+            #view-analise-funil .op-header {
+                padding-left: 64px !important;
+            }
+
+            /* ==================== TABELAS PESADAS COM SCROLL HORIZONTAL ==================== */
+            /* Toda tabela que estiver no fluxo natural ganha scroll horizontal automatico */
+            .dashboard-grid table:not(.no-mobile-scroll),
+            #view-analise-funil table:not(.no-mobile-scroll),
+            #view-marketing table:not(.no-mobile-scroll),
+            #view-forecast table:not(.no-mobile-scroll) {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+                max-width: 100%;
+            }
+            /* Wrapper de tabela explicito tambem com scroll */
+            .mql-table, .stuck-table-wrap, .collapsible-table { overflow-x: auto !important; }
+            /* MQL detail / Capacity Planning */
+            .mql-table table { min-width: 100%; }
+
+            /* Capacity planning grids */
+            .cap-funnel { grid-template-columns: 1fr !important; gap: 10px; padding: 0 4px; }
         }
 
         /* Telefones pequenos (até 480px) — ajustes finos extras */
