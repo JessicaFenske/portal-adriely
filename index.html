@@ -3704,6 +3704,12 @@
                                 <option value="Sankhya">Sankhya</option>
                                 <option value="Farmer">Farmer</option>
                             </select>
+                            <select id="wonMetricFilter" onchange="renderSection1()">
+                                <option value="mrr_setup" selected>MRR + Setup</option>
+                                <option value="mrr">MRR</option>
+                                <option value="setup">Setup</option>
+                                <option value="count">Quantidade</option>
+                            </select>
                             <select class="section-period-select" id="periodSec1" onchange="renderSection1()">
                                 <option value="global">Global</option>
                                 <option value="thisMonth" selected>Este mês</option>
@@ -6216,13 +6222,41 @@ function renderSection1() {
     const pipelines = SALES_PIPELINES.filter(p => !pf || p === pf);
     const byMonthByPipeline = {};
     pipelines.forEach(pipeline => { byMonthByPipeline[pipeline] = groupByMonth(deals.filter(d => getPipelineName(d) === pipeline), 'FinishDate'); });
+    // Metric selector: count | mrr | setup | mrr_setup
+    const metric = (document.getElementById('wonMetricFilter') || {}).value || 'mrr_setup';
+    const isMoney = metric !== 'count';
+    const metricValue = (dealsArr) => {
+        if (metric === 'count') return dealsArr.length;
+        if (metric === 'mrr') return dealsArr.reduce((s, d) => s + getMRR(d), 0);
+        if (metric === 'setup') return dealsArr.reduce((s, d) => s + getSetup(d), 0);
+        return dealsArr.reduce((s, d) => s + getMRR(d) + getSetup(d), 0); // mrr_setup
+    };
+    const metricLabel = metric === 'count' ? 'Quantidade' : metric === 'mrr' ? 'MRR' : metric === 'setup' ? 'Setup' : 'MRR + Setup';
     const datasets = pipelines.map(pipeline => {
-        return { label: pipeline, data: months.map(mk => (byMonthByPipeline[pipeline][mk] || []).length), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
+        return { label: pipeline, data: months.map(mk => metricValue(byMonthByPipeline[pipeline][mk] || [])), backgroundColor: PIPELINE_COLORS[pipeline].bg, borderColor: PIPELINE_COLORS[pipeline].border, borderWidth: 1 };
     });
     destroyChart('won');
+    const moneyTick = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     charts.won = new Chart(document.getElementById('chartWon'), {
         type: 'bar', data: { labels: months.map(monthLabel), datasets },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+        options: { responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const v = ctx.parsed.y;
+                            return `${ctx.dataset.label}: ${isMoney ? moneyTick(v) : v}`;
+                        },
+                        afterLabel: (ctx) => {
+                            if (!isMoney) return '';
+                            const mk = months[ctx.dataIndex];
+                            const dealsForBar = byMonthByPipeline[ctx.dataset.label][mk] || [];
+                            return `${dealsForBar.length} negócio(s)`;
+                        }
+                    }
+                }
+            },
             onClick: (event, elements, chart) => {
                 if (elements.length > 0) {
                     const idx = elements[0].index;
@@ -6230,10 +6264,21 @@ function renderSection1() {
                     const mk = months[idx];
                     const pipeline = pipelines[dsIdx];
                     const clickDeals = (byMonthByPipeline[pipeline][mk] || []);
-                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios)`, clickDeals, null, 'won');
+                    showDrilldown(`${pipeline} - ${monthLabel(mk)} (${clickDeals.length} negócios · ${metricLabel}: ${isMoney ? moneyTick(metricValue(clickDeals)) : clickDeals.length})`, clickDeals, null, 'won');
                 }
             },
-            scales: { x: { ...darkScaleOptions }, y: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid } } }
+            scales: {
+                x: { ...darkScaleOptions },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        ...darkScaleOptions.ticks,
+                        ...(isMoney ? { callback: moneyTick } : { stepSize: 1 })
+                    },
+                    grid: darkScaleOptions.grid,
+                    title: { display: true, text: metricLabel, color: '#94a3b8' }
+                }
+            } }
     });
     document.getElementById('tbodyWon').innerHTML = deals.map(d => `<tr>
         <td>${d.Title || ''}</td><td>${getOwnerName(d)}</td>
