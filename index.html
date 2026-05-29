@@ -3166,11 +3166,22 @@
             /* Marketing funnel */
             #mktTabPerf .dash-card { grid-column: 1 / -1 !important; }
 
-            /* Intermodal — força 1 col nas grids internas */
-            #sec7Inter .section-body > div[style*="grid-template-columns:1fr 1fr"],
-            #sec7Inter .section-body > div[style*="grid-template-columns: 1fr 1fr"] {
+            /* Grids inline 1fr 1fr dentro de qualquer section-body → 1 coluna no mobile
+               (cobre sec3 Produtos Vendidos, sec4 Ranking, sec5/5b/6/6b, Intermodal, etc) */
+            .section-body div[style*="grid-template-columns:1fr 1fr"],
+            .section-body div[style*="grid-template-columns: 1fr 1fr"],
+            .section-body div[style*="grid-template-columns:1fr 1fr 1fr"],
+            .section-body div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+            }
+            /* Marketing card também usa grid 1fr 1fr inline em alguns lugares */
+            .dash-card div[style*="grid-template-columns:1fr 1fr"],
+            .dash-card div[style*="grid-template-columns: 1fr 1fr"] {
                 grid-template-columns: 1fr !important;
             }
+            /* Charts em donut (Produtos Vendidos) — limita altura pra nao gigantes */
+            .section-body canvas { max-height: 240px !important; }
         }
 
         /* Telefones pequenos (até 480px) — ajustes finos extras */
