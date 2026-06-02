@@ -13,7 +13,7 @@ const RD_PUBLIC_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Marketing toke
 const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing token privado (API legada)
 const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 10; // Bump to invalidate disk cache after schema changes
+const CACHE_VERSION = 11; // v11: expande Contact.OtherProperties pra trazer Cargo
 
 // ==================== Auth config ====================
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
@@ -431,7 +431,7 @@ function odataEncode(url) {
 
 async function refreshAll() {
     console.log('[cache] Starting full refresh...');
-    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State)),Owner,Stage,Pipeline,OtherProperties,Origin';
+    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State),OtherProperties),Owner,Stage,Pipeline,OtherProperties,Origin';
     const forecastFilter = "OtherProperties/any(o: o/FieldKey eq 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC')";
     const stateFilter = "OtherProperties/any(o: o/FieldKey eq 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848')";
 
