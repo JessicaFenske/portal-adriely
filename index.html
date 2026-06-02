@@ -7662,16 +7662,22 @@ async function renderHallPreVendas() {
 
     // ============ Ranking 1: Realizadas no período ============
     // Conta agendadas no período (pra calc taxa) e realizadas no período (atribuição via Creator da Agendada)
+    // PROXY ESPECIAL pro Sankhya: time não preenche tasks → usa stage do deal.
+    //   Agendada Sankhya = deal pipeline Sankhya com Owner ≠ Maja
+    //   Realizada Sankhya = stage ord=0 com valor OU stage ord>=1 (não Descarte)
     const aggR = {}; // canonicalName → { realizadas, agendadas }
     const ensureAggR = (n) => { if (!aggR[n]) aggR[n] = { realizadas: 0, agendadas: 0 }; };
+    const isMaja = (name) => (name || '').toLowerCase().includes('maja');
+    const SANKHYA_DESCARTE = /descart/i;
 
-    // Agendadas do período
+    // Agendadas no período (via tasks) — pipelines não-Sankhya
     (dashMeetings || []).forEach(t => {
         const tn = normTitle(t.Title);
         if (!tn.includes('reuniao agendada')) return;
         if (!inRange(t.DateTime)) return;
+        const deal = t.DealId ? window._dashOpenDealsById?.[t.DealId] : null;
+        if (deal && getPipelineName(deal) === 'Sankhya') return; // Sankhya tem proxy próprio abaixo
         if (pipelineFilter) {
-            const deal = t.DealId ? window._dashOpenDealsById?.[t.DealId] : null;
             if (!deal || getPipelineName(deal) !== pipelineFilter) return;
         }
         const creator = dashUsersById[t.CreatorId] || '';
@@ -7681,7 +7687,7 @@ async function renderHallPreVendas() {
         aggR[canonical].agendadas++;
     });
 
-    // Realizadas do período
+    // Realizadas do período (via tasks) — pipelines não-Sankhya
     const realizedDealIds = new Set();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
@@ -7691,8 +7697,9 @@ async function renderHallPreVendas() {
         const refDate = t.FinishDate || t.DateTime;
         if (!inRange(refDate)) return;
         if (realizedDealIds.has(t.DealId)) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (deal && getPipelineName(deal) === 'Sankhya') return; // proxy abaixo
         if (pipelineFilter) {
-            const deal = window._dashOpenDealsById?.[t.DealId];
             if (!deal || getPipelineName(deal) !== pipelineFilter) return;
         }
         let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
@@ -7706,6 +7713,33 @@ async function renderHallPreVendas() {
         realizedDealIds.add(t.DealId);
     });
 
+    // PROXY SANKHYA → atribui à Maja
+    if (!pipelineFilter || pipelineFilter === 'Sankhya') {
+        const allDealsForSankhya = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+        const sankhyaInPeriod = (d) => {
+            // Janela larga: usa CreateDate ou LastUpdateDate (Sankhya tem leadtime longo)
+            return inRange(d.CreateDate) || inRange(d.LastUpdateDate);
+        };
+        allDealsForSankhya.forEach(d => {
+            if (getPipelineName(d) !== 'Sankhya') return;
+            if (!sankhyaInPeriod(d)) return;
+            const ownerName = d.Owner?.Name || '';
+            const stageOrd = d.Stage?.Ordination ?? -1;
+            const stageName = d.Stage?.Name || '';
+            const isDescarte = SANKHYA_DESCARTE.test(stageName);
+            const mrr = getMRR(d), setup = getSetup(d);
+            ensureAggR('Maja Siqueira');
+            // Agendada: Owner ≠ Maja (Maja já passou pro executivo)
+            if (!isMaja(ownerName)) aggR['Maja Siqueira'].agendadas++;
+            // Realizada: 1ª fase com valor OU 2ª+ (não descarte)
+            if (!isDescarte) {
+                const isPrimeiraComValor = stageOrd === 0 && (mrr > 0 || setup > 0);
+                const isSegundaOuMais = stageOrd >= 1;
+                if (isPrimeiraComValor || isSegundaOuMais) aggR['Maja Siqueira'].realizadas++;
+            }
+        });
+    }
+
     const sortedR = Object.entries(aggR).map(([name, v]) => ({ name, ...v, taxa: v.agendadas ? v.realizadas / v.agendadas : 0 })).filter(s => s.realizadas > 0).sort((a, b) => b.realizadas - a.realizadas);
 
     // ============ Ranking 2: Propostas no período vindas das Agendadas ============
@@ -7718,16 +7752,23 @@ async function renderHallPreVendas() {
     const proposalDealsSeen = new Set();
     allDeals.forEach(d => {
         if (proposalDealsSeen.has(d.Id)) return;
-        // Critério "proposta enviada" do projeto:
         const hasProposalDate = inRange(getProposalDate(d));
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
         const createdInPeriod = inRange(d.CreateDate);
         const isProposta = hasProposalDate || (hasValue && createdInPeriod);
         if (!isProposta) return;
-        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return;
-        const ag = agendadaByDeal.get(d.Id);
-        if (!ag) return; // sem agendada vinculada → não credita pré-vendas
-        const canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        const pn = getPipelineName(d);
+        if (pipelineFilter && pn !== pipelineFilter) return;
+
+        // PROXY SANKHYA: atribui à Maja sem precisar de Agendada task
+        let canonical = null;
+        if (pn === 'Sankhya') {
+            canonical = 'Maja Siqueira';
+        } else {
+            const ag = agendadaByDeal.get(d.Id);
+            if (!ag) return; // sem agendada vinculada e não-Sankhya → não credita
+            canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
         if (!canonical) return;
         ensureAggP(canonical);
         aggP[canonical].propostas++;
@@ -7747,9 +7788,16 @@ async function renderHallPreVendas() {
         // Atribuição pré-vendas: só faz sentido pra Funil de Vendas/Sankhya (não Farmer/IPCA)
         if (pn === 'Farmer' || pn === 'Farmer IPCA') return;
         if (pipelineFilter && pn !== pipelineFilter) return;
-        const ag = agendadaByDeal.get(d.Id);
-        if (!ag) return;
-        const canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+
+        // PROXY SANKHYA: atribui à Maja sem precisar de Agendada task
+        let canonical = null;
+        if (pn === 'Sankhya') {
+            canonical = 'Maja Siqueira';
+        } else {
+            const ag = agendadaByDeal.get(d.Id);
+            if (!ag) return;
+            canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
         if (!canonical) return;
         ensureAggG(canonical);
         aggG[canonical].ganhos++;
