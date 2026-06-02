@@ -3665,6 +3665,29 @@
             color: #94a3b8;
         }
         .hv-empty .emoji { font-size: 36px; display: block; margin-bottom: 10px; }
+
+        /* Hall de Pré-Vendas — seções numeradas */
+        .hp-section { margin-bottom: 32px; }
+        .hp-section-header { margin-bottom: 16px; }
+        .hp-section-header h2 {
+            font-size: 18px; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 6px;
+        }
+        .hp-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+            color: #fff; font-weight: 800; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+            flex-shrink: 0;
+        }
+        .hp-section-sub { font-size: 12.5px; color: #94a3b8; margin-left: 42px; line-height: 1.5; }
+        .hp-section-sub strong { color: #c4b5fd; }
+        @media (max-width: 600px) {
+            .hp-section-header h2 { font-size: 15px; gap: 10px; }
+            .hp-section-sub { margin-left: 0; margin-top: 6px; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -3688,6 +3711,10 @@
             <div class="nav-item" data-view="forecast" onclick="showView('forecast')">
                 <span class="nav-icon">&#128176;</span>
                 <span class="nav-label">Forecast</span>
+            </div>
+            <div class="nav-item" data-view="hall-prevendas" onclick="showView('hall-prevendas')">
+                <span class="nav-icon">&#128222;</span>
+                <span class="nav-label">Hall de Pré-Vendas</span>
             </div>
             <div class="nav-item" data-view="hall-vendedores" onclick="showView('hall-vendedores')">
                 <span class="nav-icon">&#127942;</span>
@@ -3811,6 +3838,92 @@
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
+
+        <!-- ==================== VIEW: HALL DE PRÉ-VENDAS ==================== -->
+        <div id="view-hall-prevendas" style="display:none;">
+            <div class="hv-page">
+                <!-- Hero header -->
+                <div class="hv-hero" style="background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(139,92,246,0.08));border-color:rgba(56,189,248,0.3);">
+                    <div class="hv-hero-left">
+                        <div class="hv-hero-eyebrow" style="color:#38bdf8;">📞 PRÉ-VENDAS</div>
+                        <h1 class="hv-hero-title" id="hpHeroTitle">Hall de Pré-Vendas</h1>
+                        <div class="hv-hero-sub" id="hpHeroSub" style="color:#7dd3fc;">Carregando dados…</div>
+                    </div>
+                    <div class="hv-filters">
+                        <select id="hpPeriod" onchange="renderHallPreVendas()">
+                            <option value="thisMonth" selected>Este mês</option>
+                            <option value="lastMonth">Mês passado</option>
+                            <option value="thisQuarter">Este trimestre</option>
+                            <option value="lastQuarter">Trimestre anterior</option>
+                            <option value="thisYear">Este ano</option>
+                        </select>
+                        <select id="hpPipeline" onchange="renderHallPreVendas()">
+                            <option value="">Todos os funis</option>
+                            <option value="Funil de Vendas">Funil de Vendas</option>
+                            <option value="Sankhya">Sankhya</option>
+                            <option value="Farmer">Farmer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats summary -->
+                <div class="hv-stats" id="hpStats"></div>
+
+                <!-- Sua posição (se for SDR) -->
+                <div id="hpYourPosition"></div>
+
+                <!-- Ranking 1: Reuniões REALIZADAS -->
+                <div class="hp-section">
+                    <div class="hp-section-header">
+                        <h2><span class="hp-num">1</span> Reuniões realizadas no período</h2>
+                        <div class="hp-section-sub">Quem mais teve reuniões com SLA cumprido. Atribuição: SDR que <strong>criou a Reunião Agendada</strong> (independente de quem foi marcado na Realizada — automação do Ploomes muitas vezes mascara o real criador).</div>
+                    </div>
+                    <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumRealizadas"></div></div>
+                    <div class="hv-board-card">
+                        <div class="hv-board-scroll">
+                            <table class="hv-board-table">
+                                <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">Realizadas</th><th class="num">Agendadas</th><th class="num hide-mob">Taxa</th></tr></thead>
+                                <tbody id="hpBoardRealizadas"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking 2: PROPOSTAS no período (vindas de suas reuniões) -->
+                <div class="hp-section">
+                    <div class="hp-section-header">
+                        <h2><span class="hp-num">2</span> Propostas no período vindas das suas reuniões</h2>
+                        <div class="hp-section-sub">Deals com proposta enviada <strong>neste período</strong>, atribuídos ao SDR que criou a <strong>Reunião Agendada original</strong> (mesmo que tenha sido em meses anteriores — leadtime &gt; 30 dias).</div>
+                    </div>
+                    <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumPropostas"></div></div>
+                    <div class="hv-board-card">
+                        <div class="hv-board-scroll">
+                            <table class="hv-board-table">
+                                <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">Propostas</th><th class="num hide-mob">MRR (R$)</th><th class="num hide-mob">Setup (R$)</th></tr></thead>
+                                <tbody id="hpBoardPropostas"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking 3: GANHOS no período (vindos de suas reuniões) -->
+                <div class="hp-section">
+                    <div class="hp-section-header">
+                        <h2><span class="hp-num">3</span> Negócios ganhos no período vindos das suas reuniões</h2>
+                        <div class="hp-section-sub">Deals <strong>ganhos neste período</strong>, atribuídos ao SDR que originou o lead. Esse é o ranking final — o que de fato virou receita por causa do trabalho do pré-vendedor.</div>
+                    </div>
+                    <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumGanhos"></div></div>
+                    <div class="hv-board-card">
+                        <div class="hv-board-scroll">
+                            <table class="hv-board-table">
+                                <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">Ganhos</th><th class="num">MRR (R$)</th><th class="num hide-mob">Setup (R$)</th></tr></thead>
+                                <tbody id="hpBoardGanhos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ==================== VIEW: HALL DE VENDEDORES ==================== -->
         <div id="view-hall-vendedores" style="display:none;">
@@ -5774,6 +5887,8 @@ function showView(viewName) {
     if (afEl) afEl.style.display = 'none';
     const hvEl = document.getElementById('view-hall-vendedores');
     if (hvEl) hvEl.style.display = 'none';
+    const hpEl = document.getElementById('view-hall-prevendas');
+    if (hpEl) hpEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -5788,6 +5903,12 @@ function showView(viewName) {
         if (typeof renderHallVendedores === 'function') {
             // Pequeno delay pra esperar dados carregarem do cache
             setTimeout(() => renderHallVendedores(), wonDeals && wonDeals.length ? 50 : 800);
+        }
+    }
+    if (viewName === 'hall-prevendas') {
+        if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
+        if (typeof renderHallPreVendas === 'function') {
+            setTimeout(() => renderHallPreVendas(), (wonDeals && wonDeals.length && dashMeetings && dashMeetings.length) ? 50 : 1200);
         }
     }
 
@@ -7495,6 +7616,248 @@ async function renderHallVendedores() {
             <td class="num hv-trend ${t.class}">${t.text}</td>
         </tr>`;
     }).join('');
+}
+
+// ==================== HALL DE PRÉ-VENDAS ====================
+function _hpPeriodRange() {
+    const sel = document.getElementById('hpPeriod');
+    const val = sel ? sel.value : 'thisMonth';
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    let start, end, label;
+    switch(val) {
+        case 'thisMonth': start = new Date(y, m, 1); end = new Date(y, m + 1, 0, 23, 59, 59); label = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); break;
+        case 'lastMonth': start = new Date(y, m - 1, 1); end = new Date(y, m, 0, 23, 59, 59); label = new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); break;
+        case 'thisQuarter': { const qs = Math.floor(m / 3) * 3; start = new Date(y, qs, 1); end = new Date(y, qs + 3, 0, 23, 59, 59); label = `Q${Math.floor(qs/3)+1}/${y}`; break; }
+        case 'lastQuarter': { const qs = Math.floor(m / 3) * 3; start = new Date(y, qs - 3, 1); end = new Date(y, qs, 0, 23, 59, 59); label = `Q${Math.floor((qs-3)/3)+1}/${qs-3 < 0 ? y-1 : y}`; break; }
+        case 'thisYear': start = new Date(y, 0, 1); end = new Date(y, 11, 31, 23, 59, 59); label = String(y); break;
+    }
+    return { start, end, label };
+}
+
+async function renderHallPreVendas() {
+    const range = _hpPeriodRange();
+    const pipelineFilter = document.getElementById('hpPipeline')?.value || '';
+    const me = await _hvFetchMe();
+
+    // Verifica dados
+    if (!dashMeetings || dashMeetings.length === 0 || !wonDeals) {
+        document.getElementById('hpHeroSub').textContent = 'Carregando dados…';
+        document.getElementById('hpPodiumRealizadas').innerHTML = '<div class="hv-empty" style="grid-column:1/-1"><span class="emoji">⏳</span>Aguardando carregamento das tasks…</div>';
+        return;
+    }
+    ensureDealsIndex();
+
+    const normTitle = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const inRange = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= range.start.getTime() && t <= range.end.getTime(); };
+
+    // Indexa Agendadas por DealId (TODAS, sem filtro de período — pra atribuir leadtime longo)
+    const agendadaByDeal = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = normTitle(t.Title);
+        if (!tn.includes('reuniao agendada')) return;
+        if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
+    });
+
+    // ============ Ranking 1: Realizadas no período ============
+    // Conta agendadas no período (pra calc taxa) e realizadas no período (atribuição via Creator da Agendada)
+    const aggR = {}; // canonicalName → { realizadas, agendadas }
+    const ensureAggR = (n) => { if (!aggR[n]) aggR[n] = { realizadas: 0, agendadas: 0 }; };
+
+    // Agendadas do período
+    (dashMeetings || []).forEach(t => {
+        const tn = normTitle(t.Title);
+        if (!tn.includes('reuniao agendada')) return;
+        if (!inRange(t.DateTime)) return;
+        if (pipelineFilter) {
+            const deal = t.DealId ? window._dashOpenDealsById?.[t.DealId] : null;
+            if (!deal || getPipelineName(deal) !== pipelineFilter) return;
+        }
+        const creator = dashUsersById[t.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        ensureAggR(canonical);
+        aggR[canonical].agendadas++;
+    });
+
+    // Realizadas do período
+    const realizedDealIds = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = normTitle(t.Title);
+        if (!tn.includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
+        const refDate = t.FinishDate || t.DateTime;
+        if (!inRange(refDate)) return;
+        if (realizedDealIds.has(t.DealId)) return;
+        if (pipelineFilter) {
+            const deal = window._dashOpenDealsById?.[t.DealId];
+            if (!deal || getPipelineName(deal) !== pipelineFilter) return;
+        }
+        let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (!canonical) {
+            const ag = agendadaByDeal.get(t.DealId);
+            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
+        if (!canonical) return;
+        ensureAggR(canonical);
+        aggR[canonical].realizadas++;
+        realizedDealIds.add(t.DealId);
+    });
+
+    const sortedR = Object.entries(aggR).map(([name, v]) => ({ name, ...v, taxa: v.agendadas ? v.realizadas / v.agendadas : 0 })).filter(s => s.realizadas > 0).sort((a, b) => b.realizadas - a.realizadas);
+
+    // ============ Ranking 2: Propostas no período vindas das Agendadas ============
+    // Agrupa TODOS os deals (won + lost + open) com proposalDate no período
+    const allDeals = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const aggP = {};
+    const ensureAggP = (n) => { if (!aggP[n]) aggP[n] = { propostas: 0, mrr: 0, setup: 0, deals: [] }; };
+    const proposalDealsSeen = new Set();
+    allDeals.forEach(d => {
+        if (proposalDealsSeen.has(d.Id)) return;
+        const pd = getProposalDate(d);
+        if (!inRange(pd)) return;
+        if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return;
+        const ag = agendadaByDeal.get(d.Id);
+        if (!ag) return; // sem agendada vinculada → não credita pré-vendas
+        const canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        if (!canonical) return;
+        ensureAggP(canonical);
+        aggP[canonical].propostas++;
+        aggP[canonical].mrr += getMRR(d);
+        aggP[canonical].setup += getSetup(d);
+        aggP[canonical].deals.push(d);
+        proposalDealsSeen.add(d.Id);
+    });
+    const sortedP = Object.entries(aggP).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.propostas - a.propostas);
+
+    // ============ Ranking 3: Ganhos no período vindos das Agendadas ============
+    const aggG = {};
+    const ensureAggG = (n) => { if (!aggG[n]) aggG[n] = { ganhos: 0, mrr: 0, setup: 0, deals: [] }; };
+    (wonDeals || []).forEach(d => {
+        if (!inRange(d.FinishDate)) return;
+        const pn = getPipelineName(d);
+        // Atribuição pré-vendas: só faz sentido pra Funil de Vendas/Sankhya (não Farmer/IPCA)
+        if (pn === 'Farmer' || pn === 'Farmer IPCA') return;
+        if (pipelineFilter && pn !== pipelineFilter) return;
+        const ag = agendadaByDeal.get(d.Id);
+        if (!ag) return;
+        const canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        if (!canonical) return;
+        ensureAggG(canonical);
+        aggG[canonical].ganhos++;
+        aggG[canonical].mrr += getMRR(d);
+        aggG[canonical].setup += getSetup(d);
+        aggG[canonical].deals.push(d);
+    });
+    const sortedG = Object.entries(aggG).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.ganhos - a.ganhos);
+
+    // ============ Hero + stats ============
+    const totalRealizadas = sortedR.reduce((s, x) => s + x.realizadas, 0);
+    const totalPropostas = sortedP.reduce((s, x) => s + x.propostas, 0);
+    const totalGanhos = sortedG.reduce((s, x) => s + x.ganhos, 0);
+    const daysLeft = Math.max(0, Math.ceil((range.end.getTime() - Date.now()) / 86400000));
+    document.getElementById('hpHeroTitle').textContent = 'Hall de Pré-Vendas — ' + range.label;
+    document.getElementById('hpHeroSub').innerHTML = daysLeft > 0
+        ? `<strong>${daysLeft} dia${daysLeft > 1 ? 's' : ''}</strong> até o fim do período · ${totalRealizadas} reuniões realizadas · ${totalPropostas} propostas · ${totalGanhos} ganhos`
+        : `Período encerrado · ${totalRealizadas} reuniões · ${totalPropostas} propostas · ${totalGanhos} ganhos`;
+    const totalMrrGanho = sortedG.reduce((s, x) => s + x.mrr, 0);
+    const convRate = totalRealizadas > 0 ? ((totalGanhos / totalRealizadas) * 100).toFixed(1) : '0';
+    document.getElementById('hpStats').innerHTML = `
+        <div class="hv-stat-card"><div class="v" style="color:#38bdf8;">${totalRealizadas}</div><div class="l">Reuniões realizadas</div></div>
+        <div class="hv-stat-card"><div class="v" style="color:#c4b5fd;">${totalPropostas}</div><div class="l">Propostas vindas</div></div>
+        <div class="hv-stat-card"><div class="v" style="color:#6ee7b7;">${totalGanhos}</div><div class="l">Ganhos vindos</div></div>
+        <div class="hv-stat-card"><div class="v">${_hvMoney(totalMrrGanho)}</div><div class="l">MRR conquistado</div></div>
+    `;
+
+    // ============ Sua posição (se for SDR) ============
+    const yourPosDiv = document.getElementById('hpYourPosition');
+    if (me) {
+        const myCanonical = getCanonicalSdrName(me);
+        if (myCanonical) {
+            const posR = sortedR.findIndex(s => s.name === myCanonical) + 1 || '—';
+            const posP = sortedP.findIndex(s => s.name === myCanonical) + 1 || '—';
+            const posG = sortedG.findIndex(s => s.name === myCanonical) + 1 || '—';
+            yourPosDiv.innerHTML = `<div class="hv-your-pos" style="background:linear-gradient(135deg,rgba(56,189,248,0.22),rgba(56,189,248,0.06));border-color:rgba(56,189,248,0.45);">
+                <div class="hv-yp-avatar" style="background:${_hvAvatarColor(me)}">${_hvInitials(me)}</div>
+                <div class="hv-yp-main">
+                    <div class="hv-yp-title" style="color:#7dd3fc;">SUA POSIÇÃO</div>
+                    <div class="hv-yp-pos">📞 <strong>${posR}º</strong> em realizadas · 📄 <strong>${posP}º</strong> em propostas · 🏆 <strong>${posG}º</strong> em ganhos</div>
+                </div>
+            </div>`;
+        } else {
+            yourPosDiv.innerHTML = '';
+        }
+    }
+
+    // ============ Render helpers ============
+    const renderPodium = (containerId, sorted, valueKey, valueLabel, subKey, subFormat) => {
+        const div = document.getElementById(containerId);
+        if (!sorted.length) {
+            div.innerHTML = '<div class="hv-empty" style="grid-column:1/-1"><span class="emoji">🤷</span>Nenhum dado neste período.</div>';
+            return;
+        }
+        const top3 = sorted.slice(0, 3);
+        const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
+        const podiumClass = top3.length === 3 ? ['silver','gold','bronze'] : top3.map((_,i) => ['gold','silver','bronze'][i]);
+        const medals = top3.length === 3 ? ['🥈','🥇','🥉'] : ['🥇','🥈','🥉'].slice(0, top3.length);
+        div.innerHTML = podiumOrder.map((s, idx) => {
+            if (!s) return '<div></div>';
+            const isYou = me && getCanonicalSdrName(me) === s.name;
+            return `<div class="hv-podium-card ${podiumClass[idx]}" ${isYou ? 'style="outline:2px solid #38bdf8;outline-offset:2px;"' : ''}>
+                <div class="hv-medal">${medals[idx]}</div>
+                <div class="hv-podium-avatar" style="background:${_hvAvatarColor(s.name)}">${_hvInitials(s.name)}</div>
+                <div class="hv-podium-name">${_hvShortName(s.name)}${isYou ? ' 👤' : ''}</div>
+                <div class="hv-podium-value">${s[valueKey]}</div>
+                <div class="hv-podium-sub">${valueLabel}</div>
+                ${subKey && s[subKey] !== undefined ? `<div class="hv-podium-trend flat" style="color:#7dd3fc;">${subFormat ? subFormat(s[subKey]) : s[subKey]}</div>` : ''}
+            </div>`;
+        }).join('');
+    };
+
+    const renderBoard = (bodyId, sorted, cols) => {
+        const body = document.getElementById(bodyId);
+        if (!sorted.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#64748b;">Nenhum dado.</td></tr>'; return; }
+        body.innerHTML = sorted.map((s, i) => {
+            const isYou = me && getCanonicalSdrName(me) === s.name;
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+            return `<tr class="${isYou ? 'you' : ''}">
+                <td class="hv-board-pos">${medal} ${i + 1}</td>
+                <td>
+                    <div class="hv-board-user">
+                        <div class="hv-board-avatar" style="background:${_hvAvatarColor(s.name)}">${_hvInitials(s.name)}</div>
+                        <div class="hv-board-name">${s.name}${isYou ? '<span class="you-tag">VOCÊ</span>' : ''}</div>
+                    </div>
+                </td>
+                ${cols.map(c => `<td class="num${c.hideMob ? ' hide-mob' : ''}" ${c.color ? `style="color:${c.color};font-weight:600;"` : ''}>${c.format(s)}</td>`).join('')}
+            </tr>`;
+        }).join('');
+    };
+
+    // ============ Render Ranking 1: Realizadas ============
+    renderPodium('hpPodiumRealizadas', sortedR, 'realizadas', 'realizadas', 'agendadas', v => `${v} agendadas`);
+    renderBoard('hpBoardRealizadas', sortedR, [
+        { format: s => s.realizadas, color: '#38bdf8' },
+        { format: s => s.agendadas },
+        { format: s => ((s.taxa * 100).toFixed(0) + '%'), hideMob: true, color: '#c4b5fd' }
+    ]);
+
+    // ============ Render Ranking 2: Propostas ============
+    renderPodium('hpPodiumPropostas', sortedP, 'propostas', 'propostas', 'mrr', v => `${_hvMoney(v)} em MRR`);
+    renderBoard('hpBoardPropostas', sortedP, [
+        { format: s => s.propostas, color: '#c4b5fd' },
+        { format: s => _hvMoney(s.mrr), color: '#6ee7b7', hideMob: true },
+        { format: s => _hvMoney(s.setup), color: '#a78bfa', hideMob: true }
+    ]);
+
+    // ============ Render Ranking 3: Ganhos ============
+    renderPodium('hpPodiumGanhos', sortedG, 'ganhos', 'ganhos', 'mrr', v => `${_hvMoney(v)} em MRR`);
+    renderBoard('hpBoardGanhos', sortedG, [
+        { format: s => s.ganhos, color: '#6ee7b7' },
+        { format: s => _hvMoney(s.mrr), color: '#fcd34d' },
+        { format: s => _hvMoney(s.setup), color: '#a78bfa', hideMob: true }
+    ]);
 }
 
 // --- Section 5: Propostas Enviadas ---
