@@ -26,6 +26,14 @@
             max-width: 420px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.4);
         }
+        @media (max-width: 480px) {
+            body { padding: 14px; }
+            .auth-card { padding: 28px 22px; border-radius: 14px; }
+            .auth-logo .title { font-size: 18px; }
+            .auth-subtitle { margin-bottom: 22px; }
+            .field { margin-bottom: 14px; }
+        }
+        .auth-footer a { padding: 10px 6px; display: inline-block; } /* tap target maior pro "esqueci minha senha" */
         .auth-logo {
             display: flex; align-items: center; justify-content: center; gap: 10px;
             margin-bottom: 12px;
@@ -45,10 +53,11 @@
             background: rgba(15, 15, 30, 0.7);
             border: 1px solid rgba(108, 63, 181, 0.3);
             border-radius: 10px;
-            padding: 12px 14px;
+            padding: 13px 14px;
             color: #fff;
-            font-size: 14px;
+            font-size: 16px; /* 16px evita auto-zoom no iOS Safari */
             transition: border-color 0.2s;
+            -webkit-appearance: none;
         }
         .field input:focus {
             outline: none;
@@ -60,13 +69,15 @@
             background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
             color: #fff;
             border: none;
-            padding: 13px;
+            padding: 14px;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             margin-top: 8px;
+            min-height: 48px; /* tap target Apple/Material */
             transition: transform 0.1s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
         .btn-primary:hover { box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4); }
         .btn-primary:active { transform: translateY(1px); }
@@ -114,7 +125,7 @@
         <form id="loginForm">
             <div class="field">
                 <label for="email">E-mail</label>
-                <input type="email" id="email" name="email" required autocomplete="email" autofocus>
+                <input type="email" id="email" name="email" required autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
             </div>
             <div class="field">
                 <label for="password">Senha</label>
