@@ -26,26 +26,128 @@ const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidade
 const SESSION_DAYS = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
 const USERS_PATH = path.join(__dirname, 'users.json');
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || '';
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+const REDIS_KEY = 'users:list';
 
-// ==================== Auth helpers ====================
-function loadUsers() {
-    try { return JSON.parse(fs.readFileSync(USERS_PATH, 'utf8')).users || []; }
-    catch (e) { console.error('[auth] erro carregando users.json:', e.message); return []; }
+// ==================== Upstash Redis helpers ====================
+function redisCmd(args) {
+    return new Promise((resolve, reject) => {
+        if (!REDIS_URL || !REDIS_TOKEN) {
+            return reject(new Error('UPSTASH_REDIS_REST_URL/TOKEN não configurados'));
+        }
+        const u = new URL(REDIS_URL);
+        const body = JSON.stringify(args);
+        const opts = {
+            hostname: u.hostname,
+            port: u.port || 443,
+            path: '/',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + REDIS_TOKEN,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+        const req = https.request(opts, (rr) => {
+            const chunks = [];
+            rr.on('data', c => chunks.push(c));
+            rr.on('end', () => {
+                const text = Buffer.concat(chunks).toString('utf8');
+                if (rr.statusCode < 200 || rr.statusCode >= 300) {
+                    return reject(new Error('Redis HTTP ' + rr.statusCode + ': ' + text.slice(0, 200)));
+                }
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.error) return reject(new Error('Redis error: ' + parsed.error));
+                    resolve(parsed.result);
+                } catch (e) { reject(new Error('Redis parse error: ' + e.message)); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(15000, () => { req.destroy(); reject(new Error('Redis timeout')); });
+        req.write(body);
+        req.end();
+    });
 }
-function saveUsers(users) {
-    fs.writeFileSync(USERS_PATH, JSON.stringify({ users }, null, 2));
+async function redisGet(key) { return await redisCmd(['GET', key]); }
+async function redisSet(key, val) { return await redisCmd(['SET', key, val]); }
+
+// ==================== Cache + bootstrap dos usuários ====================
+let usersCache = [];
+let usersCacheReady = false;
+let usersBootPromise = null;
+
+async function initUsersFromRedis() {
+    if (!REDIS_URL || !REDIS_TOKEN) {
+        // Fallback: lê do arquivo (modo dev / sem Redis configurado)
+        try {
+            const raw = fs.readFileSync(USERS_PATH, 'utf8');
+            usersCache = JSON.parse(raw).users || [];
+            console.warn('[auth] Redis NÃO configurado — usando users.json local (modo dev). Persistência será perdida em redeploy.');
+        } catch (e) {
+            console.error('[auth] sem Redis e sem users.json:', e.message);
+            usersCache = [];
+        }
+        usersCacheReady = true;
+        return;
+    }
+    try {
+        const data = await redisGet(REDIS_KEY);
+        if (data) {
+            const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+            usersCache = Array.isArray(parsed) ? parsed : [];
+            console.log('[auth] users carregados do Redis:', usersCache.length);
+        } else {
+            // Seed inicial: lê do arquivo e popula Redis
+            const raw = fs.readFileSync(USERS_PATH, 'utf8');
+            usersCache = JSON.parse(raw).users || [];
+            await redisSet(REDIS_KEY, JSON.stringify(usersCache));
+            console.log('[auth] users seeded para Redis:', usersCache.length);
+        }
+    } catch (e) {
+        console.error('[auth] erro inicializando Redis:', e.message);
+        // Fallback de emergência: lê do arquivo (não persiste, mas permite login)
+        try {
+            const raw = fs.readFileSync(USERS_PATH, 'utf8');
+            usersCache = JSON.parse(raw).users || [];
+        } catch (er) { usersCache = []; }
+    }
+    usersCacheReady = true;
+}
+function waitUsersReady() {
+    if (usersCacheReady) return Promise.resolve();
+    return usersBootPromise || Promise.resolve();
+}
+function loadUsers() {
+    return usersCache || [];
+}
+async function saveUsers(users) {
+    usersCache = users;
+    if (REDIS_URL && REDIS_TOKEN) {
+        try {
+            await redisSet(REDIS_KEY, JSON.stringify(users));
+        } catch (e) {
+            console.error('[auth] falha ao salvar no Redis:', e.message);
+            throw e;
+        }
+    } else {
+        // Fallback dev: grava no arquivo
+        try { fs.writeFileSync(USERS_PATH, JSON.stringify({ users }, null, 2)); }
+        catch (e) { console.error('[auth] falha gravando users.json:', e.message); throw e; }
+    }
 }
 function findUser(email) {
     if (!email) return null;
     const e = String(email).toLowerCase().trim();
     return loadUsers().find(u => u.email === e) || null;
 }
-function updateUser(email, patch) {
-    const users = loadUsers();
+async function updateUser(email, patch) {
+    const users = loadUsers().slice();
     const i = users.findIndex(u => u.email === String(email).toLowerCase().trim());
     if (i < 0) return false;
     users[i] = { ...users[i], ...patch };
-    saveUsers(users);
+    await saveUsers(users);
     return true;
 }
 function b64url(buf) {
@@ -559,6 +661,8 @@ const server = http.createServer(async (req, res) => {
         let ok = false;
         try { ok = bcrypt.compareSync(password, user.passwordHash); } catch (e) { ok = false; }
         if (!ok) return jsonReply(res, 401, { error: 'E-mail ou senha inválidos' });
+        // Registra ultimo login (best-effort, não bloqueia)
+        updateUser(user.email, { lastLoginAt: new Date().toISOString() }).catch(e => console.error('[auth] lastLoginAt:', e.message));
         const token = signToken({ email: user.email }, SESSION_DAYS * 86400 * 1000);
         setSessionCookie(res, token);
         return jsonReply(res, 200, {
@@ -594,7 +698,8 @@ const server = http.createServer(async (req, res) => {
         if (!ok) return jsonReply(res, 401, { error: 'Senha atual incorreta.' });
         if (bcrypt.compareSync(newPassword, u.passwordHash)) return jsonReply(res, 400, { error: 'A nova senha deve ser diferente da atual.' });
         const newHash = bcrypt.hashSync(newPassword, 10);
-        updateUser(u.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() });
+        try { await updateUser(u.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() }); }
+        catch (e) { return jsonReply(res, 500, { error: 'Falha ao salvar nova senha. Tente novamente.' }); }
         return jsonReply(res, 200, { ok: true });
     }
 
@@ -622,8 +727,49 @@ const server = http.createServer(async (req, res) => {
         const user = findUser(payload.email);
         if (!user) return jsonReply(res, 400, { error: 'Usuário não encontrado.' });
         const newHash = bcrypt.hashSync(newPassword, 10);
-        updateUser(user.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() });
+        try { await updateUser(user.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() }); }
+        catch (e) { return jsonReply(res, 500, { error: 'Falha ao salvar. Tente novamente.' }); }
         return jsonReply(res, 200, { ok: true });
+    }
+
+    // ==================== Admin endpoints (só isAdmin=true) ====================
+    if (urlPath === '/admin/users' && req.method === 'GET') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const users = loadUsers().map(x => ({
+            email: x.email,
+            name: x.name,
+            isAdmin: !!x.isAdmin,
+            mustChangePassword: !!x.mustChangePassword,
+            passwordChangedAt: x.passwordChangedAt || null,
+            lastLoginAt: x.lastLoginAt || null,
+            createdAt: x.createdAt || null
+        }));
+        return jsonReply(res, 200, { users });
+    }
+
+    if (urlPath === '/admin/reset-user-password' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        if (!targetEmail) return jsonReply(res, 400, { error: 'email obrigatório' });
+        const target = findUser(targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'usuário não encontrado' });
+        const INITIAL = 'Lincros2026!';
+        const newHash = bcrypt.hashSync(INITIAL, 10);
+        try {
+            await updateUser(target.email, {
+                passwordHash: newHash,
+                mustChangePassword: true,
+                passwordChangedAt: null,
+                resetByAdminAt: new Date().toISOString(),
+                resetByAdminEmail: u.email
+            });
+        } catch (e) { return jsonReply(res, 500, { error: 'Falha ao resetar. Tente novamente.' }); }
+        return jsonReply(res, 200, { ok: true, message: `Senha de ${target.name} resetada para a senha inicial. O usuário será obrigado a trocá-la no próximo login.` });
     }
 
     // ==================== Middleware de proteção ====================
@@ -651,6 +797,7 @@ const server = http.createServer(async (req, res) => {
     if (urlPath === '/forgot-password') { req.url = '/forgot-password.html' + (req.url.slice('/forgot-password'.length).replace(/^[^?]*/, '')); }
     if (urlPath === '/reset-password') { req.url = '/reset-password.html' + (req.url.slice('/reset-password'.length).replace(/^[^?]*/, '')); }
     if (urlPath === '/change-password') { req.url = '/change-password.html' + (req.url.slice('/change-password'.length).replace(/^[^?]*/, '')); }
+    if (urlPath === '/admin/users') { req.url = '/admin-users.html' + (req.url.slice('/admin/users'.length).replace(/^[^?]*/, '')); }
 
     // Sankhya API (autenticada)
     if (req.url.startsWith('/api/sankhya/')) {
@@ -814,6 +961,10 @@ const server = http.createServer(async (req, res) => {
     });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Portal Lincros rodando em http://0.0.0.0:${PORT}`);
+// Inicializa users do Redis (ou seed se vazio) antes de subir o server
+usersBootPromise = initUsersFromRedis();
+usersBootPromise.finally(() => {
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log(`Portal Lincros rodando em http://0.0.0.0:${PORT}`);
+    });
 });

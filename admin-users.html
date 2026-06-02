@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração de Usuários — Portal Lincros</title>
+    <link rel="icon" type="image/png" href="lincros-logo.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        .container { max-width: 1280px; margin: 0 auto; }
+        .header {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            margin-bottom: 24px; gap: 16px;
+        }
+        .header-title h1 { font-size: 24px; font-weight: 700; color: #fff; }
+        .header-title .subtitle { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .header-actions { display: flex; gap: 10px; }
+        .btn {
+            background: rgba(108, 63, 181, 0.15);
+            border: 1px solid rgba(108, 63, 181, 0.35);
+            color: #c4b5fd;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover { background: rgba(108, 63, 181, 0.25); }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+            background: rgba(26, 26, 46, 0.8);
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
+        .stat-card .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+        .table-card {
+            background: rgba(26, 26, 46, 0.8);
+            border: 1px solid rgba(108, 63, 181, 0.2);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead { background: rgba(108, 63, 181, 0.15); }
+        thead th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #c4b5fd;
+            font-weight: 600;
+        }
+        tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
+            color: #e0e0e0;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: rgba(108, 63, 181, 0.06); }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
+        .badge-warn { background: rgba(251, 191, 36, 0.18); color: #fcd34d; }
+        .badge-admin { background: rgba(108, 63, 181, 0.25); color: #c4b5fd; margin-left: 6px; }
+        .muted { color: #64748b; font-style: italic; }
+        .action-btn {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .action-btn:hover { background: rgba(239, 68, 68, 0.22); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 1000;
+            max-width: 420px;
+        }
+        .toast-success { background: rgba(16, 185, 129, 0.95); color: #fff; }
+        .toast-error { background: rgba(239, 68, 68, 0.95); color: #fff; }
+        .loading { padding: 60px 20px; text-align: center; color: #94a3b8; }
+        .empty { padding: 40px 20px; text-align: center; color: #64748b; }
+        .table-scroll { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>👥 Administração de Usuários</h1>
+                <div class="subtitle">Status de troca de senha · último acesso · ações administrativas</div>
+            </div>
+            <div class="header-actions">
+                <a class="btn" href="/">← Voltar ao dashboard</a>
+            </div>
+        </div>
+
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="value" id="statTotal">—</div><div class="label">Total</div></div>
+            <div class="stat-card"><div class="value" id="statChanged">—</div><div class="label">Trocaram senha</div></div>
+            <div class="stat-card"><div class="value" id="statPending">—</div><div class="label">Pendentes</div></div>
+            <div class="stat-card"><div class="value" id="statRecent">—</div><div class="label">Logaram últimos 7d</div></div>
+        </div>
+
+        <div class="table-card">
+            <div id="tableLoading" class="loading">Carregando...</div>
+            <div class="table-scroll" id="tableWrap" style="display:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Status</th>
+                            <th>Senha trocada em</th>
+                            <th>Último login</th>
+                            <th style="text-align:right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const toast = document.getElementById('toast');
+        function showToast(msg, type) {
+            toast.textContent = msg;
+            toast.className = 'toast toast-' + (type || 'success');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 4500);
+        }
+        function fmtDate(iso) {
+            if (!iso) return null;
+            const d = new Date(iso);
+            if (isNaN(d)) return null;
+            const dd = String(d.getDate()).padStart(2,'0');
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            const yy = d.getFullYear();
+            const hh = String(d.getHours()).padStart(2,'0');
+            const mi = String(d.getMinutes()).padStart(2,'0');
+            return `${dd}/${mm}/${yy} ${hh}:${mi}`;
+        }
+        function diffDays(iso) {
+            if (!iso) return Infinity;
+            const d = new Date(iso);
+            return (Date.now() - d.getTime()) / 86400000;
+        }
+
+        async function loadUsers() {
+            try {
+                const r = await fetch('/admin/users', { credentials: 'same-origin' });
+                if (r.status === 401) { window.location.href = '/login'; return; }
+                if (r.status === 403) {
+                    document.getElementById('tableLoading').innerHTML = '<div style="color:#fca5a5">Acesso negado. Somente administradores podem ver esta página.</div>';
+                    return;
+                }
+                if (!r.ok) throw new Error('Falha ao carregar usuários');
+                const data = await r.json();
+                renderUsers(data.users || []);
+            } catch (e) {
+                document.getElementById('tableLoading').textContent = 'Erro: ' + e.message;
+            }
+        }
+
+        function renderUsers(users) {
+            // Stats
+            const total = users.length;
+            const changed = users.filter(u => !u.mustChangePassword).length;
+            const pending = total - changed;
+            const recent = users.filter(u => diffDays(u.lastLoginAt) <= 7).length;
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statChanged').textContent = changed;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statRecent').textContent = recent;
+
+            // Sort: pendentes primeiro, depois quem logou há mais tempo
+            users.sort((a, b) => {
+                if (a.mustChangePassword !== b.mustChangePassword) return a.mustChangePassword ? -1 : 1;
+                const da = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+                const db = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+                return da - db;
+            });
+
+            const body = document.getElementById('usersBody');
+            body.innerHTML = users.map(u => {
+                const adminBadge = u.isAdmin ? '<span class="badge badge-admin">ADMIN</span>' : '';
+                const statusBadge = u.mustChangePassword
+                    ? '<span class="badge badge-warn">⏳ Pendente</span>'
+                    : '<span class="badge badge-success">✅ OK</span>';
+                const pwdDate = fmtDate(u.passwordChangedAt) || '<span class="muted">—</span>';
+                const loginDate = fmtDate(u.lastLoginAt) || '<span class="muted">nunca</span>';
+                return `<tr>
+                    <td><strong>${escapeHtml(u.name)}</strong>${adminBadge}</td>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>${statusBadge}</td>
+                    <td>${pwdDate}</td>
+                    <td>${loginDate}</td>
+                    <td style="text-align:right;">
+                        <button class="action-btn" onclick="resetPassword('${escapeAttr(u.email)}','${escapeAttr(u.name)}')">Resetar senha</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            document.getElementById('tableLoading').style.display = 'none';
+            document.getElementById('tableWrap').style.display = '';
+        }
+
+        function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function escapeAttr(s) { return String(s||'').replace(/'/g, "\\'"); }
+
+        async function resetPassword(email, name) {
+            if (!confirm(`Resetar senha de ${name}?\n\nA senha voltará para "Lincros2026!" e ele(a) será obrigado(a) a trocá-la no próximo login.`)) return;
+            try {
+                const r = await fetch('/admin/reset-user-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email })
+                });
+                const data = await r.json();
+                if (!r.ok) { showToast(data.error || 'Falha ao resetar', 'error'); return; }
+                showToast(data.message || 'Senha resetada com sucesso', 'success');
+                loadUsers();
+            } catch (e) {
+                showToast('Erro de rede', 'error');
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
