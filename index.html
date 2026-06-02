@@ -3872,10 +3872,27 @@
                 <!-- Sua posição (se for SDR) -->
                 <div id="hpYourPosition"></div>
 
-                <!-- Ranking 1: Reuniões REALIZADAS -->
+                <!-- Ranking 1: GANHOS no período (ordenado por MRR — receita de verdade) -->
                 <div class="hp-section">
                     <div class="hp-section-header">
-                        <h2><span class="hp-num">1</span> Reuniões realizadas no período</h2>
+                        <h2><span class="hp-num">1</span> Negócios ganhos no período vindos das suas reuniões</h2>
+                        <div class="hp-section-sub">Ordenado por <strong>MRR conquistado</strong>. Deals <strong>ganhos neste período</strong>, atribuídos ao SDR que originou o lead (mesmo se a reunião foi em meses anteriores — leadtime &gt; 30 dias). Esse é o ranking principal — o que de fato virou receita.</div>
+                    </div>
+                    <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumGanhos"></div></div>
+                    <div class="hv-board-card">
+                        <div class="hv-board-scroll">
+                            <table class="hv-board-table">
+                                <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">MRR (R$)</th><th class="num hide-mob">Setup (R$)</th><th class="num hide-mob">Ganhos</th></tr></thead>
+                                <tbody id="hpBoardGanhos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking 2: Reuniões REALIZADAS -->
+                <div class="hp-section">
+                    <div class="hp-section-header">
+                        <h2><span class="hp-num">2</span> Reuniões realizadas no período</h2>
                         <div class="hp-section-sub">Quem mais teve reuniões com SLA cumprido. Atribuição: SDR que <strong>criou a Reunião Agendada</strong> (independente de quem foi marcado na Realizada — automação do Ploomes muitas vezes mascara o real criador).</div>
                     </div>
                     <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumRealizadas"></div></div>
@@ -3889,10 +3906,10 @@
                     </div>
                 </div>
 
-                <!-- Ranking 2: PROPOSTAS no período (vindas de suas reuniões) -->
+                <!-- Ranking 3: PROPOSTAS no período (vindas de suas reuniões) -->
                 <div class="hp-section">
                     <div class="hp-section-header">
-                        <h2><span class="hp-num">2</span> Propostas no período vindas das suas reuniões</h2>
+                        <h2><span class="hp-num">3</span> Propostas no período vindas das suas reuniões</h2>
                         <div class="hp-section-sub">Deals com proposta enviada <strong>neste período</strong>, atribuídos ao SDR que criou a <strong>Reunião Agendada original</strong> (mesmo que tenha sido em meses anteriores — leadtime &gt; 30 dias).</div>
                     </div>
                     <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumPropostas"></div></div>
@@ -3901,23 +3918,6 @@
                             <table class="hv-board-table">
                                 <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">Propostas</th><th class="num hide-mob">MRR (R$)</th><th class="num hide-mob">Setup (R$)</th></tr></thead>
                                 <tbody id="hpBoardPropostas"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Ranking 3: GANHOS no período (vindos de suas reuniões) -->
-                <div class="hp-section">
-                    <div class="hp-section-header">
-                        <h2><span class="hp-num">3</span> Negócios ganhos no período vindos das suas reuniões</h2>
-                        <div class="hp-section-sub">Deals <strong>ganhos neste período</strong>, atribuídos ao SDR que originou o lead. Esse é o ranking final — o que de fato virou receita por causa do trabalho do pré-vendedor.</div>
-                    </div>
-                    <div class="hv-podium-wrap"><div class="hv-podium" id="hpPodiumGanhos"></div></div>
-                    <div class="hv-board-card">
-                        <div class="hv-board-scroll">
-                            <table class="hv-board-table">
-                                <thead><tr><th>Pos</th><th>Pré-Vendedor</th><th class="num">Ganhos</th><th class="num">MRR (R$)</th><th class="num hide-mob">Setup (R$)</th></tr></thead>
-                                <tbody id="hpBoardGanhos"></tbody>
                             </table>
                         </div>
                     </div>
@@ -7757,7 +7757,8 @@ async function renderHallPreVendas() {
         aggG[canonical].setup += getSetup(d);
         aggG[canonical].deals.push(d);
     });
-    const sortedG = Object.entries(aggG).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.ganhos - a.ganhos);
+    // Ordena por MRR descendente — o que realmente importa é receita conquistada
+    const sortedG = Object.entries(aggG).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.mrr - a.mrr);
 
     // ============ Hero + stats ============
     const totalRealizadas = sortedR.reduce((s, x) => s + x.realizadas, 0);
@@ -7857,12 +7858,15 @@ async function renderHallPreVendas() {
         { format: s => _hvMoney(s.setup), color: '#a78bfa', hideMob: true }
     ]);
 
-    // ============ Render Ranking 3: Ganhos ============
-    renderPodium('hpPodiumGanhos', sortedG, 'ganhos', 'ganhos', 'mrr', v => `${_hvMoney(v)} em MRR`);
+    // ============ Render Ranking 3 (agora 1º): Ganhos — ordenado por MRR ============
+    // Pódio destaca MRR como número principal, mostra qtd de ganhos como sub
+    const sortedGForPodium = sortedG.map(s => ({ ...s, mrrDisplay: _hvMoney(s.mrr) }));
+    renderPodium('hpPodiumGanhos', sortedGForPodium, 'mrrDisplay', 'em MRR', 'ganhos', v => `${v} ${v === 1 ? 'deal ganho' : 'deals ganhos'}`);
+    // Tabela: MRR vem antes de Setup e Ganhos
     renderBoard('hpBoardGanhos', sortedG, [
-        { format: s => s.ganhos, color: '#6ee7b7' },
         { format: s => _hvMoney(s.mrr), color: '#fcd34d' },
-        { format: s => _hvMoney(s.setup), color: '#a78bfa', hideMob: true }
+        { format: s => _hvMoney(s.setup), color: '#a78bfa', hideMob: true },
+        { format: s => s.ganhos, color: '#6ee7b7', hideMob: true }
     ]);
 }
 
