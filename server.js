@@ -741,8 +741,8 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { ok: true });
     }
 
-    // ==================== Admin endpoints (só isAdmin=true) ====================
-    if (urlPath === '/admin/users' && req.method === 'GET') {
+    // ==================== Admin API endpoints (só isAdmin=true) ====================
+    if (urlPath === '/api/admin/users' && req.method === 'GET') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
         if (!u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
@@ -758,7 +758,7 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { users });
     }
 
-    if (urlPath === '/admin/_health' && req.method === 'GET') {
+    if (urlPath === '/api/admin/_health' && req.method === 'GET') {
         const u = getCurrentUser(req);
         if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
         const status = {
@@ -781,7 +781,7 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, status);
     }
 
-    if (urlPath === '/admin/reset-user-password' && req.method === 'POST') {
+    if (urlPath === '/api/admin/reset-user-password' && req.method === 'POST') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
         if (!u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
@@ -802,6 +802,44 @@ const server = http.createServer(async (req, res) => {
             });
         } catch (e) { return jsonReply(res, 500, { error: 'Falha ao resetar. Tente novamente.' }); }
         return jsonReply(res, 200, { ok: true, message: `Senha de ${target.name} resetada para a senha inicial. O usuário será obrigado a trocá-la no próximo login.` });
+    }
+
+    if (urlPath === '/api/admin/send-reminder' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        const target = findUser(targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'usuário não encontrado' });
+        if (!RESEND_API_KEY) return jsonReply(res, 500, { error: 'Serviço de e-mail não configurado' });
+        const html = `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#222">
+                <h2 style="color:#1a1a2e">Portal de Oportunidades Lincros</h2>
+                <p>Olá, ${target.name}.</p>
+                <p>Notamos que você ainda <strong>não acessou o Portal de Oportunidades</strong> ou ainda não trocou sua senha inicial.</p>
+                <p>Para acessar o portal, use:</p>
+                <ul>
+                    <li><strong>E-mail:</strong> ${target.email}</li>
+                    <li><strong>Senha inicial:</strong> <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">Lincros2026!</code></li>
+                </ul>
+                <p style="margin:28px 0">
+                    <a href="${APP_BASE_URL}" style="background:#6c3fb5;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600">Acessar o Portal</a>
+                </p>
+                <p style="font-size:13px;color:#666">No primeiro acesso, você será solicitado a definir uma nova senha pessoal (mínimo 8 caracteres).</p>
+                <p style="font-size:12px;color:#999;margin-top:30px">— Lembrete enviado por ${u.name}</p>
+            </div>
+        `;
+        await new Promise((resolve) => {
+            const payload = JSON.stringify({ from: RESEND_FROM, to: [target.email], subject: 'Lembrete: acesso ao Portal de Oportunidades', html });
+            const opts = {
+                hostname: 'api.resend.com', path: '/emails', method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+            };
+            const r = https.request(opts, (rr) => { rr.on('data', () => {}); rr.on('end', () => resolve(rr.statusCode)); });
+            r.on('error', () => resolve(0)); r.write(payload); r.end();
+        });
+        return jsonReply(res, 200, { ok: true, message: `Lembrete enviado para ${target.email}` });
     }
 
     // ==================== Middleware de proteção ====================

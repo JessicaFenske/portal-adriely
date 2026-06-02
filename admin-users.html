@@ -7,27 +7,59 @@
     <link rel="icon" type="image/png" href="lincros-logo.png">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-1: #1a1a2e;
+            --bg-2: #16162b;
+            --surface: rgba(26, 26, 46, 0.85);
+            --surface-2: rgba(15, 15, 30, 0.7);
+            --border: rgba(108, 63, 181, 0.22);
+            --border-strong: rgba(108, 63, 181, 0.45);
+            --primary: #8b5cf6;
+            --primary-2: #6c3fb5;
+            --text: #e5e7eb;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.16);
+            --warn: #f59e0b;
+            --warn-soft: rgba(245, 158, 11, 0.16);
+            --danger: #ef4444;
+            --danger-soft: rgba(239, 68, 68, 0.14);
+            --info: #38bdf8;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16162b 50%, #1a1a2e 100%);
-            color: #e0e0e0;
+            background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-1) 100%);
+            color: var(--text);
             min-height: 100vh;
-            padding: 30px 20px;
+            padding: 24px 20px 80px;
         }
         .container { max-width: 1280px; margin: 0 auto; }
-        .header {
+
+        /* ============ Header ============ */
+        .topbar {
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-            margin-bottom: 24px; gap: 16px;
+            margin-bottom: 24px; gap: 14px;
         }
-        .header-title h1 { font-size: 24px; font-weight: 700; color: #fff; }
-        .header-title .subtitle { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-        .header-actions { display: flex; gap: 10px; }
+        .topbar .title-block h1 {
+            font-size: 26px; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .topbar .title-block h1 .icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-2), var(--primary));
+            display: inline-flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
+            font-size: 18px;
+        }
+        .topbar .title-block .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 6px; margin-left: 50px; }
+        .topbar .actions { display: flex; gap: 8px; align-items: center; }
         .btn {
-            background: rgba(108, 63, 181, 0.15);
-            border: 1px solid rgba(108, 63, 181, 0.35);
-            color: #c4b5fd;
-            padding: 8px 16px;
-            border-radius: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 9px 14px;
+            border-radius: 10px;
             text-decoration: none;
             font-size: 13px;
             font-weight: 500;
@@ -35,124 +67,462 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            transition: all 0.15s;
         }
-        .btn:hover { background: rgba(108, 63, 181, 0.25); }
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.12);
-            border-color: rgba(239, 68, 68, 0.35);
-            color: #fca5a5;
+        .btn:hover { border-color: var(--border-strong); background: rgba(108, 63, 181, 0.1); }
+        .btn .icon { font-size: 14px; }
+
+        /* ============ Hero progress card ============ */
+        .hero-card {
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.12), rgba(108, 63, 181, 0.04));
+            border: 1px solid var(--border-strong);
+            border-radius: 18px;
+            padding: 22px 26px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
         }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
-        .stats-row {
+        .hero-card::after {
+            content: '';
+            position: absolute;
+            right: -60px; top: -60px;
+            width: 220px; height: 220px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.18), transparent 60%);
+            pointer-events: none;
+        }
+        .hero-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
         }
-        @media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-        .stat-card {
-            background: rgba(26, 26, 46, 0.8);
-            border: 1px solid rgba(108, 63, 181, 0.2);
-            border-radius: 12px;
-            padding: 14px 18px;
+        @media (max-width: 640px) { .hero-grid { grid-template-columns: 1fr; } }
+        .hero-text .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
         }
-        .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
-        .stat-card .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+        .hero-text .big {
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            margin: 6px 0 8px;
+            line-height: 1.1;
+        }
+        .hero-text .big span.muted { color: var(--text-muted); font-weight: 600; font-size: 22px; }
+        .hero-text .sub { font-size: 13px; color: var(--text-muted); }
+        .hero-text .sub strong { color: var(--text); }
+        .progress-track {
+            margin-top: 14px;
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-2), var(--primary), #c084fc);
+            border-radius: 10px;
+            transition: width 0.6s ease;
+            box-shadow: 0 0 16px rgba(139, 92, 246, 0.5);
+        }
+        .hero-stats {
+            display: flex;
+            gap: 18px;
+            min-width: 280px;
+        }
+        @media (max-width: 640px) { .hero-stats { min-width: 0; width: 100%; justify-content: space-between; } }
+        .hero-stat {
+            text-align: right;
+        }
+        @media (max-width: 640px) { .hero-stat { text-align: center; flex: 1; } }
+        .hero-stat .v { font-size: 22px; font-weight: 700; color: #fff; }
+        .hero-stat .v.success { color: var(--success); }
+        .hero-stat .v.warn { color: var(--warn); }
+        .hero-stat .v.info { color: var(--info); }
+        .hero-stat .l { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+        /* ============ Filter bar ============ */
+        .filterbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+            max-width: 360px;
+        }
+        .search-wrap input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 9px 14px 9px 36px;
+            color: var(--text);
+            font-size: 13px;
+        }
+        .search-wrap input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+        }
+        .search-wrap .search-icon {
+            position: absolute;
+            left: 12px; top: 50%; transform: translateY(-50%);
+            color: var(--text-dim);
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .chip:hover { color: var(--text); border-color: var(--border-strong); }
+        .chip.active {
+            background: rgba(139, 92, 246, 0.18);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .chip .count {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 10.5px;
+            font-weight: 600;
+        }
+        .chip.active .count { background: rgba(255, 255, 255, 0.18); color: #fff; }
+
+        /* ============ Table card ============ */
         .table-card {
-            background: rgba(26, 26, 46, 0.8);
-            border: 1px solid rgba(108, 63, 181, 0.2);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 14px;
             overflow: hidden;
         }
+        .table-scroll { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        thead { background: rgba(108, 63, 181, 0.15); }
+        thead { background: rgba(108, 63, 181, 0.1); }
         thead th {
             text-align: left;
-            padding: 12px 16px;
-            font-size: 11px;
+            padding: 13px 16px;
+            font-size: 10.5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #c4b5fd;
-            font-weight: 600;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            font-weight: 700;
+            white-space: nowrap;
         }
         tbody td {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(108, 63, 181, 0.1);
-            color: #e0e0e0;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
         }
         tbody tr:last-child td { border-bottom: none; }
+        tbody tr {
+            transition: background 0.15s;
+            position: relative;
+        }
         tbody tr:hover { background: rgba(108, 63, 181, 0.06); }
-        .badge {
+        tbody tr.pending {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.06) 0%, transparent 100%);
+            border-left: 2px solid var(--warn);
+        }
+        tbody tr.pending:hover { background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(108, 63, 181, 0.06) 100%); }
+
+        /* ============ User cell ============ */
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #fff;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+        .user-name { font-weight: 600; color: #fff; font-size: 13.5px; }
+        .user-email { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+        .badge-admin {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 11px;
+            background: linear-gradient(135deg, var(--primary-2), var(--primary));
+            color: #fff;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 9.5px;
+            font-weight: 700;
+            margin-left: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ============ Status badge ============ */
+        .status {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
             font-weight: 600;
         }
-        .badge-success { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; }
-        .badge-warn { background: rgba(251, 191, 36, 0.18); color: #fcd34d; }
-        .badge-admin { background: rgba(108, 63, 181, 0.25); color: #c4b5fd; margin-left: 6px; }
-        .muted { color: #64748b; font-style: italic; }
+        .status-ok { background: var(--success-soft); color: #6ee7b7; }
+        .status-pending { background: var(--warn-soft); color: var(--warn); }
+
+        /* ============ Time cell ============ */
+        .time-cell { font-size: 12.5px; color: var(--text); }
+        .time-cell .relative { font-weight: 500; color: #fff; }
+        .time-cell .absolute { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+        .time-cell.never { color: var(--text-dim); font-style: italic; }
+
+        /* ============ Action menu ============ */
+        .actions-cell { white-space: nowrap; text-align: right; position: relative; }
         .action-btn {
-            background: rgba(239, 68, 68, 0.12);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            color: #fca5a5;
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 11.5px;
-            font-weight: 500;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
             cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 4px;
         }
-        .action-btn:hover { background: rgba(239, 68, 68, 0.22); }
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-btn:hover {
+            color: var(--text);
+            background: rgba(108, 63, 181, 0.12);
+            border-color: var(--border);
+        }
+        .action-btn.primary {
+            background: rgba(139, 92, 246, 0.12);
+            color: #c4b5fd;
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        .action-btn.primary:hover { background: rgba(139, 92, 246, 0.22); color: #fff; }
+        .action-btn.danger {
+            color: var(--danger);
+        }
+        .action-btn.danger:hover { background: var(--danger-soft); border-color: rgba(239, 68, 68, 0.3); }
+
+        /* ============ Empty / loading ============ */
+        .state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .state .emoji { font-size: 36px; display: block; margin-bottom: 10px; opacity: 0.6; }
+        .state .title { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 4px; }
+        .state .sub { font-size: 12.5px; }
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid rgba(139, 92, 246, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============ Toast ============ */
         .toast {
-            position: fixed; top: 20px; right: 20px;
+            position: fixed;
+            bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
             padding: 14px 20px;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 13px;
             font-weight: 500;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
             z-index: 1000;
-            max-width: 420px;
+            max-width: 480px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .toast-success { background: rgba(16, 185, 129, 0.95); color: #fff; }
-        .toast-error { background: rgba(239, 68, 68, 0.95); color: #fff; }
-        .loading { padding: 60px 20px; text-align: center; color: #94a3b8; }
-        .empty { padding: 40px 20px; text-align: center; color: #64748b; }
-        .table-scroll { overflow-x: auto; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast-success { background: linear-gradient(135deg, #059669, #10b981); color: #fff; }
+        .toast-error { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; }
+
+        /* ============ Confirmation modal ============ */
+        .modal-bg {
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+        .modal-bg.show { display: flex; }
+        .modal {
+            background: var(--bg-1);
+            border: 1px solid var(--border-strong);
+            border-radius: 18px;
+            padding: 28px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+        .modal h3 {
+            font-size: 18px; color: #fff; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .modal h3 .icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            background: var(--warn-soft); color: var(--warn);
+        }
+        .modal p { color: var(--text-muted); font-size: 13.5px; line-height: 1.55; margin-bottom: 6px; }
+        .modal p strong { color: var(--text); }
+        .modal .modal-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+            margin-top: 22px;
+        }
+        .modal .btn-cancel {
+            background: var(--surface-2); border: 1px solid var(--border);
+            color: var(--text); padding: 9px 18px; border-radius: 10px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+        }
+        .modal .btn-confirm {
+            background: linear-gradient(135deg, var(--primary-2), var(--primary));
+            border: none; color: #fff;
+            padding: 9px 18px; border-radius: 10px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .modal .btn-confirm.danger { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .modal .btn-confirm:disabled, .modal .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ============ Mobile ============ */
+        @media (max-width: 720px) {
+            body { padding: 16px 12px 60px; }
+            .topbar .title-block h1 { font-size: 20px; }
+            .topbar .title-block h1 .icon { width: 32px; height: 32px; font-size: 15px; }
+            .topbar .title-block .subtitle { margin-left: 44px; font-size: 12px; }
+            .hero-card { padding: 18px; }
+            .hero-text .big { font-size: 26px; }
+            thead { display: none; }
+            tbody tr {
+                display: block;
+                padding: 14px;
+                border-radius: 12px;
+                margin-bottom: 10px;
+                background: var(--surface-2);
+                border-bottom: none;
+            }
+            tbody tr.pending {
+                background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--surface-2));
+                border-left: 2px solid var(--warn);
+            }
+            tbody tr:hover { background: var(--surface-2); }
+            tbody td {
+                display: block;
+                padding: 6px 0;
+                border: none;
+            }
+            tbody td:first-child { padding-bottom: 10px; }
+            tbody td[data-label]::before {
+                content: attr(data-label) " · ";
+                color: var(--text-muted);
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                font-weight: 600;
+                margin-right: 4px;
+            }
+            .actions-cell { text-align: left; padding-top: 10px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; margin-top: 8px; }
+            .actions-cell::before { display: none !important; }
+        }
     </style>
 </head>
 <body>
     <div id="toast" class="toast"></div>
+    <div class="modal-bg" id="modalBg">
+        <div class="modal">
+            <h3><span class="icon" id="modalIcon">⚠️</span> <span id="modalTitle">Confirmar ação</span></h3>
+            <p id="modalBody">—</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="modalCancel">Cancelar</button>
+                <button class="btn-confirm" id="modalConfirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <div class="header-title">
-                <h1>👥 Administração de Usuários</h1>
-                <div class="subtitle">Status de troca de senha · último acesso · ações administrativas</div>
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="title-block">
+                <h1><span class="icon">👥</span> Administração de Usuários</h1>
+                <div class="subtitle">Acompanhe quem já fez login e trocou a senha</div>
             </div>
-            <div class="header-actions">
-                <a class="btn" href="/">← Voltar ao dashboard</a>
+            <div class="actions">
+                <button class="btn" onclick="loadUsers(true)" title="Recarregar"><span class="icon">⟳</span> Atualizar</button>
+                <a class="btn" href="/" title="Voltar ao dashboard"><span class="icon">←</span> Dashboard</a>
             </div>
         </div>
 
-        <div class="stats-row" id="statsRow">
-            <div class="stat-card"><div class="value" id="statTotal">—</div><div class="label">Total</div></div>
-            <div class="stat-card"><div class="value" id="statChanged">—</div><div class="label">Trocaram senha</div></div>
-            <div class="stat-card"><div class="value" id="statPending">—</div><div class="label">Pendentes</div></div>
-            <div class="stat-card"><div class="value" id="statRecent">—</div><div class="label">Logaram últimos 7d</div></div>
+        <!-- Hero progress -->
+        <div class="hero-card" id="heroCard">
+            <div class="hero-grid">
+                <div class="hero-text">
+                    <div class="label">Adoção de senhas pessoais</div>
+                    <div class="big" id="heroBig">— <span class="muted">de —</span></div>
+                    <div class="sub" id="heroSub">Carregando dados…</div>
+                    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat"><div class="v success" id="statOk">—</div><div class="l">Trocaram</div></div>
+                    <div class="hero-stat"><div class="v warn" id="statPending">—</div><div class="l">Pendentes</div></div>
+                    <div class="hero-stat"><div class="v info" id="statRecent">—</div><div class="l">Logaram 7d</div></div>
+                </div>
+            </div>
         </div>
 
+        <!-- Filter bar -->
+        <div class="filterbar">
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Buscar por nome ou e-mail…" autocomplete="off">
+            </div>
+            <div class="chips" id="filterChips">
+                <button class="chip active" data-filter="all">Todos <span class="count" id="countAll">—</span></button>
+                <button class="chip" data-filter="pending">⏳ Pendentes <span class="count" id="countPending">—</span></button>
+                <button class="chip" data-filter="done">✅ Ativos <span class="count" id="countDone">—</span></button>
+                <button class="chip" data-filter="never">🚫 Nunca logaram <span class="count" id="countNever">—</span></button>
+                <button class="chip" data-filter="admin">⭐ Admins <span class="count" id="countAdmin">—</span></button>
+            </div>
+        </div>
+
+        <!-- Table -->
         <div class="table-card">
-            <div id="tableLoading" class="loading">Carregando...</div>
+            <div id="loadingState" class="state">
+                <div class="spinner"></div>
+                <div class="sub">Carregando usuários…</div>
+            </div>
             <div class="table-scroll" id="tableWrap" style="display:none;">
                 <table>
                     <thead>
                         <tr>
-                            <th>Nome</th>
-                            <th>E-mail</th>
+                            <th style="width: 38%;">Usuário</th>
                             <th>Status</th>
-                            <th>Senha trocada em</th>
+                            <th>Senha trocada</th>
                             <th>Último login</th>
                             <th style="text-align:right;">Ações</th>
                         </tr>
@@ -160,112 +530,269 @@
                     <tbody id="usersBody"></tbody>
                 </table>
             </div>
+            <div id="emptyState" class="state" style="display:none;">
+                <span class="emoji">🔎</span>
+                <div class="title">Nenhum usuário encontrado</div>
+                <div class="sub">Ajuste os filtros ou a busca acima.</div>
+            </div>
         </div>
     </div>
 
     <script>
-        const toast = document.getElementById('toast');
-        function showToast(msg, type) {
-            toast.textContent = msg;
-            toast.className = 'toast toast-' + (type || 'success');
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 4500);
-        }
-        function fmtDate(iso) {
+        // ============ State ============
+        let allUsers = [];
+        let activeFilter = 'all';
+        let searchTerm = '';
+
+        // ============ Helpers ============
+        const $ = (id) => document.getElementById(id);
+        const escapeHtml = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const fmtRelative = (iso) => {
+            if (!iso) return null;
+            const d = new Date(iso);
+            if (isNaN(d)) return null;
+            const diffMs = Date.now() - d.getTime();
+            const sec = Math.round(diffMs / 1000);
+            const min = Math.round(sec / 60);
+            const hr = Math.round(min / 60);
+            const day = Math.round(hr / 24);
+            if (sec < 60) return 'agora há pouco';
+            if (min < 60) return `há ${min} min`;
+            if (hr < 24) return `há ${hr}h`;
+            if (day === 1) return 'ontem';
+            if (day < 7) return `há ${day} dias`;
+            if (day < 30) return `há ${Math.round(day/7)} sem`;
+            if (day < 365) return `há ${Math.round(day/30)} meses`;
+            return `há ${Math.round(day/365)} anos`;
+        };
+        const fmtAbs = (iso) => {
             if (!iso) return null;
             const d = new Date(iso);
             if (isNaN(d)) return null;
             const dd = String(d.getDate()).padStart(2,'0');
             const mm = String(d.getMonth()+1).padStart(2,'0');
-            const yy = d.getFullYear();
             const hh = String(d.getHours()).padStart(2,'0');
             const mi = String(d.getMinutes()).padStart(2,'0');
-            return `${dd}/${mm}/${yy} ${hh}:${mi}`;
-        }
-        function diffDays(iso) {
+            return `${dd}/${mm} ${hh}:${mi}`;
+        };
+        const diffDays = (iso) => {
             if (!iso) return Infinity;
-            const d = new Date(iso);
-            return (Date.now() - d.getTime()) / 86400000;
+            return (Date.now() - new Date(iso).getTime()) / 86400000;
+        };
+        // Gera cor de avatar baseada no email (consistente)
+        const avatarColor = (key) => {
+            const palette = [
+                ['#6366f1', '#818cf8'], ['#8b5cf6', '#a78bfa'], ['#ec4899', '#f472b6'],
+                ['#f59e0b', '#fbbf24'], ['#10b981', '#34d399'], ['#06b6d4', '#22d3ee'],
+                ['#3b82f6', '#60a5fa'], ['#14b8a6', '#2dd4bf'], ['#f97316', '#fb923c'],
+                ['#84cc16', '#a3e635']
+            ];
+            let h = 0;
+            for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+            const [c1, c2] = palette[h % palette.length];
+            return `linear-gradient(135deg, ${c1}, ${c2})`;
+        };
+        const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?';
+
+        // ============ Toast ============
+        let toastTimer;
+        function showToast(msg, type) {
+            const t = $('toast');
+            t.innerHTML = (type === 'error' ? '⚠️ ' : '✓ ') + escapeHtml(msg);
+            t.className = 'toast toast-' + (type || 'success') + ' show';
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { t.classList.remove('show'); }, 4500);
         }
 
-        async function loadUsers() {
-            try {
-                const r = await fetch('/admin/users', { credentials: 'same-origin' });
-                if (r.status === 401) { window.location.href = '/login'; return; }
-                if (r.status === 403) {
-                    document.getElementById('tableLoading').innerHTML = '<div style="color:#fca5a5">Acesso negado. Somente administradores podem ver esta página.</div>';
-                    return;
-                }
-                if (!r.ok) throw new Error('Falha ao carregar usuários');
-                const data = await r.json();
-                renderUsers(data.users || []);
-            } catch (e) {
-                document.getElementById('tableLoading').textContent = 'Erro: ' + e.message;
+        // ============ Modal de confirmação ============
+        function confirmDialog({ title, body, icon, confirmLabel, danger }) {
+            return new Promise(resolve => {
+                $('modalTitle').textContent = title;
+                $('modalBody').innerHTML = body;
+                $('modalIcon').textContent = icon || '⚠️';
+                $('modalConfirm').textContent = confirmLabel || 'Confirmar';
+                $('modalConfirm').classList.toggle('danger', !!danger);
+                $('modalBg').classList.add('show');
+                const cleanup = (val) => {
+                    $('modalBg').classList.remove('show');
+                    $('modalCancel').onclick = null;
+                    $('modalConfirm').onclick = null;
+                    resolve(val);
+                };
+                $('modalCancel').onclick = () => cleanup(false);
+                $('modalConfirm').onclick = () => cleanup(true);
+            });
+        }
+
+        // ============ Render ============
+        function classifyUser(u) {
+            if (u.mustChangePassword) return 'pending';
+            return 'done';
+        }
+        function applyFilters() {
+            const term = searchTerm.toLowerCase().trim();
+            let list = allUsers.slice();
+            if (activeFilter === 'pending') list = list.filter(u => u.mustChangePassword);
+            else if (activeFilter === 'done') list = list.filter(u => !u.mustChangePassword);
+            else if (activeFilter === 'never') list = list.filter(u => !u.lastLoginAt);
+            else if (activeFilter === 'admin') list = list.filter(u => u.isAdmin);
+            if (term) {
+                list = list.filter(u =>
+                    (u.name || '').toLowerCase().includes(term) ||
+                    (u.email || '').toLowerCase().includes(term)
+                );
             }
-        }
-
-        function renderUsers(users) {
-            // Stats
-            const total = users.length;
-            const changed = users.filter(u => !u.mustChangePassword).length;
-            const pending = total - changed;
-            const recent = users.filter(u => diffDays(u.lastLoginAt) <= 7).length;
-            document.getElementById('statTotal').textContent = total;
-            document.getElementById('statChanged').textContent = changed;
-            document.getElementById('statPending').textContent = pending;
-            document.getElementById('statRecent').textContent = recent;
-
-            // Sort: pendentes primeiro, depois quem logou há mais tempo
-            users.sort((a, b) => {
+            // Ordena: pendentes primeiro, depois nunca logaram, depois por último login crescente
+            list.sort((a, b) => {
                 if (a.mustChangePassword !== b.mustChangePassword) return a.mustChangePassword ? -1 : 1;
+                if (!a.lastLoginAt && b.lastLoginAt) return -1;
+                if (a.lastLoginAt && !b.lastLoginAt) return 1;
                 const da = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
                 const db = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
                 return da - db;
             });
-
-            const body = document.getElementById('usersBody');
-            body.innerHTML = users.map(u => {
-                const adminBadge = u.isAdmin ? '<span class="badge badge-admin">ADMIN</span>' : '';
-                const statusBadge = u.mustChangePassword
-                    ? '<span class="badge badge-warn">⏳ Pendente</span>'
-                    : '<span class="badge badge-success">✅ OK</span>';
-                const pwdDate = fmtDate(u.passwordChangedAt) || '<span class="muted">—</span>';
-                const loginDate = fmtDate(u.lastLoginAt) || '<span class="muted">nunca</span>';
-                return `<tr>
-                    <td><strong>${escapeHtml(u.name)}</strong>${adminBadge}</td>
-                    <td>${escapeHtml(u.email)}</td>
-                    <td>${statusBadge}</td>
-                    <td>${pwdDate}</td>
-                    <td>${loginDate}</td>
-                    <td style="text-align:right;">
-                        <button class="action-btn" onclick="resetPassword('${escapeAttr(u.email)}','${escapeAttr(u.name)}')">Resetar senha</button>
+            renderTable(list);
+        }
+        function renderTable(list) {
+            const body = $('usersBody');
+            if (!list.length) {
+                $('tableWrap').style.display = 'none';
+                $('emptyState').style.display = 'block';
+                return;
+            }
+            $('emptyState').style.display = 'none';
+            $('tableWrap').style.display = 'block';
+            body.innerHTML = list.map(u => {
+                const status = classifyUser(u);
+                const statusHtml = u.mustChangePassword
+                    ? '<span class="status status-pending">⏳ Pendente</span>'
+                    : '<span class="status status-ok">✅ OK</span>';
+                const pwd = u.passwordChangedAt
+                    ? `<div class="time-cell"><div class="relative">${fmtRelative(u.passwordChangedAt)}</div><div class="absolute">${fmtAbs(u.passwordChangedAt)}</div></div>`
+                    : '<div class="time-cell never">—</div>';
+                const login = u.lastLoginAt
+                    ? `<div class="time-cell"><div class="relative">${fmtRelative(u.lastLoginAt)}</div><div class="absolute">${fmtAbs(u.lastLoginAt)}</div></div>`
+                    : '<div class="time-cell never">nunca logou</div>';
+                const remindBtn = u.mustChangePassword
+                    ? `<button class="action-btn primary" onclick="sendReminder('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')" title="Enviar e-mail de lembrete">✉️ Lembrar</button>`
+                    : '';
+                return `<tr class="${status}">
+                    <td data-label="Usuário">
+                        <div class="user-cell">
+                            <div class="avatar" style="background:${avatarColor(u.email)}">${initials(u.name)}</div>
+                            <div>
+                                <div class="user-name">${escapeHtml(u.name)}${u.isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}</div>
+                                <div class="user-email">${escapeHtml(u.email)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td data-label="Status">${statusHtml}</td>
+                    <td data-label="Senha trocada">${pwd}</td>
+                    <td data-label="Último login">${login}</td>
+                    <td class="actions-cell">
+                        ${remindBtn}
+                        <button class="action-btn danger" onclick="resetPassword('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')" title="Resetar senha para a inicial">🔄 Resetar</button>
                     </td>
                 </tr>`;
             }).join('');
-            document.getElementById('tableLoading').style.display = 'none';
-            document.getElementById('tableWrap').style.display = '';
+        }
+        function updateHero(users) {
+            const total = users.length;
+            const ok = users.filter(u => !u.mustChangePassword).length;
+            const pending = total - ok;
+            const recent = users.filter(u => diffDays(u.lastLoginAt) <= 7).length;
+            const never = users.filter(u => !u.lastLoginAt).length;
+            const admin = users.filter(u => u.isAdmin).length;
+            const pct = total ? Math.round((ok / total) * 100) : 0;
+            $('heroBig').innerHTML = `${ok} <span class="muted">de ${total}</span>`;
+            $('heroSub').innerHTML = `${pct}% do time já tem senha pessoal definida. <strong>${pending}</strong> ainda usam a senha inicial.`;
+            $('progressFill').style.width = pct + '%';
+            $('statOk').textContent = ok;
+            $('statPending').textContent = pending;
+            $('statRecent').textContent = recent;
+            $('countAll').textContent = total;
+            $('countPending').textContent = pending;
+            $('countDone').textContent = ok;
+            $('countNever').textContent = never;
+            $('countAdmin').textContent = admin;
         }
 
-        function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-        function escapeAttr(s) { return String(s||'').replace(/'/g, "\\'"); }
-
-        async function resetPassword(email, name) {
-            if (!confirm(`Resetar senha de ${name}?\n\nA senha voltará para "Lincros2026!" e ele(a) será obrigado(a) a trocá-la no próximo login.`)) return;
+        // ============ Data fetch ============
+        async function loadUsers(refresh) {
+            if (refresh) { showToast('Atualizando…', 'success'); }
             try {
-                const r = await fetch('/admin/reset-user-password', {
+                const r = await fetch('/api/admin/users', { credentials: 'same-origin' });
+                if (r.status === 401) { window.location.href = '/login'; return; }
+                if (r.status === 403) {
+                    $('loadingState').innerHTML = '<span class="emoji">🔒</span><div class="title" style="color:#fca5a5">Acesso negado</div><div class="sub">Apenas administradores podem ver esta página.</div>';
+                    return;
+                }
+                if (!r.ok) throw new Error('Falha ao carregar usuários (HTTP ' + r.status + ')');
+                const data = await r.json();
+                allUsers = data.users || [];
+                $('loadingState').style.display = 'none';
+                updateHero(allUsers);
+                applyFilters();
+            } catch (e) {
+                $('loadingState').innerHTML = `<span class="emoji">⚠️</span><div class="title">Erro ao carregar</div><div class="sub">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        // ============ Actions ============
+        async function resetPassword(email, name) {
+            const ok = await confirmDialog({
+                title: 'Resetar senha',
+                icon: '🔄',
+                body: `Confirma resetar a senha de <strong>${escapeHtml(name)}</strong>?<br><br>A senha voltará para <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px">Lincros2026!</code> e a pessoa será obrigada a trocá-la no próximo login.`,
+                confirmLabel: 'Resetar',
+                danger: true
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/reset-user-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
                     body: JSON.stringify({ email })
                 });
                 const data = await r.json();
-                if (!r.ok) { showToast(data.error || 'Falha ao resetar', 'error'); return; }
-                showToast(data.message || 'Senha resetada com sucesso', 'success');
+                if (!r.ok) return showToast(data.error || 'Falha ao resetar', 'error');
+                showToast(`Senha de ${name} resetada.`, 'success');
                 loadUsers();
-            } catch (e) {
-                showToast('Erro de rede', 'error');
-            }
+            } catch (e) { showToast('Erro de rede', 'error'); }
         }
+        async function sendReminder(email, name) {
+            const ok = await confirmDialog({
+                title: 'Enviar lembrete por e-mail',
+                icon: '✉️',
+                body: `Enviar um e-mail para <strong>${escapeHtml(name)}</strong> (<code>${escapeHtml(email)}</code>) lembrando de acessar o portal e trocar a senha inicial?`,
+                confirmLabel: 'Enviar',
+                danger: false
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/send-reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email })
+                });
+                const data = await r.json();
+                if (!r.ok) return showToast(data.error || 'Falha ao enviar', 'error');
+                showToast(`Lembrete enviado para ${email}.`, 'success');
+            } catch (e) { showToast('Erro de rede', 'error'); }
+        }
+
+        // ============ Wire up ============
+        $('searchInput').addEventListener('input', (e) => { searchTerm = e.target.value; applyFilters(); });
+        document.querySelectorAll('#filterChips .chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                activeFilter = chip.dataset.filter;
+                applyFilters();
+            });
+        });
 
         loadUsers();
     </script>
