@@ -924,6 +924,27 @@
         #drilldownContent tbody tr.dd-decisor:hover { background: linear-gradient(90deg, rgba(251, 191, 36, 0.18), rgba(108, 63, 181, 0.08)) !important; }
         #drilldownContent td.cargo-decisor { color: #fcd34d; font-weight: 600; }
         #drilldownContent .dec-badge { font-size: 11px; margin-left: 4px; }
+        /* Link do título do deal pro Ploomes */
+        #drilldownContent .dd-deal-link {
+            color: #c4b5fd;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.15s;
+        }
+        #drilldownContent .dd-deal-link:hover { color: #fff; text-decoration: underline; }
+        #drilldownContent .dd-deal-link .dd-ext-icon {
+            font-size: 10.5px;
+            color: #6c5ca0;
+            opacity: 0.6;
+            transition: all 0.15s;
+        }
+        #drilldownContent .dd-deal-link:hover .dd-ext-icon {
+            color: #c4b5fd;
+            opacity: 1;
+        }
 
         /* ==================== EXPORT BUTTON ==================== */
         .export-btn {
@@ -10316,6 +10337,7 @@ function showDrilldown(title, deals, columns, type) {
     let html = '<table id="ddTable"><thead><tr>';
     columns.forEach(c => { html += `<th>${c.header}</th>`; });
     html += '</tr></thead><tbody>';
+    const isTitleHeader = (h) => /^t[ií]tulo$/i.test(h);
     deals.forEach(d => {
         const cargo = hasCargoCol ? getContactCargo(d) : '';
         const isDec = hasCargoCol && isCargoDecisao(cargo);
@@ -10324,7 +10346,16 @@ function showDrilldown(title, deals, columns, type) {
             const val = c.getValue(d);
             const isNum = typeof val === 'number' && c.header !== '#';
             const cellCls = isNum ? ' class="money"' : (c.highlightDecision && isDec) ? ' class="cargo-decisor"' : '';
-            html += `<td${cellCls}>${isNum ? formatMoney(val) : (val || '-')}${c.highlightDecision && isDec ? ' <span class="dec-badge">⭐</span>' : ''}</td>`;
+            // Se for coluna de Título e tiver deal Id, renderiza como link pro Ploomes
+            let cellContent;
+            if (isTitleHeader(c.header) && d.Id) {
+                const ploomesUrl = `https://app10.ploomes.com/deal/${d.Id}`;
+                const safeVal = String(val || '(sem título)').replace(/</g, '&lt;');
+                cellContent = `<a href="${ploomesUrl}" target="_blank" rel="noopener" class="dd-deal-link" title="Abrir no Ploomes">${safeVal}<span class="dd-ext-icon">↗</span></a>`;
+            } else {
+                cellContent = isNum ? formatMoney(val) : (val || '-');
+            }
+            html += `<td${cellCls}>${cellContent}${c.highlightDecision && isDec ? ' <span class="dec-badge">⭐</span>' : ''}</td>`;
         });
         html += '</tr>';
     });
@@ -13180,7 +13211,7 @@ function renderAfSankhya() {
                 ${dealsMissingList.length === 0 ? '<tr><td colspan="7" style="padding:14px;text-align:center;color:#22c55e;">🎉 Todas as tasks estão preenchidas!</td></tr>' :
                 dealsMissingList.map(({deal, missing}) => `
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <td style="padding:8px;font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(deal.Title||'').replace(/"/g,'&quot;')}">${deal.Title || '(sem título)'}</td>
+                        <td style="padding:8px;font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(deal.Title||'').replace(/"/g,'&quot;')} — abrir no Ploomes"><a href="https://app10.ploomes.com/deal/${deal.Id}" target="_blank" rel="noopener" style="color:#c4b5fd;text-decoration:none;">${deal.Title || '(sem título)'} <span style="color:#6c5ca0;font-size:10.5px;">↗</span></a></td>
                         <td style="padding:8px;color:#b794f4;">${afGetCanal(deal) || '—'}</td>
                         <td style="padding:8px;color:#a0a0b8;">${deal.Owner?.Name || '—'}</td>
                         <td style="padding:8px;color:#a0a0b8;font-size:11px;">${deal.Stage?.Name || '—'}</td>
