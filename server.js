@@ -26,9 +26,10 @@ const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidade
 const SESSION_DAYS = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
 const USERS_PATH = path.join(__dirname, 'users.json');
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || '';
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+const REDIS_URL = (process.env.UPSTASH_REDIS_REST_URL || '').trim();
+const REDIS_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
 const REDIS_KEY = 'users:list';
+let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
 // ==================== Upstash Redis helpers ====================
 function redisCmd(args) {
@@ -79,15 +80,18 @@ let usersCacheReady = false;
 let usersBootPromise = null;
 
 async function initUsersFromRedis() {
+    redisStatusAtBoot.configured = !!(REDIS_URL && REDIS_TOKEN);
+    redisStatusAtBoot.urlOk = REDIS_URL.startsWith('https://') && REDIS_URL.includes('.upstash.io');
     if (!REDIS_URL || !REDIS_TOKEN) {
-        // Fallback: lê do arquivo (modo dev / sem Redis configurado)
         try {
             const raw = fs.readFileSync(USERS_PATH, 'utf8');
             usersCache = JSON.parse(raw).users || [];
-            console.warn('[auth] Redis NÃO configurado — usando users.json local (modo dev). Persistência será perdida em redeploy.');
+            console.warn('[auth] Redis NÃO configurado — usando users.json local. URL:', REDIS_URL ? 'set' : 'EMPTY', 'TOKEN:', REDIS_TOKEN ? 'set' : 'EMPTY');
+            redisStatusAtBoot.error = 'REDIS_URL/TOKEN ausentes';
         } catch (e) {
             console.error('[auth] sem Redis e sem users.json:', e.message);
             usersCache = [];
+            redisStatusAtBoot.error = e.message;
         }
         usersCacheReady = true;
         return;
@@ -98,16 +102,17 @@ async function initUsersFromRedis() {
             const parsed = typeof data === 'string' ? JSON.parse(data) : data;
             usersCache = Array.isArray(parsed) ? parsed : [];
             console.log('[auth] users carregados do Redis:', usersCache.length);
+            redisStatusAtBoot.seedOk = true;
         } else {
-            // Seed inicial: lê do arquivo e popula Redis
             const raw = fs.readFileSync(USERS_PATH, 'utf8');
             usersCache = JSON.parse(raw).users || [];
             await redisSet(REDIS_KEY, JSON.stringify(usersCache));
             console.log('[auth] users seeded para Redis:', usersCache.length);
+            redisStatusAtBoot.seedOk = true;
         }
     } catch (e) {
-        console.error('[auth] erro inicializando Redis:', e.message);
-        // Fallback de emergência: lê do arquivo (não persiste, mas permite login)
+        console.error('[auth] ERRO inicializando Redis:', e.message);
+        redisStatusAtBoot.error = e.message;
         try {
             const raw = fs.readFileSync(USERS_PATH, 'utf8');
             usersCache = JSON.parse(raw).users || [];
@@ -747,6 +752,29 @@ const server = http.createServer(async (req, res) => {
             createdAt: x.createdAt || null
         }));
         return jsonReply(res, 200, { users });
+    }
+
+    if (urlPath === '/admin/_health' && req.method === 'GET') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const status = {
+            boot: redisStatusAtBoot,
+            redis: {
+                urlEnvSet: !!process.env.UPSTASH_REDIS_REST_URL,
+                tokenEnvSet: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+                urlHost: REDIS_URL ? (function(){ try { return new URL(REDIS_URL).hostname; } catch(e){return 'INVALID:'+REDIS_URL.slice(0,40);} })() : null,
+                tokenLen: REDIS_TOKEN.length,
+                tokenPrefix: REDIS_TOKEN ? REDIS_TOKEN.slice(0, 6) + '…' : null
+            },
+            users: { cached: usersCache.length, cacheReady: usersCacheReady }
+        };
+        if (REDIS_URL && REDIS_TOKEN) {
+            try { status.redis.livePing = await redisCmd(['PING']); }
+            catch (e) { status.redis.livePingError = e.message; }
+            try { status.redis.liveGet = (await redisCmd(['GET', REDIS_KEY])) ? 'key_exists' : 'key_missing'; }
+            catch (e) { status.redis.liveGetError = e.message; }
+        }
+        return jsonReply(res, 200, status);
     }
 
     if (urlPath === '/admin/reset-user-password' && req.method === 'POST') {
