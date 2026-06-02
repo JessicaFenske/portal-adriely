@@ -3553,6 +3553,18 @@
                 <span class="nav-label">Oportunidades</span>
             </div>
 
+            <!-- User / Logout -->
+            <div class="sidebar-user" id="sidebarUser" style="margin-top:24px;padding:12px 14px;border-top:1px solid rgba(108,63,181,0.2);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <div id="userAvatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6c3fb5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0;">?</div>
+                    <div class="nav-label" style="overflow:hidden;flex:1;min-width:0;">
+                        <div id="userName" style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+                        <div id="userEmail" style="font-size:10.5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+                    </div>
+                </div>
+                <button onclick="logoutUser()" class="nav-label" style="width:100%;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:11.5px;font-weight:600;">Sair</button>
+            </div>
+
         </div>
         <div class="sidebar-toggle" onclick="toggleSidebar()">&#171;</div>
     </nav>
@@ -5404,6 +5416,40 @@ let mqlsLoaded = false;
 let marketingLoaded = false;
 let analiseFunilLoaded = false;
 let pendingScrollSection = null;
+
+// ==================== Auth: usuário logado + logout ====================
+async function fetchCurrentUser() {
+    try {
+        const r = await fetch('/auth/me', { credentials: 'same-origin' });
+        if (!r.ok) {
+            if (r.status === 401) { window.location.href = '/login'; return; }
+            return;
+        }
+        const data = await r.json();
+        if (data.user) {
+            const u = data.user;
+            const nameEl = document.getElementById('userName');
+            const emailEl = document.getElementById('userEmail');
+            const avatarEl = document.getElementById('userAvatar');
+            if (nameEl) nameEl.textContent = u.name || u.email;
+            if (emailEl) emailEl.textContent = u.email;
+            if (avatarEl) {
+                const initials = (u.name || u.email).split(/\s+/).filter(Boolean).slice(0,2).map(p => p[0].toUpperCase()).join('');
+                avatarEl.textContent = initials || '?';
+            }
+        }
+    } catch (e) { /* silencioso */ }
+}
+async function logoutUser() {
+    try { await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+    window.location.href = '/login';
+}
+// Dispara assim que o DOM tiver carregado o sidebar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fetchCurrentUser);
+} else {
+    fetchCurrentUser();
+}
 
 function showView(viewName) {
     document.getElementById('view-oportunidades').style.display = 'none';

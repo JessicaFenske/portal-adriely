@@ -1,0 +1,188 @@
+{
+  "users": [
+    {
+      "email": "adriely.melo@lincros.com",
+      "name": "Adriely de Melo",
+      "passwordHash": "$2a$10$w9xdHFIxoJNRoxHFzhjySOud/639CVgwR4XFe0mShGUvnRK.0nYue",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.664Z"
+    },
+    {
+      "email": "agnes.santos@lincros.com",
+      "name": "Agnes Roberta Soares Araujo dos Santos",
+      "passwordHash": "$2a$10$grxmcDhbuBm.S15P6vPF1ea/3KoxROusKeZqQ3JiV.mF9.6pJdxdy",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.725Z"
+    },
+    {
+      "email": "alan.costa@lincros.com",
+      "name": "Alan Gabriel da Costa",
+      "passwordHash": "$2a$10$mmB53qkNq0mFasQlG3ja9O1ECewf0xmrGOH/CiM3DsOCYb7LLTlsW",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.781Z"
+    },
+    {
+      "email": "andre@lincros.com",
+      "name": "André Luiz Jacinto",
+      "passwordHash": "$2a$10$v7YY0M1HRrYoBkTw8TZzseelOKyHwvhuvOlPHhq.n6lQ0nBkj9jaq",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.830Z"
+    },
+    {
+      "email": "beatriz.dias@lincros.com",
+      "name": "Beatriz Dias Ferrarezi Lourenço",
+      "passwordHash": "$2a$10$E04K1s2r3JpTwMAYeXht4.vyIi2SKV7F5CKbMF5V7iikppvQZxwma",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.879Z"
+    },
+    {
+      "email": "bruno.bastos@lincros.com",
+      "name": "Bruno Matos Bastos",
+      "passwordHash": "$2a$10$EKVS0F3DkBzYlNbbOPSoHuVD4.bSn0FWg3UqBiCY3skjId5D0/M4C",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.929Z"
+    },
+    {
+      "email": "claudia.faria@lincros.com",
+      "name": "Claudia Cassimiro Faria",
+      "passwordHash": "$2a$10$/iE0qrTo/djpxacmMxS47ebYnKEa.6pDQR5feHFcut6fZ7eCilzG.",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:57.980Z"
+    },
+    {
+      "email": "daniela.barros@lincros.com",
+      "name": "Daniela Pereira de Barros",
+      "passwordHash": "$2a$10$QgpfZD6l3yHlDCfKyFsLkenCaZJZ1DeLLa7ZVhiLoM1yBYFElw9AW",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.036Z"
+    },
+    {
+      "email": "emil.souza@lincros.com",
+      "name": "Emil Mateus de Souza",
+      "passwordHash": "$2a$10$v94Yg1nj/NBa6DhNTF3UJOl9x..s9yIq9AMsZldCOzkJE.kGmcUhS",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.087Z"
+    },
+    {
+      "email": "frederico.scheffel@lincros.com",
+      "name": "Frederico Guilherme Scheffel",
+      "passwordHash": "$2a$10$2Uj0dpfWsOD.tCDtdNB18emYApVrq7kmhPBQ9CFzURppoXfim20xG",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.139Z"
+    },
+    {
+      "email": "guilherme.tomio@lincros.com",
+      "name": "Guilherme Tomio da Silva",
+      "passwordHash": "$2a$10$YkG/c9Q3EM.GWxBjxZssH.dgBR0IbKhA2dcIaJX/xGdUgf95Hf7Ia",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.189Z"
+    },
+    {
+      "email": "jessica.fenske@lincros.com",
+      "name": "Jessica Fenske",
+      "passwordHash": "$2a$10$FX/jpPreHVGIMSGaf.C1s.ysz1SWSzfwmNbVnmulfLVFfHcFrm5tq",
+      "isAdmin": true,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.242Z"
+    },
+    {
+      "email": "jessica.martins@lincros.com",
+      "name": "Jéssica Martins",
+      "passwordHash": "$2a$10$V7jvttkym1.R6GQsFcDu3Ouk43nYmMO51UEH/wwBRLRrtH9lL/ZMC",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.293Z"
+    },
+    {
+      "email": "leticia.schiestl@lincros.com",
+      "name": "Leticia Schiestl",
+      "passwordHash": "$2a$10$xo3fB2/MGQ4b6SqtMjV4wuU4dh95agpbzEyDtH4Po.OYy3YT0XLSW",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.343Z"
+    },
+    {
+      "email": "luis.esteves@lincros.com",
+      "name": "Luís Ricardo Nakaya Esteves",
+      "passwordHash": "$2a$10$i0yl..lY1GO8v.eh4tQ2QePHnzHEiHQNyxZhu3.SMJoRLFM0mDGsq",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.392Z"
+    },
+    {
+      "email": "maja.silva@lincros.com",
+      "name": "Maja Siqueira Nascimento Santos da Silva",
+      "passwordHash": "$2a$10$g/TcrKP7q8gLEETsvHwiYuy6FaiN7MPoEoCYqR4fCjQwJuQUEpUDi",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.443Z"
+    },
+    {
+      "email": "matheus.santos@lincros.com",
+      "name": "Matheus Oliveira dos Santos",
+      "passwordHash": "$2a$10$CVdNHvB8xr2qfA75wY0Yu.DFJylaxW79r7sKHo.V.qxAwXKb92IKi",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.494Z"
+    },
+    {
+      "email": "ricardo.heidorn@lincros.com",
+      "name": "Ricardo Heidorn",
+      "passwordHash": "$2a$10$k1tqxsKoKVQ2aBHLSyw/WeFsjS6s5t20TK2E/45sfs5XB5PyiNdZu",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.545Z"
+    },
+    {
+      "email": "rodrigo.gaitolini@lincros.com",
+      "name": "Rodrigo Gaitolini",
+      "passwordHash": "$2a$10$qH5CoZoY.blrGzNHlH56du5NHoScxcQDqGB8LDlQuLuLZ210Yh6AC",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.596Z"
+    },
+    {
+      "email": "samira.nicolau@lincros.com",
+      "name": "Samira Cristina Nicolau",
+      "passwordHash": "$2a$10$IOL04sEU2SkMvxYnSoA1eeYNbOSfdROl.MuhbyZsNApJPirmJMgTK",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.645Z"
+    },
+    {
+      "email": "thiago.ramos@lincros.com",
+      "name": "Thiago Ramos",
+      "passwordHash": "$2a$10$9gtCP8N0qZwjrQ1zq7Y9RO6X1bpVVlHH4skAmd3v3.h.M1xInRcVG",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.695Z"
+    },
+    {
+      "email": "vanessa.silvano@lincros.com",
+      "name": "Vanessa Lechuk Silvano",
+      "passwordHash": "$2a$10$E0rQwolDCXLLZb5DktiRZebUs6JtVP.8DaZHFW01LJk/Wx6roKRGu",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.752Z"
+    },
+    {
+      "email": "vanessa.brazao@lincros.com",
+      "name": "Vanessa Ponce Brazao",
+      "passwordHash": "$2a$10$Y7DRtKS1AUTPmGlerjrFc.0naOl1E5ToAlGU6KOuZBPYRyI32xKYm",
+      "isAdmin": false,
+      "mustChangePassword": true,
+      "createdAt": "2026-06-02T12:08:58.803Z"
+    }
+  ]
+}

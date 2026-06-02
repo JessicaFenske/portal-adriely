@@ -3,6 +3,8 @@ const https = require('https');
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const PORT = process.env.PORT || 80;
 const API_KEY = '1765E369255C44601A45DEE600DA89AB520BF12B23904DF127344DD91E3A31EAE2EFDF4862A9F31757FE84FE842076258347E9DE1AF9E28C3BC719ED7782F286';
@@ -12,6 +14,180 @@ const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing tok
 const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
 const CACHE_VERSION = 10; // Bump to invalidate disk cache after schema changes
+
+// ==================== Auth config ====================
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.SESSION_SECRET) {
+    console.warn('[auth] WARNING: SESSION_SECRET nao configurado, gerando aleatorio. Logins serao invalidados a cada restart. Configure SESSION_SECRET no Render.');
+}
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM = process.env.RESEND_FROM || 'Portal Lincros <onboarding@resend.dev>';
+const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidades.onrender.com';
+const SESSION_DAYS = 30;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
+const USERS_PATH = path.join(__dirname, 'users.json');
+
+// ==================== Auth helpers ====================
+function loadUsers() {
+    try { return JSON.parse(fs.readFileSync(USERS_PATH, 'utf8')).users || []; }
+    catch (e) { console.error('[auth] erro carregando users.json:', e.message); return []; }
+}
+function saveUsers(users) {
+    fs.writeFileSync(USERS_PATH, JSON.stringify({ users }, null, 2));
+}
+function findUser(email) {
+    if (!email) return null;
+    const e = String(email).toLowerCase().trim();
+    return loadUsers().find(u => u.email === e) || null;
+}
+function updateUser(email, patch) {
+    const users = loadUsers();
+    const i = users.findIndex(u => u.email === String(email).toLowerCase().trim());
+    if (i < 0) return false;
+    users[i] = { ...users[i], ...patch };
+    saveUsers(users);
+    return true;
+}
+function b64url(buf) {
+    return Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+function b64urlDecode(s) {
+    s = String(s).replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return Buffer.from(s, 'base64');
+}
+function hmacSign(payload) {
+    return b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
+}
+function signToken(payloadObj, ttlMs) {
+    const payload = { ...payloadObj, exp: Date.now() + ttlMs };
+    const body = b64url(JSON.stringify(payload));
+    const sig = hmacSign(body);
+    return `${body}.${sig}`;
+}
+function verifyToken(token) {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [body, sig] = parts;
+    const expected = hmacSign(body);
+    // timing-safe compare
+    if (sig.length !== expected.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    try {
+        const payload = JSON.parse(b64urlDecode(body).toString('utf8'));
+        if (!payload.exp || Date.now() > payload.exp) return null;
+        return payload;
+    } catch (e) { return null; }
+}
+function parseCookies(req) {
+    const out = {};
+    const raw = req.headers.cookie || '';
+    raw.split(';').forEach(p => {
+        const idx = p.indexOf('=');
+        if (idx < 0) return;
+        const k = p.slice(0, idx).trim();
+        const v = p.slice(idx + 1).trim();
+        if (k) out[k] = decodeURIComponent(v);
+    });
+    return out;
+}
+function setSessionCookie(res, token) {
+    const maxAge = SESSION_DAYS * 86400;
+    res.setHeader('Set-Cookie', `session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`);
+}
+function clearSessionCookie(res) {
+    res.setHeader('Set-Cookie', 'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+}
+function getCurrentUser(req) {
+    const cookies = parseCookies(req);
+    const payload = verifyToken(cookies.session);
+    if (!payload || !payload.email) return null;
+    const user = findUser(payload.email);
+    if (!user) return null;
+    return user;
+}
+function readBody(req) {
+    return new Promise((resolve, reject) => {
+        let data = '';
+        req.on('data', c => { data += c; if (data.length > 100000) { req.destroy(); reject(new Error('too large')); } });
+        req.on('end', () => resolve(data));
+        req.on('error', reject);
+    });
+}
+async function readJSON(req) {
+    const body = await readBody(req);
+    try { return body ? JSON.parse(body) : {}; } catch (e) { return {}; }
+}
+function jsonReply(res, code, obj) {
+    res.writeHead(code, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(obj));
+}
+function sendResetEmail(toEmail, toName, resetLink) {
+    return new Promise((resolve) => {
+        if (!RESEND_API_KEY) {
+            console.warn('[auth] RESEND_API_KEY nao configurado. Link de reset (manual):', resetLink);
+            return resolve({ ok: false, reason: 'no_resend_key', link: resetLink });
+        }
+        const payload = JSON.stringify({
+            from: RESEND_FROM,
+            to: [toEmail],
+            subject: 'Portal Lincros — Redefinir senha',
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#222">
+                    <h2 style="color:#1a1a2e">Portal de Oportunidades Lincros</h2>
+                    <p>Olá, ${toName || ''}.</p>
+                    <p>Recebemos uma solicitação para redefinir sua senha. Para criar uma nova senha, clique no botão abaixo:</p>
+                    <p style="margin:28px 0">
+                        <a href="${resetLink}" style="background:#6c3fb5;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600">Redefinir senha</a>
+                    </p>
+                    <p style="font-size:13px;color:#666">Esse link expira em 1 hora. Se você não solicitou a redefinição, ignore este e-mail.</p>
+                    <p style="font-size:12px;color:#999;margin-top:30px">— Equipe Lincros</p>
+                </div>
+            `
+        });
+        const opts = {
+            hostname: 'api.resend.com',
+            path: '/emails',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + RESEND_API_KEY,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        };
+        const r = https.request(opts, (rr) => {
+            const chunks = [];
+            rr.on('data', c => chunks.push(c));
+            rr.on('end', () => {
+                const body = Buffer.concat(chunks).toString('utf8');
+                if (rr.statusCode >= 200 && rr.statusCode < 300) {
+                    console.log('[auth] Reset email enviado para', toEmail);
+                    resolve({ ok: true });
+                } else {
+                    console.error('[auth] Resend falhou:', rr.statusCode, body);
+                    resolve({ ok: false, reason: 'resend_error', status: rr.statusCode, body });
+                }
+            });
+        });
+        r.on('error', (e) => { console.error('[auth] Resend net error:', e.message); resolve({ ok: false, reason: e.message }); });
+        r.write(payload);
+        r.end();
+    });
+}
+// Rotas/paths públicos (não exigem sessão)
+function isPublicPath(url) {
+    const p = url.split('?')[0];
+    if (p === '/login' || p === '/login.html') return true;
+    if (p === '/forgot-password' || p === '/forgot-password.html') return true;
+    if (p === '/reset-password' || p === '/reset-password.html') return true;
+    if (p.startsWith('/auth/')) return true;
+    if (p === '/keepalive') return true;
+    if (p.startsWith('/api/sankhya/')) return true; // bearer-auth próprio
+    // Assets puros (favicon, imagens). HTML/JS principal continua protegido.
+    if (/\.(png|jpg|jpeg|gif|svg|ico|woff2?)$/i.test(p)) return true;
+    return false;
+}
 
 // ==================== In-memory cache ====================
 const cache = {
@@ -364,11 +540,117 @@ function handleSankhyaApi(req, res, pathname, query) {
 }
 
 // ==================== HTTP server ====================
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+
+    const urlPath = req.url.split('?')[0];
+
+    // ==================== Auth endpoints ====================
+    if (urlPath === '/auth/login' && req.method === 'POST') {
+        const body = await readJSON(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        const password = String(body.password || '');
+        if (!email || !password) return jsonReply(res, 400, { error: 'E-mail e senha obrigatórios' });
+        const user = findUser(email);
+        if (!user) return jsonReply(res, 401, { error: 'E-mail ou senha inválidos' });
+        let ok = false;
+        try { ok = bcrypt.compareSync(password, user.passwordHash); } catch (e) { ok = false; }
+        if (!ok) return jsonReply(res, 401, { error: 'E-mail ou senha inválidos' });
+        const token = signToken({ email: user.email }, SESSION_DAYS * 86400 * 1000);
+        setSessionCookie(res, token);
+        return jsonReply(res, 200, {
+            ok: true,
+            user: { email: user.email, name: user.name, isAdmin: !!user.isAdmin, mustChangePassword: !!user.mustChangePassword }
+        });
+    }
+
+    if (urlPath === '/auth/logout' && (req.method === 'POST' || req.method === 'GET')) {
+        clearSessionCookie(res);
+        if (req.method === 'GET') {
+            res.writeHead(302, { Location: '/login' });
+            return res.end();
+        }
+        return jsonReply(res, 200, { ok: true });
+    }
+
+    if (urlPath === '/auth/me' && req.method === 'GET') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        return jsonReply(res, 200, { user: { email: u.email, name: u.name, isAdmin: !!u.isAdmin, mustChangePassword: !!u.mustChangePassword } });
+    }
+
+    if (urlPath === '/auth/change-password' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        const body = await readJSON(req);
+        const currentPassword = String(body.currentPassword || '');
+        const newPassword = String(body.newPassword || '');
+        if (!newPassword || newPassword.length < 8) return jsonReply(res, 400, { error: 'A nova senha deve ter ao menos 8 caracteres.' });
+        let ok = false;
+        try { ok = bcrypt.compareSync(currentPassword, u.passwordHash); } catch (e) {}
+        if (!ok) return jsonReply(res, 401, { error: 'Senha atual incorreta.' });
+        if (bcrypt.compareSync(newPassword, u.passwordHash)) return jsonReply(res, 400, { error: 'A nova senha deve ser diferente da atual.' });
+        const newHash = bcrypt.hashSync(newPassword, 10);
+        updateUser(u.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() });
+        return jsonReply(res, 200, { ok: true });
+    }
+
+    if (urlPath === '/auth/forgot-password' && req.method === 'POST') {
+        const body = await readJSON(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        // Resposta sempre "ok" pra não vazar quais e-mails existem
+        if (!email) return jsonReply(res, 200, { ok: true });
+        const user = findUser(email);
+        if (user) {
+            const token = signToken({ email: user.email, purpose: 'reset' }, RESET_TOKEN_TTL_MS);
+            const link = `${APP_BASE_URL}/reset-password?token=${encodeURIComponent(token)}`;
+            await sendResetEmail(user.email, user.name, link);
+        }
+        return jsonReply(res, 200, { ok: true });
+    }
+
+    if (urlPath === '/auth/reset-password' && req.method === 'POST') {
+        const body = await readJSON(req);
+        const token = String(body.token || '');
+        const newPassword = String(body.newPassword || '');
+        if (!newPassword || newPassword.length < 8) return jsonReply(res, 400, { error: 'A nova senha deve ter ao menos 8 caracteres.' });
+        const payload = verifyToken(token);
+        if (!payload || payload.purpose !== 'reset' || !payload.email) return jsonReply(res, 400, { error: 'Link inválido ou expirado.' });
+        const user = findUser(payload.email);
+        if (!user) return jsonReply(res, 400, { error: 'Usuário não encontrado.' });
+        const newHash = bcrypt.hashSync(newPassword, 10);
+        updateUser(user.email, { passwordHash: newHash, mustChangePassword: false, passwordChangedAt: new Date().toISOString() });
+        return jsonReply(res, 200, { ok: true });
+    }
+
+    // ==================== Middleware de proteção ====================
+    if (!isPublicPath(req.url)) {
+        const u = getCurrentUser(req);
+        if (!u) {
+            // Pra requisições HTML: redireciona pro login. Pra API/cache: 401 JSON.
+            const accepts = req.headers['accept'] || '';
+            const wantsHtml = accepts.includes('text/html') && req.method === 'GET';
+            if (wantsHtml) {
+                res.writeHead(302, { Location: '/login' });
+                return res.end();
+            }
+            return jsonReply(res, 401, { error: 'not authenticated' });
+        }
+        // Se senha precisa ser trocada e o usuário tá tentando carregar o app principal, força change-password
+        if (u.mustChangePassword && (urlPath === '/' || urlPath === '/index.html')) {
+            res.writeHead(302, { Location: '/change-password' });
+            return res.end();
+        }
+    }
+
+    // Rewrite limpo: /login -> /login.html etc
+    if (urlPath === '/login') { req.url = '/login.html' + (req.url.slice('/login'.length).replace(/^[^?]*/, '')); }
+    if (urlPath === '/forgot-password') { req.url = '/forgot-password.html' + (req.url.slice('/forgot-password'.length).replace(/^[^?]*/, '')); }
+    if (urlPath === '/reset-password') { req.url = '/reset-password.html' + (req.url.slice('/reset-password'.length).replace(/^[^?]*/, '')); }
+    if (urlPath === '/change-password') { req.url = '/change-password.html' + (req.url.slice('/change-password'.length).replace(/^[^?]*/, '')); }
 
     // Sankhya API (autenticada)
     if (req.url.startsWith('/api/sankhya/')) {
