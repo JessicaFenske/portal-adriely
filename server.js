@@ -26,8 +26,12 @@ const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidade
 const SESSION_DAYS = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
 const USERS_PATH = path.join(__dirname, 'users.json');
-const REDIS_URL = (process.env.UPSTASH_REDIS_REST_URL || '').trim();
-const REDIS_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
+// Remove aspas/whitespace de env vars (paste do .env ou snippet costuma vir com aspas)
+function cleanEnv(v) {
+    return (v || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+}
+const REDIS_URL = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
+const REDIS_TOKEN = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
 const REDIS_KEY = 'users:list';
 let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
