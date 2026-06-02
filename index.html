@@ -895,6 +895,35 @@
         #drilldownContent tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.01); }
         #drilldownContent tbody tr:hover { background: rgba(108, 63, 181, 0.08); }
         #drilldownContent tbody td { padding: 8px 12px; vertical-align: middle; color: #c0c0d0; }
+        /* Drilldown: filterbar + realce decisores */
+        .dd-filterbar {
+            display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
+        }
+        .dd-filterbar #ddSearch {
+            flex: 1; min-width: 180px;
+            background: rgba(15, 15, 30, 0.7); color: #fff;
+            border: 1px solid rgba(108, 63, 181, 0.3); border-radius: 8px;
+            padding: 8px 12px; font-size: 13px;
+        }
+        .dd-filterbar #ddSearch:focus { outline: none; border-color: #8b5cf6; }
+        .dd-chip {
+            background: rgba(251, 191, 36, 0.12);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            color: #fcd34d;
+            padding: 7px 14px; border-radius: 999px;
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+        }
+        .dd-chip:hover { background: rgba(251, 191, 36, 0.2); }
+        .dd-chip.active { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #1a1a2e; border-color: #fbbf24; }
+        .dd-row-count { font-size: 12px; color: #94a3b8; margin-left: auto; }
+        /* Linha de decisor: realce sutil + bordas */
+        #drilldownContent tbody tr.dd-decisor {
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.08), transparent 60%) !important;
+            border-left: 3px solid #fcd34d;
+        }
+        #drilldownContent tbody tr.dd-decisor:hover { background: linear-gradient(90deg, rgba(251, 191, 36, 0.18), rgba(108, 63, 181, 0.08)) !important; }
+        #drilldownContent td.cargo-decisor { color: #fcd34d; font-weight: 600; }
+        #drilldownContent .dec-badge { font-size: 11px; margin-left: 4px; }
 
         /* ==================== EXPORT BUTTON ==================== */
         .export-btn {
@@ -10175,6 +10204,28 @@ function exportToExcel(data, columns, filename) {
     XLSX.writeFile(wb, filename + '.xlsx');
 }
 
+// Helper: extrai cargo do contato do deal (Ploomes JobTitle nativo + fallback custom fields)
+function getContactCargo(d) {
+    const c = d.Contact;
+    if (!c) return '';
+    if (c.JobTitle) return String(c.JobTitle).trim();
+    if (c.Role) return String(c.Role).trim();
+    const props = c.OtherProperties || [];
+    for (const p of props) {
+        const fn = (p.FieldName || '').toLowerCase();
+        if (fn.includes('cargo') || fn.includes('função') || fn.includes('funcao') || fn.includes('position')) {
+            return p.StringValue || p.ObjectValueName || '';
+        }
+    }
+    return '';
+}
+// Detecta cargo de decisão (heurística pt-BR)
+function isCargoDecisao(cargo) {
+    if (!cargo) return false;
+    const c = cargo.toLowerCase();
+    return /\b(ceo|cto|cfo|coo|cmo|cro|cio|presidente|vice[\s-]?presidente|vp|diretor|director|gerente|head|coordenador|coord|supervisor|founder|fundador|s[oó]cio|owner|proprietário|líder|lider|chefe|superintendente)\b/.test(c);
+}
+
 function showDrilldown(title, deals, columns, type) {
     document.getElementById('drilldownTitle').textContent = title;
     _drilldownData = deals;
@@ -10193,6 +10244,7 @@ function showDrilldown(title, deals, columns, type) {
         } else if (type === 'lost') {
             columns = [
                 { header: 'Titulo', getValue: d => d.Title || '' },
+                { header: 'Cargo do contato', getValue: d => getContactCargo(d), highlightDecision: true },
                 { header: 'Responsavel', getValue: d => getOwnerName(d) },
                 { header: 'Funil', getValue: d => getPipelineName(d) },
                 { header: 'Motivo Perda', getValue: d => d.LossReason?.Name || '-' },
@@ -10249,23 +10301,63 @@ function showDrilldown(title, deals, columns, type) {
     }
     _drilldownColumns = columns;
 
-    let html = '<table><thead><tr>';
+    // Header: busca + atalho "só decisores" (se a coluna Cargo existe)
+    const hasCargoCol = columns.some(c => c.highlightDecision);
+    const decisoresCount = hasCargoCol ? deals.filter(d => isCargoDecisao(getContactCargo(d))).length : 0;
+    let header = '';
+    if (deals.length > 0) {
+        header = `<div class="dd-filterbar">
+            <input type="text" id="ddSearch" placeholder="🔍 Buscar em qualquer coluna..." autocomplete="off">
+            ${hasCargoCol && decisoresCount > 0 ? `<button id="ddOnlyDecisores" class="dd-chip">⭐ Só decisores (${decisoresCount})</button>` : ''}
+            <span class="dd-row-count" id="ddRowCount">${deals.length} negócios</span>
+        </div>`;
+    }
+
+    let html = '<table id="ddTable"><thead><tr>';
     columns.forEach(c => { html += `<th>${c.header}</th>`; });
     html += '</tr></thead><tbody>';
     deals.forEach(d => {
-        html += '<tr>';
+        const cargo = hasCargoCol ? getContactCargo(d) : '';
+        const isDec = hasCargoCol && isCargoDecisao(cargo);
+        html += `<tr class="dd-row${isDec ? ' dd-decisor' : ''}" data-row-text="${(deals && columns.map(c => String(c.getValue(d) || '')).join(' ').toLowerCase().replace(/"/g,'&quot;'))}">`;
         columns.forEach(c => {
             const val = c.getValue(d);
             const isNum = typeof val === 'number' && c.header !== '#';
-            html += `<td${isNum ? ' class="money"' : ''}>${isNum ? formatMoney(val) : (val || '-')}</td>`;
+            const cellCls = isNum ? ' class="money"' : (c.highlightDecision && isDec) ? ' class="cargo-decisor"' : '';
+            html += `<td${cellCls}>${isNum ? formatMoney(val) : (val || '-')}${c.highlightDecision && isDec ? ' <span class="dec-badge">⭐</span>' : ''}</td>`;
         });
         html += '</tr>';
     });
     html += '</tbody></table>';
     if (deals.length === 0) html = '<p style="text-align:center;color:#6868a0;padding:30px;">Nenhum negócio encontrado</p>';
 
-    document.getElementById('drilldownContent').innerHTML = html;
+    document.getElementById('drilldownContent').innerHTML = header + html;
     document.getElementById('drilldownModal').classList.add('active');
+
+    // Wire-up busca e filtro
+    const searchEl = document.getElementById('ddSearch');
+    const decoBtn = document.getElementById('ddOnlyDecisores');
+    const rowCount = document.getElementById('ddRowCount');
+    let onlyDecisoresActive = false;
+    const applyFilter = () => {
+        const q = (searchEl?.value || '').toLowerCase().trim();
+        let shown = 0;
+        document.querySelectorAll('#ddTable tbody tr.dd-row').forEach(tr => {
+            const text = tr.getAttribute('data-row-text') || '';
+            const matchesText = !q || text.includes(q);
+            const matchesDec = !onlyDecisoresActive || tr.classList.contains('dd-decisor');
+            const show = matchesText && matchesDec;
+            tr.style.display = show ? '' : 'none';
+            if (show) shown++;
+        });
+        if (rowCount) rowCount.textContent = `${shown} de ${deals.length} negócios`;
+    };
+    if (searchEl) searchEl.addEventListener('input', applyFilter);
+    if (decoBtn) decoBtn.addEventListener('click', () => {
+        onlyDecisoresActive = !onlyDecisoresActive;
+        decoBtn.classList.toggle('active', onlyDecisoresActive);
+        applyFilter();
+    });
 }
 
 function closeDrilldown() {
