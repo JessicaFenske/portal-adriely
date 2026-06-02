@@ -110,13 +110,35 @@
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #4a4a6a;
-            padding: 14px 16px 4px;
+            color: #6c5ca0;
+            font-weight: 700;
+            padding: 14px 16px 6px;
             white-space: nowrap;
             opacity: 1;
             transition: opacity 0.2s ease;
+            position: relative;
         }
+        .nav-section-title::before {
+            content: '';
+            display: block;
+            position: absolute;
+            left: 16px; right: 16px; top: 0;
+            height: 1px;
+            background: linear-gradient(to right, rgba(108, 63, 181, 0.25), transparent);
+        }
+        .nav-section-title:first-child::before { display: none; }
         .sidebar.collapsed .nav-section-title { opacity: 0; }
+        .nav-subgroup-title {
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #5a4a8a;
+            font-weight: 600;
+            padding: 10px 16px 2px 28px;
+            white-space: nowrap;
+            opacity: 0.85;
+        }
+        .sidebar.collapsed .nav-subgroup-title { opacity: 0; }
 
         .nav-sub-item {
             display: flex;
@@ -3435,6 +3457,214 @@
             .stat-box .label { font-size: 10px !important; }
             #view-analise-funil .af-stage-grid { grid-template-columns: 1fr !important; }
         }
+
+        /* ==================== HALL DE VENDEDORES ==================== */
+        #view-hall-vendedores { padding: 0; }
+        .hv-page { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
+        @media (max-width: 720px) { .hv-page { padding: 16px 14px 50px; } }
+
+        .hv-hero {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.18), rgba(251, 191, 36, 0.06));
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            border-radius: 20px;
+            padding: 24px 28px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hv-hero::after {
+            content: '🏆';
+            position: absolute;
+            right: -20px; bottom: -40px;
+            font-size: 200px;
+            opacity: 0.04;
+            pointer-events: none;
+        }
+        .hv-hero-eyebrow { font-size: 11px; color: #fcd34d; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+        .hv-hero-title { font-size: 28px; color: #fff; font-weight: 800; margin-bottom: 6px; line-height: 1.1; }
+        .hv-hero-sub { font-size: 13px; color: #b794f4; }
+        .hv-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .hv-filters select {
+            background: rgba(15, 15, 30, 0.6); color: #fff; border: 1px solid rgba(108, 63, 181, 0.35);
+            border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer;
+        }
+        .hv-filters select:focus { outline: none; border-color: #8b5cf6; }
+        @media (max-width: 720px) {
+            .hv-hero { padding: 18px; }
+            .hv-hero-title { font-size: 22px; }
+            .hv-filters { width: 100%; }
+            .hv-filters select { flex: 1; font-size: 12.5px; }
+        }
+
+        .hv-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+        @media (max-width: 720px) { .hv-stats { grid-template-columns: repeat(2, 1fr); } }
+        .hv-stat-card {
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid rgba(108, 63, 181, 0.22);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        .hv-stat-card .v { font-size: 22px; font-weight: 800; color: #fff; }
+        .hv-stat-card .l { font-size: 10.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+        /* Podium */
+        .hv-podium-wrap { margin-bottom: 22px; }
+        .hv-podium {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 14px;
+            align-items: end;
+            min-height: 280px;
+        }
+        @media (max-width: 600px) { .hv-podium { grid-template-columns: 1fr; min-height: 0; } }
+        .hv-podium-card {
+            background: rgba(26, 26, 46, 0.85);
+            border-radius: 18px;
+            padding: 22px 18px 20px;
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(108, 63, 181, 0.25);
+            animation: hvRise 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+        }
+        .hv-podium-card.gold {
+            border: 2px solid rgba(251, 191, 36, 0.6);
+            background: linear-gradient(180deg, rgba(251, 191, 36, 0.12), rgba(26, 26, 46, 0.9));
+            box-shadow: 0 20px 50px rgba(251, 191, 36, 0.15);
+            min-height: 260px;
+            animation-delay: 0.3s;
+        }
+        .hv-podium-card.silver {
+            border: 2px solid rgba(192, 192, 192, 0.45);
+            background: linear-gradient(180deg, rgba(192, 192, 192, 0.08), rgba(26, 26, 46, 0.9));
+            min-height: 220px;
+            animation-delay: 0.15s;
+        }
+        .hv-podium-card.bronze {
+            border: 2px solid rgba(205, 127, 50, 0.45);
+            background: linear-gradient(180deg, rgba(205, 127, 50, 0.08), rgba(26, 26, 46, 0.9));
+            min-height: 200px;
+        }
+        @keyframes hvRise { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        .hv-medal { font-size: 36px; margin-bottom: 8px; line-height: 1; }
+        .hv-podium-avatar {
+            width: 60px; height: 60px; border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 20px; color: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+        .hv-podium-card.gold .hv-podium-avatar { width: 72px; height: 72px; font-size: 24px; box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4); }
+        .hv-podium-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; line-height: 1.25; }
+        .hv-podium-card.gold .hv-podium-name { font-size: 16px; }
+        .hv-podium-value { font-size: 18px; font-weight: 800; color: #fcd34d; }
+        .hv-podium-card.gold .hv-podium-value { font-size: 22px; }
+        .hv-podium-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+        .hv-podium-trend { font-size: 11px; margin-top: 6px; font-weight: 600; }
+        .hv-podium-trend.up { color: #6ee7b7; }
+        .hv-podium-trend.down { color: #fca5a5; }
+        .hv-podium-trend.flat { color: #94a3b8; }
+
+        /* Sua posição */
+        .hv-your-pos {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.08));
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 14px;
+            padding: 16px 22px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.1);
+        }
+        .hv-your-pos .hv-yp-avatar {
+            width: 46px; height: 46px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; color: #fff; flex-shrink: 0; font-size: 15px;
+        }
+        .hv-your-pos .hv-yp-main { flex: 1; }
+        .hv-your-pos .hv-yp-title { font-size: 13px; color: #c4b5fd; font-weight: 600; margin-bottom: 2px; }
+        .hv-your-pos .hv-yp-pos { font-size: 18px; color: #fff; font-weight: 700; }
+        .hv-your-pos .hv-yp-pos strong { color: #fcd34d; }
+        .hv-your-pos .hv-yp-sub { font-size: 12.5px; color: #94a3b8; margin-top: 2px; }
+        @media (max-width: 600px) { .hv-your-pos { padding: 14px 16px; gap: 12px; } .hv-your-pos .hv-yp-pos { font-size: 16px; } }
+
+        /* Achievements */
+        .hv-achievements {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+        .hv-badge-card {
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid rgba(108, 63, 181, 0.22);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hv-badge-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+        .hv-badge-text { min-width: 0; }
+        .hv-badge-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; font-weight: 600; }
+        .hv-badge-winner { font-size: 14px; color: #fff; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hv-badge-meta { font-size: 11.5px; color: #fcd34d; margin-top: 2px; }
+
+        /* Leaderboard */
+        .hv-board-card {
+            background: rgba(26, 26, 46, 0.85);
+            border: 1px solid rgba(108, 63, 181, 0.22);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .hv-board-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .hv-board-header h3 { font-size: 15px; color: #fff; margin: 0; }
+        .hv-board-sub { font-size: 12px; color: #94a3b8; }
+        .hv-board-scroll { overflow-x: auto; }
+        .hv-board-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .hv-board-table thead { background: rgba(108, 63, 181, 0.08); }
+        .hv-board-table th {
+            text-align: left; padding: 12px 16px; font-size: 10.5px;
+            text-transform: uppercase; letter-spacing: 0.5px; color: #c4b5fd; font-weight: 700;
+        }
+        .hv-board-table th.num, .hv-board-table td.num { text-align: right; white-space: nowrap; }
+        .hv-board-table tbody td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        .hv-board-table tbody tr:last-child td { border-bottom: none; }
+        .hv-board-table tbody tr.you {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15), transparent);
+            border-left: 3px solid #8b5cf6;
+        }
+        .hv-board-pos { font-weight: 800; color: #fcd34d; font-size: 14px; width: 50px; }
+        .hv-board-user { display: flex; align-items: center; gap: 10px; }
+        .hv-board-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+        .hv-board-name { font-weight: 600; color: #fff; font-size: 13.5px; }
+        .hv-board-name .you-tag { background: rgba(139, 92, 246, 0.3); color: #c4b5fd; font-size: 9.5px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 700; letter-spacing: 0.4px; }
+        .hv-trend { font-weight: 600; }
+        .hv-trend.up { color: #6ee7b7; }
+        .hv-trend.down { color: #fca5a5; }
+        .hv-trend.flat { color: #94a3b8; }
+        .hv-trend.new { color: #fcd34d; }
+        @media (max-width: 720px) {
+            .hv-board-table th, .hv-board-table td { padding: 10px 10px; font-size: 12px; }
+            .hv-board-table .hide-mob { display: none; }
+            .hv-board-pos { width: auto; }
+            .hv-board-avatar { width: 28px; height: 28px; font-size: 11px; }
+        }
+
+        .hv-empty {
+            padding: 60px 20px; text-align: center;
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px dashed rgba(108, 63, 181, 0.3);
+            border-radius: 14px;
+            color: #94a3b8;
+        }
+        .hv-empty .emoji { font-size: 36px; display: block; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -3450,7 +3680,7 @@
             <span class="brand-text">Lincros</span>
         </div>
         <div class="sidebar-nav">
-            <div class="nav-section-title">Acesso rapido</div>
+            <div class="nav-section-title">Principais</div>
             <div class="nav-item" data-view="analise-funil" onclick="showView('analise-funil')">
                 <span class="nav-icon">&#127919;</span>
                 <span class="nav-label">Análise de Funil</span>
@@ -3459,15 +3689,19 @@
                 <span class="nav-icon">&#128176;</span>
                 <span class="nav-label">Forecast</span>
             </div>
+            <div class="nav-item" data-view="hall-vendedores" onclick="showView('hall-vendedores')">
+                <span class="nav-icon">&#127942;</span>
+                <span class="nav-label">Hall de Vendedores</span>
+            </div>
+
+            <div class="nav-section-title" style="margin-top:20px;">Dashboard completo</div>
+            <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+                <span class="nav-icon">&#128202;</span>
+                <span class="nav-label">Visão geral</span>
+            </div>
             <div class="nav-item" data-view="marketing" onclick="showView('marketing')">
                 <span class="nav-icon">&#128225;</span>
                 <span class="nav-label">Marketing</span>
-            </div>
-
-            <div class="nav-section-title" style="margin-top:20px;">Dashboard</div>
-            <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
-                <span class="nav-icon">&#128202;</span>
-                <span class="nav-label">Dashboard</span>
             </div>
 
             <!-- Grupo: Pré-vendas -->
@@ -3478,13 +3712,13 @@
                 </div>
                 <div class="nav-group-items">
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secAnalise');">
-                        <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Análise Pré-vendas</span>
+                        <span class="sub-num" style="background:rgba(96,165,250,0.2);color:#60a5fa;">&#128202;</span><span class="sub-label">Resumo</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secMetaReverse');">
-                        <span class="sub-num" style="background:rgba(250,204,21,0.2);color:#facc15;">&#127919;</span><span class="sub-label">Cálculo Reverso de Meta</span>
+                        <span class="sub-num" style="background:rgba(250,204,21,0.2);color:#facc15;">&#127919;</span><span class="sub-label">Cálculo reverso de meta</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secStuck');">
-                        <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads Parados</span>
+                        <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#128680;</span><span class="sub-label">Leads parados</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
                         <span class="sub-num">&#128197;</span><span class="sub-label">Reuniões por SDR</span>
@@ -3493,13 +3727,13 @@
                         <span class="sub-num">&#128465;</span><span class="sub-label">Descartes por SDR</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7c');">
-                        <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de Descarte</span>
+                        <span class="sub-num">&#128270;</span><span class="sub-label">Motivos de descarte</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7d');">
-                        <span class="sub-num">&#127760;</span><span class="sub-label">Reuniões por Origem</span>
+                        <span class="sub-num">&#127760;</span><span class="sub-label">Reuniões por canal</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec8');">
-                        <span class="sub-num">&#127919;</span><span class="sub-label">Origem das Reuniões</span>
+                        <span class="sub-num">&#127919;</span><span class="sub-label">Top origens de reunião</span>
                     </div>
                 </div>
             </div>
@@ -3511,46 +3745,51 @@
                     <span class="chevron">&#9662;</span>
                 </div>
                 <div class="nav-group-items">
+                    <div class="nav-subgroup-title">Resultado</div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec1');">
-                        <span class="sub-num">&#9989;</span><span class="sub-label">Oportunidades Ganhas</span>
+                        <span class="sub-num">&#9989;</span><span class="sub-label">Ganhas</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2');">
-                        <span class="sub-num">&#10060;</span><span class="sub-label">Oportunidades Perdidas</span>
+                        <span class="sub-num">&#10060;</span><span class="sub-label">Perdidas</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2b');">
-                        <span class="sub-num">&#128680;</span><span class="sub-label">Perdas por Motivo</span>
+                        <span class="sub-num">&#128680;</span><span class="sub-label">Motivos de perda</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec2c');">
-                        <span class="sub-num">&#128100;</span><span class="sub-label">Perdas Vendedor/Produto</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
-                        <span class="sub-num">&#128230;</span><span class="sub-label">Produtos Vendidos</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
-                        <span class="sub-num">&#127942;</span><span class="sub-label">Ranking Vendedores</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
-                        <span class="sub-num">&#128196;</span><span class="sub-label">Propostas Enviadas</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
-                        <span class="sub-num">&#128078;</span><span class="sub-label">Perdidos por Vendedor</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5b');">
-                        <span class="sub-num">&#128176;</span><span class="sub-label">Propostas - Valor</span>
-                    </div>
-                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6b');">
-                        <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos - Valor</span>
+                        <span class="sub-num">&#128100;</span><span class="sub-label">Perdas por vendedor</span>
                     </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
-                        <span class="sub-num">&#128200;</span><span class="sub-label">Conversão por Etapa</span>
+                        <span class="sub-num">&#128200;</span><span class="sub-label">Conversão por etapa</span>
+                    </div>
+
+                    <div class="nav-subgroup-title">Produção</div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
+                        <span class="sub-num">&#128230;</span><span class="sub-label">Produtos vendidos</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec4');">
+                        <span class="sub-num">&#127942;</span><span class="sub-label">Ranking de vendedores</span>
+                    </div>
+
+                    <div class="nav-subgroup-title">Pipeline</div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5');">
+                        <span class="sub-num">&#128196;</span><span class="sub-label">Propostas — quantidade</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec5b');">
+                        <span class="sub-num">&#128176;</span><span class="sub-label">Propostas — valor</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6');">
+                        <span class="sub-num">&#128078;</span><span class="sub-label">Perdidos por vendedor</span>
+                    </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec6b');">
+                        <span class="sub-num">&#128201;</span><span class="sub-label">Perdidos — valor</span>
                     </div>
                 </div>
             </div>
 
-            <div class="nav-section-title" style="margin-top:20px;">Outros</div>
+            <div class="nav-section-title" style="margin-top:20px;">Explorar</div>
             <div class="nav-item" data-view="oportunidades" onclick="showView('oportunidades')">
                 <span class="nav-icon">&#128203;</span>
-                <span class="nav-label">Oportunidades</span>
+                <span class="nav-label">Lista de oportunidades</span>
             </div>
 
             <!-- User / Logout -->
@@ -3572,6 +3811,77 @@
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
+
+        <!-- ==================== VIEW: HALL DE VENDEDORES ==================== -->
+        <div id="view-hall-vendedores" style="display:none;">
+            <div class="hv-page">
+                <!-- Hero header -->
+                <div class="hv-hero">
+                    <div class="hv-hero-left">
+                        <div class="hv-hero-eyebrow">🏆 RANKING DE VENDEDORES</div>
+                        <h1 class="hv-hero-title" id="hvHeroTitle">Hall de Vendedores</h1>
+                        <div class="hv-hero-sub" id="hvHeroSub">Carregando ranking…</div>
+                    </div>
+                    <div class="hv-filters">
+                        <select id="hvPeriod" onchange="renderHallVendedores()">
+                            <option value="thisMonth" selected>Este mês</option>
+                            <option value="lastMonth">Mês passado</option>
+                            <option value="thisQuarter">Este trimestre</option>
+                            <option value="lastQuarter">Trimestre anterior</option>
+                            <option value="thisYear">Este ano</option>
+                        </select>
+                        <select id="hvPipeline" onchange="renderHallVendedores()">
+                            <option value="">Todos os funis</option>
+                            <option value="Funil de Vendas">Funil de Vendas</option>
+                            <option value="Sankhya">Sankhya</option>
+                            <option value="Farmer">Farmer</option>
+                        </select>
+                        <select id="hvMetric" onchange="renderHallVendedores()">
+                            <option value="mrr" selected>MRR novo</option>
+                            <option value="mrr_setup">MRR + Setup</option>
+                            <option value="count">Quantidade</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats summary -->
+                <div class="hv-stats" id="hvStats"></div>
+
+                <!-- Podium -->
+                <div class="hv-podium-wrap">
+                    <div class="hv-podium" id="hvPodium"></div>
+                </div>
+
+                <!-- Sua posição -->
+                <div id="hvYourPosition"></div>
+
+                <!-- Achievements -->
+                <div class="hv-achievements" id="hvAchievements"></div>
+
+                <!-- Full leaderboard -->
+                <div class="hv-board-card">
+                    <div class="hv-board-header">
+                        <h3>📋 Leaderboard completo</h3>
+                        <div class="hv-board-sub" id="hvBoardSub">—</div>
+                    </div>
+                    <div class="hv-board-scroll">
+                        <table class="hv-board-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Vendedor</th>
+                                    <th class="num">MRR</th>
+                                    <th class="num">Setup</th>
+                                    <th class="num">Deals</th>
+                                    <th class="num">Trend (vs período anterior)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hvBoardBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ==================== VIEW: OPORTUNIDADES ==================== -->
         <div id="view-oportunidades" style="display:none;">
@@ -5462,6 +5772,8 @@ function showView(viewName) {
     if (mktEl) mktEl.style.display = 'none';
     const afEl = document.getElementById('view-analise-funil');
     if (afEl) afEl.style.display = 'none';
+    const hvEl = document.getElementById('view-hall-vendedores');
+    if (hvEl) hvEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -5470,6 +5782,14 @@ function showView(viewName) {
     if (viewName === 'forecast' && !forecastLoaded) { loadForecast(); forecastLoaded = true; }
     if (viewName === 'marketing' && !marketingLoaded) { loadMarketing(); marketingLoaded = true; }
     if (viewName === 'analise-funil' && !analiseFunilLoaded) { loadAnaliseFunil(); analiseFunilLoaded = true; }
+    if (viewName === 'hall-vendedores') {
+        // Hall depende dos dados de "won" — se dashboard ainda não carregou, carrega
+        if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
+        if (typeof renderHallVendedores === 'function') {
+            // Pequeno delay pra esperar dados carregarem do cache
+            setTimeout(() => renderHallVendedores(), wonDeals && wonDeals.length ? 50 : 800);
+        }
+    }
 
     updateSidebarActive(viewName);
 
@@ -6876,6 +7196,305 @@ function renderSection4() {
         <td class="money" style="color:#818cf8;">${formatMoney(s.setup)}</td>
         <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td>
         <td style="text-align:center;">${s.count}</td></tr>`).join('');
+}
+
+// ==================== HALL DE VENDEDORES (view dedicada) ====================
+function _hvPeriodRange() {
+    const sel = document.getElementById('hvPeriod');
+    const val = sel ? sel.value : 'thisMonth';
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    let start, end, prevStart, prevEnd, label;
+    switch(val) {
+        case 'thisMonth':
+            start = new Date(y, m, 1); end = new Date(y, m + 1, 0, 23, 59, 59);
+            prevStart = new Date(y, m - 1, 1); prevEnd = new Date(y, m, 0, 23, 59, 59);
+            label = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            break;
+        case 'lastMonth':
+            start = new Date(y, m - 1, 1); end = new Date(y, m, 0, 23, 59, 59);
+            prevStart = new Date(y, m - 2, 1); prevEnd = new Date(y, m - 1, 0, 23, 59, 59);
+            label = new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            break;
+        case 'thisQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            start = new Date(y, qs, 1); end = new Date(y, qs + 3, 0, 23, 59, 59);
+            prevStart = new Date(y, qs - 3, 1); prevEnd = new Date(y, qs, 0, 23, 59, 59);
+            label = `Q${Math.floor(qs/3)+1}/${y}`;
+            break;
+        }
+        case 'lastQuarter': {
+            const qs = Math.floor(m / 3) * 3;
+            start = new Date(y, qs - 3, 1); end = new Date(y, qs, 0, 23, 59, 59);
+            prevStart = new Date(y, qs - 6, 1); prevEnd = new Date(y, qs - 3, 0, 23, 59, 59);
+            label = `Q${Math.floor((qs-3)/3)+1}/${qs-3 < 0 ? y-1 : y}`;
+            break;
+        }
+        case 'thisYear':
+            start = new Date(y, 0, 1); end = new Date(y, 11, 31, 23, 59, 59);
+            prevStart = new Date(y - 1, 0, 1); prevEnd = new Date(y - 1, 11, 31, 23, 59, 59);
+            label = String(y);
+            break;
+    }
+    return { start, end, prevStart, prevEnd, label };
+}
+function _hvDealsInRange(deals, range, pipelineFilter) {
+    return deals.filter(d => {
+        const fd = d.FinishDate;
+        if (!fd) return false;
+        const t = new Date(fd).getTime();
+        if (t < range.start.getTime() || t > range.end.getTime()) return false;
+        const p = getPipelineName(d);
+        if (pipelineFilter && p !== pipelineFilter) return false;
+        // MRR novo: exclui Farmer IPCA (reajuste)
+        if (!pipelineFilter && p === 'Farmer IPCA') return false;
+        return true;
+    });
+}
+function _hvAvatarColor(key) {
+    const palette = [
+        ['#6366f1','#818cf8'],['#8b5cf6','#a78bfa'],['#ec4899','#f472b6'],
+        ['#f59e0b','#fbbf24'],['#10b981','#34d399'],['#06b6d4','#22d3ee'],
+        ['#3b82f6','#60a5fa'],['#14b8a6','#2dd4bf'],['#f97316','#fb923c'],['#84cc16','#a3e635']
+    ];
+    let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    const [c1, c2] = palette[h % palette.length];
+    return `linear-gradient(135deg, ${c1}, ${c2})`;
+}
+function _hvInitials(name) {
+    return (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?';
+}
+function _hvMoney(v) {
+    if (Math.abs(v) >= 1000) return 'R$ ' + (v/1000).toFixed(1).replace('.', ',') + 'k';
+    return 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function _hvShortName(name) {
+    const parts = (name || '').trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    return parts[0] + ' ' + parts[parts.length-1];
+}
+let _hvCurrentUserName = null;
+async function _hvFetchMe() {
+    if (_hvCurrentUserName) return _hvCurrentUserName;
+    try {
+        const r = await fetch('/auth/me', { credentials: 'same-origin' });
+        if (r.ok) {
+            const d = await r.json();
+            _hvCurrentUserName = (d.user && d.user.name) || null;
+        }
+    } catch (e) {}
+    return _hvCurrentUserName;
+}
+
+async function renderHallVendedores() {
+    const range = _hvPeriodRange();
+    const pipelineFilter = document.getElementById('hvPipeline')?.value || '';
+    const metric = document.getElementById('hvMetric')?.value || 'mrr';
+    const me = await _hvFetchMe();
+
+    // Garante que temos dados de won; se não, mostra estado de carregamento
+    if (!wonDeals || wonDeals.length === 0) {
+        document.getElementById('hvHeroSub').textContent = 'Carregando dados de vendas…';
+        document.getElementById('hvPodium').innerHTML = '<div class="hv-empty"><span class="emoji">⏳</span>Aguardando carregamento dos dados de vendas…</div>';
+        return;
+    }
+
+    const current = _hvDealsInRange(wonDeals, range, pipelineFilter);
+    const previous = _hvDealsInRange(wonDeals, { start: range.prevStart, end: range.prevEnd }, pipelineFilter);
+
+    const aggregate = (deals) => {
+        const map = {};
+        deals.forEach(d => {
+            const name = getOwnerName(d);
+            if (!name) return;
+            if (!map[name]) map[name] = { name, mrr: 0, setup: 0, count: 0, biggestDeal: 0, biggestDealTitle: '', firstSale: null };
+            const mrr = getMRR(d);
+            const setup = getSetup(d);
+            map[name].mrr += mrr;
+            map[name].setup += setup;
+            map[name].count++;
+            if (mrr > map[name].biggestDeal) { map[name].biggestDeal = mrr; map[name].biggestDealTitle = d.Title || ''; }
+            const fd = d.FinishDate ? new Date(d.FinishDate).getTime() : Infinity;
+            if (!map[name].firstSale || fd < map[name].firstSale) map[name].firstSale = fd;
+        });
+        return map;
+    };
+    const curMap = aggregate(current);
+    const prevMap = aggregate(previous);
+
+    // Sort by metric
+    const sortKey = (s) => metric === 'count' ? s.count : metric === 'mrr_setup' ? (s.mrr + s.setup) : s.mrr;
+    const sortedAll = Object.values(curMap).filter(s => sortKey(s) > 0).sort((a, b) => sortKey(b) - sortKey(a));
+
+    // Hero subtitle
+    const totalDeals = current.length;
+    const totalMrr = current.reduce((s, d) => s + getMRR(d), 0);
+    const daysLeft = Math.max(0, Math.ceil((range.end.getTime() - Date.now()) / 86400000));
+    document.getElementById('hvHeroTitle').textContent = 'Hall de Vendedores — ' + range.label;
+    document.getElementById('hvHeroSub').innerHTML = daysLeft > 0
+        ? `<strong>${daysLeft} dia${daysLeft > 1 ? 's' : ''}</strong> até o fim do período · ${totalDeals} deals ganhos · ${_hvMoney(totalMrr)} em MRR`
+        : `Período encerrado · ${totalDeals} deals ganhos · ${_hvMoney(totalMrr)} em MRR`;
+
+    // Stats
+    const sumSetup = current.reduce((s, d) => s + getSetup(d), 0);
+    const avgTicket = totalDeals > 0 ? totalMrr / totalDeals : 0;
+    document.getElementById('hvStats').innerHTML = `
+        <div class="hv-stat-card"><div class="v">${sortedAll.length}</div><div class="l">Vendedores ativos</div></div>
+        <div class="hv-stat-card"><div class="v">${totalDeals}</div><div class="l">Deals ganhos</div></div>
+        <div class="hv-stat-card"><div class="v">${_hvMoney(totalMrr)}</div><div class="l">MRR total</div></div>
+        <div class="hv-stat-card"><div class="v">${_hvMoney(avgTicket)}</div><div class="l">Ticket médio</div></div>
+    `;
+
+    // Podium
+    const podiumDiv = document.getElementById('hvPodium');
+    if (sortedAll.length === 0) {
+        podiumDiv.innerHTML = '<div class="hv-empty" style="grid-column:1/-1"><span class="emoji">🤷</span>Nenhum vendedor com vendas neste período.</div>';
+        document.getElementById('hvYourPosition').innerHTML = '';
+        document.getElementById('hvAchievements').innerHTML = '';
+        document.getElementById('hvBoardBody').innerHTML = '';
+        document.getElementById('hvBoardSub').textContent = '';
+        return;
+    }
+    const top3 = sortedAll.slice(0, 3);
+    const trendFor = (name) => {
+        const cur = sortKey(curMap[name] || {mrr:0,setup:0,count:0});
+        const prev = sortKey(prevMap[name] || {mrr:0,setup:0,count:0});
+        if (prev === 0 && cur > 0) return { class: 'up', text: 'novo top!' };
+        if (cur > prev) return { class: 'up', text: `↑ +${metric === 'count' ? (cur-prev) : _hvMoney(cur-prev)}` };
+        if (cur < prev) return { class: 'down', text: `↓ ${metric === 'count' ? (cur-prev) : _hvMoney(cur-prev)}` };
+        return { class: 'flat', text: '→ estável' };
+    };
+    const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3; // silver, gold, bronze
+    const podiumClass = top3.length === 3 ? ['silver','gold','bronze'] : top3.map((_,i) => ['gold','silver','bronze'][i]);
+    const medals = top3.length === 3 ? ['🥈','🥇','🥉'] : ['🥇','🥈','🥉'].slice(0, top3.length);
+    podiumDiv.innerHTML = podiumOrder.map((s, idx) => {
+        if (!s) return '<div></div>';
+        const t = trendFor(s.name);
+        const valDisp = metric === 'count' ? `${s.count}` : metric === 'mrr_setup' ? _hvMoney(s.mrr + s.setup) : _hvMoney(s.mrr);
+        const subDisp = metric === 'count' ? 'deals' : (metric === 'mrr_setup' ? 'MRR + Setup' : (s.count + ' deal' + (s.count > 1 ? 's' : '')));
+        return `<div class="hv-podium-card ${podiumClass[idx]}">
+            <div class="hv-medal">${medals[idx]}</div>
+            <div class="hv-podium-avatar" style="background:${_hvAvatarColor(s.name)}">${_hvInitials(s.name)}</div>
+            <div class="hv-podium-name">${_hvShortName(s.name)}</div>
+            <div class="hv-podium-value">${valDisp}</div>
+            <div class="hv-podium-sub">${subDisp}</div>
+            <div class="hv-podium-trend ${t.class}">${t.text}</div>
+        </div>`;
+    }).join('');
+
+    // Sua posição
+    const yourPosDiv = document.getElementById('hvYourPosition');
+    if (me) {
+        const myIdx = sortedAll.findIndex(s => s.name.toLowerCase().trim() === me.toLowerCase().trim());
+        if (myIdx >= 0) {
+            const myEntry = sortedAll[myIdx];
+            const myPos = myIdx + 1;
+            const myVal = sortKey(myEntry);
+            let gapMsg = '';
+            if (myIdx > 0) {
+                const above = sortedAll[myIdx - 1];
+                const gap = sortKey(above) - myVal;
+                gapMsg = metric === 'count'
+                    ? `Faltam ${gap} deal${gap > 1 ? 's' : ''} pra alcançar <strong>${_hvShortName(above.name)}</strong> (${myPos - 1}º).`
+                    : `Faltam <strong>${_hvMoney(gap)}</strong> pra alcançar <strong>${_hvShortName(above.name)}</strong> (${myPos - 1}º).`;
+            } else {
+                gapMsg = '🏆 Você está em 1º lugar — defenda o topo!';
+            }
+            const prevPos = (() => {
+                const prevSorted = Object.values(prevMap).filter(s => sortKey(s) > 0).sort((a,b) => sortKey(b) - sortKey(a));
+                return prevSorted.findIndex(s => s.name.toLowerCase().trim() === me.toLowerCase().trim()) + 1;
+            })();
+            let trendMsg = '';
+            if (prevPos > 0 && prevPos > myPos) trendMsg = ` <strong style="color:#6ee7b7">↑ Subiu ${prevPos - myPos} posição(ões)</strong> vs período anterior.`;
+            else if (prevPos > 0 && prevPos < myPos) trendMsg = ` <strong style="color:#fca5a5">↓ Caiu ${myPos - prevPos} posição(ões)</strong> vs período anterior.`;
+            else if (prevPos === 0) trendMsg = ' <strong style="color:#fcd34d">🆕 Estreia no ranking</strong> neste período!';
+            yourPosDiv.innerHTML = `<div class="hv-your-pos">
+                <div class="hv-yp-avatar" style="background:${_hvAvatarColor(me)}">${_hvInitials(me)}</div>
+                <div class="hv-yp-main">
+                    <div class="hv-yp-title">VOCÊ</div>
+                    <div class="hv-yp-pos"><strong>${myPos}º lugar</strong> — ${metric === 'count' ? myEntry.count + ' deals' : _hvMoney(myVal)}${trendMsg}</div>
+                    <div class="hv-yp-sub">${gapMsg}</div>
+                </div>
+            </div>`;
+        } else {
+            yourPosDiv.innerHTML = `<div class="hv-your-pos">
+                <div class="hv-yp-avatar" style="background:${_hvAvatarColor(me)}">${_hvInitials(me)}</div>
+                <div class="hv-yp-main">
+                    <div class="hv-yp-title">VOCÊ</div>
+                    <div class="hv-yp-pos">Ainda sem vendas neste período</div>
+                    <div class="hv-yp-sub">Bora? 🎯 Cada deal te coloca no mapa.</div>
+                </div>
+            </div>`;
+        }
+    } else {
+        yourPosDiv.innerHTML = '';
+    }
+
+    // Achievements (badges)
+    const badges = [];
+    // 🚀 Foguete: maior crescimento absoluto vs período anterior
+    let bestGrowth = { name: null, growth: 0 };
+    sortedAll.forEach(s => {
+        const prev = prevMap[s.name] ? sortKey(prevMap[s.name]) : 0;
+        const growth = sortKey(s) - prev;
+        if (growth > bestGrowth.growth) bestGrowth = { name: s.name, growth };
+    });
+    if (bestGrowth.name && bestGrowth.growth > 0) {
+        badges.push({ icon: '🚀', title: 'Foguete do período', winner: _hvShortName(bestGrowth.name),
+            meta: metric === 'count' ? `+${bestGrowth.growth} deal(s) vs período anterior` : `+${_hvMoney(bestGrowth.growth)} vs período anterior` });
+    }
+    // 💎 Top deal: maior MRR único
+    let topDeal = { name: null, value: 0, title: '' };
+    sortedAll.forEach(s => {
+        if (s.biggestDeal > topDeal.value) topDeal = { name: s.name, value: s.biggestDeal, title: s.biggestDealTitle };
+    });
+    if (topDeal.name) {
+        badges.push({ icon: '💎', title: 'Maior MRR único', winner: _hvShortName(topDeal.name),
+            meta: `${_hvMoney(topDeal.value)} · ${(topDeal.title || '').slice(0, 30)}${topDeal.title.length > 30 ? '…' : ''}` });
+    }
+    // 🎯 Primeira venda do período
+    const firstSeller = sortedAll.slice().sort((a, b) => (a.firstSale || Infinity) - (b.firstSale || Infinity))[0];
+    if (firstSeller && firstSeller.firstSale && firstSeller.firstSale !== Infinity) {
+        const dt = new Date(firstSeller.firstSale);
+        badges.push({ icon: '🎯', title: 'Primeira venda do período', winner: _hvShortName(firstSeller.name),
+            meta: dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) });
+    }
+    // 🏃 Comeback: estava fora do top 5 antes, agora está no top 5
+    const prevSortedNames = Object.values(prevMap).filter(s => sortKey(s) > 0).sort((a,b) => sortKey(b) - sortKey(a)).slice(0, 5).map(s => s.name);
+    const comeback = sortedAll.slice(0, 5).find(s => sortKey(prevMap[s.name] || {mrr:0,setup:0,count:0}) > 0 && !prevSortedNames.includes(s.name) && sortKey(s) > sortKey(prevMap[s.name] || {mrr:0,setup:0,count:0}));
+    if (comeback) {
+        badges.push({ icon: '🏃', title: 'Comeback do período', winner: _hvShortName(comeback.name),
+            meta: 'Voltou ao Top 5' });
+    }
+    document.getElementById('hvAchievements').innerHTML = badges.map(b => `<div class="hv-badge-card">
+        <div class="hv-badge-icon">${b.icon}</div>
+        <div class="hv-badge-text">
+            <div class="hv-badge-title">${b.title}</div>
+            <div class="hv-badge-winner">${b.winner}</div>
+            <div class="hv-badge-meta">${b.meta}</div>
+        </div>
+    </div>`).join('');
+
+    // Leaderboard
+    document.getElementById('hvBoardSub').textContent = `${sortedAll.length} vendedores · ordenado por ${metric === 'count' ? 'quantidade de deals' : metric === 'mrr_setup' ? 'MRR + Setup' : 'MRR novo'}`;
+    document.getElementById('hvBoardBody').innerHTML = sortedAll.map((s, i) => {
+        const t = trendFor(s.name);
+        const isYou = me && s.name.toLowerCase().trim() === me.toLowerCase().trim();
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        return `<tr class="${isYou ? 'you' : ''}">
+            <td class="hv-board-pos">${medal} ${i + 1}</td>
+            <td>
+                <div class="hv-board-user">
+                    <div class="hv-board-avatar" style="background:${_hvAvatarColor(s.name)}">${_hvInitials(s.name)}</div>
+                    <div class="hv-board-name">${s.name}${isYou ? '<span class="you-tag">VOCÊ</span>' : ''}</div>
+                </div>
+            </td>
+            <td class="num" style="color:#6ee7b7;font-weight:600;">${_hvMoney(s.mrr)}</td>
+            <td class="num hide-mob" style="color:#a78bfa;">${_hvMoney(s.setup)}</td>
+            <td class="num hide-mob">${s.count}</td>
+            <td class="num hv-trend ${t.class}">${t.text}</td>
+        </tr>`;
+    }).join('');
 }
 
 // --- Section 5: Propostas Enviadas ---
