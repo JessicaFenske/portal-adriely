@@ -7709,15 +7709,21 @@ async function renderHallPreVendas() {
     const sortedR = Object.entries(aggR).map(([name, v]) => ({ name, ...v, taxa: v.agendadas ? v.realizadas / v.agendadas : 0 })).filter(s => s.realizadas > 0).sort((a, b) => b.realizadas - a.realizadas);
 
     // ============ Ranking 2: Propostas no período vindas das Agendadas ============
-    // Agrupa TODOS os deals (won + lost + open) com proposalDate no período
+    // Regra do projeto (consistente com sec7 Intermediário):
+    //   proposta = (proposalDate no período) OU (tem MRR/Setup E criado no período)
+    // O (b) captura propostas em que o vendedor preencheu valor mas esqueceu de marcar a data.
     const allDeals = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
     const aggP = {};
     const ensureAggP = (n) => { if (!aggP[n]) aggP[n] = { propostas: 0, mrr: 0, setup: 0, deals: [] }; };
     const proposalDealsSeen = new Set();
     allDeals.forEach(d => {
         if (proposalDealsSeen.has(d.Id)) return;
-        const pd = getProposalDate(d);
-        if (!inRange(pd)) return;
+        // Critério "proposta enviada" do projeto:
+        const hasProposalDate = inRange(getProposalDate(d));
+        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
+        const createdInPeriod = inRange(d.CreateDate);
+        const isProposta = hasProposalDate || (hasValue && createdInPeriod);
+        if (!isProposta) return;
         if (pipelineFilter && getPipelineName(d) !== pipelineFilter) return;
         const ag = agendadaByDeal.get(d.Id);
         if (!ag) return; // sem agendada vinculada → não credita pré-vendas
