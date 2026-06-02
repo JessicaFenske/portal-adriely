@@ -291,34 +291,98 @@
         .time-cell .absolute { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
         .time-cell.never { color: var(--text-dim); font-style: italic; }
 
-        /* ============ Action menu ============ */
+        /* ============ Action menu (kebab) ============ */
         .actions-cell { white-space: nowrap; text-align: right; position: relative; }
-        .action-btn {
+        .kebab-btn {
             background: transparent;
             border: 1px solid transparent;
             color: var(--text-muted);
-            padding: 6px 10px;
+            width: 34px; height: 34px;
             border-radius: 8px;
-            font-size: 12px;
+            font-size: 18px;
             cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
             transition: all 0.15s;
-            display: inline-flex; align-items: center; gap: 4px;
+            -webkit-tap-highlight-color: transparent;
         }
-        .action-btn:hover {
+        .kebab-btn:hover { background: rgba(108, 63, 181, 0.14); color: var(--text); border-color: var(--border); }
+        .kebab-btn.open { background: rgba(108, 63, 181, 0.2); color: var(--text); border-color: var(--border-strong); }
+        .kebab-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: #1d1d35;
+            border: 1px solid var(--border-strong);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            min-width: 220px;
+            padding: 6px;
+            z-index: 100;
+            display: none;
+        }
+        .kebab-menu.show { display: block; animation: menuIn 0.12s ease-out; }
+        @keyframes menuIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .kebab-menu .menu-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
             color: var(--text);
-            background: rgba(108, 63, 181, 0.12);
-            border-color: var(--border);
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
         }
-        .action-btn.primary {
-            background: rgba(139, 92, 246, 0.12);
-            color: #c4b5fd;
-            border-color: rgba(139, 92, 246, 0.3);
+        .kebab-menu .menu-item:hover { background: rgba(108, 63, 181, 0.15); }
+        .kebab-menu .menu-item .ico { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+        .kebab-menu .menu-item.danger { color: #fca5a5; }
+        .kebab-menu .menu-item.danger:hover { background: var(--danger-soft); }
+        .kebab-menu .menu-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+        .menu-overlay { position: fixed; inset: 0; z-index: 99; }
+
+        /* ============ Botão Adicionar usuário ============ */
+        .btn-primary-add {
+            background: linear-gradient(135deg, var(--primary-2), var(--primary));
+            border: none;
+            color: #fff;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            -webkit-tap-highlight-color: transparent;
         }
-        .action-btn.primary:hover { background: rgba(139, 92, 246, 0.22); color: #fff; }
-        .action-btn.danger {
-            color: var(--danger);
+        .btn-primary-add:hover { box-shadow: 0 6px 18px rgba(139, 92, 246, 0.45); }
+
+        /* ============ Formulário do modal ============ */
+        .form-field { margin-bottom: 14px; }
+        .form-field label { display: block; font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+        .form-field input[type="text"], .form-field input[type="email"] {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: var(--text);
+            font-size: 16px;
+            -webkit-appearance: none;
         }
-        .action-btn.danger:hover { background: var(--danger-soft); border-color: rgba(239, 68, 68, 0.3); }
+        .form-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12); }
+        .checkbox-field {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: rgba(108, 63, 181, 0.08);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .checkbox-field input { margin-top: 2px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+        .checkbox-field .ck-text { font-size: 13px; color: var(--text); }
+        .checkbox-field .ck-text small { display: block; color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
 
         /* ============ Empty / loading ============ */
         .state {
@@ -479,10 +543,10 @@
                 padding-top: 12px !important;
                 margin-top: 6px;
                 border-top: 1px solid rgba(255,255,255,0.06);
-                justify-content: stretch !important;
+                justify-content: flex-end !important;
             }
             .actions-cell::before { display: none !important; }
-            .actions-cell .action-btn { flex: 1; justify-content: center; padding: 10px 8px; min-height: 40px; font-size: 12.5px; }
+            .kebab-menu { right: 0; left: auto; min-width: 240px; }
             .modal { padding: 22px 20px; }
             .modal h3 { font-size: 16px; }
             .modal p { font-size: 13px; }
@@ -507,6 +571,34 @@
         </div>
     </div>
 
+    <div class="modal-bg" id="addUserModalBg">
+        <div class="modal">
+            <h3><span class="icon" style="background:rgba(108,63,181,0.18);color:#c4b5fd;">＋</span> Adicionar novo usuário</h3>
+            <p>Será criado(a) com a senha inicial <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px">Lincros2026!</code> e obrigatoriamente terá que trocá-la no primeiro login.</p>
+            <form id="addUserForm" style="margin-top:18px;">
+                <div class="form-field">
+                    <label for="newUserName">Nome completo</label>
+                    <input type="text" id="newUserName" required minlength="2" autocomplete="off">
+                </div>
+                <div class="form-field">
+                    <label for="newUserEmail">E-mail</label>
+                    <input type="email" id="newUserEmail" required autocomplete="off" inputmode="email" autocapitalize="none" spellcheck="false">
+                </div>
+                <label class="checkbox-field">
+                    <input type="checkbox" id="newUserAdmin">
+                    <span class="ck-text">
+                        Tornar administrador(a)
+                        <small>Poderá adicionar/excluir usuários, resetar senhas e gerenciar permissões.</small>
+                    </span>
+                </label>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="addUserCancel">Cancelar</button>
+                    <button type="submit" class="btn-confirm" id="addUserSubmit">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Topbar -->
         <div class="topbar">
@@ -515,7 +607,8 @@
                 <div class="subtitle">Acompanhe quem já fez login e trocou a senha</div>
             </div>
             <div class="actions">
-                <button class="btn" onclick="loadUsers(true)" title="Recarregar"><span class="icon">⟳</span> Atualizar</button>
+                <button class="btn-primary-add" onclick="openAddUserModal()" title="Adicionar usuário"><span class="icon">＋</span> Adicionar usuário</button>
+                <button class="btn" onclick="loadUsers(true)" title="Recarregar"><span class="icon">⟳</span></button>
                 <a class="btn" href="/" title="Voltar ao dashboard"><span class="icon">←</span> Dashboard</a>
             </div>
         </div>
@@ -585,6 +678,7 @@
         let allUsers = [];
         let activeFilter = 'all';
         let searchTerm = '';
+        let currentUserEmail = null; // pra esconder ações destrutivas em "self"
 
         // ============ Helpers ============
         const $ = (id) => document.getElementById(id);
@@ -715,15 +809,26 @@
                 const login = u.lastLoginAt
                     ? `<div class="time-cell"><div class="relative">${fmtRelative(u.lastLoginAt)}</div><div class="absolute">${fmtAbs(u.lastLoginAt)}</div></div>`
                     : '<div class="time-cell never">nunca logou</div>';
-                const remindBtn = u.mustChangePassword
-                    ? `<button class="action-btn primary" onclick="sendReminder('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')" title="Enviar e-mail de lembrete">✉️ Lembrar</button>`
-                    : '';
+                const isSelf = currentUserEmail && u.email === currentUserEmail;
+                const menuItems = [];
+                if (u.mustChangePassword) {
+                    menuItems.push(`<button class="menu-item" onclick="sendReminder('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">✉️</span> Enviar lembrete por e-mail</button>`);
+                }
+                if (!isSelf) {
+                    menuItems.push(`<button class="menu-item" onclick="toggleAdmin('${escapeHtml(u.email)}', '${escapeHtml(u.name)}', ${!u.isAdmin})"><span class="ico">${u.isAdmin ? '☆' : '⭐'}</span> ${u.isAdmin ? 'Remover acesso de admin' : 'Tornar administrador(a)'}</button>`);
+                }
+                menuItems.push(`<button class="menu-item" onclick="resetPassword('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">🔄</span> Resetar senha</button>`);
+                if (!isSelf) {
+                    menuItems.push('<div class="menu-divider"></div>');
+                    menuItems.push(`<button class="menu-item danger" onclick="deleteUser('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">🗑️</span> Excluir usuário</button>`);
+                }
+                const safeKey = (u.email || '').replace(/[^a-z0-9]/gi, '_');
                 return `<tr class="${status}">
                     <td data-label="Usuário">
                         <div class="user-cell">
                             <div class="avatar" style="background:${avatarColor(u.email)}">${initials(u.name)}</div>
                             <div>
-                                <div class="user-name">${escapeHtml(u.name)}${u.isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}</div>
+                                <div class="user-name">${escapeHtml(u.name)}${u.isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}${isSelf ? '<span class="badge-admin" style="background:rgba(56,189,248,0.25);">VOCÊ</span>' : ''}</div>
                                 <div class="user-email">${escapeHtml(u.email)}</div>
                             </div>
                         </div>
@@ -732,8 +837,8 @@
                     <td data-label="Senha trocada">${pwd}</td>
                     <td data-label="Último login">${login}</td>
                     <td class="actions-cell">
-                        ${remindBtn}
-                        <button class="action-btn danger" onclick="resetPassword('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')" title="Resetar senha para a inicial">🔄 Resetar</button>
+                        <button class="kebab-btn" id="kebab_${safeKey}" onclick="toggleKebab(event, '${safeKey}')" title="Ações" aria-label="Ações">⋯</button>
+                        <div class="kebab-menu" id="menu_${safeKey}">${menuItems.join('')}</div>
                     </td>
                 </tr>`;
             }).join('');
@@ -760,9 +865,21 @@
         }
 
         // ============ Data fetch ============
+        async function fetchCurrentUser() {
+            try {
+                const r = await fetch('/auth/me', { credentials: 'same-origin' });
+                if (!r.ok) return null;
+                const d = await r.json();
+                return d.user || null;
+            } catch (e) { return null; }
+        }
         async function loadUsers(refresh) {
             if (refresh) { showToast('Atualizando…', 'success'); }
             try {
+                if (!currentUserEmail) {
+                    const me = await fetchCurrentUser();
+                    if (me) currentUserEmail = me.email;
+                }
                 const r = await fetch('/api/admin/users', { credentials: 'same-origin' });
                 if (r.status === 401) { window.location.href = '/login'; return; }
                 if (r.status === 403) {
@@ -780,8 +897,28 @@
             }
         }
 
+        // ============ Kebab menus ============
+        function closeAllKebabs() {
+            document.querySelectorAll('.kebab-menu.show').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.kebab-btn.open').forEach(b => b.classList.remove('open'));
+        }
+        function toggleKebab(ev, safeKey) {
+            ev.stopPropagation();
+            const menu = document.getElementById('menu_' + safeKey);
+            const btn = document.getElementById('kebab_' + safeKey);
+            const isOpen = menu.classList.contains('show');
+            closeAllKebabs();
+            if (!isOpen) {
+                menu.classList.add('show');
+                btn.classList.add('open');
+            }
+        }
+        document.addEventListener('click', closeAllKebabs);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllKebabs(); });
+
         // ============ Actions ============
         async function resetPassword(email, name) {
+            closeAllKebabs();
             const ok = await confirmDialog({
                 title: 'Resetar senha',
                 icon: '🔄',
@@ -804,6 +941,7 @@
             } catch (e) { showToast('Erro de rede', 'error'); }
         }
         async function sendReminder(email, name) {
+            closeAllKebabs();
             const ok = await confirmDialog({
                 title: 'Enviar lembrete por e-mail',
                 icon: '✉️',
@@ -824,6 +962,102 @@
                 showToast(`Lembrete enviado para ${email}.`, 'success');
             } catch (e) { showToast('Erro de rede', 'error'); }
         }
+
+        async function toggleAdmin(email, name, makeAdmin) {
+            closeAllKebabs();
+            const ok = await confirmDialog({
+                title: makeAdmin ? 'Tornar administrador(a)' : 'Remover acesso de admin',
+                icon: makeAdmin ? '⭐' : '☆',
+                body: makeAdmin
+                    ? `Conceder permissões de administrador(a) a <strong>${escapeHtml(name)}</strong>?<br><br>Essa pessoa poderá <strong>adicionar/excluir usuários, resetar senhas e promover/demover outros admins</strong>, incluindo você.`
+                    : `Remover as permissões de administrador(a) de <strong>${escapeHtml(name)}</strong>?<br><br>A pessoa continuará podendo acessar o portal normalmente, mas perderá acesso a esta tela e às ações de gestão.`,
+                confirmLabel: makeAdmin ? 'Tornar admin' : 'Remover admin',
+                danger: !makeAdmin
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/toggle-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email, isAdmin: makeAdmin })
+                });
+                const data = await r.json();
+                if (!r.ok) return showToast(data.error || 'Falha ao atualizar', 'error');
+                showToast(data.message, 'success');
+                loadUsers();
+            } catch (e) { showToast('Erro de rede', 'error'); }
+        }
+
+        async function deleteUser(email, name) {
+            closeAllKebabs();
+            const ok = await confirmDialog({
+                title: 'Excluir usuário',
+                icon: '🗑️',
+                body: `Tem certeza que deseja <strong>excluir permanentemente</strong> a conta de <strong>${escapeHtml(name)}</strong> (<code>${escapeHtml(email)}</code>)?<br><br>A pessoa perderá imediatamente o acesso ao portal. Esta ação <strong>não pode ser desfeita</strong> — se precisar dela de volta, terá que recriar a conta manualmente.`,
+                confirmLabel: 'Excluir definitivamente',
+                danger: true
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email })
+                });
+                const data = await r.json();
+                if (!r.ok) return showToast(data.error || 'Falha ao excluir', 'error');
+                showToast(data.message, 'success');
+                loadUsers();
+            } catch (e) { showToast('Erro de rede', 'error'); }
+        }
+
+        // ============ Add user modal ============
+        function openAddUserModal() {
+            document.getElementById('newUserName').value = '';
+            document.getElementById('newUserEmail').value = '';
+            document.getElementById('newUserAdmin').checked = false;
+            document.getElementById('addUserSubmit').disabled = false;
+            document.getElementById('addUserSubmit').textContent = 'Adicionar';
+            document.getElementById('addUserModalBg').classList.add('show');
+            setTimeout(() => document.getElementById('newUserName').focus(), 50);
+        }
+        function closeAddUserModal() {
+            document.getElementById('addUserModalBg').classList.remove('show');
+        }
+        document.getElementById('addUserCancel').addEventListener('click', closeAddUserModal);
+        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newUserName').value.trim();
+            const email = document.getElementById('newUserEmail').value.trim().toLowerCase();
+            const isAdmin = document.getElementById('newUserAdmin').checked;
+            const btn = document.getElementById('addUserSubmit');
+            btn.disabled = true; btn.textContent = 'Adicionando…';
+            try {
+                const r = await fetch('/api/admin/add-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ name, email, isAdmin })
+                });
+                const data = await r.json();
+                if (!r.ok) {
+                    showToast(data.error || 'Falha ao adicionar', 'error');
+                    btn.disabled = false; btn.textContent = 'Adicionar';
+                    return;
+                }
+                showToast(data.message || `${name} adicionado(a) com sucesso.`, 'success');
+                closeAddUserModal();
+                loadUsers();
+            } catch (err) {
+                showToast('Erro de rede', 'error');
+                btn.disabled = false; btn.textContent = 'Adicionar';
+            }
+        });
+        document.getElementById('addUserModalBg').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('addUserModalBg')) closeAddUserModal();
+        });
 
         // ============ Wire up ============
         $('searchInput').addEventListener('input', (e) => { searchTerm = e.target.value; applyFilters(); });

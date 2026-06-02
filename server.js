@@ -804,6 +804,64 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { ok: true, message: `Senha de ${target.name} resetada para a senha inicial. O usuário será obrigado a trocá-la no próximo login.` });
     }
 
+    if (urlPath === '/api/admin/add-user' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        const name = String(body.name || '').trim();
+        const isAdmin = !!body.isAdmin;
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return jsonReply(res, 400, { error: 'E-mail inválido' });
+        if (!name || name.length < 2) return jsonReply(res, 400, { error: 'Nome muito curto (mín. 2 caracteres)' });
+        if (findUser(email)) return jsonReply(res, 409, { error: 'Já existe um usuário com este e-mail' });
+        const INITIAL = 'Lincros2026!';
+        const users = loadUsers().slice();
+        users.push({
+            email, name,
+            passwordHash: bcrypt.hashSync(INITIAL, 10),
+            isAdmin,
+            mustChangePassword: true,
+            createdAt: new Date().toISOString(),
+            createdBy: u.email,
+            passwordChangedAt: null,
+            lastLoginAt: null
+        });
+        try { await saveUsers(users); }
+        catch (e) { return jsonReply(res, 500, { error: 'Falha ao salvar. Tente novamente.' }); }
+        return jsonReply(res, 200, { ok: true, message: `${name} adicionado(a) com sucesso. Senha inicial: ${INITIAL}` });
+    }
+
+    if (urlPath === '/api/admin/delete-user' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        if (!targetEmail) return jsonReply(res, 400, { error: 'email obrigatório' });
+        if (targetEmail === u.email) return jsonReply(res, 400, { error: 'Você não pode excluir a própria conta' });
+        const users = loadUsers();
+        const target = users.find(x => x.email === targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'Usuário não encontrado' });
+        const filtered = users.filter(x => x.email !== targetEmail);
+        try { await saveUsers(filtered); }
+        catch (e) { return jsonReply(res, 500, { error: 'Falha ao excluir. Tente novamente.' }); }
+        return jsonReply(res, 200, { ok: true, message: `${target.name} foi excluído(a) do portal.` });
+    }
+
+    if (urlPath === '/api/admin/toggle-admin' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        const makeAdmin = !!body.isAdmin;
+        if (!targetEmail) return jsonReply(res, 400, { error: 'email obrigatório' });
+        if (targetEmail === u.email && !makeAdmin) return jsonReply(res, 400, { error: 'Você não pode remover seu próprio acesso de admin' });
+        const target = findUser(targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'Usuário não encontrado' });
+        try { await updateUser(target.email, { isAdmin: makeAdmin, adminChangedAt: new Date().toISOString(), adminChangedBy: u.email }); }
+        catch (e) { return jsonReply(res, 500, { error: 'Falha ao atualizar. Tente novamente.' }); }
+        return jsonReply(res, 200, { ok: true, message: makeAdmin ? `${target.name} agora é administrador(a).` : `${target.name} não é mais administrador(a).` });
+    }
+
     if (urlPath === '/api/admin/send-reminder' && req.method === 'POST') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
