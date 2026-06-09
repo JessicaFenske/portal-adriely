@@ -8124,6 +8124,13 @@ async function renderCockpit() {
     const greeting = `${_cpGreetingHour()}, ${firstName}! 👋`;
     document.getElementById('cpGreeting').textContent = greeting;
 
+    // Garante dados carregados antes de calcular KPIs
+    // (renderCockpit pode ser chamado em paralelo com loadDashboard ou antes dele)
+    if ((!wonDeals || wonDeals.length === 0) && typeof loadDashboard === 'function') {
+        document.getElementById('cpSubtitle').textContent = 'Carregando seus dados...';
+        try { await loadDashboard(); dashLoaded = true; } catch (e) {}
+    }
+
     // Antes de buscar deals, checa se é líder mapeado de pipeline
     const myEmail = _hvCurrentEmail();
     const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
