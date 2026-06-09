@@ -8167,16 +8167,19 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
 
     // ============ Performance do time ============
     // Top 3 vendedores do mês + alertas (quem não tem deal aberto/parado)
+    // Exclui SDRs (Guilherme Tomio, Adriely, Maja, Samira, Agnes) — eles aparecem no Hall de Pré-Vendas
     const sellerStats = {};
     pipelineWon.forEach(d => {
         if (!inThisMonth(d.FinishDate)) return;
         const o = d.Owner?.Name; if (!o) return;
+        if (typeof isSdrName === 'function' && isSdrName(o)) return; // SDR não é vendedor
         if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0 };
         sellerStats[o].mrrMonth += getMRR(d);
         sellerStats[o].dealsMonth++;
     });
     pipelineOpen.forEach(d => {
         const o = d.Owner?.Name; if (!o) return;
+        if (typeof isSdrName === 'function' && isSdrName(o)) return; // SDR não é vendedor
         if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0 };
         sellerStats[o].open++;
         sellerStats[o].mrrOpen += getMRR(d);
