@@ -3798,6 +3798,35 @@
         }
         .cp-practice-deal-meta .money { color: #fcd34d; font-weight: 600; }
         .cp-practice-deal-meta strong { color: #c4b5fd; }
+        /* Alerta diário: pisca o item "Meu Cockpit" no sidebar até a pessoa rolar a tela */
+        .nav-item.cockpit-alert {
+            animation: cockpitPulse 2s ease-in-out infinite;
+            position: relative;
+        }
+        .nav-item.cockpit-alert::after {
+            content: '';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+            animation: cockpitDot 1s ease-in-out infinite;
+        }
+        .sidebar.collapsed .nav-item.cockpit-alert::after {
+            right: 8px;
+        }
+        @keyframes cockpitPulse {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(239, 68, 68, 0.12); }
+        }
+        @keyframes cockpitDot {
+            0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+            50% { transform: translateY(-50%) scale(1.4); opacity: 0.6; }
+        }
 
         /* Empty state pra usuário sem deals */
         .cp-empty-hero {
@@ -6477,6 +6506,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof renderCockpit === 'function') renderCockpit();
         }).catch(e => console.warn('[cockpit] dashboard load failed:', e.message));
     }
+    // Setup do scroll watcher e do alerta visual diário
+    if (typeof _cpSetupScrollWatcher === 'function') _cpSetupScrollWatcher();
+    // Espera o /auth/me responder pra ter o email do user, depois atualiza o alerta
+    setTimeout(() => {
+        if (typeof _cpUpdateAlertVisual === 'function') _cpUpdateAlertVisual();
+    }, 800);
 });
 
 // Sidebar collapse
@@ -7801,6 +7836,47 @@ function _cpDaysUntilEndOfMonth() {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return Math.max(0, Math.ceil((lastDay.getTime() - now.getTime()) / 86400000));
 }
+// ============ Tracking "leu o cockpit hoje?" (alerta diário) ============
+function _cpReadKey() {
+    const today = new Date().toISOString().slice(0, 10);
+    const u = (_hvCurrentUserEmail || 'anon').toLowerCase();
+    return `cockpit_read_${u}_${today}`;
+}
+function _cpIsReadToday() {
+    try { return !!localStorage.getItem(_cpReadKey()); } catch (e) { return false; }
+}
+function _cpMarkRead() {
+    try { localStorage.setItem(_cpReadKey(), '1'); } catch (e) {}
+    _cpUpdateAlertVisual();
+}
+function _cpUpdateAlertVisual() {
+    const navItem = document.querySelector('.nav-item[data-view="cockpit"]');
+    if (!navItem) return;
+    if (_cpIsReadToday()) {
+        navItem.classList.remove('cockpit-alert');
+    } else {
+        navItem.classList.add('cockpit-alert');
+    }
+}
+let _cpScrollWatcherSetup = false;
+function _cpSetupScrollWatcher() {
+    if (_cpScrollWatcherSetup) return;
+    _cpScrollWatcherSetup = true;
+    const check = () => {
+        const view = document.getElementById('view-cockpit');
+        if (!view || view.style.display === 'none') return;
+        // Considera "leu" quando chega a 90% da página (não exige scroll absoluto até último pixel)
+        const docHeight = document.documentElement.scrollHeight;
+        const scrolledTo = window.scrollY + window.innerHeight;
+        if (docHeight > 0 && scrolledTo >= docHeight * 0.9) {
+            _cpMarkRead();
+        }
+    };
+    window.addEventListener('scroll', check, { passive: true });
+    // Também checa quando muda de view (caso voltem pro cockpit)
+    setTimeout(check, 500);
+}
+
 function _cpBusinessDaysUntilEndOfMonth() {
     // Conta dias úteis (seg-sex) a partir de HOJE até o último dia do mês, inclusivo
     const now = new Date();
