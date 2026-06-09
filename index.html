@@ -8472,12 +8472,28 @@ async function renderCockpit() {
     document.getElementById('cpEmptyState').style.display = 'none';
     document.getElementById('cpMainContent').style.display = 'block';
 
-    // Filtra deals do owner — APENAS dos funis de vendas
-    // (deals em CS/pós-venda/outros funis não devem aparecer na análise comercial)
+    // Filtra deals do owner — APENAS dos funis em que o vendedor REALMENTE opera
+    // Detecção dinâmica: agrupa funis por modelo de venda (Novos Negócios x Farmer)
+    // e identifica o grupo dominante pelo histórico de wins do vendedor.
+    const NEW_BUSINESS_PIPELINES = ['Funil de Vendas', 'Sankhya'];
+    const FARMER_PIPELINES = ['Farmer', 'Farmer IPCA'];
     const isSalesP = (d) => typeof SALES_PIPELINES !== 'undefined' && SALES_PIPELINES.includes(getPipelineName(d));
-    const myWon = (wonDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
-    const myLost = (lostDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
-    const myOpen = (dashOpenDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
+
+    let newBizWins = 0, farmerWins = 0;
+    (wonDeals || []).forEach(d => {
+        if (d.Owner?.Name !== ownerName) return;
+        const p = getPipelineName(d);
+        if (NEW_BUSINESS_PIPELINES.includes(p)) newBizWins++;
+        else if (FARMER_PIPELINES.includes(p)) farmerWins++;
+    });
+    // Define funis ativos do vendedor: grupo dominante. Empate ou sem histórico → default Novos Negócios.
+    const myPipelines = (farmerWins > newBizWins) ? FARMER_PIPELINES : NEW_BUSINESS_PIPELINES;
+    const myPipelineSet = new Set(myPipelines);
+    const isMyPipeline = (d) => myPipelineSet.has(getPipelineName(d));
+
+    const myWon = (wonDeals || []).filter(d => d.Owner?.Name === ownerName && isMyPipeline(d));
+    const myLost = (lostDeals || []).filter(d => d.Owner?.Name === ownerName && isMyPipeline(d));
+    const myOpen = (dashOpenDeals || []).filter(d => d.Owner?.Name === ownerName && isMyPipeline(d));
 
     // Mês atual range
     const now = new Date();
