@@ -3508,6 +3508,282 @@
             #view-analise-funil .af-stage-grid { grid-template-columns: 1fr !important; }
         }
 
+        /* ==================== MEU COCKPIT ==================== */
+        #view-cockpit { padding: 0; }
+        .cp-page { padding: 24px 32px 60px; max-width: 1280px; margin: 0 auto; }
+        @media (max-width: 720px) { .cp-page { padding: 14px 12px 50px; } }
+
+        /* Hero saudação */
+        .cp-hero {
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.25), rgba(56, 189, 248, 0.08) 60%, rgba(251, 191, 36, 0.06));
+            border: 1px solid rgba(108, 63, 181, 0.35);
+            border-radius: 20px;
+            padding: 26px 30px;
+            margin-bottom: 18px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .cp-hero::after {
+            content: ''; position: absolute;
+            right: -80px; top: -80px;
+            width: 280px; height: 280px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.18), transparent 70%);
+            pointer-events: none;
+        }
+        .cp-hero-text { z-index: 1; }
+        .cp-greeting { font-size: 28px; color: #fff; font-weight: 800; margin-bottom: 6px; line-height: 1.1; }
+        .cp-subtitle { font-size: 14px; color: #c4b5fd; line-height: 1.5; max-width: 600px; }
+        .cp-hero-meta {
+            text-align: right; z-index: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 18px;
+            min-width: 180px;
+        }
+        .cp-hero-meta .label { font-size: 10.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .cp-hero-meta .value { font-size: 22px; color: #fff; font-weight: 800; margin: 4px 0 6px; }
+        .cp-hero-meta .small { font-size: 11.5px; color: #94a3b8; }
+        @media (max-width: 720px) {
+            .cp-hero { padding: 20px; }
+            .cp-greeting { font-size: 22px; }
+            .cp-subtitle { font-size: 12.5px; }
+            .cp-hero-meta { width: 100%; text-align: left; padding: 12px 14px; }
+        }
+
+        /* KPIs pessoais */
+        .cp-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 720px) { .cp-kpis { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
+        .cp-kpi-card {
+            background: rgba(26, 26, 46, 0.85);
+            border: 1px solid rgba(108, 63, 181, 0.22);
+            border-radius: 14px;
+            padding: 14px 18px;
+        }
+        .cp-kpi-card .label { font-size: 10.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .cp-kpi-card .value { font-size: 26px; color: #fff; font-weight: 800; margin: 4px 0 2px; }
+        .cp-kpi-card .delta { font-size: 11.5px; font-weight: 600; }
+        .cp-kpi-card .delta.up { color: #6ee7b7; }
+        .cp-kpi-card .delta.down { color: #fca5a5; }
+        .cp-kpi-card .delta.flat { color: #94a3b8; }
+
+        /* Card base */
+        .cp-focus-card, .cp-list-card, .cp-insights-card, .cp-coaching-card {
+            background: rgba(26, 26, 46, 0.85);
+            border: 1px solid rgba(108, 63, 181, 0.22);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-bottom: 18px;
+        }
+        .cp-card-header { margin-bottom: 16px; }
+        .cp-card-header h2 { font-size: 17px; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .cp-card-header h3 { font-size: 15px; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .cp-card-header .cp-icon { font-size: 18px; }
+        .cp-card-sub { font-size: 12.5px; color: #94a3b8; line-height: 1.4; }
+
+        /* Foco da semana — 3 ações */
+        .cp-focus-card {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(26, 26, 46, 0.9));
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+        .cp-focus-card .cp-card-header h2 { color: #fcd34d; }
+        .cp-action {
+            background: rgba(15, 15, 30, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .cp-action:last-child { margin-bottom: 0; }
+        .cp-action-num {
+            display: flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: #1a1a2e; font-weight: 800; font-size: 14px;
+            flex-shrink: 0;
+        }
+        .cp-action-body { flex: 1; min-width: 0; }
+        .cp-action-title { font-size: 14px; color: #fff; font-weight: 600; margin-bottom: 4px; }
+        .cp-action-title a { color: #fbbf24; text-decoration: none; }
+        .cp-action-title a:hover { text-decoration: underline; }
+        .cp-action-why { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+        .cp-action-why strong { color: #c4b5fd; }
+        .cp-action-cta {
+            font-size: 11.5px;
+            color: #fcd34d;
+            background: rgba(251, 191, 36, 0.12);
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-block;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        /* Grid 2 colunas: risk + chances */
+        .cp-two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 900px) { .cp-two-col { grid-template-columns: 1fr; gap: 14px; } }
+        .cp-two-col .cp-list-card { margin-bottom: 0; }
+        .cp-risk { border-color: rgba(239, 68, 68, 0.25); background: linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(26, 26, 46, 0.9)); }
+        .cp-risk .cp-card-header h3 { color: #fca5a5; }
+        .cp-chances { border-color: rgba(56, 189, 248, 0.25); background: linear-gradient(135deg, rgba(56, 189, 248, 0.06), rgba(26, 26, 46, 0.9)); }
+        .cp-chances .cp-card-header h3 { color: #7dd3fc; }
+
+        .cp-deal-item {
+            background: rgba(15, 15, 30, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 11px 14px;
+            margin-bottom: 8px;
+        }
+        .cp-deal-item:last-child { margin-bottom: 0; }
+        .cp-deal-title {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .cp-deal-title a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .cp-deal-title a:hover { color: #c4b5fd; text-decoration: underline; }
+        .cp-deal-title .ext { font-size: 10px; color: #6c5ca0; }
+        .cp-deal-meta {
+            font-size: 11.5px;
+            color: #94a3b8;
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+        .cp-deal-meta strong { color: #c4b5fd; font-weight: 600; }
+        .cp-deal-meta .warn { color: #fca5a5; }
+        .cp-deal-meta .good { color: #6ee7b7; }
+        .cp-deal-meta .money { color: #fcd34d; font-weight: 600; }
+        .cp-empty-mini { text-align: center; padding: 24px 12px; color: #6c5ca0; font-size: 12.5px; font-style: italic; }
+
+        /* Insights grid */
+        .cp-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .cp-insight-card {
+            background: rgba(15, 15, 30, 0.5);
+            border: 1px solid rgba(108, 63, 181, 0.15);
+            border-left: 3px solid #8b5cf6;
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .cp-insight-emoji { font-size: 22px; line-height: 1; margin-bottom: 6px; }
+        .cp-insight-text { font-size: 13px; color: #e0e0e0; line-height: 1.45; }
+        .cp-insight-text strong { color: #fff; }
+        .cp-insight-text .number { color: #fcd34d; font-weight: 700; }
+
+        /* Coaching */
+        .cp-coaching-card { background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(26, 26, 46, 0.9)); }
+        .cp-coaching-card .cp-card-header h2 { color: #c4b5fd; }
+        .cp-coach-block {
+            background: rgba(15, 15, 30, 0.5);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .cp-coach-block:last-child { margin-bottom: 0; }
+        .cp-coach-deal {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+        }
+        .cp-coach-deal a { color: #fff; text-decoration: none; }
+        .cp-coach-deal a:hover { color: #c4b5fd; text-decoration: underline; }
+        .cp-coach-stage {
+            background: rgba(108, 63, 181, 0.25);
+            color: #c4b5fd;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .cp-coach-score {
+            display: flex; gap: 6px; align-items: center;
+            margin-bottom: 10px;
+            font-size: 11.5px;
+            color: #94a3b8;
+        }
+        .cp-coach-score .gauge { display: flex; gap: 3px; }
+        .cp-coach-score .pip { width: 16px; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+        .cp-coach-score .pip.on { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .cp-coach-checks { display: grid; gap: 5px; margin-bottom: 10px; }
+        .cp-check { font-size: 12px; color: #c0c0d0; display: flex; align-items: flex-start; gap: 6px; }
+        .cp-check .icon { font-size: 13px; flex-shrink: 0; }
+        .cp-check.miss { color: #94a3b8; }
+        .cp-check.miss .icon { color: #fca5a5; }
+        .cp-check.ok .icon { color: #6ee7b7; }
+        .cp-coach-spin {
+            background: rgba(56, 189, 248, 0.08);
+            border-left: 3px solid #38bdf8;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #c0c0d0;
+            line-height: 1.5;
+        }
+        .cp-coach-spin .lab {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.25);
+            color: #7dd3fc;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-right: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .cp-coach-spin em { color: #fff; font-style: italic; font-weight: 500; }
+
+        /* Empty state pra usuário sem deals */
+        .cp-empty-hero {
+            background: rgba(26, 26, 46, 0.85);
+            border: 1px dashed rgba(108, 63, 181, 0.3);
+            border-radius: 16px;
+            padding: 50px 30px;
+            text-align: center;
+            color: #94a3b8;
+        }
+        .cp-empty-hero .icon { font-size: 56px; opacity: 0.5; margin-bottom: 14px; display: block; }
+        .cp-empty-hero h2 { color: #fff; font-size: 19px; margin-bottom: 8px; font-weight: 700; }
+        .cp-empty-hero p { font-size: 13.5px; line-height: 1.6; max-width: 520px; margin: 0 auto 22px; }
+        .cp-empty-hero .links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .cp-empty-hero .links a {
+            background: rgba(108, 63, 181, 0.18);
+            border: 1px solid rgba(108, 63, 181, 0.4);
+            color: #c4b5fd;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .cp-empty-hero .links a:hover { background: rgba(108, 63, 181, 0.3); color: #fff; }
+
         /* ==================== HALL DE VENDEDORES ==================== */
         #view-hall-vendedores { padding: 0; }
         .hv-page { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
@@ -3754,8 +4030,12 @@
         </div>
         <div class="sidebar-nav">
             <div class="nav-section-title">Principais</div>
-            <div class="nav-item" data-view="analise-funil" onclick="showView('analise-funil')">
+            <div class="nav-item active" data-view="cockpit" onclick="showView('cockpit')">
                 <span class="nav-icon">&#127919;</span>
+                <span class="nav-label" style="font-weight:700;">Meu Cockpit</span>
+            </div>
+            <div class="nav-item" data-view="analise-funil" onclick="showView('analise-funil')">
+                <span class="nav-icon">&#128202;</span>
                 <span class="nav-label">Análise de Funil</span>
             </div>
             <div class="nav-item" data-view="forecast" onclick="showView('forecast')">
@@ -3772,7 +4052,7 @@
             </div>
 
             <div class="nav-section-title" style="margin-top:20px;">Dashboard completo</div>
-            <div class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+            <div class="nav-item" data-view="dashboard" onclick="showView('dashboard')">
                 <span class="nav-icon">&#128202;</span>
                 <span class="nav-label">Visão geral</span>
             </div>
@@ -3888,6 +4168,74 @@
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
+
+        <!-- ==================== VIEW: MEU COCKPIT (default ao logar) ==================== -->
+        <div id="view-cockpit" style="display:block;">
+            <div class="cp-page">
+                <!-- Saudação -->
+                <div class="cp-hero">
+                    <div class="cp-hero-text">
+                        <div class="cp-greeting" id="cpGreeting">Olá! 👋</div>
+                        <div class="cp-subtitle" id="cpSubtitle">Carregando seu cockpit…</div>
+                    </div>
+                    <div class="cp-hero-meta" id="cpHeroMeta"></div>
+                </div>
+
+                <!-- Empty state pra admin/sem deals -->
+                <div id="cpEmptyState" style="display:none;"></div>
+
+                <!-- Conteúdo principal -->
+                <div id="cpMainContent" style="display:none;">
+                    <!-- KPIs pessoais -->
+                    <div class="cp-kpis" id="cpKpis"></div>
+
+                    <!-- Foco da semana (3 ações prioritárias) -->
+                    <div class="cp-focus-card">
+                        <div class="cp-card-header">
+                            <h2><span class="cp-icon">🎯</span> Foco da semana</h2>
+                            <div class="cp-card-sub">As 3 ações mais importantes que você precisa fazer agora pra fechar mais</div>
+                        </div>
+                        <div id="cpFocusActions"></div>
+                    </div>
+
+                    <!-- Grid: Pipeline em risco + Top chances -->
+                    <div class="cp-two-col">
+                        <div class="cp-list-card cp-risk">
+                            <div class="cp-card-header">
+                                <h3><span class="cp-icon">🚨</span> Pipeline em risco</h3>
+                                <div class="cp-card-sub">Deals que podem morrer se você não agir</div>
+                            </div>
+                            <div id="cpRiskList"></div>
+                        </div>
+                        <div class="cp-list-card cp-chances">
+                            <div class="cp-card-header">
+                                <h3><span class="cp-icon">⭐</span> Suas melhores chances</h3>
+                                <div class="cp-card-sub">Maior potencial de conversão essa semana</div>
+                            </div>
+                            <div id="cpChancesList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Insights de padrões -->
+                    <div class="cp-insights-card">
+                        <div class="cp-card-header">
+                            <h2><span class="cp-icon">📈</span> Seus padrões de vitória</h2>
+                            <div class="cp-card-sub">O que dá certo pra você — baseado no seu histórico</div>
+                        </div>
+                        <div class="cp-insights-grid" id="cpInsightsGrid"></div>
+                    </div>
+
+                    <!-- Coaching MEDDIC -->
+                    <div class="cp-coaching-card">
+                        <div class="cp-card-header">
+                            <h2><span class="cp-icon">🧠</span> Coaching da semana</h2>
+                            <div class="cp-card-sub">Como qualificar melhor seus deals usando SPICED + MEDDIC + SPIN</div>
+                        </div>
+                        <div id="cpCoachingContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ==================== VIEW: HALL DE PRÉ-VENDAS ==================== -->
         <div id="view-hall-prevendas" style="display:none;">
@@ -4153,7 +4501,7 @@
         </div>
 
         <!-- ==================== VIEW: DASHBOARD ==================== -->
-        <div id="view-dashboard" style="display:block;">
+        <div id="view-dashboard" style="display:none;">
 
             <div class="period-bar">
                 <label>Periodo:</label>
@@ -5939,6 +6287,8 @@ function showView(viewName) {
     if (hvEl) hvEl.style.display = 'none';
     const hpEl = document.getElementById('view-hall-prevendas');
     if (hpEl) hpEl.style.display = 'none';
+    const cpEl = document.getElementById('view-cockpit');
+    if (cpEl) cpEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -5959,6 +6309,12 @@ function showView(viewName) {
         if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
         if (typeof renderHallPreVendas === 'function') {
             setTimeout(() => renderHallPreVendas(), (wonDeals && wonDeals.length && dashMeetings && dashMeetings.length) ? 50 : 1200);
+        }
+    }
+    if (viewName === 'cockpit') {
+        if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
+        if (typeof renderCockpit === 'function') {
+            setTimeout(() => renderCockpit(), (wonDeals && wonDeals.length) ? 50 : 1200);
         }
     }
 
@@ -6070,6 +6426,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', onScrollspyScroll, { passive: true });
     // Também atualiza quando troca de view (ex: clica em Análise de Funil e volta pro Dashboard)
     setTimeout(updateScrollspy, 500);
+});
+
+// Boot do Cockpit: ao carregar a página, dispara o load do dashboard (pra ter dados)
+// e renderiza o cockpit assim que os dados chegam.
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof loadDashboard === 'function' && !dashLoaded) {
+        loadDashboard().then(() => {
+            dashLoaded = true;
+            if (typeof renderCockpit === 'function') renderCockpit();
+        }).catch(e => console.warn('[cockpit] dashboard load failed:', e.message));
+    }
 });
 
 // Sidebar collapse
@@ -7367,6 +7734,464 @@ function renderSection4() {
         <td class="money" style="color:#818cf8;">${formatMoney(s.setup)}</td>
         <td class="money" style="font-weight:700;color:#b794f4;">${formatMoney(s.total)}</td>
         <td style="text-align:center;">${s.count}</td></tr>`).join('');
+}
+
+// ==================== MEU COCKPIT (personalizado por usuário logado) ====================
+// Helpers
+function _cpNormName(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+function _cpFmtMoney(v) {
+    if (!v) return 'R$ 0';
+    if (Math.abs(v) >= 1000) return 'R$ ' + (v / 1000).toFixed(1).replace('.', ',') + 'k';
+    return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function _cpDaysSince(iso) {
+    if (!iso) return null;
+    return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+function _cpGreetingHour() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+}
+function _cpDaysUntilEndOfMonth() {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return Math.max(0, Math.ceil((lastDay.getTime() - now.getTime()) / 86400000));
+}
+function _cpMatchUserToOwner(myName, deals) {
+    if (!myName) return null;
+    const n = _cpNormName(myName);
+    const ownerNames = new Set();
+    deals.forEach(d => { if (d.Owner?.Name) ownerNames.add(d.Owner.Name); });
+    // 1) Match exato
+    for (const o of ownerNames) if (_cpNormName(o) === n) return o;
+    // 2) Match por primeiro + último nome
+    const myParts = n.split(/\s+/);
+    if (myParts.length >= 2) {
+        const first = myParts[0], last = myParts[myParts.length - 1];
+        for (const o of ownerNames) {
+            const op = _cpNormName(o).split(/\s+/);
+            if (op[0] === first && op[op.length - 1] === last) return o;
+        }
+    }
+    // 3) Match por primeiro nome apenas (último recurso)
+    for (const o of ownerNames) {
+        const op = _cpNormName(o).split(/\s+/);
+        if (op[0] === myParts[0]) return o;
+    }
+    return null;
+}
+
+// MEDDIC scoring per deal
+function _cpMeddicScore(d) {
+    const checks = {
+        M: { label: 'Métricas (MRR/Setup)', ok: (getMRR(d) > 0 || getSetup(d) > 0), tip: 'Defina o valor proposto pra ter algo concreto pra negociar.' },
+        E: { label: 'Decisor (Economic Buyer)', ok: !!isCargoDecisao(getContactCargo(d)), tip: 'Identifique o cargo de quem decide. Sem decisor = sem fechamento.' },
+        D1: { label: 'Critérios de decisão', ok: !!(d.Origin?.Name), tip: 'Mapeie como o cliente compara fornecedores (preço, prazo, integração, etc).' },
+        D2: { label: 'Processo de decisão', ok: !!getProposalDate(d), tip: 'Envie proposta formal e marque next step com data.' },
+        I: { label: 'Dor identificada', ok: !!(d.Origin?.Name || d.Title), tip: 'Anote a dor específica: "Hoje gasta X horas/mês com Y, perde Z R$".' },
+        C: { label: 'Champion interno', ok: !!d.ContactId, tip: 'Construa relacionamento com alguém que vende internamente por você.' }
+    };
+    const score = Object.values(checks).filter(c => c.ok).length;
+    return { checks, score, max: 6 };
+}
+
+// SPIN prompts por stage
+function _cpSpinTip(stageOrd, stageName) {
+    const sn = (stageName || '').toLowerCase();
+    // Stage 0-1: descobrimento
+    if (stageOrd <= 1 || sn.includes('reconhecim') || sn.includes('lead') || sn.includes('contato')) {
+        return {
+            label: 'SITUATION',
+            text: 'Foque em entender o cenário atual antes de pitchar. Pergunte: <em>"Hoje, como vocês fazem a gestão de transportes?"</em> e <em>"Quantas pessoas estão envolvidas nesse processo?"</em>'
+        };
+    }
+    if (sn.includes('consider') || sn.includes('qualif') || stageOrd === 2) {
+        return {
+            label: 'PROBLEM',
+            text: 'Cave a dor específica. Pergunte: <em>"Quais erros mais acontecem nesse processo manual?"</em> e <em>"Quando foi a última vez que isso causou um problema sério?"</em>'
+        };
+    }
+    if (sn.includes('proposta') || sn.includes('aprov') || stageOrd === 3) {
+        return {
+            label: 'IMPLICATION',
+            text: 'Amplifique a dor pro decisor enxergar o custo de NÃO fazer nada. Pergunte: <em>"Se continuar assim, qual o impacto em 12 meses?"</em> e <em>"Quem fica responsável quando isso falha?"</em>'
+        };
+    }
+    if (sn.includes('formal') || sn.includes('negoci') || stageOrd >= 4) {
+        return {
+            label: 'NEED-PAYOFF',
+            text: 'Faça o cliente verbalizar os benefícios. Pergunte: <em>"Se a gente eliminar esses problemas, qual seria o ganho mensal?"</em> e <em>"Como essa solução te ajudaria a bater sua meta?"</em>'
+        };
+    }
+    return {
+        label: 'SITUATION',
+        text: 'Faça perguntas abertas pra entender o contexto antes de avançar.'
+    };
+}
+
+async function renderCockpit() {
+    const me = await _hvFetchMe();
+    if (!me) {
+        document.getElementById('cpGreeting').textContent = 'Olá! 👋';
+        document.getElementById('cpSubtitle').textContent = 'Faça login pra ver seu cockpit personalizado.';
+        return;
+    }
+    const firstName = me.split(/\s+/)[0];
+    const greeting = `${_cpGreetingHour()}, ${firstName}! 👋`;
+    document.getElementById('cpGreeting').textContent = greeting;
+
+    // Match usuário → Owner do Ploomes
+    const allDealsForMatch = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const ownerName = _cpMatchUserToOwner(me, allDealsForMatch);
+    if (!ownerName) {
+        // Usuário sem deals (admin/leadership)
+        document.getElementById('cpSubtitle').innerHTML = `Você não tem deals atribuídos no Ploomes — provavelmente é liderança/admin.<br>Use os atalhos abaixo pra ver a visão geral do time.`;
+        document.getElementById('cpHeroMeta').style.display = 'none';
+        document.getElementById('cpEmptyState').style.display = 'block';
+        document.getElementById('cpEmptyState').innerHTML = `<div class="cp-empty-hero">
+            <span class="icon">🦅</span>
+            <h2>Visão de liderança</h2>
+            <p>Esse cockpit é desenhado pros vendedores planejarem o foco da semana. Como liderança, sua visão é estratégica — use os relatórios principais:</p>
+            <div class="links">
+                <a href="#" onclick="showView('analise-funil');return false;">🎯 Análise de Funil</a>
+                <a href="#" onclick="showView('forecast');return false;">💰 Forecast</a>
+                <a href="#" onclick="showView('hall-vendedores');return false;">🏆 Hall de Vendedores</a>
+                <a href="#" onclick="showView('hall-prevendas');return false;">🥇 Hall de Pré-Vendas</a>
+            </div>
+        </div>`;
+        return;
+    }
+
+    document.getElementById('cpEmptyState').style.display = 'none';
+    document.getElementById('cpMainContent').style.display = 'block';
+
+    // Filtra deals do owner
+    const myWon = (wonDeals || []).filter(d => d.Owner?.Name === ownerName);
+    const myLost = (lostDeals || []).filter(d => d.Owner?.Name === ownerName);
+    const myOpen = (dashOpenDeals || []).filter(d => d.Owner?.Name === ownerName);
+
+    // Mês atual range
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const inThisMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart.getTime() && t <= monthEnd.getTime(); };
+    const inLastMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= lastMonthStart.getTime() && t <= lastMonthEnd.getTime(); };
+
+    const myWonMonth = myWon.filter(d => inThisMonth(d.FinishDate));
+    const myWonLastMonth = myWon.filter(d => inLastMonth(d.FinishDate));
+    const myMrrMonth = myWonMonth.reduce((s, d) => s + getMRR(d), 0);
+    const myMrrLastMonth = myWonLastMonth.reduce((s, d) => s + getMRR(d), 0);
+
+    // Subtitle
+    const daysLeft = _cpDaysUntilEndOfMonth();
+    const monthName = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    let subtitleMotivacao = '';
+    if (myWonMonth.length === 0 && daysLeft > 0) {
+        subtitleMotivacao = `Ainda não pontuou em ${monthName} — bora colocar o primeiro? 🎯`;
+    } else if (myWonMonth.length > 0) {
+        subtitleMotivacao = `Você já fechou <strong>${myWonMonth.length}</strong> deal${myWonMonth.length > 1 ? 's' : ''} (${_cpFmtMoney(myMrrMonth)} em MRR). Continue!`;
+    }
+    document.getElementById('cpSubtitle').innerHTML = `${monthName} · <strong>${daysLeft} dia${daysLeft > 1 ? 's' : ''}</strong> até fim do mês · ${subtitleMotivacao}`;
+
+    // Hero meta — posição no ranking
+    const allSellers = {};
+    (wonDeals || []).forEach(d => {
+        if (!inThisMonth(d.FinishDate)) return;
+        const pn = getPipelineName(d);
+        if (pn === 'Farmer IPCA') return; // MRR novo
+        const o = d.Owner?.Name;
+        if (!o) return;
+        if (!allSellers[o]) allSellers[o] = 0;
+        allSellers[o] += getMRR(d);
+    });
+    const sortedSellers = Object.entries(allSellers).sort((a, b) => b[1] - a[1]);
+    const myPos = sortedSellers.findIndex(([n]) => n === ownerName) + 1;
+    if (myPos > 0) {
+        const myMrr = allSellers[ownerName];
+        const medal = myPos === 1 ? '🥇' : myPos === 2 ? '🥈' : myPos === 3 ? '🥉' : '';
+        document.getElementById('cpHeroMeta').innerHTML = `
+            <div class="label">${medal} Sua posição</div>
+            <div class="value">${myPos}º</div>
+            <div class="small">de ${sortedSellers.length} vendedores</div>
+        `;
+    } else {
+        document.getElementById('cpHeroMeta').style.display = 'none';
+    }
+
+    // ============ KPIs ============
+    const taxaConv = (myWon.length + myLost.length) > 0 ? (myWon.length / (myWon.length + myLost.length) * 100) : 0;
+    const ticketMedio = myWon.length > 0 ? (myWon.reduce((s,d) => s + getMRR(d), 0) / myWon.length) : 0;
+    const mrrDelta = myMrrLastMonth > 0 ? ((myMrrMonth - myMrrLastMonth) / myMrrLastMonth * 100) : 0;
+    const deltaArrow = mrrDelta > 5 ? '↑' : mrrDelta < -5 ? '↓' : '→';
+    const deltaClass = mrrDelta > 5 ? 'up' : mrrDelta < -5 ? 'down' : 'flat';
+    document.getElementById('cpKpis').innerHTML = `
+        <div class="cp-kpi-card">
+            <div class="label">MRR este mês</div>
+            <div class="value">${_cpFmtMoney(myMrrMonth)}</div>
+            <div class="delta ${deltaClass}">${deltaArrow} ${Math.abs(mrrDelta).toFixed(0)}% vs mês passado</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Deals ganhos no mês</div>
+            <div class="value">${myWonMonth.length}</div>
+            <div class="delta flat">${myWonLastMonth.length} no mês passado</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Pipeline aberto</div>
+            <div class="value">${myOpen.length}</div>
+            <div class="delta flat">${_cpFmtMoney(myOpen.reduce((s,d) => s + getMRR(d), 0))} em potencial</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Taxa de conversão</div>
+            <div class="value">${taxaConv.toFixed(0)}%</div>
+            <div class="delta flat">Ticket médio ${_cpFmtMoney(ticketMedio)}</div>
+        </div>
+    `;
+
+    // ============ Pipeline em risco ============
+    // Critérios: (a) sem atividade > 14d (b) proposta sem retorno > 7d (c) stage avançado parado > 21d
+    const risks = [];
+    myOpen.forEach(d => {
+        const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate);
+        const propDate = getProposalDate(d);
+        const daysSinceProposal = propDate ? _cpDaysSince(propDate) : null;
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const reasons = [];
+        let severity = 0;
+        if (daysSinceProposal !== null && daysSinceProposal >= 7) {
+            reasons.push({ text: `Proposta enviada há <strong>${daysSinceProposal} dias</strong> sem retorno`, sev: 3 });
+            severity = Math.max(severity, 3);
+        }
+        if (daysSinceUpdate >= 21 && stageOrd >= 2) {
+            reasons.push({ text: `Estagnado em <strong>${stageName}</strong> há ${daysSinceUpdate} dias`, sev: 2 });
+            severity = Math.max(severity, 2);
+        } else if (daysSinceUpdate >= 14) {
+            reasons.push({ text: `Sem atividade há <strong>${daysSinceUpdate} dias</strong>`, sev: 1 });
+            severity = Math.max(severity, 1);
+        }
+        if (reasons.length > 0) {
+            risks.push({ deal: d, reasons, severity, daysSinceUpdate });
+        }
+    });
+    risks.sort((a, b) => b.severity - a.severity || b.daysSinceUpdate - a.daysSinceUpdate);
+    const topRisks = risks.slice(0, 5);
+    const riskListEl = document.getElementById('cpRiskList');
+    if (topRisks.length === 0) {
+        riskListEl.innerHTML = '<div class="cp-empty-mini">🎉 Nenhum deal em risco! Continue o follow-up.</div>';
+    } else {
+        riskListEl.innerHTML = topRisks.map(r => {
+            const d = r.deal;
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-meta">
+                    <span class="warn">⚠️ ${r.reasons[0].text}</span>
+                    <span>· <strong>${getPipelineName(d)}</strong></span>
+                    ${getMRR(d) > 0 ? `<span>· <span class="money">${_cpFmtMoney(getMRR(d))}</span> MRR</span>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ============ Top chances ============
+    // Score = MRR*1.0 + (stageOrd*5000) + (activity_recent_boost)
+    const chances = myOpen.map(d => {
+        const mrr = getMRR(d), setup = getSetup(d);
+        const stageOrd = d.Stage?.Ordination ?? 0;
+        const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0;
+        const activityBoost = daysSinceUpdate < 7 ? 10000 : daysSinceUpdate < 14 ? 3000 : 0;
+        const hasProposal = !!getProposalDate(d);
+        const score = mrr + setup * 0.3 + (stageOrd * 5000) + activityBoost + (hasProposal ? 8000 : 0);
+        return { deal: d, score, mrr, setup, hasProposal, daysSinceUpdate };
+    }).filter(c => c.mrr > 0 || c.setup > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+    const chancesEl = document.getElementById('cpChancesList');
+    if (chances.length === 0) {
+        chancesEl.innerHTML = '<div class="cp-empty-mini">Sem deals com valor definido. Defina MRR/Setup pra priorizar.</div>';
+    } else {
+        chancesEl.innerHTML = chances.map(c => {
+            const d = c.deal;
+            const meddic = _cpMeddicScore(d);
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-meta">
+                    <span class="money">${_cpFmtMoney(c.mrr)}</span>
+                    <span>· <strong>${d.Stage?.Name || '—'}</strong></span>
+                    <span>· MEDDIC <strong>${meddic.score}/6</strong></span>
+                    ${c.hasProposal ? '<span class="good">✓ Proposta enviada</span>' : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ============ Insights de padrões ============
+    const insights = [];
+    // Insight 1: Melhor origem
+    const originStats = {};
+    myWon.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].won++; });
+    myLost.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].lost++; });
+    const originRates = Object.entries(originStats)
+        .filter(([_, v]) => v.won + v.lost >= 3)
+        .map(([o, v]) => ({ origin: o, rate: v.won / (v.won + v.lost), total: v.won + v.lost }))
+        .sort((a, b) => b.rate - a.rate);
+    if (originRates.length > 0) {
+        const top = originRates[0];
+        insights.push({
+            emoji: '🎯',
+            text: `Você converte <span class="number">${(top.rate * 100).toFixed(0)}%</span> dos leads que vêm via <strong>${top.origin}</strong> (em ${top.total} deals). Priorize esse canal.`
+        });
+    }
+    // Insight 2: Pipeline mais lucrativo
+    const pipelineStats = {};
+    myWon.forEach(d => { const p = getPipelineName(d); if (!pipelineStats[p]) pipelineStats[p] = { mrr: 0, count: 0 }; pipelineStats[p].mrr += getMRR(d); pipelineStats[p].count++; });
+    const pipelineSorted = Object.entries(pipelineStats).filter(([_,v]) => v.count >= 2).map(([p, v]) => ({ pipeline: p, avg: v.mrr / v.count })).sort((a, b) => b.avg - a.avg);
+    if (pipelineSorted.length > 0) {
+        const top = pipelineSorted[0];
+        insights.push({
+            emoji: '💎',
+            text: `Seu ticket médio é maior em <strong>${top.pipeline}</strong>: <span class="number">${_cpFmtMoney(top.avg)}</span> por deal. Foque deals desse perfil pra crescer rápido.`
+        });
+    }
+    // Insight 3: Principal motivo de perda
+    const lossReasons = {};
+    myLost.forEach(d => { const r = d.LossReason?.Name || '(sem motivo)'; lossReasons[r] = (lossReasons[r] || 0) + 1; });
+    const topLoss = Object.entries(lossReasons).sort((a, b) => b[1] - a[1])[0];
+    if (topLoss && topLoss[1] >= 3) {
+        const tips = {
+            'preço': 'Antecipe valor: peça orçamento prévio do cliente pra calibrar a proposta',
+            'sem retorno': 'Cadência mais agressiva: 3 follow-ups em 7 dias antes de descartar',
+            'tentativas': 'Cadência mais agressiva: 3 follow-ups em 7 dias antes de descartar',
+            'orçamento': 'Qualifique budget no início, evita perder tempo',
+            'momento': 'Pergunte sobre o evento crítico (Critical Event do SPICED) na 1ª call'
+        };
+        const reasonLower = topLoss[0].toLowerCase();
+        const tip = Object.entries(tips).find(([k]) => reasonLower.includes(k))?.[1] || 'Investigue o padrão e ajuste sua abordagem';
+        insights.push({
+            emoji: '🔍',
+            text: `Sua maior causa de perda é <strong>"${topLoss[0]}"</strong> (<span class="number">${topLoss[1]}</span> deals). ${tip}.`
+        });
+    }
+    // Insight 4: Tempo médio de fechamento
+    const closeTimes = myWon.filter(d => d.CreateDate && d.FinishDate).map(d => (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000);
+    if (closeTimes.length >= 3) {
+        const avgDays = Math.round(closeTimes.reduce((s, t) => s + t, 0) / closeTimes.length);
+        insights.push({
+            emoji: '⏱️',
+            text: `Você fecha em média em <span class="number">${avgDays} dias</span> desde a criação do deal. Use isso pra dimensionar sua pipeline (regra prática: cada R$1 de meta = 3x em pipeline aberto).`
+        });
+    }
+    // Insight 5: Pipeline saudável?
+    const pipelineRatio = myMrrMonth > 0 ? (myOpen.reduce((s,d) => s + getMRR(d), 0) / myMrrMonth) : null;
+    if (pipelineRatio !== null) {
+        if (pipelineRatio < 2) {
+            insights.push({ emoji: '📉', text: `Sua pipeline é <span class="number">${pipelineRatio.toFixed(1)}x</span> do que você fechou no mês. Saudável é <strong>3x ou mais</strong> — bora prospectar.` });
+        } else if (pipelineRatio >= 3) {
+            insights.push({ emoji: '🚀', text: `Sua pipeline tá saudável: <span class="number">${pipelineRatio.toFixed(1)}x</span> do que você fechou. Foque em conversão agora.` });
+        }
+    }
+    const insightsEl = document.getElementById('cpInsightsGrid');
+    if (insights.length === 0) {
+        insightsEl.innerHTML = '<div class="cp-empty-mini" style="grid-column:1/-1">Ainda não temos histórico suficiente pra gerar insights. Continue fechando deals!</div>';
+    } else {
+        insightsEl.innerHTML = insights.map(i => `<div class="cp-insight-card">
+            <div class="cp-insight-emoji">${i.emoji}</div>
+            <div class="cp-insight-text">${i.text}</div>
+        </div>`).join('');
+    }
+
+    // ============ Coaching MEDDIC + SPIN ============
+    // Pega os 3 deals mais valiosos abertos pra fazer coaching detalhado
+    const coachDeals = myOpen.filter(d => getMRR(d) > 0).sort((a, b) => (getMRR(b) + getSetup(b)) - (getMRR(a) + getSetup(a))).slice(0, 3);
+    const coachEl = document.getElementById('cpCoachingContent');
+    if (coachDeals.length === 0) {
+        coachEl.innerHTML = '<div class="cp-empty-mini">Sem deals abertos pra coaching. Preencha MRR nos deals da sua pipeline.</div>';
+    } else {
+        coachEl.innerHTML = coachDeals.map(d => {
+            const meddic = _cpMeddicScore(d);
+            const spin = _cpSpinTip(d.Stage?.Ordination ?? 0, d.Stage?.Name);
+            const pips = Array.from({ length: 6 }, (_, i) => `<span class="pip ${i < meddic.score ? 'on' : ''}"></span>`).join('');
+            const checkRows = Object.values(meddic.checks).map(c => `<div class="cp-check ${c.ok ? 'ok' : 'miss'}"><span class="icon">${c.ok ? '✓' : '○'}</span> <span>${c.label}${!c.ok ? ` — <em style="color:#fcd34d;">${c.tip}</em>` : ''}</span></div>`).join('');
+            return `<div class="cp-coach-block">
+                <div class="cp-coach-deal">
+                    <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>
+                    <span class="cp-coach-stage">${d.Stage?.Name || '—'}</span>
+                </div>
+                <div class="cp-coach-score">
+                    <span><strong>MEDDIC</strong>: ${meddic.score}/6 critérios</span>
+                    <div class="gauge">${pips}</div>
+                </div>
+                <div class="cp-coach-checks">${checkRows}</div>
+                <div class="cp-coach-spin"><span class="lab">SPIN · ${spin.label}</span>${spin.text}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // ============ Foco da semana — 3 ações prioritárias ============
+    const focusActions = [];
+    // 1. Top risco
+    if (topRisks.length > 0) {
+        const r = topRisks[0];
+        const d = r.deal;
+        let cta = 'Ligar pro contato hoje';
+        if (r.reasons[0].text.includes('Proposta')) cta = 'Cobrar retorno da proposta';
+        else if (r.reasons[0].text.includes('Estagnado')) cta = 'Marcar reunião pra desbloquear';
+        focusActions.push({
+            num: 1,
+            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Resgate: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>`,
+            why: `${r.reasons[0].text} — esse deal vai morrer se você não agir essa semana.`,
+            cta
+        });
+    }
+    // 2. Top chance com MEDDIC fraco
+    if (chances.length > 0) {
+        const cWithGaps = chances.find(c => _cpMeddicScore(c.deal).score < 5) || chances[0];
+        const d = cWithGaps.deal;
+        const meddic = _cpMeddicScore(d);
+        const missingItems = Object.entries(meddic.checks).filter(([_, c]) => !c.ok);
+        const why = missingItems.length > 0
+            ? `Maior oportunidade (${_cpFmtMoney(cWithGaps.mrr)} MRR), mas <strong>falta qualificar:</strong> ${missingItems.map(([k]) => k).join(', ')}.`
+            : `Maior oportunidade (${_cpFmtMoney(cWithGaps.mrr)} MRR) e bem qualificada — empurra pra fechar.`;
+        focusActions.push({
+            num: 2,
+            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Avance: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>`,
+            why,
+            cta: missingItems.length > 0 ? 'Marcar call de qualificação' : 'Pedir o fechamento'
+        });
+    }
+    // 3. Insight de melhoria
+    if (insights.length > 0) {
+        const i = insights[insights.length - 1]; // último insight (geralmente o mais acionável)
+        focusActions.push({
+            num: 3,
+            title: 'Aplicar padrão pessoal',
+            why: i.text,
+            cta: 'Refletir na próxima call'
+        });
+    } else if (myOpen.length === 0) {
+        focusActions.push({
+            num: 3,
+            title: 'Construir pipeline',
+            why: 'Você não tem deals abertos. Sem pipeline, sem fechamento.',
+            cta: 'Prospectar 10 contatos hoje'
+        });
+    }
+    const focusEl = document.getElementById('cpFocusActions');
+    if (focusActions.length === 0) {
+        focusEl.innerHTML = '<div class="cp-empty-mini">Tudo sob controle. Continue executando.</div>';
+    } else {
+        focusEl.innerHTML = focusActions.map(a => `<div class="cp-action">
+            <div class="cp-action-num">${a.num}</div>
+            <div class="cp-action-body">
+                <div class="cp-action-title">${a.title}</div>
+                <div class="cp-action-why">${a.why}</div>
+                <span class="cp-action-cta">→ ${a.cta}</span>
+            </div>
+        </div>`).join('');
+    }
 }
 
 // ==================== HALL DE VENDEDORES (view dedicada) ====================
