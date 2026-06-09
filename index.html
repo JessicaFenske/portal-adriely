@@ -7873,6 +7873,24 @@ function _cpSpinTip(stageOrd, stageName) {
     };
 }
 
+// Owners que não estão mais na empresa — excluir das visões de pipeline aberto
+// (deals deles ficam órfãos no Ploomes; aparecer só polui a análise)
+const FORMER_OWNER_PATTERNS = [
+    /rafael.{0,3}loth/i,
+    /jessica.{0,3}(almeida|santana)/i,
+    /vanessa.{0,3}pereira/i,
+    /leticia.{0,3}schiestl/i,
+    /\bneusa\b/i
+];
+function _cpIsFormerOwner(ownerName) {
+    if (!ownerName) return false;
+    const n = ownerName.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return FORMER_OWNER_PATTERNS.some(p => p.test(n));
+}
+function _cpFilterActive(deals) {
+    return (deals || []).filter(d => !_cpIsFormerOwner(getOwnerName(d)));
+}
+
 // Calcula deals candidatos pra cada boa prática (por pipeline + índice)
 function _cpDealsForPractice(pipelineName, practiceIndex, ctx) {
     const { open, won, lost, ticketMedio } = ctx;
@@ -8078,10 +8096,10 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     document.getElementById('cpGreeting').textContent = `${_cpGreetingHour()}, ${firstName}! ${config.emoji}`;
     document.getElementById('cpSubtitle').innerHTML = `<strong>${config.contextLabel}</strong> · ${config.narrative}`;
 
-    // Filtra deals do pipeline que lidera
-    const pipelineWon = (wonDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
-    const pipelineLost = (lostDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
-    const pipelineOpen = (dashOpenDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
+    // Filtra deals do pipeline que lidera + exclui owners que saíram da empresa
+    const pipelineWon = _cpFilterActive((wonDeals || []).filter(d => getPipelineName(d) === leaderPipeline));
+    const pipelineLost = _cpFilterActive((lostDeals || []).filter(d => getPipelineName(d) === leaderPipeline));
+    const pipelineOpen = _cpFilterActive((dashOpenDeals || []).filter(d => getPipelineName(d) === leaderPipeline));
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
