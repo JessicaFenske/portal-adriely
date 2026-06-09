@@ -3758,6 +3758,46 @@
             letter-spacing: 0.3px;
         }
         .cp-coach-spin em { color: #fff; font-style: italic; font-weight: 500; }
+        /* Deals candidatos por boa prática */
+        .cp-practice-deals {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.08);
+        }
+        .cp-practice-deals-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .cp-practice-deal {
+            background: rgba(15, 15, 30, 0.5);
+            border-left: 2px solid #8b5cf6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12.5px;
+            transition: border-left-color 0.15s;
+        }
+        .cp-practice-deal:last-child { margin-bottom: 0; }
+        .cp-practice-deal:hover { border-left-color: #fcd34d; }
+        .cp-practice-deal a {
+            color: #c4b5fd;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 3px;
+        }
+        .cp-practice-deal a:hover { color: #fff; text-decoration: underline; }
+        .cp-practice-deal-meta {
+            font-size: 11.5px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .cp-practice-deal-meta .money { color: #fcd34d; font-weight: 600; }
+        .cp-practice-deal-meta strong { color: #c4b5fd; }
 
         /* Empty state pra usuário sem deals */
         .cp-empty-hero {
@@ -7833,6 +7873,152 @@ function _cpSpinTip(stageOrd, stageName) {
     };
 }
 
+// Calcula deals candidatos pra cada boa prática (por pipeline + índice)
+function _cpDealsForPractice(pipelineName, practiceIndex, ctx) {
+    const { open, won, lost, ticketMedio } = ctx;
+    if (pipelineName === 'Funil de Vendas') {
+        if (practiceIndex === 1) {
+            // MEDDIC nos deals top: deals acima do ticket médio com MEDDIC incompleto
+            const threshold = Math.max(ticketMedio || 0, 3000);
+            return open
+                .filter(d => getMRR(d) >= threshold)
+                .map(d => ({ deal: d, extra: _cpMeddicScore(d) }))
+                .filter(x => x.extra.score < 5)
+                .sort((a, b) => a.extra.score - b.extra.score || getMRR(b.deal) - getMRR(a.deal))
+                .slice(0, 3);
+        }
+        if (practiceIndex === 2) {
+            // Velocidade proposta: deals em stage avançado SEM proposalDate
+            return open
+                .filter(d => {
+                    const stageOrd = d.Stage?.Ordination ?? 0;
+                    return stageOrd >= 1 && !getProposalDate(d) && getMRR(d) > 0;
+                })
+                .sort((a, b) => getMRR(b) - getMRR(a))
+                .slice(0, 3)
+                .map(d => ({ deal: d }));
+        }
+        if (practiceIndex === 3) {
+            // SPIN no método: deals em estágio inicial (discovery)
+            return open
+                .filter(d => {
+                    const stageOrd = d.Stage?.Ordination ?? 0;
+                    const sn = (d.Stage?.Name || '').toLowerCase();
+                    return (stageOrd <= 1 || sn.includes('reconhecim') || sn.includes('lead') || sn.includes('contato')) && getMRR(d) > 0;
+                })
+                .sort((a, b) => getMRR(b) - getMRR(a))
+                .slice(0, 3)
+                .map(d => ({ deal: d }));
+        }
+        if (practiceIndex === 4) {
+            // Cadência sem retorno: deals sem atividade ≥ 10d
+            return open
+                .map(d => ({ deal: d, extra: _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0 }))
+                .filter(x => x.extra >= 10 && getMRR(x.deal) > 0)
+                .sort((a, b) => b.extra - a.extra)
+                .slice(0, 3);
+        }
+    }
+    if (pipelineName === 'Farmer') {
+        if (practiceIndex === 1) {
+            // Expansão: deals abertos do Farmer com MRR > 0 (ordenados pelo maior potencial)
+            return open
+                .filter(d => getMRR(d) > 0)
+                .sort((a, b) => getMRR(b) - getMRR(a))
+                .slice(0, 3)
+                .map(d => ({ deal: d }));
+        }
+        if (practiceIndex === 2) {
+            // Health score: deals sem atividade > 30d em Farmer (sinal de risco)
+            return open
+                .map(d => ({ deal: d, extra: _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0 }))
+                .filter(x => x.extra >= 30)
+                .sort((a, b) => b.extra - a.extra)
+                .slice(0, 3);
+        }
+        if (practiceIndex === 3) {
+            // NPS: top accounts por MRR (ganhos) — os clientes Curva A
+            const accountMRR = {};
+            won.forEach(d => {
+                const acc = d.Contact?.CompanyName || d.Title?.split(' - ')[0] || 'Cliente';
+                accountMRR[acc] = (accountMRR[acc] || 0) + getMRR(d);
+            });
+            return Object.entries(accountMRR).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, mrr]) => ({ accountName: name, mrr }));
+        }
+    }
+    if (pipelineName === 'Sankhya') {
+        if (practiceIndex === 1) {
+            // SLA <24h: deals criados últimos 7d (cobre velocidade)
+            return open
+                .map(d => ({ deal: d, extra: _cpDaysSince(d.CreateDate) || 0 }))
+                .filter(x => x.extra <= 7 && getMRR(x.deal) > 0)
+                .sort((a, b) => a.extra - b.extra)
+                .slice(0, 3);
+        }
+        if (practiceIndex === 3) {
+            // BANT: deals em qualificação (estágios iniciais) com MRR alto
+            return open
+                .filter(d => {
+                    const stageOrd = d.Stage?.Ordination ?? 0;
+                    return stageOrd <= 1 && getMRR(d) > 0;
+                })
+                .sort((a, b) => getMRR(b) - getMRR(a))
+                .slice(0, 3)
+                .map(d => ({ deal: d }));
+        }
+    }
+    return null;
+}
+
+function _cpRenderPracticeDeals(items, practiceIndex, pipelineName) {
+    if (!items || items.length === 0) return '';
+    let html = '<div class="cp-practice-deals"><div class="cp-practice-deals-label">📌 Aplicar nesses deals do seu funil aberto:</div>';
+    items.forEach(item => {
+        // Account-level (Farmer NPS): sem deal específico
+        if (item.accountName) {
+            html += `<div class="cp-practice-deal">
+                <div style="color:#c4b5fd;font-weight:600;">${item.accountName.replace(/</g,'&lt;')}</div>
+                <div class="cp-practice-deal-meta"><span class="money">${_cpFmtMoney(item.mrr)} MRR histórico</span> · Curva A</div>
+            </div>`;
+            return;
+        }
+        const d = item.deal;
+        let extra = '';
+        if (pipelineName === 'Funil de Vendas') {
+            if (practiceIndex === 1) {
+                const score = item.extra.score;
+                const gaps = Object.values(item.extra.checks).filter(c => !c.ok).slice(0, 2).map(c => c.label).join(', ');
+                extra = ` · <strong>MEDDIC ${score}/6</strong>`;
+                if (gaps) extra += ` · falta: <span style="color:#fcd34d;">${gaps}</span>`;
+            } else if (practiceIndex === 2) {
+                extra = ' · <span style="color:#fcd34d;">sem data de proposta</span>';
+            } else if (practiceIndex === 3) {
+                extra = ` · stage: <span style="color:#7dd3fc;">${d.Stage?.Name || '—'}</span>`;
+            } else if (practiceIndex === 4) {
+                extra = ` · <span style="color:#fca5a5;">${item.extra}d sem atividade</span>`;
+            }
+        } else if (pipelineName === 'Farmer') {
+            if (practiceIndex === 2) {
+                extra = ` · <span style="color:#fca5a5;">${item.extra}d sem atividade</span>`;
+            }
+        } else if (pipelineName === 'Sankhya') {
+            if (practiceIndex === 1) {
+                extra = ` · criado há <strong>${item.extra}d</strong>`;
+            }
+        }
+        const owner = getOwnerName(d) || '';
+        html += `<div class="cp-practice-deal">
+            <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>
+            <div class="cp-practice-deal-meta">
+                <span class="money">${_cpFmtMoney(getMRR(d))}</span>
+                ${owner ? `<span>· ${owner}</span>` : ''}${extra}
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
 // Mapa: email do líder → pipeline que lidera
 const PIPELINE_LEADERS = {
     'jessica.fenske@lincros.com': 'Funil de Vendas',
@@ -8104,16 +8290,22 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
 
     // ============ Coaching → Boas práticas do funil ============
     document.querySelector('.cp-coaching-card .cp-card-header h2').innerHTML = `<span class="cp-icon">${config.emoji}</span> Boas práticas — ${leaderPipeline}`;
-    document.querySelector('.cp-coaching-card .cp-card-sub').textContent = 'Use esses pontos pra orientar o time nas reuniões e revisões';
+    document.querySelector('.cp-coaching-card .cp-card-sub').textContent = 'Use esses pontos pra orientar o time nas reuniões e revisões — cada um vem com os deals do seu funil onde aplicar';
     const coachEl = document.getElementById('cpCoachingContent');
-    coachEl.innerHTML = config.practices.map((p, i) => `<div class="cp-coach-block" style="background:rgba(15,15,30,0.5);">
-        <div class="cp-coach-deal" style="border-bottom:none;padding-bottom:0;margin-bottom:6px;">
-            <span><span style="font-size:18px;margin-right:8px;">${p.icon}</span><strong>${i + 1}. ${p.title}</strong></span>
-        </div>
-        <div class="cp-coach-spin" style="background:rgba(108,63,181,0.08);border-left-color:${i === 0 ? '#fcd34d' : '#8b5cf6'};">
-            ${p.body}
-        </div>
-    </div>`).join('');
+    const ctxForDeals = { open: pipelineOpen, won: pipelineWon, lost: pipelineLost, ticketMedio };
+    coachEl.innerHTML = config.practices.map((p, i) => {
+        const dealsForPractice = _cpDealsForPractice(leaderPipeline, i, ctxForDeals);
+        const dealsHtml = _cpRenderPracticeDeals(dealsForPractice, i, leaderPipeline);
+        return `<div class="cp-coach-block" style="background:rgba(15,15,30,0.5);">
+            <div class="cp-coach-deal" style="border-bottom:none;padding-bottom:0;margin-bottom:6px;">
+                <span><span style="font-size:18px;margin-right:8px;">${p.icon}</span><strong>${i + 1}. ${p.title}</strong></span>
+            </div>
+            <div class="cp-coach-spin" style="background:rgba(108,63,181,0.08);border-left-color:${i === 0 ? '#fcd34d' : '#8b5cf6'};">
+                ${p.body}
+            </div>
+            ${dealsHtml}
+        </div>`;
+    }).join('');
 
     return true;
 }
