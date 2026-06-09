@@ -7888,15 +7888,16 @@ function _cpDealsForPractice(pipelineName, practiceIndex, ctx) {
                 .slice(0, 3);
         }
         if (practiceIndex === 2) {
-            // Velocidade proposta: deals em stage avançado SEM proposalDate
+            // Velocidade proposta: deals em stage avançado mas SEM valor preenchido
+            // (proposta de fato ainda não foi enviada — sem MRR e sem Setup)
             return open
                 .filter(d => {
                     const stageOrd = d.Stage?.Ordination ?? 0;
-                    return stageOrd >= 1 && !getProposalDate(d) && getMRR(d) > 0;
+                    return stageOrd >= 1 && getMRR(d) === 0 && getSetup(d) === 0;
                 })
-                .sort((a, b) => getMRR(b) - getMRR(a))
-                .slice(0, 3)
-                .map(d => ({ deal: d }));
+                .map(d => ({ deal: d, extra: _cpDaysSince(d.CreateDate) || 0 }))
+                .sort((a, b) => b.extra - a.extra) // mais antigos primeiro
+                .slice(0, 3);
         }
         if (practiceIndex === 3) {
             // SPIN no método: deals em estágio inicial (discovery)
@@ -7991,7 +7992,7 @@ function _cpRenderPracticeDeals(items, practiceIndex, pipelineName) {
                 extra = ` · <strong>MEDDIC ${score}/6</strong>`;
                 if (gaps) extra += ` · falta: <span style="color:#fcd34d;">${gaps}</span>`;
             } else if (practiceIndex === 2) {
-                extra = ' · <span style="color:#fcd34d;">sem data de proposta</span>';
+                extra = ` · stage: <span style="color:#7dd3fc;">${d.Stage?.Name || '—'}</span> · <span style="color:#fcd34d;">há ${item.extra}d sem valor preenchido</span>`;
             } else if (practiceIndex === 3) {
                 extra = ` · stage: <span style="color:#7dd3fc;">${d.Stage?.Name || '—'}</span>`;
             } else if (practiceIndex === 4) {
@@ -8007,11 +8008,13 @@ function _cpRenderPracticeDeals(items, practiceIndex, pipelineName) {
             }
         }
         const owner = getOwnerName(d) || '';
+        const mrr = getMRR(d);
+        const moneyHtml = mrr > 0 ? `<span class="money">${_cpFmtMoney(mrr)}</span> ` : '';
+        const ownerSep = mrr > 0 && owner ? '· ' : '';
         html += `<div class="cp-practice-deal">
             <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>
             <div class="cp-practice-deal-meta">
-                <span class="money">${_cpFmtMoney(getMRR(d))}</span>
-                ${owner ? `<span>· ${owner}</span>` : ''}${extra}
+                ${moneyHtml}${owner ? `<span>${ownerSep}${owner}</span>` : ''}${extra}
             </div>
         </div>`;
     });
