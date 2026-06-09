@@ -3798,6 +3798,51 @@
         }
         .cp-practice-deal-meta .money { color: #fcd34d; font-weight: 600; }
         .cp-practice-deal-meta strong { color: #c4b5fd; }
+        /* Banner de impersonate (admin "vendo como") */
+        .cp-imp-banner {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.06));
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 12px;
+            padding: 12px 18px;
+            margin-bottom: 14px;
+        }
+        .cp-imp-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .cp-imp-label { color: #fcd34d; font-size: 13px; }
+        .cp-imp-label strong { color: #fbbf24; }
+        .cp-imp-banner select {
+            background: rgba(15, 15, 30, 0.7);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 8px;
+            padding: 7px 12px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            min-width: 240px;
+        }
+        .cp-imp-banner select:focus { outline: none; border-color: #fbbf24; }
+        .cp-imp-reset {
+            background: rgba(108, 63, 181, 0.2);
+            border: 1px solid rgba(108, 63, 181, 0.45);
+            color: #c4b5fd;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .cp-imp-reset:hover { background: rgba(108, 63, 181, 0.3); color: #fff; }
+        @media (max-width: 600px) {
+            .cp-imp-row { flex-direction: column; align-items: stretch; }
+            .cp-imp-banner select { min-width: 0; width: 100%; }
+            .cp-imp-reset { margin-left: 0; }
+        }
+
         /* Alerta diário: pisca o item "Meu Cockpit" no sidebar até a pessoa rolar a tela */
         .nav-item.cockpit-alert {
             animation: cockpitPulse 2s ease-in-out infinite;
@@ -4241,6 +4286,8 @@
         <!-- ==================== VIEW: MEU COCKPIT (default ao logar) ==================== -->
         <div id="view-cockpit" style="display:block;">
             <div class="cp-page">
+                <!-- Banner de impersonate (só pra admin) -->
+                <div id="cpImpersonateBanner" class="cp-imp-banner" style="display:none;"></div>
                 <!-- Saudação -->
                 <div class="cp-hero">
                     <div class="cp-hero-text">
@@ -6500,6 +6547,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // Boot do Cockpit: ao carregar a página, dispara o load do dashboard (pra ter dados)
 // e renderiza o cockpit assim que os dados chegam.
 document.addEventListener('DOMContentLoaded', () => {
+    // Recupera estado de impersonate (sessionStorage)
+    if (typeof _cpInitImpersonate === 'function') _cpInitImpersonate();
     if (typeof loadDashboard === 'function' && !dashLoaded) {
         loadDashboard().then(() => {
             dashLoaded = true;
@@ -7836,6 +7885,60 @@ function _cpDaysUntilEndOfMonth() {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return Math.max(0, Math.ceil((lastDay.getTime() - now.getTime()) / 86400000));
 }
+// ============ Impersonation (admin "ver como") ============
+let _cpImpersonateOwner = null;
+function _cpInitImpersonate() {
+    try { _cpImpersonateOwner = sessionStorage.getItem('cockpit_impersonate') || null; } catch (e) {}
+}
+function _cpSetImpersonate(owner) {
+    _cpImpersonateOwner = owner || null;
+    try {
+        if (owner) sessionStorage.setItem('cockpit_impersonate', owner);
+        else sessionStorage.removeItem('cockpit_impersonate');
+    } catch (e) {}
+}
+function _cpListSellers() {
+    if (typeof wonDeals === 'undefined') return [];
+    const SP = typeof SALES_PIPELINES !== 'undefined' ? SALES_PIPELINES : [];
+    const set = new Set();
+    const allDeals = [...(wonDeals || []), ...(dashOpenDeals || []), ...(lostDeals || [])];
+    allDeals.forEach(d => {
+        const o = d.Owner?.Name;
+        if (!o) return;
+        if (typeof _cpIsFormerOwner === 'function' && _cpIsFormerOwner(o)) return;
+        if (typeof isSdrName === 'function' && isSdrName(o)) return;
+        if (!SP.includes(getPipelineName(d))) return;
+        set.add(o);
+    });
+    return [...set].sort();
+}
+function _cpRenderImpersonateBanner() {
+    const banner = document.getElementById('cpImpersonateBanner');
+    if (!banner) return;
+    if (!_hvIsAdmin()) { banner.style.display = 'none'; return; }
+    banner.style.display = '';
+    const sellers = _cpListSellers();
+    const current = _cpImpersonateOwner || '';
+    const options = ['<option value="">Minha visão (padrão)</option>']
+        .concat(sellers.map(s => `<option value="${s.replace(/"/g,'&quot;')}" ${s === current ? 'selected' : ''}>${s}</option>`))
+        .join('');
+    banner.innerHTML = `
+        <div class="cp-imp-row">
+            <span class="cp-imp-label">👁️ <strong>Admin</strong> · Visualizar como:</span>
+            <select id="cpImpSelect">${options}</select>
+            ${current ? `<button class="cp-imp-reset" onclick="_cpImpersonateReset()">↩ Voltar pra minha visão</button>` : ''}
+        </div>
+    `;
+    document.getElementById('cpImpSelect').addEventListener('change', (e) => {
+        _cpSetImpersonate(e.target.value || null);
+        renderCockpit();
+    });
+}
+function _cpImpersonateReset() {
+    _cpSetImpersonate(null);
+    renderCockpit();
+}
+
 // ============ Tracking "leu o cockpit hoje?" (alerta diário) ============
 function _cpReadKey() {
     const today = new Date().toISOString().slice(0, 10);
@@ -8442,14 +8545,25 @@ async function renderCockpit() {
         try { await loadDashboard(); dashLoaded = true; } catch (e) {}
     }
 
-    // Antes de buscar deals, checa se é líder mapeado de pipeline
-    const myEmail = _hvCurrentEmail();
-    const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
-    if (leaderPipeline && _cpRenderLeaderCockpit(leaderPipeline)) return;
+    // Renderiza banner de impersonate (só pra admin)
+    if (typeof _cpRenderImpersonateBanner === 'function') _cpRenderImpersonateBanner();
 
-    // Match usuário → Owner do Ploomes
-    const allDealsForMatch = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    const ownerName = _cpMatchUserToOwner(me, allDealsForMatch);
+    // Se admin está impersonando um vendedor, força a visão pessoal desse vendedor
+    let ownerName;
+    if (_hvIsAdmin() && _cpImpersonateOwner) {
+        ownerName = _cpImpersonateOwner;
+        // Sobrescreve saudação
+        document.getElementById('cpGreeting').textContent = `Visualizando como ${_cpImpersonateOwner.split(/\s+/)[0]} 👁️`;
+    } else {
+        // Antes de buscar deals, checa se é líder mapeado de pipeline
+        const myEmail = _hvCurrentEmail();
+        const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
+        if (leaderPipeline && _cpRenderLeaderCockpit(leaderPipeline)) return;
+
+        // Match usuário → Owner do Ploomes
+        const allDealsForMatch = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+        ownerName = _cpMatchUserToOwner(me, allDealsForMatch);
+    }
     if (!ownerName) {
         // Usuário sem deals e sem mapeamento de liderança (admin geral)
         document.getElementById('cpSubtitle').innerHTML = `Você não tem deals atribuídos no Ploomes — provavelmente é liderança/admin.<br>Use os atalhos abaixo pra ver a visão geral do time.`;
@@ -8893,6 +9007,7 @@ function _hvShortName(name) {
 }
 let _hvCurrentUserName = null;
 let _hvCurrentUserEmail = null;
+let _hvCurrentUserIsAdmin = false;
 async function _hvFetchMe() {
     if (_hvCurrentUserName) return _hvCurrentUserName;
     try {
@@ -8901,11 +9016,13 @@ async function _hvFetchMe() {
             const d = await r.json();
             _hvCurrentUserName = (d.user && d.user.name) || null;
             _hvCurrentUserEmail = (d.user && d.user.email) || null;
+            _hvCurrentUserIsAdmin = !!(d.user && d.user.isAdmin);
         }
     } catch (e) {}
     return _hvCurrentUserName;
 }
 function _hvCurrentEmail() { return _hvCurrentUserEmail; }
+function _hvIsAdmin() { return _hvCurrentUserIsAdmin; }
 
 async function renderHallVendedores() {
     const range = _hvPeriodRange();
