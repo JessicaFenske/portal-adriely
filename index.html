@@ -7801,6 +7801,19 @@ function _cpDaysUntilEndOfMonth() {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return Math.max(0, Math.ceil((lastDay.getTime() - now.getTime()) / 86400000));
 }
+function _cpBusinessDaysUntilEndOfMonth() {
+    // Conta dias úteis (seg-sex) a partir de HOJE até o último dia do mês, inclusivo
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    let count = 0;
+    const cur = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    while (cur <= lastDay) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) count++;
+        cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+}
 function _cpMatchUserToOwner(myName, deals) {
     if (!myName) return null;
     const n = _cpNormName(myName);
@@ -8125,10 +8138,11 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     const daysLeft = _cpDaysUntilEndOfMonth();
     const monthName = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
+    const businessDays = _cpBusinessDaysUntilEndOfMonth();
     document.getElementById('cpHeroMeta').innerHTML = `
         <div class="label">${monthName}</div>
         <div class="value">${daysLeft}d</div>
-        <div class="small">até fim do mês</div>
+        <div class="small">até fim do mês · <strong style="color:#fcd34d;">${businessDays} úteis</strong></div>
     `;
     document.getElementById('cpHeroMeta').style.display = '';
 
@@ -8403,6 +8417,7 @@ async function renderCockpit() {
 
     // Subtitle
     const daysLeft = _cpDaysUntilEndOfMonth();
+    const businessDaysLeft = _cpBusinessDaysUntilEndOfMonth();
     const monthName = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     let subtitleMotivacao = '';
     if (myWonMonth.length === 0 && daysLeft > 0) {
@@ -8410,7 +8425,7 @@ async function renderCockpit() {
     } else if (myWonMonth.length > 0) {
         subtitleMotivacao = `Você já fechou <strong>${myWonMonth.length}</strong> deal${myWonMonth.length > 1 ? 's' : ''} (${_cpFmtMoney(myMrrMonth)} em MRR). Continue!`;
     }
-    document.getElementById('cpSubtitle').innerHTML = `${monthName} · <strong>${daysLeft} dia${daysLeft > 1 ? 's' : ''}</strong> até fim do mês · ${subtitleMotivacao}`;
+    document.getElementById('cpSubtitle').innerHTML = `${monthName} · <strong>${daysLeft} dia${daysLeft > 1 ? 's' : ''}</strong> até fim do mês (<strong style="color:#fcd34d;">${businessDaysLeft} úteis</strong>) · ${subtitleMotivacao}`;
 
     // Hero meta — posição no ranking
     const allSellers = {};
@@ -8429,7 +8444,7 @@ async function renderCockpit() {
         const myMrr = allSellers[ownerName];
         const medal = myPos === 1 ? '🥇' : myPos === 2 ? '🥈' : myPos === 3 ? '🥉' : '';
         document.getElementById('cpHeroMeta').innerHTML = `
-            <div class="label">${medal} Sua posição</div>
+            <div class="label">${medal} Sua posição · ${businessDaysLeft} dias úteis</div>
             <div class="value">${myPos}º</div>
             <div class="small">de ${sortedSellers.length} vendedores</div>
         `;
