@@ -7930,16 +7930,21 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     document.getElementById('cpMainContent').style.display = 'block';
 
     // ============ KPIs do funil ============
+    // Pra liderança: o que importa é o TOTAL EM FUNIL (pipeline aberto = potencial)
+    // + o que já foi realizado no mês + saúde histórica (win rate, ciclo)
+    const monthDeltaText = mrrLastMonth > 0
+        ? `${deltaArrow} ${Math.abs(mrrDelta).toFixed(0)}% vs mês passado`
+        : (mrrMonth > 0 ? `${wonMonth.length} deal${wonMonth.length > 1 ? 's' : ''} fechado${wonMonth.length > 1 ? 's' : ''}` : 'Sem fechamentos no mês ainda');
     document.getElementById('cpKpis').innerHTML = `
         <div class="cp-kpi-card">
-            <div class="label">MRR do funil — ${monthName.split(' ')[0]}</div>
-            <div class="value">${_cpFmtMoney(mrrMonth)}</div>
-            <div class="delta ${deltaClass}">${deltaArrow} ${Math.abs(mrrDelta).toFixed(0)}% vs mês passado</div>
+            <div class="label">Pipeline aberto (potencial)</div>
+            <div class="value">${_cpFmtMoney(pipelineMrrOpen)}</div>
+            <div class="delta flat">${pipelineOpen.length} deal${pipelineOpen.length === 1 ? '' : 's'} em aberto</div>
         </div>
         <div class="cp-kpi-card">
-            <div class="label">Ticket médio</div>
-            <div class="value">${_cpFmtMoney(ticketMedio)}</div>
-            <div class="delta flat">${wonMonth.length} deals ganhos no mês</div>
+            <div class="label">MRR ganho — ${monthName.split(' ')[0]}</div>
+            <div class="value">${_cpFmtMoney(mrrMonth)}</div>
+            <div class="delta ${deltaClass}">${monthDeltaText}</div>
         </div>
         <div class="cp-kpi-card">
             <div class="label">Win rate (histórico)</div>
@@ -7947,9 +7952,9 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
             <div class="delta flat">${pipelineWon.length} ganhos / ${totalConsidered} considerados</div>
         </div>
         <div class="cp-kpi-card">
-            <div class="label">Ciclo médio (lead→ganho)</div>
-            <div class="value">${ciclo}d</div>
-            <div class="delta flat">Pipeline aberto: ${_cpFmtMoney(pipelineMrrOpen)}</div>
+            <div class="label">Ticket médio / ciclo</div>
+            <div class="value">${_cpFmtMoney(ticketMedio)}</div>
+            <div class="delta flat">Ciclo médio: ${ciclo}d (lead→ganho)</div>
         </div>
     `;
 
