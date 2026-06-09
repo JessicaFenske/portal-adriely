@@ -8587,21 +8587,31 @@ async function renderCockpit() {
     document.getElementById('cpMainContent').style.display = 'block';
 
     // Filtra deals do owner — APENAS dos funis em que o vendedor REALMENTE opera
-    // Detecção dinâmica: agrupa funis por modelo de venda (Novos Negócios x Farmer)
-    // e identifica o grupo dominante pelo histórico de wins do vendedor.
+    // 1) Override manual pra vendedores híbridos (operam em mais de 1 grupo)
+    // 2) Detecção dinâmica por dominância de wins históricos pros demais
     const NEW_BUSINESS_PIPELINES = ['Funil de Vendas', 'Sankhya'];
     const FARMER_PIPELINES = ['Farmer', 'Farmer IPCA'];
+    const VENDEDOR_PIPELINES_OVERRIDE = {
+        // Daniela atua em Farmer + IPCA E TAMBÉM em Sankhya
+        'daniela pereira de barros': ['Farmer', 'Farmer IPCA', 'Sankhya']
+    };
     const isSalesP = (d) => typeof SALES_PIPELINES !== 'undefined' && SALES_PIPELINES.includes(getPipelineName(d));
 
-    let newBizWins = 0, farmerWins = 0;
-    (wonDeals || []).forEach(d => {
-        if (d.Owner?.Name !== ownerName) return;
-        const p = getPipelineName(d);
-        if (NEW_BUSINESS_PIPELINES.includes(p)) newBizWins++;
-        else if (FARMER_PIPELINES.includes(p)) farmerWins++;
-    });
-    // Define funis ativos do vendedor: grupo dominante. Empate ou sem histórico → default Novos Negócios.
-    const myPipelines = (farmerWins > newBizWins) ? FARMER_PIPELINES : NEW_BUSINESS_PIPELINES;
+    const ownerKeyNorm = (ownerName || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    let myPipelines;
+    if (VENDEDOR_PIPELINES_OVERRIDE[ownerKeyNorm]) {
+        myPipelines = VENDEDOR_PIPELINES_OVERRIDE[ownerKeyNorm];
+    } else {
+        let newBizWins = 0, farmerWins = 0;
+        (wonDeals || []).forEach(d => {
+            if (d.Owner?.Name !== ownerName) return;
+            const p = getPipelineName(d);
+            if (NEW_BUSINESS_PIPELINES.includes(p)) newBizWins++;
+            else if (FARMER_PIPELINES.includes(p)) farmerWins++;
+        });
+        // Grupo dominante; empate ou sem histórico → default Novos Negócios
+        myPipelines = (farmerWins > newBizWins) ? FARMER_PIPELINES : NEW_BUSINESS_PIPELINES;
+    }
     const myPipelineSet = new Set(myPipelines);
     const isMyPipeline = (d) => myPipelineSet.has(getPipelineName(d));
 
