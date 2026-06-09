@@ -7833,6 +7833,286 @@ function _cpSpinTip(stageOrd, stageName) {
     };
 }
 
+// Mapa: email do líder → pipeline que lidera
+const PIPELINE_LEADERS = {
+    'jessica.fenske@lincros.com': 'Funil de Vendas',
+    'jessica.martins@lincros.com': 'Farmer',
+    'luis.esteves@lincros.com': 'Sankhya'
+};
+// Boas práticas curadas por pipeline (expertise em vendas)
+const PIPELINE_BEST_PRACTICES = {
+    'Funil de Vendas': {
+        emoji: '🎯',
+        contextLabel: 'Liderança de Novos Negócios',
+        narrative: 'Seu time tá na linha de frente de aquisição. Cada lead que entra precisa ser qualificado, trabalhado com método e fechado com velocidade. Pipeline é seu seguro — sem 3x da meta aberta, o mês fica refém de 2-3 deals.',
+        practices: [
+            { icon: '📊', title: 'Pipeline 3x a meta', body: 'Se sua meta é R$ 100k, seu time precisa ter R$ 300k+ em pipeline aberto. Sem isso, qualquer perda dói. Faça revisão semanal de pipeline aberto.' },
+            { icon: '🔍', title: 'MEDDIC nos deals top', body: 'Pra cada deal acima do ticket médio, exija dos vendedores: <strong>Metrics</strong>, <strong>Economic Buyer</strong>, <strong>Decision Criteria</strong>, <strong>Decision Process</strong>, <strong>Identify Pain</strong>, <strong>Champion</strong>. Sem essas 6 caixas marcadas = sem fechamento previsível.' },
+            { icon: '⚡', title: 'Velocidade da proposta', body: 'Proposta enviada em até <strong>48h após reunião de qualificação</strong>. Quanto mais demora, mais o cliente esfria. Cobre o time semanalmente.' },
+            { icon: '🧠', title: 'SPIN no método', body: 'Reuniões de discovery devem seguir Situation → Problem → Implication → Need-payoff. Treine o time pra fazer <strong>perguntas de implicação</strong> — é onde o cliente verbaliza a dor e cria urgência.' },
+            { icon: '🚫', title: 'Cadência pra "sem retorno"', body: 'Lead que sumiu = não morreu. Defina cadência: 3 follow-ups em 7 dias por canais diferentes (email + WhatsApp + LinkedIn) antes de descartar. Esse é seu maior motivo de perda hoje.' }
+        ]
+    },
+    'Farmer': {
+        emoji: '🌾',
+        contextLabel: 'Liderança de Farmer (Renovação + Expansão)',
+        narrative: 'Seu time é o motor de receita recorrente. Renovação não acontece sozinha — proatividade vence. Cada cliente que sai vale 2 vendas novas pra você cobrir. Health score é mais importante que fechar deal novo.',
+        practices: [
+            { icon: '📅', title: 'Renovação proativa: -90 dias', body: 'Comece negociação <strong>90 dias antes</strong> do vencimento. Nunca na última semana — aí o cliente já cotou concorrente.' },
+            { icon: '📈', title: 'Identifique expansão em toda renovação', body: 'A cada renovação, avalie: usuários adicionais? módulos novos? volume maior? Renovar com flat = oportunidade perdida. Meta: <strong>20% de expansion em renovação</strong>.' },
+            { icon: '🩺', title: 'Health score dos top accounts', body: 'Clientes que reduzem uso da plataforma, atrasam pagamento ou trocam champion interno estão em risco. Monitore os top 20% dos clientes (Curva A).' },
+            { icon: '💬', title: 'NPS trimestral nos clientes A', body: 'NPS abaixo de 7 = risco de churn em 6 meses. Faça intervenção imediata: reunião de alinhamento, escalação interna. Não espere o pedido de cancelamento.' },
+            { icon: '💰', title: 'IPCA é receita gratuita', body: 'Reajuste é seu pra pegar. Aplique no aniversário do contrato e <strong>justifique com valor entregue</strong> (case, métricas de uso, melhorias). Sem justificativa = abre porta pra negociação.' }
+        ]
+    },
+    'Sankhya': {
+        emoji: '🤝',
+        contextLabel: 'Liderança do Canal Sankhya',
+        narrative: 'O Sankhya é diferente: leads chegam via parceiros, ticket médio é mais alto, mas o time não opera como Novos Negócios — não preenche tasks no Ploomes (compliance baixo). Sua missão é trazer disciplina sem perder a velocidade dos parceiros.',
+        practices: [
+            { icon: '🔔', title: 'Compliance das tasks', body: 'Use o painel de Compliance Sankhya. Cobre <strong>Maja e o time</strong> a preencher Reunião Agendada/Realizada — sem isso, métricas de pré-vendas ficam cegas. Meta: <strong>chegar em 80% de preenchimento</strong>.' },
+            { icon: '⏱️', title: 'SLA de resposta < 24h', body: 'Lead que vem de parceiro Sankhya é parceiro confiando em você. Resposta em mais de 24h = parceiro reclama, e ele tem outras opções de TMS.' },
+            { icon: '📊', title: 'Corte canais que não convertem', body: 'Acompanhe taxa de conversão por canal. Canal com &lt;5% de conversão e &gt;20 leads = corta ou renegocia comercial. Não desperdice tempo do time.' },
+            { icon: '🎯', title: 'Qualifique BANT no início', body: 'Sankhya tem ticket alto (R$15k+ MRR comum). Use <strong>BANT</strong> (Budget, Authority, Need, Timeline) na primeira call — leads desqualificados consomem ciclos de venda de 40+ dias.' },
+            { icon: '🤝', title: 'Champion no parceiro', body: 'Cada canal precisa de UM contato dedicado seu. Construa relacionamento, faça reuniões mensais. Parceiro engajado entrega <strong>3x mais leads</strong> que parceiro abandonado.' }
+        ]
+    }
+};
+
+function _cpRenderLeaderCockpit(leaderPipeline) {
+    const config = PIPELINE_BEST_PRACTICES[leaderPipeline];
+    if (!config) return false;
+    const me = _hvCurrentUserName || 'Líder';
+    const firstName = me.split(/\s+/)[0];
+
+    // Atualiza hero
+    document.getElementById('cpGreeting').textContent = `${_cpGreetingHour()}, ${firstName}! ${config.emoji}`;
+    document.getElementById('cpSubtitle').innerHTML = `<strong>${config.contextLabel}</strong> · ${config.narrative}`;
+
+    // Filtra deals do pipeline que lidera
+    const pipelineWon = (wonDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
+    const pipelineLost = (lostDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
+    const pipelineOpen = (dashOpenDeals || []).filter(d => getPipelineName(d) === leaderPipeline);
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const inThisMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart.getTime() && t <= monthEnd.getTime(); };
+    const inLastMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= lastMonthStart.getTime() && t <= lastMonthEnd.getTime(); };
+
+    const wonMonth = pipelineWon.filter(d => inThisMonth(d.FinishDate));
+    const wonLastMonth = pipelineWon.filter(d => inLastMonth(d.FinishDate));
+    const mrrMonth = wonMonth.reduce((s, d) => s + getMRR(d), 0);
+    const mrrLastMonth = wonLastMonth.reduce((s, d) => s + getMRR(d), 0);
+    const ticketMedio = wonMonth.length > 0 ? (mrrMonth / wonMonth.length) : 0;
+    const totalConsidered = pipelineWon.length + pipelineLost.length;
+    const winRate = totalConsidered > 0 ? (pipelineWon.length / totalConsidered * 100) : 0;
+    const closeTimes = pipelineWon.filter(d => d.CreateDate && d.FinishDate).map(d => (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000);
+    const ciclo = closeTimes.length > 0 ? Math.round(closeTimes.reduce((s,t)=>s+t,0) / closeTimes.length) : 0;
+    const mrrDelta = mrrLastMonth > 0 ? ((mrrMonth - mrrLastMonth) / mrrLastMonth * 100) : 0;
+    const deltaArrow = mrrDelta > 5 ? '↑' : mrrDelta < -5 ? '↓' : '→';
+    const deltaClass = mrrDelta > 5 ? 'up' : mrrDelta < -5 ? 'down' : 'flat';
+    const pipelineMrrOpen = pipelineOpen.reduce((s, d) => s + getMRR(d), 0);
+    const daysLeft = _cpDaysUntilEndOfMonth();
+    const monthName = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    document.getElementById('cpHeroMeta').innerHTML = `
+        <div class="label">${monthName}</div>
+        <div class="value">${daysLeft}d</div>
+        <div class="small">até fim do mês</div>
+    `;
+    document.getElementById('cpHeroMeta').style.display = '';
+
+    // Habilita o conteúdo principal
+    document.getElementById('cpEmptyState').style.display = 'none';
+    document.getElementById('cpMainContent').style.display = 'block';
+
+    // ============ KPIs do funil ============
+    document.getElementById('cpKpis').innerHTML = `
+        <div class="cp-kpi-card">
+            <div class="label">MRR do funil — ${monthName.split(' ')[0]}</div>
+            <div class="value">${_cpFmtMoney(mrrMonth)}</div>
+            <div class="delta ${deltaClass}">${deltaArrow} ${Math.abs(mrrDelta).toFixed(0)}% vs mês passado</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Ticket médio</div>
+            <div class="value">${_cpFmtMoney(ticketMedio)}</div>
+            <div class="delta flat">${wonMonth.length} deals ganhos no mês</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Win rate (histórico)</div>
+            <div class="value">${winRate.toFixed(0)}%</div>
+            <div class="delta flat">${pipelineWon.length} ganhos / ${totalConsidered} considerados</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">Ciclo médio (lead→ganho)</div>
+            <div class="value">${ciclo}d</div>
+            <div class="delta flat">Pipeline aberto: ${_cpFmtMoney(pipelineMrrOpen)}</div>
+        </div>
+    `;
+
+    // ============ Performance do time ============
+    // Top 3 vendedores do mês + alertas (quem não tem deal aberto/parado)
+    const sellerStats = {};
+    pipelineWon.forEach(d => {
+        if (!inThisMonth(d.FinishDate)) return;
+        const o = d.Owner?.Name; if (!o) return;
+        if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0 };
+        sellerStats[o].mrrMonth += getMRR(d);
+        sellerStats[o].dealsMonth++;
+    });
+    pipelineOpen.forEach(d => {
+        const o = d.Owner?.Name; if (!o) return;
+        if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0 };
+        sellerStats[o].open++;
+        sellerStats[o].mrrOpen += getMRR(d);
+    });
+    const sellerEntries = Object.entries(sellerStats).map(([name, v]) => ({ name, ...v }));
+    const topSellers = sellerEntries.slice().sort((a, b) => b.mrrMonth - a.mrrMonth).slice(0, 5);
+    // Alertas: sellers com 0 ganhos no mês (e o mês já passou de metade)
+    const alertSellers = sellerEntries.filter(s => s.mrrMonth === 0 && s.open > 0).sort((a, b) => b.open - a.open).slice(0, 3);
+
+    // ============ Risco: deals grandes parados ============
+    const bigRisks = pipelineOpen
+        .filter(d => getMRR(d) >= ticketMedio * 0.8 || getMRR(d) >= 5000) // deals de valor
+        .map(d => {
+            const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0;
+            const propDate = getProposalDate(d);
+            const daysSinceProposal = propDate ? _cpDaysSince(propDate) : null;
+            let reason = null, sev = 0;
+            if (daysSinceProposal !== null && daysSinceProposal >= 7) { reason = `Proposta há ${daysSinceProposal}d sem retorno`; sev = 3; }
+            else if (daysSinceUpdate >= 14) { reason = `Sem atividade há ${daysSinceUpdate}d`; sev = 2; }
+            return { deal: d, reason, sev, daysSinceUpdate };
+        })
+        .filter(r => r.reason)
+        .sort((a, b) => b.sev - a.sev || b.daysSinceUpdate - a.daysSinceUpdate)
+        .slice(0, 5);
+
+    // ============ Foco da semana (3 ações de liderança) ============
+    const focusActions = [];
+    if (bigRisks.length > 0) {
+        const r = bigRisks[0];
+        focusActions.push({
+            num: 1,
+            title: `Resgatar <a href="https://app10.ploomes.com/deal/${r.deal.Id}" target="_blank" rel="noopener">${(r.deal.Title || '(sem título)').replace(/</g,'&lt;')}</a>`,
+            why: `Deal de <strong>${_cpFmtMoney(getMRR(r.deal))}</strong> com <strong>${getOwnerName(r.deal)}</strong> — ${r.reason}. Toque na conversa com o vendedor essa semana.`,
+            cta: 'Reunião 1:1 com o vendedor'
+        });
+    }
+    if (alertSellers.length > 0) {
+        const a = alertSellers[0];
+        focusActions.push({
+            num: 2,
+            title: `<strong>${a.name}</strong> sem fechamentos no mês`,
+            why: `Tem <strong>${a.open} deals abertos</strong> (${_cpFmtMoney(a.mrrOpen)} em potencial) mas zero ganhos esse mês. Pode estar travado em qualificação ou enrolando num deal grande.`,
+            cta: 'Sessão de pipeline review'
+        });
+    }
+    const lowerPipeline = pipelineMrrOpen < (mrrMonth * 3);
+    if (lowerPipeline && mrrMonth > 0) {
+        focusActions.push({
+            num: 3,
+            title: 'Pipeline subdimensionado',
+            why: `Pipeline aberto é <strong>${(pipelineMrrOpen / mrrMonth).toFixed(1)}x</strong> do MRR ganho no mês. Saudável é <strong>3x ou mais</strong>. Mobilize o time pra prospectar.`,
+            cta: 'Definir meta de prospecção semanal'
+        });
+    } else if (winRate < 15 && totalConsidered >= 10) {
+        focusActions.push({
+            num: 3,
+            title: 'Win rate abaixo do saudável',
+            why: `Win rate de <strong>${winRate.toFixed(0)}%</strong> em ${totalConsidered} deals considerados. Padrão de mercado SaaS B2B é <strong>20-30%</strong>. Investigue motivos de perda e ajuste qualificação na entrada.`,
+            cta: 'Análise de motivos de perda'
+        });
+    } else if (focusActions.length < 3) {
+        focusActions.push({
+            num: focusActions.length + 1,
+            title: 'Aplicar boa prática da semana',
+            why: 'Use o tempo do 1:1 com cada vendedor pra reforçar uma das boas práticas listadas abaixo.',
+            cta: 'Escolher 1 boa prática'
+        });
+    }
+    document.getElementById('cpFocusActions').innerHTML = focusActions.map(a => `<div class="cp-action">
+        <div class="cp-action-num">${a.num}</div>
+        <div class="cp-action-body">
+            <div class="cp-action-title">${a.title}</div>
+            <div class="cp-action-why">${a.why}</div>
+            <span class="cp-action-cta">→ ${a.cta}</span>
+        </div>
+    </div>`).join('');
+
+    // ============ Pipeline em risco + Top vendedores ============
+    const riskListEl = document.getElementById('cpRiskList');
+    if (bigRisks.length === 0) {
+        riskListEl.innerHTML = '<div class="cp-empty-mini">🎉 Nenhum deal grande em risco.</div>';
+    } else {
+        riskListEl.innerHTML = bigRisks.map(r => {
+            const d = r.deal;
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-meta">
+                    <span class="warn">⚠️ ${r.reason}</span>
+                    <span>· <strong>${getOwnerName(d)}</strong></span>
+                    <span>· <span class="money">${_cpFmtMoney(getMRR(d))}</span></span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // Top vendedores
+    const chancesEl = document.getElementById('cpChancesList');
+    document.querySelector('.cp-chances .cp-card-header h3').innerHTML = '<span class="cp-icon">🏆</span> Top vendedores do mês';
+    document.querySelector('.cp-chances .cp-card-sub').textContent = 'Quem tá puxando os resultados — reconheça e replique';
+    if (topSellers.length === 0) {
+        chancesEl.innerHTML = '<div class="cp-empty-mini">Sem ganhos no mês ainda.</div>';
+    } else {
+        chancesEl.innerHTML = topSellers.map((s, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1);
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title">${medal} ${s.name}</div>
+                <div class="cp-deal-meta">
+                    <span class="money">${_cpFmtMoney(s.mrrMonth)}</span>
+                    <span>· <strong>${s.dealsMonth}</strong> deal${s.dealsMonth > 1 ? 's' : ''} ganho${s.dealsMonth > 1 ? 's' : ''}</span>
+                    ${s.open > 0 ? `<span>· ${s.open} abertos (${_cpFmtMoney(s.mrrOpen)})</span>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ============ Alertas do time ============
+    document.querySelector('.cp-insights-card .cp-card-header h2').innerHTML = '<span class="cp-icon">🚧</span> Vendedores precisando de atenção';
+    document.querySelector('.cp-insights-card .cp-card-sub').textContent = 'Quem tá com gap de produção — alvo das suas reuniões 1:1';
+    const insightsEl = document.getElementById('cpInsightsGrid');
+    if (alertSellers.length === 0) {
+        insightsEl.innerHTML = '<div class="cp-empty-mini" style="grid-column:1/-1">🎉 Time inteiro com pelo menos 1 ganho no mês. Continue puxando.</div>';
+    } else {
+        insightsEl.innerHTML = alertSellers.map(s => `<div class="cp-insight-card" style="border-left-color:#fbbf24;">
+            <div class="cp-insight-emoji">⚠️</div>
+            <div class="cp-insight-text">
+                <strong>${s.name}</strong> ainda sem fechamentos esse mês.<br>
+                <span class="number">${s.open}</span> deal${s.open > 1 ? 's' : ''} aberto${s.open > 1 ? 's' : ''} · <span class="number">${_cpFmtMoney(s.mrrOpen)}</span> em potencial.<br>
+                <em style="color:#94a3b8;font-size:12px;">Marque pipeline review e investigue onde tá travando.</em>
+            </div>
+        </div>`).join('');
+    }
+
+    // ============ Coaching → Boas práticas do funil ============
+    document.querySelector('.cp-coaching-card .cp-card-header h2').innerHTML = `<span class="cp-icon">${config.emoji}</span> Boas práticas — ${leaderPipeline}`;
+    document.querySelector('.cp-coaching-card .cp-card-sub').textContent = 'Use esses pontos pra orientar o time nas reuniões e revisões';
+    const coachEl = document.getElementById('cpCoachingContent');
+    coachEl.innerHTML = config.practices.map((p, i) => `<div class="cp-coach-block" style="background:rgba(15,15,30,0.5);">
+        <div class="cp-coach-deal" style="border-bottom:none;padding-bottom:0;margin-bottom:6px;">
+            <span><span style="font-size:18px;margin-right:8px;">${p.icon}</span><strong>${i + 1}. ${p.title}</strong></span>
+        </div>
+        <div class="cp-coach-spin" style="background:rgba(108,63,181,0.08);border-left-color:${i === 0 ? '#fcd34d' : '#8b5cf6'};">
+            ${p.body}
+        </div>
+    </div>`).join('');
+
+    return true;
+}
+
 async function renderCockpit() {
     const me = await _hvFetchMe();
     if (!me) {
@@ -7844,11 +8124,16 @@ async function renderCockpit() {
     const greeting = `${_cpGreetingHour()}, ${firstName}! 👋`;
     document.getElementById('cpGreeting').textContent = greeting;
 
+    // Antes de buscar deals, checa se é líder mapeado de pipeline
+    const myEmail = _hvCurrentEmail();
+    const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
+    if (leaderPipeline && _cpRenderLeaderCockpit(leaderPipeline)) return;
+
     // Match usuário → Owner do Ploomes
     const allDealsForMatch = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
     const ownerName = _cpMatchUserToOwner(me, allDealsForMatch);
     if (!ownerName) {
-        // Usuário sem deals (admin/leadership)
+        // Usuário sem deals e sem mapeamento de liderança (admin geral)
         document.getElementById('cpSubtitle').innerHTML = `Você não tem deals atribuídos no Ploomes — provavelmente é liderança/admin.<br>Use os atalhos abaixo pra ver a visão geral do time.`;
         document.getElementById('cpHeroMeta').style.display = 'none';
         document.getElementById('cpEmptyState').style.display = 'block';
@@ -8270,6 +8555,7 @@ function _hvShortName(name) {
     return parts[0] + ' ' + parts[parts.length-1];
 }
 let _hvCurrentUserName = null;
+let _hvCurrentUserEmail = null;
 async function _hvFetchMe() {
     if (_hvCurrentUserName) return _hvCurrentUserName;
     try {
@@ -8277,10 +8563,12 @@ async function _hvFetchMe() {
         if (r.ok) {
             const d = await r.json();
             _hvCurrentUserName = (d.user && d.user.name) || null;
+            _hvCurrentUserEmail = (d.user && d.user.email) || null;
         }
     } catch (e) {}
     return _hvCurrentUserName;
 }
+function _hvCurrentEmail() { return _hvCurrentUserEmail; }
 
 async function renderHallVendedores() {
     const range = _hvPeriodRange();
