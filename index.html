@@ -10110,11 +10110,11 @@ function exportSection6b() {
 }
 
 // --- Section 7: Reuniões Agendadas (atividade real do Ploomes) ---
-// Helper: filtra dashMeetings pelo período via DateTime + Title (Reunião Agendada)
+// Helper: filtra dashMeetings pelo período via CreateDate + Title (Reunião Agendada)
+// Bug fix histórico: antes filtrava por DateTime (quando o meeting está marcado pra acontecer)
+// mas a descrição é "tarefa CRIADA pela SDR no período" → usar CreateDate.
+// Fallback pra DateTime se CreateDate não vier no objeto (ex: caminhos antigos).
 function meetingsForPeriod(sp) {
-    // BUGFIX: normalizar TANTO o título quanto a substring de busca — antes só
-    // normalizava o título mas buscava por 'reunião agendada' com 'ã' literal, que
-    // nunca matcha depois da normalização (que tira o til).
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const target = norm('reunião agendada'); // = "reuniao agendada"
     const start = sp?.start || periodStart;
@@ -10123,7 +10123,7 @@ function meetingsForPeriod(sp) {
         const tn = norm(t.Title);
         if (!tn.includes(target)) return false;
         if (start && end) {
-            const dt = new Date(t.DateTime);
+            const dt = new Date(t.CreateDate || t.DateTime);
             if (dt < start || dt > end) return false;
         }
         return true;
@@ -12205,7 +12205,7 @@ async function loadDashboard() {
             try {
                 const since = new Date(Date.now() - 120*86400000).toISOString();
                 const flt = encodeURIComponent(`DateTime ge ${since} and (startswith(Title,'Reuni') or startswith(Title,'reuni'))`);
-                const sel = encodeURIComponent('Id,Title,DateTime,OwnerId,CreatorId,DealId,ContactId,TypeId');
+                const sel = encodeURIComponent('Id,Title,DateTime,CreateDate,FinishDate,Finished,OwnerId,CreatorId,DealId,ContactId,TypeId');
                 let all = []; let skip = 0;
                 while (skip < 6000) {
                     const r = await fetch(`/api/Tasks?%24filter=${flt}&%24select=${sel}&%24top=300&%24skip=${skip}`).then(r => r.json());
