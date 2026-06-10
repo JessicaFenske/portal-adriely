@@ -934,6 +934,25 @@
             gap: 4px;
             transition: color 0.15s;
         }
+        @media (max-width: 720px) {
+            /* Drilldown mobile: filterbar empilha, search e chip full-width */
+            .dd-filterbar { gap: 8px; flex-direction: column; align-items: stretch; }
+            .dd-filterbar #ddSearch { min-width: 0; font-size: 16px; -webkit-appearance: none; }
+            .dd-chip { font-size: 12px; padding: 8px 14px; text-align: center; }
+            .dd-row-count { margin-left: 0; text-align: center; font-size: 11.5px; }
+            /* Tabela do drilldown — esconde cargo do contato em mobile quando há outras colunas
+               (continua acessível via search + filtro decisores) */
+            #drilldownContent table { font-size: 12px; }
+            #drilldownContent thead th { padding: 8px 6px; font-size: 11px; }
+            #drilldownContent tbody td { padding: 8px 6px; font-size: 11.5px; }
+            #drilldownContent .dd-ext-icon { display: none; }
+        }
+        @media (max-width: 480px) {
+            /* Sec1 filtros: empilha vertical em telas muito pequenas */
+            #periodSec1Range { flex-wrap: wrap; gap: 6px !important; }
+            #periodSec1Range input { flex: 1; min-width: 120px; font-size: 16px !important; }
+            #periodSec1Month { font-size: 16px !important; }
+        }
         #drilldownContent .dd-deal-link:hover { color: #fff; text-decoration: underline; }
         #drilldownContent .dd-deal-link .dd-ext-icon {
             font-size: 10.5px;
