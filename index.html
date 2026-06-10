@@ -8586,6 +8586,16 @@ async function renderCockpit() {
     document.getElementById('cpEmptyState').style.display = 'none';
     document.getElementById('cpMainContent').style.display = 'block';
 
+    // Reset headers caso esteja vindo do leader render (impersonate)
+    const _setH = (selector, html) => { const el = document.querySelector(selector); if (el) el.innerHTML = html; };
+    const _setT = (selector, text) => { const el = document.querySelector(selector); if (el) el.textContent = text; };
+    _setH('.cp-chances .cp-card-header h3', '<span class="cp-icon">⭐</span> Suas melhores chances');
+    _setT('.cp-chances .cp-card-sub', 'Maior potencial de conversão essa semana');
+    _setH('.cp-insights-card .cp-card-header h2', '<span class="cp-icon">📈</span> Seus padrões de vitória');
+    _setT('.cp-insights-card .cp-card-sub', 'O que dá certo pra você — baseado no seu histórico');
+    _setH('.cp-coaching-card .cp-card-header h2', '<span class="cp-icon">🧠</span> Coaching da semana');
+    _setT('.cp-coaching-card .cp-card-sub', 'Como qualificar melhor seus deals usando SPICED + MEDDIC + SPIN');
+
     // Filtra deals do owner — APENAS dos funis em que o vendedor REALMENTE opera
     // 1) Override manual pra vendedores híbridos (operam em mais de 1 grupo)
     // 2) Detecção dinâmica por dominância de wins históricos pros demais
@@ -8839,6 +8849,77 @@ async function renderCockpit() {
             insights.push({ emoji: '🚀', text: `Sua pipeline tá saudável: <span class="number">${pipelineRatio.toFixed(1)}x</span> do que você fechou. Foque em conversão agora.` });
         }
     }
+
+    // ============ DIAGNÓSTICOS AVANÇADOS (MEDDIC/SPIN/SPICED) ============
+    // Insight 6: Concentração em estágio inicial (sinal de dificuldade em avançar)
+    if (myOpen.length >= 5) {
+        const stage0Count = myOpen.filter(d => (d.Stage?.Ordination ?? -1) <= 0).length;
+        const stage0Pct = (stage0Count / myOpen.length) * 100;
+        if (stage0Pct >= 50) {
+            insights.push({
+                emoji: '🚧',
+                text: `<span class="number">${stage0Pct.toFixed(0)}%</span> do seu pipeline (${stage0Count}/${myOpen.length}) está travado em <strong>estágio inicial</strong>. Sinal clássico de gap em qualificação — você conversa mas não avança. <strong>SPIN</strong>: aprofunde perguntas de <em>Implicação</em> ("Se continuar assim, qual o impacto em 12 meses? Quem mais paga essa conta na empresa?"). <strong>MEDDIC</strong>: traga o <em>Economic Buyer</em> pra reunião 2 — não aceite "vou apresentar pra ele depois".`
+            });
+        }
+    }
+
+    // Insight 7: Acesso ao decisor (analisa cargo dos contatos dos deals abertos)
+    if (myOpen.length >= 5 && typeof getContactCargo === 'function' && typeof isCargoDecisao === 'function') {
+        let semDecisor = 0, comCargo = 0;
+        myOpen.forEach(d => {
+            const cargo = getContactCargo(d);
+            if (cargo) {
+                comCargo++;
+                if (!isCargoDecisao(cargo)) semDecisor++;
+            }
+        });
+        if (comCargo >= 3) {
+            const semDecisorPct = (semDecisor / comCargo) * 100;
+            if (semDecisorPct >= 60) {
+                insights.push({
+                    emoji: '👤',
+                    text: `<span class="number">${semDecisorPct.toFixed(0)}%</span> dos seus deals abertos (${semDecisor}/${comCargo}) estão com contatos <strong>sem cargo de decisão</strong> (analista, coordenador, etc). Você tá falando com a pessoa errada. <strong>MEDDIC - Champion + Economic Buyer</strong>: peça apresentação pro decisor. <strong>Frase de fechamento</strong>: <em>"Pra avançarmos numa proposta, preciso entender o processo de decisão de vocês. Quem aprova esse tipo de investimento? Pode me apresentar?"</em>`
+                });
+            }
+        }
+    }
+
+    // Insight 8: Tempo médio em estágio inicial (velocidade de qualificação)
+    const stage0DealsForVelocity = myOpen.filter(d => (d.Stage?.Ordination ?? -1) <= 0);
+    if (stage0DealsForVelocity.length >= 3) {
+        const avgDaysInStage0 = stage0DealsForVelocity.reduce((s, d) => s + (_cpDaysSince(d.CreateDate) || 0), 0) / stage0DealsForVelocity.length;
+        if (avgDaysInStage0 >= 30) {
+            insights.push({
+                emoji: '⏱️',
+                text: `Seus ${stage0DealsForVelocity.length} deals em <strong>Reconhecimento</strong> têm em média <span class="number">${avgDaysInStage0.toFixed(0)} dias</span> sem avançar. Vendedor que demora geralmente <strong>não cavou a dor o suficiente</strong>. <strong>SPIN - Implication</strong>: revisite cada um e faça UMA pergunta direta: <em>"Pra você, qual a urgência real disso? Se nada for feito até dezembro, o que muda?"</em>. Quem não responder com clareza → descarte e foque em quem dói.`
+            });
+        }
+    }
+
+    // Insight 9: Perdas em estágios iniciais (qualificação fraca)
+    if (myLost.length >= 5) {
+        const lostEarly = myLost.filter(d => (d.Stage?.Ordination ?? -1) <= 0).length;
+        const earlyLossPct = (lostEarly / myLost.length) * 100;
+        if (earlyLossPct >= 60) {
+            insights.push({
+                emoji: '🪤',
+                text: `<span class="number">${earlyLossPct.toFixed(0)}%</span> das suas perdas (${lostEarly}/${myLost.length}) acontecem <strong>antes mesmo da proposta</strong>. Isso é <strong>qualificação fraca na entrada</strong>: você tá começando deals que não tinham fit real. Use <strong>BANT na primeira call</strong>: <em>tem orçamento? tem autoridade? tem necessidade clara? tem timeline?</em> Sem 3 desses 4 → não invista mais tempo.`
+            });
+        }
+    }
+
+    // Insight 10: Propostas enviadas mas não fechando (qualificação fraca na proposta)
+    const propostasEnviadas = (myWon.length + myLost.length + myOpen.filter(d => (d.Stage?.Ordination ?? -1) >= 2).length);
+    if (propostasEnviadas >= 8) {
+        const closeRateOnProposta = (myWon.length / propostasEnviadas) * 100;
+        if (closeRateOnProposta <= 25 && closeRateOnProposta > 0) {
+            insights.push({
+                emoji: '💸',
+                text: `Você converte apenas <span class="number">${closeRateOnProposta.toFixed(0)}%</span> dos deals que chegam em Proposta (${myWon.length}/${propostasEnviadas}). Padrão saudável é <strong>40-60%</strong>. Você tá enviando proposta cedo demais. <strong>Checklist MEDDIC antes de mandar proposta</strong>: M✓ E✓ D✓ D✓ I✓ C✓. Se faltar 2 dessas 6 caixas → <strong>não envie ainda</strong> — agende mais uma call de discovery.`
+            });
+        }
+    }
+
     const insightsEl = document.getElementById('cpInsightsGrid');
     if (insights.length === 0) {
         insightsEl.innerHTML = '<div class="cp-empty-mini" style="grid-column:1/-1">Ainda não temos histórico suficiente pra gerar insights. Continue fechando deals!</div>';
