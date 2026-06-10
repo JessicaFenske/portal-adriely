@@ -4660,7 +4660,7 @@
                                 <option value="setup">Setup</option>
                                 <option value="count">Quantidade</option>
                             </select>
-                            <select class="section-period-select" id="periodSec1" onchange="renderSection1()">
+                            <select class="section-period-select" id="periodSec1" onchange="_handleSec1PeriodChange()">
                                 <option value="global">Global</option>
                                 <option value="thisMonth" selected>Este mês</option>
                                 <option value="lastMonth">Mês passado</option>
@@ -4668,7 +4668,15 @@
                                 <option value="lastQuarter">Trimestre anterior</option>
                                 <option value="last6">Último 6 meses</option>
                                 <option value="thisYear">Este ano</option>
+                                <option value="customMonth">📅 Mês específico…</option>
+                                <option value="customRange">📅 Intervalo personalizado…</option>
                             </select>
+                            <input type="month" id="periodSec1Month" style="display:none;background:rgba(15,15,30,0.7);border:1px solid rgba(108,63,181,0.3);border-radius:8px;color:#fff;padding:6px 10px;font-size:13px;" onchange="renderSection1()">
+                            <span id="periodSec1Range" style="display:none;gap:6px;align-items:center;">
+                                <input type="date" id="periodSec1Start" style="background:rgba(15,15,30,0.7);border:1px solid rgba(108,63,181,0.3);border-radius:8px;color:#fff;padding:6px 10px;font-size:13px;" onchange="renderSection1()">
+                                <span style="color:#94a3b8;font-size:13px;">até</span>
+                                <input type="date" id="periodSec1End" style="background:rgba(15,15,30,0.7);border:1px solid rgba(108,63,181,0.3);border-radius:8px;color:#fff;padding:6px 10px;font-size:13px;" onchange="renderSection1()">
+                            </span>
                         </div>
                     </div>
                     <div class="section-body">
@@ -6976,10 +6984,50 @@ function getSectionPeriod(sectionId) {
             start = new Date(y, 0, 1);
             end = new Date(y, m, now.getDate(), 23, 59, 59);
             break;
+        case 'customMonth': {
+            const monthEl = document.getElementById(sectionId.startsWith('sec') ? 'period' + sectionId.charAt(0).toUpperCase() + sectionId.slice(1) + 'Month' : null);
+            const monthVal = monthEl ? monthEl.value : '';
+            if (!monthVal) return { start: periodStart, end: periodEnd };
+            const [yy, mm] = monthVal.split('-').map(Number);
+            start = new Date(yy, mm - 1, 1);
+            end = new Date(yy, mm, 0, 23, 59, 59);
+            break;
+        }
+        case 'customRange': {
+            const sId = 'period' + sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+            const startEl = document.getElementById(sId + 'Start');
+            const endEl = document.getElementById(sId + 'End');
+            const sv = startEl?.value, ev = endEl?.value;
+            if (!sv || !ev) return { start: periodStart, end: periodEnd };
+            start = new Date(sv + 'T00:00:00');
+            end = new Date(ev + 'T23:59:59');
+            break;
+        }
         default:
             return { start: periodStart, end: periodEnd };
     }
     return { start, end };
+}
+
+function _handleSec1PeriodChange() {
+    const sel = document.getElementById('periodSec1');
+    const monthEl = document.getElementById('periodSec1Month');
+    const rangeEl = document.getElementById('periodSec1Range');
+    if (sel.value === 'customMonth') {
+        monthEl.style.display = '';
+        rangeEl.style.display = 'none';
+        if (!monthEl.value) {
+            const now = new Date();
+            monthEl.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+    } else if (sel.value === 'customRange') {
+        monthEl.style.display = 'none';
+        rangeEl.style.display = 'inline-flex';
+    } else {
+        monthEl.style.display = 'none';
+        rangeEl.style.display = 'none';
+    }
+    renderSection1();
 }
 
 function inPeriodSection(dateStr, secStart, secEnd) {
