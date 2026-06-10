@@ -10264,6 +10264,38 @@ function renderSection7() {
         markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
     });
 
+    // === PROXY SANKHYA: Maja não cria tasks no Ploomes (compliance baixo conhecido).
+    // Aplicamos a mesma lógica do painel Sankhya/Hall: deals do pipeline Sankhya com
+    // sinais de movimentação contam como Agendada/Realizada da Maja.
+    //   Agendada Sankhya = deal pipeline Sankhya com Owner ≠ Maja (passou pro executivo)
+    //   Realizada Sankhya = stage ord=0 com valor OU stage ord>=1 (não Descarte)
+    // Janela: usa CreateDate OU LastUpdateDate no período (leadtime Sankhya é longo).
+    const SANKHYA_DESCARTE = /descart/i;
+    const isMajaName = (name) => (name || '').toLowerCase().includes('maja');
+    const allDealsForSankhyaProxy = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    allDealsForSankhyaProxy.forEach(d => {
+        if (getPipelineName(d) !== 'Sankhya') return;
+        if (!inPeriod(d.CreateDate) && !inPeriod(d.LastUpdateDate)) return;
+        const ownerName = d.Owner?.Name || '';
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const isDescarte = SANKHYA_DESCARTE.test(stageName);
+        const mrr = getMRR(d), setup = getSetup(d);
+        ensureSdr('Maja Siqueira');
+        // Agendada Sankhya
+        if (!isMajaName(ownerName)) {
+            sdrAgg['Maja Siqueira'].count++;
+        }
+        // Realizada Sankhya
+        if (!isDescarte) {
+            const isPrimeiraComValor = stageOrd === 0 && (mrr > 0 || setup > 0);
+            const isSegundaOuMais = stageOrd >= 1;
+            if (isPrimeiraComValor || isSegundaOuMais) {
+                sdrAgg['Maja Siqueira'].realizadasCount++;
+            }
+        }
+    });
+
     // === No Show ===
     // Dois caminhos pra um deal contar como no-show:
     //   A) REGRA DE NEGOCIO: card foi DEVOLVIDO pro SDR (sales pipeline + Owner = SDR).
