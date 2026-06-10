@@ -4317,6 +4317,9 @@
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
                         <span class="sub-num">&#128197;</span><span class="sub-label">Reuniões por SDR</span>
                     </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secCompliance');">
+                        <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#9888;&#65039;</span><span class="sub-label">Compliance Realizadas</span>
+                    </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7b');">
                         <span class="sub-num">&#128465;</span><span class="sub-label">Descartes por SDR</span>
                     </div>
@@ -5281,6 +5284,29 @@
                         <textarea id="investigateInput" placeholder="605069900&#10;https://app10.ploomes.com/deal/604914654&#10;..." style="width:100%;min-height:120px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:12px;font-family:monospace;font-size:12px;margin-bottom:12px;"></textarea>
                         <button onclick="runInvestigate()" style="background:#facc15;color:#0a0a14;font-weight:700;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;">Analisar</button>
                         <div id="investigateResults" style="margin-top:18px;"></div>
+                    </div>
+                </div>
+
+                <!-- Section 7-Compliance: Compliance das tasks Novos Negócios -->
+                <div class="section-card" id="secCompliance">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#9888;&#65039;</span> Compliance — Reuniões Realizadas (Novos Negócios)</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSecCompliance" onchange="renderCompliance()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#fca5a5;line-height:1.6;">
+                            <strong style="color:#ef4444;">Por que esse painel existe:</strong> a tarefa <strong style="color:#fff;">"Reunião Realizada"</strong> é criada automaticamente no Ploomes quando a Agendada vence, mas precisa ser marcada como <strong style="color:#fff;">concluída (Finished=true)</strong> manualmente pelo SDR após a reunião. Sem essa marcação, todas as métricas de pré-vendas ficam cegas. <strong>Meta: ≥80% das agendadas vencidas têm Realizada marcada como concluída.</strong>
+                        </div>
+                        <div id="complianceKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;"></div>
+                        <div id="complianceByExec" style="overflow-x:auto;margin-bottom:14px;"></div>
+                        <div id="complianceDeals" style="overflow-x:auto;"></div>
                     </div>
                 </div>
 
@@ -10169,6 +10195,155 @@ function getCanonicalSdrName(name) {
     return null;
 }
 
+// ==================== COMPLIANCE NOVOS NEGÓCIOS ====================
+// Detecta agendadas vencidas (DateTime passou) sem Realizada Finished=true.
+// Sinaliza pro líder cobrar o SDR a marcar a task no Ploomes — sem isso métricas ficam cegas.
+function renderCompliance() {
+    if (!dashMeetings || dashMeetings.length === 0) {
+        document.getElementById('complianceKpis').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8888a0;padding:20px;">Aguardando carregamento das tasks…</div>';
+        return;
+    }
+    const sp = getSectionPeriod('secCompliance');
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    const now = new Date();
+
+    // Index Agendadas e Realizadas por DealId
+    const agendadaByDeal = new Map();
+    const realizadaByDeal = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = norm(t.Title);
+        if (tn.includes('reuniao agendada')) {
+            if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
+        } else if (tn.includes('reuniao realizada')) {
+            // Preserva a com Finished=true se existir
+            const existing = realizadaByDeal.get(t.DealId);
+            if (!existing || (!existing.Finished && t.Finished)) realizadaByDeal.set(t.DealId, t);
+        }
+    });
+
+    // Aggrega por SDR
+    const sdrStats = {}; // canonical -> { vencidas, finished, pendingDeals: [] }
+    const ensure = (n) => { if (!sdrStats[n]) sdrStats[n] = { vencidas: 0, finished: 0, pendingDeals: [] }; };
+
+    agendadaByDeal.forEach((agTask, dealId) => {
+        // Agendada precisa estar no período (criada/agendada no período)
+        if (!inPeriod(agTask.DateTime)) return;
+        // E precisa estar vencida (data passou — meet já deveria ter acontecido)
+        if (new Date(agTask.DateTime) > now) return;
+        const sdrName = dashUsersById[agTask.CreatorId] || '';
+        const canonical = getCanonicalSdrName(sdrName);
+        if (!canonical) return;
+        // Maja não conta aqui (usa proxy Sankhya separado)
+        if (canonical === 'Maja Siqueira') return;
+        ensure(canonical);
+        sdrStats[canonical].vencidas++;
+        const realTask = realizadaByDeal.get(dealId);
+        if (realTask && realTask.Finished === true) {
+            sdrStats[canonical].finished++;
+        } else {
+            const deal = window._dashOpenDealsById?.[dealId];
+            sdrStats[canonical].pendingDeals.push({ dealId, agTask, realTask, deal });
+        }
+    });
+
+    const sdrRows = Object.entries(sdrStats).map(([sdr, v]) => ({
+        sdr,
+        vencidas: v.vencidas,
+        finished: v.finished,
+        pending: v.vencidas - v.finished,
+        rate: v.vencidas > 0 ? (v.finished / v.vencidas * 100) : 0,
+        pendingDeals: v.pendingDeals
+    })).sort((a, b) => b.pending - a.pending);
+
+    const totalVencidas = sdrRows.reduce((s, r) => s + r.vencidas, 0);
+    const totalFinished = sdrRows.reduce((s, r) => s + r.finished, 0);
+    const totalPending = totalVencidas - totalFinished;
+    const overallRate = totalVencidas > 0 ? (totalFinished / totalVencidas * 100) : 0;
+
+    // KPIs
+    const kpiHtml = (label, val, sub, color) => `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px;">
+            <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
+            <div style="font-size:22px;color:${color};font-weight:700;margin-top:4px;line-height:1;">${val}</div>
+            <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;">${sub}</div>
+        </div>`;
+    const rateColor = overallRate >= 80 ? '#22c55e' : overallRate >= 50 ? '#f59e0b' : '#ef4444';
+    document.getElementById('complianceKpis').innerHTML =
+        kpiHtml('Agendadas Vencidas', totalVencidas, 'No período (data passou)', '#60a5fa') +
+        kpiHtml('Marcadas como Finished', totalFinished, 'Tasks Realizada concluídas', '#22c55e') +
+        kpiHtml('Taxa de Preenchimento', overallRate.toFixed(0) + '%', overallRate >= 80 ? '🟢 Saudável' : overallRate >= 50 ? '🟡 Precisa atenção' : '🔴 Crítico', rateColor) +
+        kpiHtml('Pendentes (cobrar)', totalPending, totalPending > 0 ? '🚨 Reuniões sem marcar' : '✅ Tudo em dia', totalPending > 0 ? '#ef4444' : '#22c55e');
+
+    // Tabela por SDR
+    let byExecHtml = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    byExecHtml += '<thead><tr style="background:rgba(108,63,181,0.1);">' +
+        '<th style="padding:10px 12px;text-align:left;color:#c4b5fd;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Pré-vendedor</th>' +
+        '<th style="padding:10px 12px;text-align:center;color:#c4b5fd;font-size:11px;">Vencidas</th>' +
+        '<th style="padding:10px 12px;text-align:center;color:#c4b5fd;font-size:11px;">Marcadas</th>' +
+        '<th style="padding:10px 12px;text-align:center;color:#c4b5fd;font-size:11px;">Pendentes</th>' +
+        '<th style="padding:10px 12px;text-align:center;color:#c4b5fd;font-size:11px;">Taxa</th></tr></thead><tbody>';
+    if (sdrRows.length === 0) {
+        byExecHtml += '<tr><td colspan="5" style="padding:20px;text-align:center;color:#22c55e;">🎉 Nenhuma agendada vencida no período</td></tr>';
+    } else {
+        sdrRows.forEach(r => {
+            const rc = r.rate >= 80 ? '#22c55e' : r.rate >= 50 ? '#f59e0b' : '#ef4444';
+            byExecHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:10px 12px;font-weight:600;color:#fff;">${r.sdr}</td>
+                <td style="padding:10px 12px;text-align:center;color:#a0a0b8;">${r.vencidas}</td>
+                <td style="padding:10px 12px;text-align:center;color:#22c55e;font-weight:600;">${r.finished}</td>
+                <td style="padding:10px 12px;text-align:center;color:${r.pending > 0 ? '#ef4444' : '#22c55e'};font-weight:700;">${r.pending}</td>
+                <td style="padding:10px 12px;text-align:center;color:${rc};font-weight:700;">${r.rate.toFixed(0)}%</td>
+            </tr>`;
+        });
+    }
+    byExecHtml += '</tbody></table>';
+    document.getElementById('complianceByExec').innerHTML = byExecHtml;
+
+    // Lista de deals pendentes (top 30 com agendada mais antiga)
+    const allPending = sdrRows.flatMap(r => r.pendingDeals.map(p => ({ ...p, sdr: r.sdr })));
+    allPending.sort((a, b) => new Date(a.agTask.DateTime) - new Date(b.agTask.DateTime));
+    const top = allPending.slice(0, 30);
+
+    let dealsHtml = `<div style="margin-top:10px;font-size:12px;color:#8888a0;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🚨 Deals com Realizada pendente (top ${top.length})</div>`;
+    dealsHtml += '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">';
+    dealsHtml += '<thead><tr style="background:rgba(255,255,255,0.04);">' +
+        '<th style="padding:8px 12px;text-align:left;color:#94a3b8;font-size:10.5px;text-transform:uppercase;">Deal</th>' +
+        '<th style="padding:8px 12px;text-align:left;color:#94a3b8;font-size:10.5px;text-transform:uppercase;">SDR</th>' +
+        '<th style="padding:8px 12px;text-align:center;color:#94a3b8;font-size:10.5px;text-transform:uppercase;">Data Agendada</th>' +
+        '<th style="padding:8px 12px;text-align:center;color:#94a3b8;font-size:10.5px;text-transform:uppercase;">Há quanto tempo</th>' +
+        '<th style="padding:8px 12px;text-align:right;color:#94a3b8;font-size:10.5px;text-transform:uppercase;">Ploomes</th></tr></thead><tbody>';
+    if (top.length === 0) {
+        dealsHtml += '<tr><td colspan="5" style="padding:20px;text-align:center;color:#22c55e;">🎉 Sem pendências — todas as agendadas têm Realizada marcada!</td></tr>';
+    } else {
+        top.forEach(p => {
+            const agDate = new Date(p.agTask.DateTime);
+            const daysAgo = Math.floor((Date.now() - agDate.getTime()) / 86400000);
+            const dealTitle = (p.deal?.Title || '(sem título)').replace(/</g,'&lt;');
+            const dealId = p.dealId;
+            const sdrCanonical = p.sdr;
+            const realStatus = p.realTask ? (p.realTask.Finished ? '✓' : '○ task existe mas não marcada') : '⚠️ task não criada';
+            const daysColor = daysAgo > 14 ? '#ef4444' : daysAgo > 7 ? '#f59e0b' : '#a0a0b8';
+            dealsHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:8px 12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${dealTitle.replace(/"/g,'&quot;')}">
+                    <a href="https://app10.ploomes.com/deal/${dealId}" target="_blank" rel="noopener" style="color:#c4b5fd;text-decoration:none;font-weight:600;">${dealTitle} <span style="color:#6c5ca0;font-size:10px;">↗</span></a>
+                    <div style="font-size:10.5px;color:#6c5ca0;margin-top:2px;">${realStatus}</div>
+                </td>
+                <td style="padding:8px 12px;color:#a0a0b8;">${sdrCanonical}</td>
+                <td style="padding:8px 12px;text-align:center;color:#a0a0b8;font-size:11.5px;">${agDate.toLocaleDateString('pt-BR')}</td>
+                <td style="padding:8px 12px;text-align:center;color:${daysColor};font-weight:700;">${daysAgo}d</td>
+                <td style="padding:8px 12px;text-align:right;"><a href="https://app10.ploomes.com/deal/${dealId}" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:none;font-size:11.5px;">Abrir &raquo;</a></td>
+            </tr>`;
+        });
+    }
+    dealsHtml += '</tbody></table>';
+    if (allPending.length > 30) {
+        dealsHtml += `<div style="text-align:center;color:#8888a0;font-size:11.5px;margin-top:10px;font-style:italic;">+ ${allPending.length - 30} outros deals pendentes (limitado aos 30 mais antigos)</div>`;
+    }
+    document.getElementById('complianceDeals').innerHTML = dealsHtml;
+}
+
 function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
@@ -11993,7 +12168,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderCompliance(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
 }
 
 async function loadDashboard() {
