@@ -8115,38 +8115,49 @@ function _cpMeddicScore(d) {
     return { checks, score, max: 6 };
 }
 
-// SPIN prompts por stage
+// SPIN prompts por stage — PRIORIDADE: nome do stage (mais confiável) > stageOrd
+// Lógica: cada estágio do funil pede uma técnica SPIN diferente. Errar a pergunta
+// regride a conversa (ex: fazer SITUATION em Consideração = perda de tempo).
 function _cpSpinTip(stageOrd, stageName) {
     const sn = (stageName || '').toLowerCase();
-    // Stage 0-1: descobrimento
-    if (stageOrd <= 1 || sn.includes('reconhecim') || sn.includes('lead') || sn.includes('contato')) {
-        return {
-            label: 'SITUATION',
-            text: 'Foque em entender o cenário atual antes de pitchar. Pergunte: <em>"Hoje, como vocês fazem a gestão de transportes?"</em> e <em>"Quantas pessoas estão envolvidas nesse processo?"</em>'
-        };
-    }
-    if (sn.includes('consider') || sn.includes('qualif') || stageOrd === 2) {
-        return {
-            label: 'PROBLEM',
-            text: 'Cave a dor específica. Pergunte: <em>"Quais erros mais acontecem nesse processo manual?"</em> e <em>"Quando foi a última vez que isso causou um problema sério?"</em>'
-        };
-    }
-    if (sn.includes('proposta') || sn.includes('aprov') || stageOrd === 3) {
-        return {
-            label: 'IMPLICATION',
-            text: 'Amplifique a dor pro decisor enxergar o custo de NÃO fazer nada. Pergunte: <em>"Se continuar assim, qual o impacto em 12 meses?"</em> e <em>"Quem fica responsável quando isso falha?"</em>'
-        };
-    }
-    if (sn.includes('formal') || sn.includes('negoci') || stageOrd >= 4) {
+
+    // === FORMALIZAÇÃO / NEGOCIAÇÃO → NEED-PAYOFF (fechar) ===
+    if (sn.includes('formal') || sn.includes('negoci') || sn.includes('fechament')) {
         return {
             label: 'NEED-PAYOFF',
-            text: 'Faça o cliente verbalizar os benefícios. Pergunte: <em>"Se a gente eliminar esses problemas, qual seria o ganho mensal?"</em> e <em>"Como essa solução te ajudaria a bater sua meta?"</em>'
+            text: 'Faça o cliente <strong>verbalizar o ganho</strong> — é assim que ele se vende internamente e desbloqueia a aprovação. Pergunte: <em>"Se eliminarmos esses problemas, quanto tempo da equipe vocês liberam? Em quanto a operação melhora?"</em> e <em>"Como essa solução te ajuda a bater sua meta de Q4/2026?"</em>'
         };
     }
-    return {
-        label: 'SITUATION',
-        text: 'Faça perguntas abertas pra entender o contexto antes de avançar.'
-    };
+
+    // === APROVADO / PROPOSTA → IMPLICATION + NEED-PAYOFF (justificar urgência + valor) ===
+    if (sn.includes('proposta') || sn.includes('aprov')) {
+        return {
+            label: 'IMPLICATION + NEED-PAYOFF',
+            text: 'Cliente viu a proposta — agora você precisa <strong>justificar URGÊNCIA</strong>. Amplifique o custo de não decidir: <em>"Se vocês ficarem mais 6 meses sem resolver isso, qual o impacto na meta? Quem responde quando o problema escalar pro CEO?"</em> Depois feche com ganho: <em>"Se decidirmos hoje, em 30 dias vocês já têm [resultado X]"</em>'
+        };
+    }
+
+    // === CONSIDERAÇÃO / QUALIFICAÇÃO → PROBLEM + IMPLICATION (cavar a dor) ===
+    if (sn.includes('consider') || sn.includes('qualif') || stageOrd === 1) {
+        return {
+            label: 'PROBLEM + IMPLICATION',
+            text: 'Cliente já conhece o problema mas <strong>talvez não dimensione o custo real</strong>. Cave: <em>"Quando foi a última vez que esse problema te fez perder dinheiro ou um cliente? Como vocês medem hoje o impacto disso?"</em> Depois amplifique: <em>"Se nada mudar nos próximos 6 meses, qual o impacto em margem? E na sua equipe — quem fica sobrecarregado?"</em>'
+        };
+    }
+
+    // === RECONHECIMENTO / LEAD / CONTATO → SITUATION + PROBLEM (entender + identificar) ===
+    if (sn.includes('reconhecim') || sn.includes('lead') || sn.includes('contato') || stageOrd === 0) {
+        return {
+            label: 'SITUATION + PROBLEM',
+            text: 'Foque em <strong>entender o cenário e identificar a dor</strong> antes de pitchar. Comece: <em>"Hoje, como vocês fazem a gestão de transportes? Quantas pessoas estão envolvidas?"</em> Depois transicione: <em>"Quais são os 2 maiores incômodos do processo atual? Onde mais dá ruim?"</em>'
+        };
+    }
+
+    // === FALLBACK por stageOrd quando o nome não bate ===
+    if (stageOrd >= 3) return { label: 'NEED-PAYOFF', text: 'Faça o cliente verbalizar o ganho. <em>"Se resolvermos isso, qual seria o impacto na sua meta?"</em>' };
+    if (stageOrd === 2) return { label: 'IMPLICATION + NEED-PAYOFF', text: 'Amplifique a dor + verbalize o ganho pra justificar urgência da decisão.' };
+    if (stageOrd === 1) return { label: 'PROBLEM + IMPLICATION', text: 'Cave a dor e amplifique o custo de não decidir agora.' };
+    return { label: 'SITUATION + PROBLEM', text: 'Entenda o cenário e identifique as 2 maiores dores antes de pitchar.' };
 }
 
 // Owners que não estão mais na empresa — excluir das visões de pipeline aberto
