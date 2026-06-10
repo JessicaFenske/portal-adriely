@@ -8834,19 +8834,45 @@ async function renderCockpit() {
 
     // ============ Insights de padrões ============
     const insights = [];
-    // Insight 1: Melhor origem
+    // Insight 1: Melhor / pior canal (origem preenchida, sample mínimo, taxa significativa)
     const originStats = {};
     myWon.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].won++; });
     myLost.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].lost++; });
+    // Exclui "(sem origem)" do ranking — não é canal, é gap de dado
     const originRates = Object.entries(originStats)
-        .filter(([_, v]) => v.won + v.lost >= 3)
-        .map(([o, v]) => ({ origin: o, rate: v.won / (v.won + v.lost), total: v.won + v.lost }))
+        .filter(([o, v]) => o !== '(sem origem)' && (v.won + v.lost) >= 5)
+        .map(([o, v]) => ({ origin: o, rate: v.won / (v.won + v.lost), total: v.won + v.lost, won: v.won, lost: v.lost }))
         .sort((a, b) => b.rate - a.rate);
+
     if (originRates.length > 0) {
         const top = originRates[0];
+        // Só sugere "priorize" se a taxa for genuinamente boa (≥25%)
+        if (top.rate >= 0.25) {
+            insights.push({
+                emoji: '🎯',
+                text: `Você converte <span class="number">${(top.rate * 100).toFixed(0)}%</span> dos leads que vêm via <strong>${top.origin}</strong> (${top.won}/${top.total} deals). <strong>Priorize esse canal</strong> — é onde você converte melhor.`
+            });
+        }
+        // Pior canal: se tiver várias origens e o pior tem taxa baixa + sample relevante
+        if (originRates.length >= 2) {
+            const bottom = originRates[originRates.length - 1];
+            if (bottom.rate <= 0.10 && bottom.total >= 8 && bottom.origin !== top.origin) {
+                insights.push({
+                    emoji: '⛔',
+                    text: `<strong>${bottom.origin}</strong> só converte <span class="number">${(bottom.rate * 100).toFixed(0)}%</span> (${bottom.won}/${bottom.total} deals). Você tá gastando tempo num canal de baixo retorno. <strong>Investigue</strong>: qualidade do lead na entrada? abordagem desalinhada? Considere reduzir esforço aqui e realocar pros canais que funcionam.`
+                });
+            }
+        }
+    }
+
+    // Insight extra: dados ruins — muitos deals sem origem preenchida (problema de qualidade)
+    const noOriginCount = (originStats['(sem origem)']?.won || 0) + (originStats['(sem origem)']?.lost || 0);
+    const totalDeals = myWon.length + myLost.length;
+    if (totalDeals >= 10 && noOriginCount / totalDeals >= 0.30) {
+        const pct = (noOriginCount / totalDeals * 100).toFixed(0);
         insights.push({
-            emoji: '🎯',
-            text: `Você converte <span class="number">${(top.rate * 100).toFixed(0)}%</span> dos leads que vêm via <strong>${top.origin}</strong> (em ${top.total} deals). Priorize esse canal.`
+            emoji: '📋',
+            text: `<span class="number">${pct}%</span> dos seus deals (${noOriginCount}/${totalDeals}) estão <strong>sem origem preenchida</strong>. Isso te impede de saber quais canais funcionam pra você. <strong>Pequeno hábito, grande análise</strong>: preencha o campo Origem ao criar cada deal no Ploomes.`
         });
     }
     // Insight 2: Pipeline mais lucrativo
