@@ -3798,6 +3798,33 @@
         }
         .cp-practice-deal-meta .money { color: #fcd34d; font-weight: 600; }
         .cp-practice-deal-meta strong { color: #c4b5fd; }
+        /* Badge urgente: deal abertou passou do leadtime ideal (30d) */
+        .cp-leadtime-alert {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15));
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            font-weight: 700;
+            font-size: 10.5px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            margin-left: 6px;
+            letter-spacing: 0.3px;
+            animation: cpLeadPulse 2.2s ease-in-out infinite;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        @keyframes cpLeadPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15));
+            }
+            50% {
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.0);
+                background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.22));
+                color: #fff;
+            }
+        }
         /* Banner de impersonate (admin "vendo como") */
         .cp-imp-banner {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.06));
@@ -7922,6 +7949,15 @@ function _cpDaysSince(iso) {
     if (!iso) return null;
     return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
+// Leadtime ideal Lincros = 30 dias do CreateDate até fechamento
+// Pra deals abertos: se já passou de 30d, gera alerta visual urgente
+const CP_IDEAL_LEADTIME_DAYS = 30;
+function _cpLeadtimeBadge(deal) {
+    if (!deal || !deal.CreateDate) return '';
+    const days = Math.floor((Date.now() - new Date(deal.CreateDate).getTime()) / 86400000);
+    if (days <= CP_IDEAL_LEADTIME_DAYS) return '';
+    return `<span class="cp-leadtime-alert" title="No funil há ${days} dias — leadtime ideal: ${CP_IDEAL_LEADTIME_DAYS}d">🚨 ${days}d no funil</span>`;
+}
 function _cpGreetingHour() {
     const h = new Date().getHours();
     if (h < 12) return 'Bom dia';
@@ -8270,7 +8306,7 @@ function _cpRenderPracticeDeals(items, practiceIndex, pipelineName) {
         const moneyHtml = mrr > 0 ? `<span class="money">${_cpFmtMoney(mrr)}</span> ` : '';
         const ownerSep = mrr > 0 && owner ? '· ' : '';
         html += `<div class="cp-practice-deal">
-            <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>
+            <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>${_cpLeadtimeBadge(d)}
             <div class="cp-practice-deal-meta">
                 ${moneyHtml}${owner ? `<span>${ownerSep}${owner}</span>` : ''}${extra}
             </div>
@@ -8506,7 +8542,7 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
         riskListEl.innerHTML = bigRisks.map(r => {
             const d = r.deal;
             return `<div class="cp-deal-item">
-                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a>${_cpLeadtimeBadge(d)}</div>
                 <div class="cp-deal-meta">
                     <span class="warn">⚠️ ${r.reason}</span>
                     <span>· <strong>${getOwnerName(d)}</strong></span>
@@ -8792,7 +8828,7 @@ async function renderCockpit() {
         riskListEl.innerHTML = topRisks.map(r => {
             const d = r.deal;
             return `<div class="cp-deal-item">
-                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a>${_cpLeadtimeBadge(d)}</div>
                 <div class="cp-deal-meta">
                     <span class="warn">⚠️ ${r.reasons[0].text}</span>
                     <span>· <strong>${getPipelineName(d)}</strong></span>
@@ -8821,7 +8857,7 @@ async function renderCockpit() {
             const d = c.deal;
             const meddic = _cpMeddicScore(d);
             return `<div class="cp-deal-item">
-                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-title"><a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} <span class="ext">↗</span></a>${_cpLeadtimeBadge(d)}</div>
                 <div class="cp-deal-meta">
                     <span class="money">${_cpFmtMoney(c.mrr)}</span>
                     <span>· <strong>${d.Stage?.Name || '—'}</strong></span>
@@ -9018,7 +9054,7 @@ async function renderCockpit() {
             const checkRows = Object.values(meddic.checks).map(c => `<div class="cp-check ${c.ok ? 'ok' : 'miss'}"><span class="icon">${c.ok ? '✓' : '○'}</span> <span>${c.label}${!c.ok ? ` — <em style="color:#fcd34d;">${c.tip}</em>` : ''}</span></div>`).join('');
             return `<div class="cp-coach-block">
                 <div class="cp-coach-deal">
-                    <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>
+                    <a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">${(d.Title || '(sem título)').replace(/</g,'&lt;')} ↗</a>${_cpLeadtimeBadge(d)}
                     <span class="cp-coach-stage">${d.Stage?.Name || '—'}</span>
                 </div>
                 <div class="cp-coach-score">
@@ -9042,7 +9078,7 @@ async function renderCockpit() {
         else if (r.reasons[0].text.includes('Estagnado')) cta = 'Marcar reunião pra desbloquear';
         focusActions.push({
             num: 1,
-            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Resgate: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>`,
+            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Resgate: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>${_cpLeadtimeBadge(d)}`,
             why: `${r.reasons[0].text} — esse deal vai morrer se você não agir essa semana.`,
             cta
         });
@@ -9058,7 +9094,7 @@ async function renderCockpit() {
             : `Maior oportunidade (${_cpFmtMoney(cWithGaps.mrr)} MRR) e bem qualificada — empurra pra fechar.`;
         focusActions.push({
             num: 2,
-            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Avance: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>`,
+            title: `<a href="https://app10.ploomes.com/deal/${d.Id}" target="_blank" rel="noopener">Avance: ${(d.Title || '(sem título)').replace(/</g,'&lt;')}</a>${_cpLeadtimeBadge(d)}`,
             why,
             cta: missingItems.length > 0 ? 'Marcar call de qualificação' : 'Pedir o fechamento'
         });
