@@ -5593,7 +5593,7 @@
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
                             Soma de agendadas, realizadas e no-show por time, classificadas pelo funil do deal vinculado à reunião.
                             <strong style="color:#facc15;">Sankhya</strong> inclui o proxy da Maja (movimentações de etapa) já que ela não cria tasks no Ploomes.<br>
-                            <strong>Metas:</strong> Gui+Samira (NN) e Adriely (Farmer) = <strong style="color:#22c55e;">25 realizadas/mês cada</strong> · Maja (Sankhya) e Agnes (Farmer) = <strong style="color:#facc15;">30 OPOs/mês cada</strong> (propostas geradas).
+                            <strong>Metas:</strong> Gui + Samira + Adriely (NN) = <strong style="color:#22c55e;">25 realizadas/mês cada</strong> (total 75) · Maja (Sankhya) e Agnes (Farmer) = <strong style="color:#facc15;">30 OPOs/mês cada</strong> (propostas geradas).
                         </div>
                         <div id="sec7TimesCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableSec7Times')">Mostrar/ocultar tabela consolidada</button>
@@ -12693,14 +12693,13 @@ function renderSection7Times() {
         let bars = '';
         let reverseHint = '';
         if (team === 'Novos Negócios') {
-            // Gui + Samira = 2 SDRs × 25 realizadas
-            const target = SDR_META_REALIZADAS * 2;
-            bars += renderMetaBar({ label: '✅ Realizadas (Gui + Samira)', atual: v.realizadas, meta: target, pace, color: teamMeta[team].color });
+            // Gui + Samira + Adriely = 3 SDRs × 25 realizadas
+            const target = SDR_META_REALIZADAS * 3;
+            bars += renderMetaBar({ label: '✅ Realizadas (Gui + Samira + Adriely)', atual: v.realizadas, meta: target, pace, color: teamMeta[team].color });
         } else if (team === 'Farmer') {
-            // Adriely (25 realizadas) + Agnes (30 OPOs — Farmer + Sankhya)
-            bars += renderMetaBar({ label: '✅ Realizadas (Adriely)', atual: v.realizadas, meta: SDR_META_REALIZADAS, pace, color: teamMeta[team].color });
+            // Agnes = 30 OPOs (Farmer + Sankhya)
             bars += renderMetaBar({ label: '📝 OPOs Agnes (Farmer + Sankhya)', atual: opoAgnes, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
-            // Reverso: Agnes — usa conv geral (realizadas Farmer+Sankhya → OPOs Agnes)
+            // Reverso: Agnes — usa conv das realizadas Farmer + Sankhya
             const realizadasAgnes = v.realizadas + (teams['Sankhya'].realizadas || 0);
             const convRtoO = realizadasAgnes > 0 ? opoAgnes / realizadasAgnes : 0.5;
             if (opoAgnes < SDR_META_OPOS) {
@@ -12771,20 +12770,18 @@ function renderSection7Times() {
         const rate = v.agendadas > 0 ? ((v.realizadas / v.agendadas) * 100).toFixed(1) + '%' : '—';
         let metaStr, atualStr, pctStr;
         if (team === 'Novos Negócios') {
-            const target = SDR_META_REALIZADAS * 2;
+            const target = SDR_META_REALIZADAS * 3;
             metaStr = `${target} realizadas`;
             atualStr = `${v.realizadas}`;
             pctStr = target > 0 ? Math.round((v.realizadas / target) * 100) + '%' : '—';
         } else if (team === 'Farmer') {
-            metaStr = `${SDR_META_REALIZADAS} real. + ${SDR_META_OPOS} OPOs`;
-            const pct1 = Math.round((v.realizadas / SDR_META_REALIZADAS) * 100);
-            const pct2 = Math.round((v.opos / SDR_META_OPOS) * 100);
-            atualStr = `${v.realizadas} / ${v.opos}`;
-            pctStr = `${pct1}% / ${pct2}%`;
+            metaStr = `${SDR_META_OPOS} OPOs (Agnes)`;
+            atualStr = `${opoAgnes}`;
+            pctStr = Math.round((opoAgnes / SDR_META_OPOS) * 100) + '%';
         } else { // Sankhya
-            metaStr = `${SDR_META_OPOS} OPOs`;
-            atualStr = `${v.opos}`;
-            pctStr = Math.round((v.opos / SDR_META_OPOS) * 100) + '%';
+            metaStr = `${SDR_META_OPOS} OPOs (Maja)`;
+            atualStr = `${opoMaja}`;
+            pctStr = Math.round((opoMaja / SDR_META_OPOS) * 100) + '%';
         }
         return `<tr>
             <td><strong>${team}</strong></td>
