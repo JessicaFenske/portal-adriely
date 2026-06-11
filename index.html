@@ -9484,6 +9484,389 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     return true;
 }
 
+// ==================== COCKPIT SDR (Pré-Vendas) ====================
+// Detecta SDR logado e renderiza visão personalizada com foco em ação diária:
+// agenda do dia, compliance gaps, cards devolvidos, próximas reuniões, KPIs e
+// coaching SPIN qualificador. Reusa os containers do view-cockpit.
+function _cpRenderSdrCockpit(canonicalSdr) {
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const firstName = canonicalSdr.split(/\s+/)[0];
+
+    // Tipo de meta: Maja/Agnes = OPOs(30) | Gui/Samira/Adriely = Realizadas(25)
+    const isOpoSdr = /maja|agnes/i.test(canonicalSdr);
+    const META_TARGET = isOpoSdr ? 30 : 25;
+    const META_LABEL = isOpoSdr ? 'OPOs (propostas geradas)' : 'reuniões realizadas';
+    const META_ICON = isOpoSdr ? '📝' : '✅';
+    const TEAM_COLOR = isOpoSdr ? '#facc15' : '#8b5cf6';
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const inThisMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart.getTime() && t <= monthEnd.getTime(); };
+    const isToday = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= todayStart.getTime() && t <= todayEnd.getTime(); };
+
+    // ===== Hero =====
+    document.getElementById('cpGreeting').textContent = `${_cpGreetingHour()}, ${firstName}! 📞`;
+    document.getElementById('cpSubtitle').innerHTML = `<strong>SDR · Pré-Vendas</strong> · seu cockpit de ação diária — meta, agenda do dia, pendências e foco.`;
+
+    // ===== Tasks Agendadas do SDR =====
+    // Index agendadas globais (todas as Reunião Agendada) por DealId pra resolver
+    // realizadas que vêm como Automação.
+    const agendadaByDealAll = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!agendadaByDealAll.has(t.DealId)) agendadaByDealAll.set(t.DealId, t);
+    });
+
+    // Agendadas criadas pelo SDR este mês
+    const myAgendadasMonth = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        const creator = dashUsersById[t.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        return inThisMonth(t.CreateDate);
+    });
+
+    // Realizadas atribuídas ao SDR este mês (via creator da Realizada OU da Agendada)
+    const myRealizadasMonth = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return false;
+        if (t.Finished !== true) return false;
+        const refDate = t.FinishDate || t.DateTime;
+        if (!inThisMonth(refDate)) return false;
+        let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (!canonical) {
+            const ag = agendadaByDealAll.get(t.DealId);
+            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
+        return canonical === canonicalSdr;
+    });
+
+    // OPOs atribuídos ao SDR este mês (deals com proposta gerada)
+    const myOposMonth = (() => {
+        const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+        return all.filter(d => {
+            if (!hasProposalSent(d)) return false;
+            const propDate = (typeof getEffectiveProposalDate === 'function') ? getEffectiveProposalDate(d) : (getProposalDate(d) || d.LastUpdateDate);
+            if (!propDate) return false;
+            if (!inThisMonth(propDate)) return false;
+            const ag = agendadaByDealAll.get(d.Id);
+            let canonical = null;
+            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+            if (!canonical && getPipelineName(d) === 'Sankhya' && /maja/i.test(canonicalSdr)) canonical = 'Maja Siqueira';
+            return canonical === canonicalSdr;
+        });
+    })();
+
+    // ===== Pro caso de meta OPO, o atual é OPOs; caso contrário, Realizadas =====
+    const metaAtual = isOpoSdr ? myOposMonth.length : myRealizadasMonth.length;
+    const metaPct = META_TARGET > 0 ? Math.round((metaAtual / META_TARGET) * 100) : 0;
+    const daysLeft = _cpDaysUntilEndOfMonth();
+    const businessLeft = _cpBusinessDaysUntilEndOfMonth();
+    const faltam = Math.max(0, META_TARGET - metaAtual);
+    const perDay = businessLeft > 0 ? (faltam / businessLeft).toFixed(1) : '—';
+
+    document.getElementById('cpHeroMeta').innerHTML = `
+        <div class="label">Meta do mês</div>
+        <div class="value" style="color:${TEAM_COLOR};">${metaAtual}<span style="opacity:0.55;font-size:0.5em;"> / ${META_TARGET}</span></div>
+        <div class="small">${metaPct}% · faltam <strong>${faltam}</strong> em <strong>${businessLeft}</strong> dias úteis (~${perDay}/dia)</div>
+    `;
+    document.getElementById('cpHeroMeta').style.display = '';
+
+    // Habilita main + reset headers
+    document.getElementById('cpEmptyState').style.display = 'none';
+    document.getElementById('cpMainContent').style.display = 'block';
+
+    const _setH = (selector, html) => { const el = document.querySelector(selector); if (el) el.innerHTML = html; };
+    const _setT = (selector, text) => { const el = document.querySelector(selector); if (el) el.textContent = text; };
+
+    // ===== KPIs (4 cards) =====
+    // 1) Meta do mês (atual / target)
+    // 2) Agenda da semana (próximos 7 dias com reuniões agendadas)
+    // 3) Compliance gap (agendadas vencidas sem Realizada concluída)
+    // 4) Taxa Realização do mês
+
+    // Agendadas vencidas do SDR sem Realizada concluída
+    const realizadaByDealConcluded = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!norm(t.Title).includes('reuniao realizada')) return;
+        if (t.Finished === true) realizadaByDealConcluded.add(t.DealId);
+    });
+    const pendingCompliance = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        const creator = dashUsersById[t.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        const dt = new Date(t.DateTime);
+        if (dt > now) return false;
+        if (t.Finished === true) return false;
+        if (realizadaByDealConcluded.has(t.DealId)) return false;
+        return true;
+    });
+
+    // Próximas 7 dias
+    const in7d = new Date(now.getTime() + 7*86400000);
+    const upcomingMeetings = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        const creator = dashUsersById[t.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        if (t.Finished === true) return false;
+        const dt = new Date(t.DateTime);
+        return dt >= now && dt <= in7d;
+    }).sort((a,b) => new Date(a.DateTime) - new Date(b.DateTime));
+
+    // Reuniões de hoje
+    const todayMeetings = upcomingMeetings.filter(t => isToday(t.DateTime));
+
+    // Taxa realização do mês
+    const taxaReal = myAgendadasMonth.length > 0 ? Math.round((myRealizadasMonth.length / myAgendadasMonth.length) * 100) : 0;
+
+    // Cards devolvidos: deals em sales pipeline com Owner = canonicalSdr
+    const SALES_PIPES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+    const cardsDevolvidos = (dashOpenDeals || []).filter(d => {
+        if (!SALES_PIPES.includes(getPipelineName(d))) return false;
+        return getCanonicalSdrName(getOwnerName(d)) === canonicalSdr;
+    });
+
+    document.getElementById('cpKpis').innerHTML = `
+        <div class="cp-kpi-card">
+            <div class="label">${META_ICON} ${META_LABEL.toUpperCase()} no mês</div>
+            <div class="value" style="color:${TEAM_COLOR};">${metaAtual}<span style="opacity:0.5;font-size:0.5em;"> / ${META_TARGET}</span></div>
+            <div class="delta ${metaPct >= 50 ? 'up' : 'down'}">${metaPct}% da meta · ~${perDay}/dia útil restante</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">📅 Próximas reuniões (7d)</div>
+            <div class="value">${upcomingMeetings.length}</div>
+            <div class="delta flat">${todayMeetings.length} hoje · ${upcomingMeetings.length - todayMeetings.length} nos próximos dias</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">⚠️ Compliance pendente</div>
+            <div class="value" style="color:${pendingCompliance.length > 0 ? '#ef4444' : '#22c55e'};">${pendingCompliance.length}</div>
+            <div class="delta ${pendingCompliance.length > 0 ? 'down' : 'up'}">${pendingCompliance.length === 0 ? 'Tudo em dia ✅' : 'Agendadas vencidas sem Realizada'}</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">📊 Taxa Realização (mês)</div>
+            <div class="value">${myAgendadasMonth.length > 0 ? taxaReal + '%' : '—'}</div>
+            <div class="delta flat">${myRealizadasMonth.length} realiz. / ${myAgendadasMonth.length} agend.</div>
+        </div>
+    `;
+
+    // ===== Foco do dia (3 ações priorizadas) =====
+    _setH('.cp-focus-card .cp-card-header h2', '<span class="cp-icon">🎯</span> Foco do dia');
+    _setT('.cp-focus-card .cp-card-sub', `${todayMeetings.length} reunião${todayMeetings.length === 1 ? '' : 'ões'} hoje · ${pendingCompliance.length} compliance · ${cardsDevolvidos.length} card${cardsDevolvidos.length === 1 ? '' : 's'} devolvido${cardsDevolvidos.length === 1 ? '' : 's'}`);
+    const focusActions = [];
+    // Ação 1: marcar Realizadas vencidas (compliance) — sempre prioridade máxima
+    if (pendingCompliance.length > 0) {
+        focusActions.push({
+            icon: '⚠️',
+            title: `Marcar ${pendingCompliance.length} Realizada${pendingCompliance.length === 1 ? '' : 's'} pendente${pendingCompliance.length === 1 ? '' : 's'} no Ploomes`,
+            why: `Você tem agendadas vencidas sem a task "Reunião Realizada" marcada como concluída. Sem isso, métricas do time ficam cegas e a liderança não vê seu esforço real.`,
+            color: '#ef4444'
+        });
+    }
+    // Ação 2: agenda do dia
+    if (todayMeetings.length > 0) {
+        focusActions.push({
+            icon: '📅',
+            title: `Preparar-se pras ${todayMeetings.length} reunião${todayMeetings.length === 1 ? '' : 'ões'} de hoje`,
+            why: `Leve as 4 perguntas SPIN de cada reunião: Situation (cenário), Problem (dor), Implication (impacto se nada mudar) e Need-payoff (ganho de resolver). Confirma agendada 30min antes pra evitar no-show.`,
+            color: '#8b5cf6'
+        });
+    }
+    // Ação 3: cards devolvidos
+    if (cardsDevolvidos.length > 0) {
+        focusActions.push({
+            icon: '🔄',
+            title: `Retomar ${cardsDevolvidos.length} card${cardsDevolvidos.length === 1 ? '' : 's'} devolvido${cardsDevolvidos.length === 1 ? '' : 's'} pelo vendedor`,
+            why: `Esses cards voltaram do funil de vendas pra você. Provável motivo: vendedor sentiu que precisa requalificar antes de avançar. Reabra contato em 24h.`,
+            color: '#facc15'
+        });
+    }
+    // Se não tem nada urgente, foca em prospecção
+    if (focusActions.length === 0) {
+        focusActions.push({
+            icon: '🚀',
+            title: 'Agenda livre — bora prospectar!',
+            why: `Sem reuniões hoje, sem pendência. Use as próximas 4h pra: (1) prospectar contas alvo, (2) reaquecer leads frios sem atividade > 7 dias, (3) preparar abordagem pras agendadas dos próximos dias.`,
+            color: '#22c55e'
+        });
+    }
+    // Sempre adiciona pace check
+    if (metaPct < 50 && businessLeft > 5) {
+        focusActions.push({
+            icon: '📈',
+            title: `Você está ${metaPct}% da meta — bata ~${perDay} ${META_LABEL.split(' ')[0]}/dia até fim do mês`,
+            why: `Faltam ${faltam} ${META_LABEL.split(' ')[0]} em ${businessLeft} dias úteis. Foco em volume: cada dia perdido vira pressão acumulada na última semana.`,
+            color: '#fb923c'
+        });
+    }
+    document.getElementById('cpFocusActions').innerHTML = focusActions.slice(0, 3).map((a, i) => `
+        <div class="cp-action" style="border-left:3px solid ${a.color};">
+            <div class="cp-action-num">${i + 1}</div>
+            <div class="cp-action-body">
+                <div class="cp-action-title"><span style="margin-right:6px;">${a.icon}</span>${a.title}</div>
+                <div class="cp-action-why">${a.why}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // ===== Coluna esquerda: Compliance pendente (deals concretos) =====
+    _setH('.cp-risk .cp-card-header h3', '<span class="cp-icon">⚠️</span> Compliance pendente');
+    _setT('.cp-risk .cp-card-sub', 'Agendadas vencidas sem "Realizada" marcada — bora atualizar');
+    if (pendingCompliance.length === 0) {
+        document.getElementById('cpRiskList').innerHTML = `<div class="cp-empty-mini">✅ Tudo em dia — sem compliance pendente.</div>`;
+    } else {
+        document.getElementById('cpRiskList').innerHTML = pendingCompliance.slice(0, 8).map(t => {
+            const deal = window._dashOpenDealsById?.[t.DealId];
+            const dt = new Date(t.DateTime);
+            const daysOverdue = Math.floor((now - dt) / 86400000);
+            const dealTitle = (deal?.Title || `Deal #${t.DealId}`).replace(/</g,'&lt;');
+            const link = t.DealId ? `https://app10.ploomes.com/deal/${t.DealId}` : '#';
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title"><a href="${link}" target="_blank" rel="noopener">${dealTitle} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-meta">
+                    <span class="warn">⚠️ vencida há ${daysOverdue}d</span>
+                    <span>· ${dt.toLocaleDateString('pt-BR')}</span>
+                    <span>· <strong>${deal?.Pipeline?.Name || '—'}</strong></span>
+                </div>
+            </div>`;
+        }).join('') + (pendingCompliance.length > 8 ? `<div class="cp-empty-mini" style="padding:8px;">+${pendingCompliance.length - 8} restantes</div>` : '');
+    }
+
+    // ===== Coluna direita: Próximas reuniões =====
+    _setH('.cp-chances .cp-card-header h3', '<span class="cp-icon">📅</span> Próximas reuniões');
+    _setT('.cp-chances .cp-card-sub', 'Suas agendadas dos próximos 7 dias — prepare-se');
+    if (upcomingMeetings.length === 0) {
+        document.getElementById('cpChancesList').innerHTML = `<div class="cp-empty-mini">Sem reuniões agendadas pros próximos 7 dias.<br>🚀 Bora prospectar pra encher a agenda.</div>`;
+    } else {
+        document.getElementById('cpChancesList').innerHTML = upcomingMeetings.slice(0, 8).map(t => {
+            const deal = window._dashOpenDealsById?.[t.DealId];
+            const dt = new Date(t.DateTime);
+            const isHoje = isToday(t.DateTime);
+            const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+            const tomorrowEnd = new Date(todayEnd.getTime() + 86400000);
+            const isAmanha = dt >= tomorrowStart && dt <= tomorrowEnd;
+            const dayLabel = isHoje ? '🔴 HOJE' : (isAmanha ? 'amanhã' : dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }));
+            const timeLabel = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const dealTitle = (deal?.Title || `Deal #${t.DealId}`).replace(/</g,'&lt;');
+            const link = t.DealId ? `https://app10.ploomes.com/deal/${t.DealId}` : '#';
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title"><a href="${link}" target="_blank" rel="noopener">${dealTitle} <span class="ext">↗</span></a></div>
+                <div class="cp-deal-meta">
+                    <strong style="color:${isHoje ? '#ef4444' : '#c4b5fd'};">${dayLabel} · ${timeLabel}</strong>
+                    <span>· <strong>${deal?.Pipeline?.Name || '—'}</strong></span>
+                </div>
+            </div>`;
+        }).join('') + (upcomingMeetings.length > 8 ? `<div class="cp-empty-mini" style="padding:8px;">+${upcomingMeetings.length - 8} restantes</div>` : '');
+    }
+
+    // ===== Insights diagnósticos =====
+    _setH('.cp-insights-card .cp-card-header h2', '<span class="cp-icon">🔬</span> Diagnóstico das suas reuniões');
+    _setT('.cp-insights-card .cp-card-sub', 'Padrões do seu mês — onde tá apertando e onde dá pra ganhar');
+
+    // Taxa No-show = (Agendadas vencidas sem realizada) / (Agendadas vencidas)
+    const overdueAgendadas = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        const creator = dashUsersById[t.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        return new Date(t.DateTime) < now && inThisMonth(t.CreateDate);
+    });
+    const noShowCount = overdueAgendadas.filter(t => !realizadaByDealConcluded.has(t.DealId)).length;
+    const noShowRate = overdueAgendadas.length > 0 ? Math.round((noShowCount / overdueAgendadas.length) * 100) : 0;
+
+    // Tempo médio agendar → realizar (em dias)
+    const leadTimes = myRealizadasMonth.map(r => {
+        const ag = agendadaByDealAll.get(r.DealId);
+        if (!ag) return null;
+        const diff = (new Date(r.FinishDate || r.DateTime) - new Date(ag.CreateDate)) / 86400000;
+        return diff >= 0 ? diff : null;
+    }).filter(v => v !== null);
+    const avgLeadTime = leadTimes.length > 0 ? (leadTimes.reduce((a,b) => a+b, 0) / leadTimes.length).toFixed(1) : '—';
+
+    // Conversão realizada → OPO (só faz sentido pra Maja/Agnes)
+    const convOpoRealizada = myRealizadasMonth.length > 0 ? Math.round((myOposMonth.length / myRealizadasMonth.length) * 100) : 0;
+
+    const insights = [
+        {
+            icon: '🚫',
+            title: 'Taxa de No-Show',
+            value: overdueAgendadas.length > 0 ? `${noShowRate}%` : '—',
+            sub: overdueAgendadas.length > 0 ? `${noShowCount} de ${overdueAgendadas.length} agendadas vencidas viraram no-show` : 'Sem agendadas vencidas no mês',
+            tone: noShowRate > 30 ? 'bad' : (noShowRate > 15 ? 'warn' : 'good'),
+            tip: noShowRate > 30 ? '💡 Confirma sempre 30min antes via WhatsApp + e-mail.' : (noShowRate > 15 ? '💡 Tá razoável, mas dá pra melhorar com confirmação dupla.' : '✅ Excelente disciplina de confirmação.')
+        },
+        {
+            icon: '⏱️',
+            title: 'Tempo médio agendar → realizar',
+            value: avgLeadTime === '—' ? '—' : `${avgLeadTime}d`,
+            sub: `Quanto tempo do agendamento até a reunião acontecer`,
+            tone: 'neutral',
+            tip: avgLeadTime > 7 ? '💡 Agendamentos longe demais perdem engajamento — tente fechar em até 5 dias.' : '✅ Ritmo bom — agendamentos próximos da decisão.'
+        },
+        isOpoSdr ? {
+            icon: '📝',
+            title: 'Conversão Realizada → OPO',
+            value: myRealizadasMonth.length > 0 ? `${convOpoRealizada}%` : '—',
+            sub: `${myOposMonth.length} OPOs de ${myRealizadasMonth.length} realizadas no mês`,
+            tone: convOpoRealizada >= 60 ? 'good' : (convOpoRealizada >= 40 ? 'warn' : 'bad'),
+            tip: convOpoRealizada < 40 ? '💡 Foco em qualificação MEDDIC — chega na reunião com Pain + Metric pré-mapeados.' : '✅ Boa taxa de qualificação até OPO.'
+        } : {
+            icon: '🎯',
+            title: 'Cards na sua fila',
+            value: `${cardsDevolvidos.length}`,
+            sub: cardsDevolvidos.length > 0 ? 'Cards devolvidos pelo vendedor — retomar' : 'Sem cards devolvidos',
+            tone: cardsDevolvidos.length > 3 ? 'bad' : (cardsDevolvidos.length > 0 ? 'warn' : 'good'),
+            tip: cardsDevolvidos.length > 3 ? '💡 Volume alto de devoluções — alinhe critérios de handoff com o vendedor.' : ''
+        }
+    ];
+    const toneColor = (tone) => tone === 'good' ? '#22c55e' : (tone === 'bad' ? '#ef4444' : (tone === 'warn' ? '#facc15' : '#8b5cf6'));
+    document.getElementById('cpInsightsGrid').innerHTML = insights.map(i => `
+        <div class="cp-insight-card" style="border-left-color:${toneColor(i.tone)};">
+            <div class="cp-insight-emoji">${i.icon}</div>
+            <div class="cp-insight-text">
+                <strong>${i.title}</strong><br>
+                <span class="number" style="color:${toneColor(i.tone)};">${i.value}</span><br>
+                <span style="color:#94a3b8;font-size:12px;">${i.sub}</span>
+                ${i.tip ? `<br><em style="color:#94a3b8;font-size:11.5px;">${i.tip}</em>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // ===== Coaching SPIN (perguntas qualificadoras) =====
+    _setH('.cp-coaching-card .cp-card-header h2', '<span class="cp-icon">🧠</span> Coaching SPIN — perguntas qualificadoras');
+    _setT('.cp-coaching-card .cp-card-sub', 'Use essas perguntas nas próximas reuniões pra qualificar melhor e gerar OPO');
+    document.getElementById('cpCoachingContent').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+            <div class="cp-coach-block" style="background:rgba(56,189,248,0.08);border-left:4px solid #38bdf8;padding:14px 16px;border-radius:8px;">
+                <div style="font-size:11px;color:#7dd3fc;font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">S · SITUATION</div>
+                <div style="font-size:13px;color:#e5e7eb;line-height:1.5;">"Como vocês fazem [processo X] hoje? Quantas pessoas envolvidas?"</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.5;">📌 Pra entender o cenário sem julgar. Não pule essa.</div>
+            </div>
+            <div class="cp-coach-block" style="background:rgba(251,146,60,0.08);border-left:4px solid #fb923c;padding:14px 16px;border-radius:8px;">
+                <div style="font-size:11px;color:#fdba74;font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">P · PROBLEM</div>
+                <div style="font-size:13px;color:#e5e7eb;line-height:1.5;">"Quais erros mais acontecem nesse processo? Quando foi o último?"</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.5;">📌 Tira a dor específica — exemplos concretos, não generalização.</div>
+            </div>
+            <div class="cp-coach-block" style="background:rgba(239,68,68,0.08);border-left:4px solid #ef4444;padding:14px 16px;border-radius:8px;">
+                <div style="font-size:11px;color:#fca5a5;font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">I · IMPLICATION</div>
+                <div style="font-size:13px;color:#e5e7eb;line-height:1.5;">"Se nada mudar em 6 meses, qual o impacto em R$ ou tempo perdido?"</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.5;">📌 Quantifica o custo de não fazer. Essencial pra urgência.</div>
+            </div>
+            <div class="cp-coach-block" style="background:rgba(34,197,94,0.08);border-left:4px solid #22c55e;padding:14px 16px;border-radius:8px;">
+                <div style="font-size:11px;color:#86efac;font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">N · NEED-PAYOFF</div>
+                <div style="font-size:13px;color:#e5e7eb;line-height:1.5;">"Se resolvermos isso, qual seria o ganho mensal pra vocês?"</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.5;">📌 Faz o cliente verbalizar o ROI — ele vende pra ele mesmo.</div>
+            </div>
+        </div>
+        <div style="margin-top:14px;background:rgba(250,204,21,0.06);border:1px solid rgba(250,204,21,0.2);border-radius:8px;padding:12px 14px;font-size:12px;color:#fcd34d;line-height:1.6;">
+            <strong>🎯 Critério de handoff (passar pro vendedor):</strong> só passe o card depois de ter pelo menos 3 das 4 perguntas SPIN respondidas + decisor econômico identificado + critério de decisão claro. Sem isso, o vendedor vai te devolver — e vocês perdem o lead.
+        </div>
+    `;
+
+    return true;
+}
+
 async function renderCockpit() {
     const me = await _hvFetchMe();
     if (!me) {
@@ -9516,6 +9899,10 @@ async function renderCockpit() {
         const myEmail = _hvCurrentEmail();
         const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
         if (leaderPipeline && _cpRenderLeaderCockpit(leaderPipeline)) return;
+
+        // É SDR? Render cockpit específico de pré-vendas
+        const canonicalSdr = (typeof getCanonicalSdrName === 'function') ? getCanonicalSdrName(me) : null;
+        if (canonicalSdr && typeof _cpRenderSdrCockpit === 'function' && _cpRenderSdrCockpit(canonicalSdr)) return;
 
         // Match usuário → Owner do Ploomes
         const allDealsForMatch = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
