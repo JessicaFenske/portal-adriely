@@ -14575,6 +14575,22 @@ function renderAnaliseFunil() {
         convSubEl.textContent = `Calculadas com base nos deals dos ${periodLabel} (${wonInPeriod.length} ganhos + ${lostInPeriod.length} perdidos + ${openDeals.length} abertos hoje)`;
     }
 
+    // Pré-calc: pra cada etapa, média de dias dos deals ABERTOS atualmente nela
+    // Usa LastUpdateDate como proxy de "quando mudou pra esta etapa" (sem stage history não dá pra ser exato)
+    const stageAvgDays = {};
+    const stageOpenCount = {};
+    stagesForConv.forEach(s => {
+        const dealsInStage = openDeals.filter(d => d.Stage?.Name === s);
+        stageOpenCount[s] = dealsInStage.length;
+        if (dealsInStage.length === 0) { stageAvgDays[s] = null; return; }
+        const days = dealsInStage.map(d => {
+            const ref = d.LastUpdateDate || d.CreateDate;
+            if (!ref) return null;
+            return Math.floor((Date.now() - new Date(ref).getTime()) / 86400000);
+        }).filter(v => v !== null && v >= 0);
+        stageAvgDays[s] = days.length > 0 ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null;
+    });
+
     // === Funil visual trapezoidal (estilo PPT) ===
     const funnelHtml = [];
     const maxPassed = Math.max(...stagesForConv.map(s => passedCount[s] || 0), 1);
@@ -14586,10 +14602,22 @@ function renderAnaliseFunil() {
         const color = palette[i] || '#8b5cf6';
         const lightColor = i < palette.length - 1 ? palette[i+1] : '#b794f4';
         const topPct = i === 0 ? 100 : ((count / (passedCount[stagesForConv[0]] || 1)) * 100);
+        // Badge de dias médios pra esta etapa (só pra deals abertos)
+        const avgDays = stageAvgDays[s];
+        const openInStage = stageOpenCount[s] || 0;
+        let daysBadge = '';
+        if (avgDays !== null && openInStage > 0) {
+            const dColor = avgDays >= 45 ? '#ef4444' : avgDays >= 21 ? '#f59e0b' : '#22c55e';
+            const dLabel = avgDays >= 45 ? '🐢 estagnado' : avgDays >= 21 ? '⚠️ lento' : '⚡ saudável';
+            daysBadge = `<div class="stage-days-badge" title="Média de dias dos ${openInStage} deals abertos atualmente nesta etapa" style="background:rgba(0,0,0,0.35);border:1px solid ${dColor};color:${dColor};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-top:5px;display:inline-block;">
+                ⏱️ ${avgDays}d em média &middot; ${dLabel}
+            </div>`;
+        }
         funnelHtml.push(`<div class="af-funnel-stage" style="width:${widthPct}%;--stage-color:${color};--stage-color-light:${lightColor};">
             <div class="stage-info">
                 <div class="stage-title">${s}</div>
                 <div class="stage-sub">${topPct.toFixed(1)}% do topo</div>
+                ${daysBadge}
             </div>
             <div class="stage-numbers">
                 <div class="stage-pct">${count} deals</div>
