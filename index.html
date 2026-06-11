@@ -9543,20 +9543,40 @@ function _cpRenderSdrCockpit(canonicalSdr) {
         return canonical === canonicalSdr;
     });
 
-    // OPOs atribuídos ao SDR este mês (deals com proposta gerada)
+    // OPOs atribuídos ao SDR este mês
+    // (1) Via task "Proposta Enviada/Gerada" criada pelo SDR
+    // (2) Via marcador no card + creator da Agendada (fallback Sankhya→Maja)
     const myOposMonth = (() => {
         const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-        return all.filter(d => {
-            if (!hasProposalSent(d)) return false;
-            const propDate = (typeof getEffectiveProposalDate === 'function') ? getEffectiveProposalDate(d) : (getProposalDate(d) || d.LastUpdateDate);
-            if (!propDate) return false;
-            if (!inThisMonth(propDate)) return false;
-            const ag = agendadaByDealAll.get(d.Id);
-            let canonical = null;
-            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
-            if (!canonical && getPipelineName(d) === 'Sankhya' && /maja/i.test(canonicalSdr)) canonical = 'Maja Siqueira';
-            return canonical === canonicalSdr;
+        const dealById = {}; all.forEach(d => { dealById[d.Id] = d; });
+        const counted = new Set();
+        const result = [];
+        // (1) Tasks "Proposta Enviada/Gerada"
+        getPropostaEnviadaTasks().forEach(t => {
+            if (!t.DealId) return;
+            if (!inThisMonth(t.CreateDate)) return;
+            const creatorName = dashUsersById[t.CreatorId] || t.Creator?.Name || '';
+            if (getCanonicalSdrName(creatorName) !== canonicalSdr) return;
+            const d = dealById[t.DealId];
+            if (!d || counted.has(d.Id)) return;
+            counted.add(d.Id);
+            result.push(d);
         });
+        // (2) Marcador + Agendada creator
+        all.forEach(d => {
+            if (counted.has(d.Id)) return;
+            if (!hasProposalSent(d)) return;
+            const propDate = getProposalDate(d) || d.LastUpdateDate;
+            if (!inThisMonth(propDate)) return;
+            const ag = agendadaByDealAll.get(d.Id);
+            let canonical = ag ? getCanonicalSdrName(dashUsersById[ag.CreatorId] || '') : null;
+            if (!canonical && getPipelineName(d) === 'Sankhya' && /maja/i.test(canonicalSdr)) canonical = 'Maja Siqueira';
+            if (canonical === canonicalSdr) {
+                counted.add(d.Id);
+                result.push(d);
+            }
+        });
+        return result;
     })();
 
     // ===== Pro caso de meta OPO, o atual é OPOs; caso contrário, Realizadas =====
@@ -12823,54 +12843,101 @@ function showIntermodalDrilldown(kind) {
 const SDR_META_REALIZADAS = 25;  // por SDR/mês
 const SDR_META_OPOS = 30;        // por SDR/mês
 
-// Data efetiva da proposta: usa data nativa ou data do marcador.
-// Fallback: LastUpdateDate (marker auto-aplicado costuma bumpar isso).
-function getEffectiveProposalDate(deal) {
-    return getProposalDate(deal) || deal.LastUpdateDate || deal.CreateDate || null;
+// === Detecção de OPO ===
+// Sankhya/Farmer: SDR cria uma TASK chamada "Proposta Enviada" no deal quando manda
+// a proposta. A task é o sinal. Data = CreateDate. Creator = SDR responsável.
+// Novos Negócios: continua via marcador automático "Proposta Gerada" no card.
+function getPropostaEnviadaTasks() {
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    return (dashMeetings || []).filter(t => {
+        const tn = norm(t.Title);
+        return tn.includes('proposta enviada') || tn.includes('proposta gerada');
+    });
 }
 
-// Conta OPOs (propostas geradas) num pipeline específico no período
+// Conta OPOs num pipeline específico no período, combinando:
+//  (1) Deals com marcador "Proposta Gerada" / campo Data Proposta (NN)
+//  (2) Deals com task "Proposta Enviada" criada no período (Sankhya/Farmer)
 function countOposForTeamInPeriod(teamPipelineFilter, sp) {
+    const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
     const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    return all.filter(d => {
-        const pname = getPipelineName(d);
-        if (!teamPipelineFilter(pname)) return false;
-        if (!hasProposalSent(d)) return false;
-        const propDate = getEffectiveProposalDate(d);
-        if (!propDate) return false;
-        const dt = new Date(propDate);
-        return sp.start && sp.end && dt >= sp.start && dt <= sp.end;
-    }).length;
+    const matched = new Set();
+    // (1) Marcador / campo nativo
+    all.forEach(d => {
+        if (!teamPipelineFilter(getPipelineName(d))) return;
+        if (!hasProposalSent(d)) return;
+        const propDate = getProposalDate(d) || d.LastUpdateDate;
+        if (!inPeriod(propDate)) return;
+        matched.add(d.Id);
+    });
+    // (2) Task "Proposta Enviada/Gerada" — usa CreateDate da task
+    const dealById = {};
+    all.forEach(d => { dealById[d.Id] = d; });
+    getPropostaEnviadaTasks().forEach(t => {
+        if (!t.DealId) return;
+        if (!inPeriod(t.CreateDate)) return;
+        const d = dealById[t.DealId];
+        if (!d) return;
+        if (!teamPipelineFilter(getPipelineName(d))) return;
+        matched.add(d.Id);
+    });
+    return matched.size;
 }
 
-// Atribui OPOs por SDR (criador da Agendada do deal). Pra deals Sankhya sem Agendada
-// rastreável, defaulta pra Maja (proxy, ela não cria tasks).
+// Atribui OPOs por SDR. Prioridade:
+//  1) Creator da task "Proposta Enviada" (Sankhya/Farmer)
+//  2) Creator da Agendada do deal (NN via marcador)
+//  3) Fallback Sankhya → Maja (sem task vinculável, presume proxy)
 function countOposByCanonicalSdr(sp) {
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-    // Index agendadas por dealId
+    const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    // Index agendadas
     const agendadaByDeal = new Map();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
         if (!norm(t.Title).includes('reuniao agendada')) return;
         if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
     });
+    // Index "Proposta Enviada/Gerada" tasks por DealId (mais recente do período)
+    const propTaskByDeal = new Map();
+    getPropostaEnviadaTasks().forEach(t => {
+        if (!t.DealId) return;
+        if (!inPeriod(t.CreateDate)) return;
+        const prev = propTaskByDeal.get(t.DealId);
+        if (!prev || new Date(t.CreateDate) > new Date(prev.CreateDate)) propTaskByDeal.set(t.DealId, t);
+    });
+
     const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    const opoBySdr = {}; // canonical → count
+    const opoBySdr = {};
+    const counted = new Set();
+
+    // (a) Via task Proposta Enviada — atribui ao Creator da task
     all.forEach(d => {
+        if (counted.has(d.Id)) return;
+        const task = propTaskByDeal.get(d.Id);
+        if (!task) return;
+        const creatorName = dashUsersById[task.CreatorId] || task.Creator?.Name || '';
+        const canonical = getCanonicalSdrName(creatorName);
+        if (!canonical) return;
+        opoBySdr[canonical] = (opoBySdr[canonical] || 0) + 1;
+        counted.add(d.Id);
+    });
+
+    // (b) Via marcador / campo nativo — atribui ao Creator da Agendada do deal
+    all.forEach(d => {
+        if (counted.has(d.Id)) return;
         if (!hasProposalSent(d)) return;
-        const propDate = getEffectiveProposalDate(d);
-        if (!propDate) return;
-        const dt = new Date(propDate);
-        if (!sp.start || !sp.end || dt < sp.start || dt > sp.end) return;
-        // Procura o SDR via Agendada
+        const propDate = getProposalDate(d) || d.LastUpdateDate;
+        if (!inPeriod(propDate)) return;
         const ag = agendadaByDeal.get(d.Id);
-        let canonical = null;
-        if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
-        // Fallback Sankhya → Maja (proxy)
+        let canonical = ag ? getCanonicalSdrName(dashUsersById[ag.CreatorId] || '') : null;
+        // Fallback Sankhya → Maja
         if (!canonical && getPipelineName(d) === 'Sankhya') canonical = 'Maja Siqueira';
         if (!canonical) return;
         opoBySdr[canonical] = (opoBySdr[canonical] || 0) + 1;
+        counted.add(d.Id);
     });
+
     return opoBySdr;
 }
 
