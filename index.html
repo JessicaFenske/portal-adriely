@@ -8864,9 +8864,13 @@ function _cpRenderImpersonateBanner() {
     banner.style.display = '';
     const sellers = _cpListSellers();
     const current = _cpImpersonateOwner || '';
-    const options = ['<option value="">Minha visão (padrão)</option>']
-        .concat(sellers.map(s => `<option value="${s.replace(/"/g,'&quot;')}" ${s === current ? 'selected' : ''}>${s}</option>`))
-        .join('');
+    // SDRs canonicalizadas (Gui, Samira, Adriely, Maja, Agnes)
+    const sdrs = (typeof SDR_CANONICAL === 'object' && SDR_CANONICAL) ? Object.values(SDR_CANONICAL) : [];
+    const sellersOptions = sellers.map(s => `<option value="${s.replace(/"/g,'&quot;')}" ${s === current ? 'selected' : ''}>${s}</option>`).join('');
+    const sdrsOptions = sdrs.map(s => `<option value="SDR::${s.replace(/"/g,'&quot;')}" ${('SDR::'+s) === current ? 'selected' : ''}>📞 ${s} (SDR)</option>`).join('');
+    const options = `<option value="">Minha visão (padrão)</option>` +
+        (sdrsOptions ? `<optgroup label="Pré-Vendas (SDR)">${sdrsOptions}</optgroup>` : '') +
+        (sellersOptions ? `<optgroup label="Vendedores">${sellersOptions}</optgroup>` : '');
     banner.innerHTML = `
         <div class="cp-imp-row">
             <span class="cp-imp-label">👁️ <strong>Admin</strong> · Visualizar como:</span>
@@ -9924,11 +9928,19 @@ async function renderCockpit() {
     // Renderiza banner de impersonate (só pra admin)
     if (typeof _cpRenderImpersonateBanner === 'function') _cpRenderImpersonateBanner();
 
-    // Se admin está impersonando um vendedor, força a visão pessoal desse vendedor
+    // Se admin está impersonando um vendedor ou SDR
     let ownerName;
     if (_hvIsAdmin() && _cpImpersonateOwner) {
+        // Impersonate SDR? Prefixo "SDR::nome"
+        if (_cpImpersonateOwner.startsWith('SDR::')) {
+            const sdrName = _cpImpersonateOwner.slice(5);
+            if (typeof _cpRenderSdrCockpit === 'function' && _cpRenderSdrCockpit(sdrName)) {
+                // Sobrescreve saudação com aviso de impersonate
+                document.getElementById('cpGreeting').textContent = `Visualizando como ${sdrName.split(/\s+/)[0]} 👁️ (SDR)`;
+                return;
+            }
+        }
         ownerName = _cpImpersonateOwner;
-        // Sobrescreve saudação
         document.getElementById('cpGreeting').textContent = `Visualizando como ${_cpImpersonateOwner.split(/\s+/)[0]} 👁️`;
     } else {
         // Antes de buscar deals, checa se é líder mapeado de pipeline
