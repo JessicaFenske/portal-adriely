@@ -1880,14 +1880,14 @@
             transition: width 0.5s ease;
         }
         /* Funil trapezoidal visual */
-        #view-analise-funil .af-funnel-viz {
+        .af-funnel-viz {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 8px;
             padding: 6px 0;
         }
-        #view-analise-funil .af-funnel-stage {
+        .af-funnel-stage {
             background: linear-gradient(135deg, var(--stage-color, #8b5cf6), var(--stage-color-light, #b794f4));
             color: #fff;
             border-radius: 10px;
@@ -1898,39 +1898,39 @@
             box-shadow: 0 4px 14px rgba(108,63,181,0.15);
             transition: transform 0.2s ease;
         }
-        #view-analise-funil .af-funnel-stage:hover { transform: translateY(-1px); }
-        #view-analise-funil .af-funnel-stage .stage-info {
+        .af-funnel-stage:hover { transform: translateY(-1px); }
+        .af-funnel-stage .stage-info {
             display: flex;
             flex-direction: column;
             gap: 2px;
         }
-        #view-analise-funil .af-funnel-stage .stage-title {
+        .af-funnel-stage .stage-title {
             font-size: 14px;
             font-weight: 700;
         }
-        #view-analise-funil .af-funnel-stage .stage-sub {
+        .af-funnel-stage .stage-sub {
             font-size: 11px;
             opacity: 0.85;
         }
-        #view-analise-funil .af-funnel-stage .stage-numbers {
+        .af-funnel-stage .stage-numbers {
             display: flex;
             align-items: center;
             gap: 16px;
         }
-        #view-analise-funil .af-funnel-stage .stage-count {
+        .af-funnel-stage .stage-count {
             font-size: 28px;
             font-weight: 700;
             line-height: 1;
             font-variant-numeric: tabular-nums;
         }
-        #view-analise-funil .af-funnel-stage .stage-pct {
+        .af-funnel-stage .stage-pct {
             font-size: 11px;
             background: rgba(0,0,0,0.25);
             padding: 4px 9px;
             border-radius: 6px;
             font-weight: 600;
         }
-        #view-analise-funil .af-funnel-arrow {
+        .af-funnel-arrow {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -1940,33 +1940,33 @@
             background: rgba(255,255,255,0.03);
             border-left: 3px solid;
         }
-        #view-analise-funil .af-funnel-arrow.ok { border-left-color: #22c55e; background: rgba(34,197,94,0.06); }
-        #view-analise-funil .af-funnel-arrow.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.06); }
-        #view-analise-funil .af-funnel-arrow.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
-        #view-analise-funil .af-funnel-arrow .arrow-icon {
+        .af-funnel-arrow.ok { border-left-color: #22c55e; background: rgba(34,197,94,0.06); }
+        .af-funnel-arrow.warn { border-left-color: #f59e0b; background: rgba(245,158,11,0.06); }
+        .af-funnel-arrow.crit { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
+        .af-funnel-arrow .arrow-icon {
             font-size: 20px;
             font-weight: 700;
             line-height: 1;
         }
-        #view-analise-funil .af-funnel-arrow.ok .arrow-icon { color: #22c55e; }
-        #view-analise-funil .af-funnel-arrow.warn .arrow-icon { color: #f59e0b; }
-        #view-analise-funil .af-funnel-arrow.crit .arrow-icon { color: #ef4444; }
-        #view-analise-funil .af-funnel-arrow .arrow-pct {
+        .af-funnel-arrow.ok .arrow-icon { color: #22c55e; }
+        .af-funnel-arrow.warn .arrow-icon { color: #f59e0b; }
+        .af-funnel-arrow.crit .arrow-icon { color: #ef4444; }
+        .af-funnel-arrow .arrow-pct {
             font-size: 18px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
         }
-        #view-analise-funil .af-funnel-arrow.ok .arrow-pct { color: #22c55e; }
-        #view-analise-funil .af-funnel-arrow.warn .arrow-pct { color: #f59e0b; }
-        #view-analise-funil .af-funnel-arrow.crit .arrow-pct { color: #ef4444; }
-        #view-analise-funil .af-funnel-arrow .arrow-label {
+        .af-funnel-arrow.ok .arrow-pct { color: #22c55e; }
+        .af-funnel-arrow.warn .arrow-pct { color: #f59e0b; }
+        .af-funnel-arrow.crit .arrow-pct { color: #ef4444; }
+        .af-funnel-arrow .arrow-label {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.6px;
             font-weight: 600;
             color: #a0a0b8;
         }
-        #view-analise-funil .af-funnel-arrow .arrow-detail {
+        .af-funnel-arrow .arrow-detail {
             font-size: 11px;
             color: #8888a0;
         }
