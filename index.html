@@ -12436,6 +12436,12 @@ function showIntermodalDrilldown(kind) {
 const SDR_META_REALIZADAS = 25;  // por SDR/mês
 const SDR_META_OPOS = 30;        // por SDR/mês
 
+// Data efetiva da proposta: usa data nativa ou data do marcador.
+// Fallback: LastUpdateDate (marker auto-aplicado costuma bumpar isso).
+function getEffectiveProposalDate(deal) {
+    return getProposalDate(deal) || deal.LastUpdateDate || deal.CreateDate || null;
+}
+
 // Conta OPOs (propostas geradas) num pipeline específico no período
 function countOposForTeamInPeriod(teamPipelineFilter, sp) {
     const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
@@ -12443,7 +12449,7 @@ function countOposForTeamInPeriod(teamPipelineFilter, sp) {
         const pname = getPipelineName(d);
         if (!teamPipelineFilter(pname)) return false;
         if (!hasProposalSent(d)) return false;
-        const propDate = getProposalDate(d);
+        const propDate = getEffectiveProposalDate(d);
         if (!propDate) return false;
         const dt = new Date(propDate);
         return sp.start && sp.end && dt >= sp.start && dt <= sp.end;
@@ -12465,7 +12471,7 @@ function countOposByCanonicalSdr(sp) {
     const opoBySdr = {}; // canonical → count
     all.forEach(d => {
         if (!hasProposalSent(d)) return;
-        const propDate = getProposalDate(d);
+        const propDate = getEffectiveProposalDate(d);
         if (!propDate) return;
         const dt = new Date(propDate);
         if (!sp.start || !sp.end || dt < sp.start || dt > sp.end) return;
