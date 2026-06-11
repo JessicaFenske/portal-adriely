@@ -23,6 +23,8 @@ if (!process.env.SESSION_SECRET) {
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM = process.env.RESEND_FROM || 'Portal Lincros <onboarding@resend.dev>';
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+const ANTHROPIC_API_KEY = (process.env.ANTHROPIC_API_KEY || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+const ANTHROPIC_MODEL = (process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5').trim();
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidades.onrender.com';
 const SESSION_DAYS = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
@@ -904,11 +906,15 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { ok: true, message: `Lembrete enviado para ${target.email}` });
     }
 
-    // ==================== Chat IA "Lia" (Gemini Flash) ====================
+    // ==================== Chat IA "Lia" (Claude Haiku 4.5 / Gemini fallback) ====================
     if (urlPath === '/api/chat' && req.method === 'POST') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
-        if (!GEMINI_API_KEY) return jsonReply(res, 500, { error: 'IA não configurada — peça pro admin configurar GEMINI_API_KEY no Render.' });
+        // Sem chave configurada: rejeita amigavelmente
+        if (!ANTHROPIC_API_KEY && !GEMINI_API_KEY) {
+            return jsonReply(res, 500, { error: 'IA não configurada — peça pro admin configurar ANTHROPIC_API_KEY (ou GEMINI_API_KEY) no Render.' });
+        }
+        const useClaude = !!ANTHROPIC_API_KEY; // prioriza Claude se ambos existirem
 
         const body = await readJSON(req);
         const messages = body.messages || [];
@@ -955,38 +961,59 @@ DIRETRIZES:
 9. NUNCA invente dados. Se não tem informação, fala que não tem.
 10. Se a pergunta for fora de escopo (vendas/operação Lincros), redirecione gentilmente.`;
 
-        // Monta contents pro Gemini
-        const contents = messages.map(m => ({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.text || '' }]
-        }));
-
-        const payload = JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents,
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 1024,
-                topP: 0.95
-            },
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
-            ]
-        });
-
-        const reply = await new Promise((resolve) => {
-            const opts = {
-                hostname: 'generativelanguage.googleapis.com',
-                path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        // Monta payload conforme provider escolhido
+        let opts, payload;
+        if (useClaude) {
+            // Anthropic Claude API
+            // Mensagens já vem com role 'user'|'assistant' (formato Anthropic-compatível)
+            const claudeMessages = messages.map(m => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.text || ''
+            }));
+            payload = JSON.stringify({
+                model: ANTHROPIC_MODEL,
+                max_tokens: 1024,
+                system: systemPrompt,
+                messages: claudeMessages,
+                temperature: 0.7
+            });
+            opts = {
+                hostname: 'api.anthropic.com',
+                path: '/v1/messages',
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(payload)
+                    'Content-Length': Buffer.byteLength(payload),
+                    'x-api-key': ANTHROPIC_API_KEY,
+                    'anthropic-version': '2023-06-01'
                 }
             };
+        } else {
+            // Google Gemini (fallback)
+            const contents = messages.map(m => ({
+                role: m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.text || '' }]
+            }));
+            payload = JSON.stringify({
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                contents,
+                generationConfig: { temperature: 0.7, maxOutputTokens: 1024, topP: 0.95 },
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+                ]
+            });
+            opts = {
+                hostname: 'generativelanguage.googleapis.com',
+                path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+            };
+        }
+
+        const reply = await new Promise((resolve) => {
             const r = https.request(opts, (rr) => {
                 const chunks = [];
                 rr.on('data', c => chunks.push(c));
@@ -995,10 +1022,18 @@ DIRETRIZES:
                     try {
                         const json = JSON.parse(raw);
                         if (rr.statusCode < 200 || rr.statusCode >= 300) {
-                            console.error('[chat] Gemini HTTP', rr.statusCode, raw.slice(0, 400));
-                            return resolve({ error: 'Erro na IA: ' + (json.error?.message || 'HTTP ' + rr.statusCode) });
+                            console.error(`[chat] ${useClaude ? 'Claude' : 'Gemini'} HTTP`, rr.statusCode, raw.slice(0, 400));
+                            const msg = json.error?.message || (typeof json.error === 'string' ? json.error : `HTTP ${rr.statusCode}`);
+                            return resolve({ error: 'Erro na IA: ' + msg });
                         }
-                        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                        // Parsing diferente por provider
+                        let text;
+                        if (useClaude) {
+                            // Claude: content array de blocks, pegamos os blocks de texto
+                            text = (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+                        } else {
+                            text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                        }
                         if (!text) return resolve({ error: 'Sem resposta da IA' });
                         resolve({ text });
                     } catch (e) {
