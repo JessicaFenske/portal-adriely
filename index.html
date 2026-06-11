@@ -4638,6 +4638,9 @@
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec9');">
                         <span class="sub-num">&#128200;</span><span class="sub-label">Conversão por etapa</span>
                     </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec10');">
+                        <span class="sub-num" style="background:rgba(56,189,248,0.2);color:#38bdf8;">&#128202;</span><span class="sub-label">CR / VM / ΔT por vendedor</span>
+                    </div>
 
                     <div class="nav-subgroup-title">Produção</div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec3');">
@@ -5788,6 +5791,33 @@
                         <div class="collapsible-table" id="tableFunnel"><table><thead><tr>
                             <th>Etapa</th><th>Negócios</th><th>Conversão</th>
                         </tr></thead><tbody id="tbodyFunnel"></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- Section 10: Métricas de Funil por Modelo e Vendedor (CR / VM / ΔT) -->
+                <div class="section-card full-width" id="sec10">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128202;</span> Métricas de Funil por Modelo e Vendedor</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec10" onchange="renderSecMetrics()">
+                                <option value="global">Global (histórico)</option>
+                                <option value="thisMonth">Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="last6" selected>Últimos 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#7dd3fc;line-height:1.55;">
+                            <strong style="color:#fff;">3 métricas-chave por vendedor:</strong>
+                            <strong style="color:#22c55e;">CR</strong> = Taxa de Conversão (ganhos / ganhos+perdidos) ·
+                            <strong style="color:#fcd34d;">VM</strong> = Valor Médio (MRR médio dos deals ganhos) ·
+                            <strong style="color:#c084fc;">ΔT</strong> = Delta Tempo (ciclo médio em dias, criação → fechamento)
+                        </div>
+                        <div id="secMetricsContent"></div>
+                        <button class="export-btn" style="margin-top:12px;" onclick="exportSecMetrics()">&#128229; Exportar Excel</button>
                     </div>
                 </div>
             </div>
@@ -12833,6 +12863,149 @@ function showStageDrilldown(pipelineName, stageName) {
     showDrilldown(`${pipelineName} - ${stageName} (${deals.length} negócios)`, deals, null, 'won');
 }
 
+// ==================== SEC 10: Métricas de Funil por Modelo e Vendedor ====================
+// CR (Conversion Rate), VM (Valor Médio MRR), ΔT (Delta Tempo de ciclo em dias)
+function renderSecMetrics() {
+    const sp = getSectionPeriod('sec10');
+    const won = wonDeals.filter(d => isSalesPipeline(d) && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatchesGlobal(d));
+    const lost = lostDeals.filter(d => isSalesPipeline(d) && inPeriodSection(d.FinishDate, sp.start, sp.end) && ownerMatchesGlobal(d));
+
+    const NEW_BIZ = ['Funil de Vendas', 'Sankhya'];
+    const FARMER_PIP = ['Farmer', 'Farmer IPCA'];
+    const isNewBiz = (d) => NEW_BIZ.includes(getPipelineName(d));
+    const isFarmer = (d) => FARMER_PIP.includes(getPipelineName(d));
+
+    // Filtra ex-funcionários e SDRs do ranking (mantém só vendedores ativos)
+    const isExFunc = (name) => {
+        if (typeof _cpIsFormerOwner === 'function') return _cpIsFormerOwner(name);
+        return false;
+    };
+    const isSdr = (name) => typeof isSdrName === 'function' && isSdrName(name);
+
+    // Aggrega por (vendedor, modelo)
+    const agg = {}; // key = ownerName + '|' + modelo
+    const ensure = (owner, modelo) => {
+        const k = owner + '|' + modelo;
+        if (!agg[k]) agg[k] = { owner, modelo, won: 0, lost: 0, mrrSum: 0, cycleSum: 0, cycleCount: 0 };
+        return agg[k];
+    };
+    won.forEach(d => {
+        const o = getOwnerName(d);
+        if (!o || isExFunc(o) || isSdr(o)) return;
+        const modelo = isNewBiz(d) ? 'Novos Negócios' : (isFarmer(d) ? 'Farmer' : null);
+        if (!modelo) return;
+        const r = ensure(o, modelo);
+        r.won++;
+        r.mrrSum += getMRR(d);
+        if (d.CreateDate && d.FinishDate) {
+            const dias = (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000;
+            if (dias >= 0) { r.cycleSum += dias; r.cycleCount++; }
+        }
+    });
+    lost.forEach(d => {
+        const o = getOwnerName(d);
+        if (!o || isExFunc(o) || isSdr(o)) return;
+        const modelo = isNewBiz(d) ? 'Novos Negócios' : (isFarmer(d) ? 'Farmer' : null);
+        if (!modelo) return;
+        const r = ensure(o, modelo);
+        r.lost++;
+    });
+
+    // Calcula métricas finais por linha
+    const rows = Object.values(agg).map(r => {
+        const total = r.won + r.lost;
+        return {
+            owner: r.owner,
+            modelo: r.modelo,
+            won: r.won,
+            lost: r.lost,
+            cr: total > 0 ? (r.won / total * 100) : null,
+            vm: r.won > 0 ? (r.mrrSum / r.won) : null,
+            dt: r.cycleCount > 0 ? Math.round(r.cycleSum / r.cycleCount) : null
+        };
+    });
+
+    // Agrupa por modelo e ordena cada grupo por CR descendente
+    const novosNegRows = rows.filter(r => r.modelo === 'Novos Negócios').sort((a, b) => (b.cr || 0) - (a.cr || 0));
+    const farmerRows = rows.filter(r => r.modelo === 'Farmer').sort((a, b) => (b.cr || 0) - (a.cr || 0));
+
+    // Cores semafóricas
+    const crColor = (cr) => cr === null ? '#6c5ca0' : cr >= 30 ? '#22c55e' : cr >= 15 ? '#f59e0b' : '#ef4444';
+    const dtColor = (dt) => dt === null ? '#6c5ca0' : dt <= 30 ? '#22c55e' : dt <= 60 ? '#f59e0b' : '#ef4444';
+
+    const formatMoneyShort = (v) => {
+        if (v === null) return '—';
+        if (v >= 1000) return 'R$ ' + (v/1000).toFixed(1).replace('.', ',') + 'k';
+        return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    };
+
+    const renderTable = (modelo, rows, color, accent) => {
+        if (rows.length === 0) return `<div style="background:rgba(26,26,46,0.5);border-radius:10px;padding:24px;text-align:center;color:#94a3b8;font-style:italic;margin-bottom:18px;">Sem dados de ${modelo} no período selecionado</div>`;
+        // Médias do modelo
+        const totalWon = rows.reduce((s,r) => s + r.won, 0);
+        const totalLost = rows.reduce((s,r) => s + r.lost, 0);
+        const avgCR = (totalWon + totalLost) > 0 ? (totalWon / (totalWon + totalLost) * 100) : null;
+        const validVM = rows.filter(r => r.vm !== null);
+        const avgVM = validVM.length > 0 ? validVM.reduce((s,r) => s + r.vm, 0) / validVM.length : null;
+        const validDT = rows.filter(r => r.dt !== null);
+        const avgDT = validDT.length > 0 ? Math.round(validDT.reduce((s,r) => s + r.dt, 0) / validDT.length) : null;
+        return `<div style="background:rgba(26,26,46,0.7);border:1px solid ${accent};border-radius:12px;overflow:hidden;margin-bottom:18px;">
+            <div style="background:linear-gradient(135deg,${color}33,${color}11);padding:12px 18px;border-bottom:1px solid ${accent};">
+                <div style="font-size:14px;font-weight:700;color:#fff;">${modelo} <span style="font-size:11px;color:#94a3b8;font-weight:500;">(${rows.length} vendedores · ${totalWon} ganhos · ${totalLost} perdidos)</span></div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:rgba(255,255,255,0.03);">
+                    <th style="padding:10px 14px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Vendedor</th>
+                    <th style="padding:10px 14px;text-align:center;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Ganhos</th>
+                    <th style="padding:10px 14px;text-align:center;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Perdidos</th>
+                    <th style="padding:10px 14px;text-align:center;font-size:11px;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;">CR</th>
+                    <th style="padding:10px 14px;text-align:right;font-size:11px;color:#fcd34d;text-transform:uppercase;letter-spacing:0.5px;">VM (MRR)</th>
+                    <th style="padding:10px 14px;text-align:center;font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:0.5px;">ΔT (ciclo)</th>
+                </tr></thead>
+                <tbody>${rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:10px 14px;color:#fff;font-weight:500;">${r.owner}</td>
+                    <td style="padding:10px 14px;text-align:center;color:#22c55e;font-weight:600;">${r.won}</td>
+                    <td style="padding:10px 14px;text-align:center;color:#fca5a5;">${r.lost}</td>
+                    <td style="padding:10px 14px;text-align:center;color:${crColor(r.cr)};font-weight:700;">${r.cr === null ? '—' : r.cr.toFixed(0) + '%'}</td>
+                    <td style="padding:10px 14px;text-align:right;color:#fcd34d;font-weight:600;">${formatMoneyShort(r.vm)}</td>
+                    <td style="padding:10px 14px;text-align:center;color:${dtColor(r.dt)};font-weight:600;">${r.dt === null ? '—' : r.dt + 'd'}</td>
+                </tr>`).join('')}
+                <tr style="background:rgba(108,63,181,0.12);border-top:2px solid ${accent};">
+                    <td style="padding:10px 14px;color:#c4b5fd;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Médias do modelo</td>
+                    <td style="padding:10px 14px;text-align:center;color:#fff;font-weight:700;">${totalWon}</td>
+                    <td style="padding:10px 14px;text-align:center;color:#fca5a5;font-weight:700;">${totalLost}</td>
+                    <td style="padding:10px 14px;text-align:center;color:${crColor(avgCR)};font-weight:700;">${avgCR === null ? '—' : avgCR.toFixed(0) + '%'}</td>
+                    <td style="padding:10px 14px;text-align:right;color:#fcd34d;font-weight:700;">${formatMoneyShort(avgVM)}</td>
+                    <td style="padding:10px 14px;text-align:center;color:${dtColor(avgDT)};font-weight:700;">${avgDT === null ? '—' : avgDT + 'd'}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>`;
+    };
+
+    const html = renderTable('Novos Negócios', novosNegRows, '#8b5cf6', 'rgba(139, 92, 246, 0.3)')
+        + renderTable('Farmer', farmerRows, '#22c55e', 'rgba(34, 197, 94, 0.3)');
+    document.getElementById('secMetricsContent').innerHTML = html;
+    window._sec10_rows = [...novosNegRows, ...farmerRows];
+}
+
+function exportSecMetrics() {
+    const rows = window._sec10_rows || [];
+    if (rows.length === 0) { alert('Sem dados pra exportar.'); return; }
+    const headers = ['Modelo', 'Vendedor', 'Ganhos', 'Perdidos', 'CR (%)', 'VM (R$)', 'ΔT (dias)'];
+    const csv = [headers.join(';'), ...rows.map(r => [
+        r.modelo, r.owner, r.won, r.lost,
+        r.cr === null ? '' : r.cr.toFixed(0),
+        r.vm === null ? '' : Math.round(r.vm).toString().replace('.', ','),
+        r.dt === null ? '' : r.dt
+    ].join(';'))].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'metricas_funil_vendedor.csv'; a.click();
+    URL.revokeObjectURL(url);
+}
+
 // Abre drilldown de um mini-insight da Analise de Funil
 function showAfInsightDrilldown(idx) {
     const tip = (window._afInsightTips || [])[idx];
@@ -12885,7 +13058,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderCompliance(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9();
+    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderCompliance(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9(); renderSecMetrics();
 }
 
 async function loadDashboard() {
