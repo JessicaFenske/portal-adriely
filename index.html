@@ -5592,13 +5592,14 @@
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
                             Soma de agendadas, realizadas e no-show por time, classificadas pelo funil do deal vinculado à reunião.
-                            <strong style="color:#facc15;">Sankhya</strong> inclui o proxy da Maja (movimentações de etapa) já que ela não cria tasks no Ploomes.
+                            <strong style="color:#facc15;">Sankhya</strong> inclui o proxy da Maja (movimentações de etapa) já que ela não cria tasks no Ploomes.<br>
+                            <strong>Metas:</strong> Gui+Samira (NN) e Adriely (Farmer) = <strong style="color:#22c55e;">25 realizadas/mês cada</strong> · Maja (Sankhya) e Agnes (Farmer) = <strong style="color:#facc15;">30 OPOs/mês cada</strong> (propostas geradas).
                         </div>
                         <div id="sec7TimesCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableSec7Times')">Mostrar/ocultar tabela consolidada</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7Times()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableSec7Times"><table><thead><tr>
-                            <th>Time</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th>
+                            <th>Time</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th><th>OPOs</th><th>Meta</th><th>% Meta</th>
                         </tr></thead><tbody id="tbodySec7Times"></tbody></table></div>
                     </div>
                 </div>
@@ -12429,6 +12430,59 @@ function showIntermodalDrilldown(kind) {
     showDrilldown(title, deals, columns, isLossKind ? 'lost' : 'open');
 }
 
+// --- Metas mensais por SDR/Time ---
+// Gui+Samira+Adriely são medidos por REALIZADAS (25 cada/mês)
+// Maja+Agnes são medidos por OPOs (propostas geradas) — 30 cada/mês
+const SDR_META_REALIZADAS = 25;  // por SDR/mês
+const SDR_META_OPOS = 30;        // por SDR/mês
+
+// Conta OPOs (propostas geradas) num pipeline específico no período
+function countOposForTeamInPeriod(teamPipelineFilter, sp) {
+    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    return all.filter(d => {
+        const pname = getPipelineName(d);
+        if (!teamPipelineFilter(pname)) return false;
+        if (!hasProposalSent(d)) return false;
+        const propDate = getProposalDate(d);
+        if (!propDate) return false;
+        const dt = new Date(propDate);
+        return sp.start && sp.end && dt >= sp.start && dt <= sp.end;
+    }).length;
+}
+
+// Pace do mês: hoje / total de dias do mês corrente.
+// Só faz sentido pra "thisMonth" — em outros períodos retorna 1 (meta cheia).
+function getMonthlyPace(periodSelectId) {
+    const sel = document.getElementById(periodSelectId);
+    if (!sel || sel.value !== 'thisMonth') return 1;
+    const now = new Date();
+    const day = now.getDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return day / lastDay;
+}
+
+// Render uma barra de progresso compacta com meta vs atual
+function renderMetaBar({ label, atual, meta, pace, color, suffix }) {
+    const pct = meta > 0 ? Math.round((atual / meta) * 100) : 0;
+    const expected = meta * pace;
+    const onTrack = atual >= expected * 0.9; // 90% do esperado = on track
+    const barColor = onTrack ? '#22c55e' : (atual >= expected * 0.6 ? '#facc15' : '#ef4444');
+    const barWidth = Math.min(100, pct);
+    const expectedMark = pace < 1 ? Math.min(100, Math.round(pace * 100)) : null;
+    suffix = suffix || '';
+    return `
+        <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <span style="font-size:11px;color:#a0a0b8;font-weight:600;">${label}</span>
+                <span style="font-size:11px;color:#e0e0e0;"><strong style="color:${barColor};font-size:13px;">${atual}</strong> / ${meta}${suffix} <span style="color:#8888a0;">(${pct}%)</span></span>
+            </div>
+            <div style="position:relative;background:rgba(255,255,255,0.06);border-radius:4px;height:8px;overflow:hidden;">
+                <div style="height:100%;width:${barWidth}%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
+                ${expectedMark !== null ? `<div style="position:absolute;top:-2px;left:${expectedMark}%;width:2px;height:12px;background:#fff;opacity:0.5;" title="Pace esperado: ${expectedMark}%"></div>` : ''}
+            </div>
+        </div>`;
+}
+
 // --- Section 7Times: Reuniões por Time (Novos Negócios, Farmer, Sankhya) ---
 // Agrega agendadas, realizadas e no-show classificando pelo funil do deal vinculado.
 // Times:
@@ -12570,13 +12624,66 @@ function renderSection7Times() {
         noShowDealIds.add(t.DealId);
     });
 
+    // === OPOs por time (propostas geradas no período) ===
+    const opoNovos = countOposForTeamInPeriod(p => {
+        const l = (p||'').toLowerCase();
+        return l === 'funil de vendas' || l === 'sdr inbound' || l === 'sdr outbound';
+    }, sp);
+    const opoFarmer = countOposForTeamInPeriod(p => (p||'').toLowerCase().includes('farmer'), sp);
+    const opoSankhya = countOposForTeamInPeriod(p => (p||'').toLowerCase().includes('sankhya'), sp);
+    teams['Novos Negócios'].opos = opoNovos;
+    teams['Farmer'].opos = opoFarmer;
+    teams['Sankhya'].opos = opoSankhya;
+
     // === Render cards ===
+    const pace = getMonthlyPace('periodSec7Times');
     const teamMeta = {
         'Novos Negócios': { icon: '🚀', color: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.45)' },
         'Farmer':         { icon: '🌱', color: '#22c55e', soft: 'rgba(34, 197, 94, 0.12)',  border: 'rgba(34, 197, 94, 0.45)'  },
         'Sankhya':        { icon: '🏛️', color: '#facc15', soft: 'rgba(250, 204, 21, 0.12)', border: 'rgba(250, 204, 21, 0.45)' }
     };
     const totalAg = teams['Novos Negócios'].agendadas + teams['Farmer'].agendadas + teams['Sankhya'].agendadas;
+
+    // Builder do bloco META por time
+    const buildMetaBlock = (team, v) => {
+        let bars = '';
+        let reverseHint = '';
+        if (team === 'Novos Negócios') {
+            // Gui + Samira = 2 SDRs × 25 realizadas
+            const target = SDR_META_REALIZADAS * 2;
+            bars += renderMetaBar({ label: '✅ Realizadas (Gui + Samira)', atual: v.realizadas, meta: target, pace, color: teamMeta[team].color });
+        } else if (team === 'Farmer') {
+            // Adriely (25 realizadas) + Agnes (30 OPOs)
+            bars += renderMetaBar({ label: '✅ Realizadas (Adriely)', atual: v.realizadas, meta: SDR_META_REALIZADAS, pace, color: teamMeta[team].color });
+            bars += renderMetaBar({ label: '📝 OPOs (Agnes — propostas geradas)', atual: v.opos, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
+            // Reverso da meta de OPO: precisa quantas realizadas?
+            const convRtoO = v.realizadas > 0 ? v.opos / v.realizadas : 0.5; // fallback 50%
+            if (v.opos < SDR_META_OPOS) {
+                const reqReal = convRtoO > 0 ? Math.ceil(SDR_META_OPOS / convRtoO) : null;
+                if (reqReal) {
+                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Agnes bater 30 OPOs com a conversão atual (<strong>${Math.round(convRtoO*100)}%</strong>), o time precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas no mês.</div>`;
+                }
+            }
+        } else if (team === 'Sankhya') {
+            // Maja = 30 OPOs
+            bars += renderMetaBar({ label: '📝 OPOs (Maja — propostas geradas)', atual: v.opos, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
+            const convRtoO = v.realizadas > 0 ? v.opos / v.realizadas : 0.5;
+            if (v.opos < SDR_META_OPOS) {
+                const reqReal = convRtoO > 0 ? Math.ceil(SDR_META_OPOS / convRtoO) : null;
+                if (reqReal) {
+                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Maja bater 30 OPOs com a conversão atual (<strong>${Math.round(convRtoO*100)}%</strong>), o time precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas no mês.</div>`;
+                }
+            }
+        }
+        const paceLabel = pace < 1 ? ` <span style="color:#8888a0;font-weight:400;">· pace esperado: ${Math.round(pace*100)}%</span>` : '';
+        return `
+            <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;padding-top:12px;">
+                <div style="font-size:11px;color:${teamMeta[team].color};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">🎯 Meta do mês${paceLabel}</div>
+                ${bars}
+                ${reverseHint}
+            </div>`;
+    };
+
     const cardsHtml = Object.entries(teams).map(([team, v]) => {
         const m = teamMeta[team];
         const rate = v.agendadas > 0 ? Math.round((v.realizadas / v.agendadas) * 100) : 0;
@@ -12601,29 +12708,55 @@ function renderSection7Times() {
                         <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.noShow}</div>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:12px;color:#a0a0b8;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#a0a0b8;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px;">
                     <span>Taxa realização: <strong style="color:${m.color};">${v.agendadas > 0 ? rate + '%' : '—'}</strong></span>
                     <span>${shareOfTotal}% do total</span>
                 </div>
+                ${buildMetaBlock(team, v)}
             </div>`;
     }).join('');
     document.getElementById('sec7TimesCards').innerHTML = cardsHtml;
 
     // === Tabela ===
+    // Meta consolidada por time (em "unidades da métrica principal"):
+    //   NN     = 50 realizadas
+    //   Farmer = 25 realizadas + 30 OPOs (mostra como string)
+    //   Sankhya = 30 OPOs
     const tableRows = Object.entries(teams).map(([team, v]) => {
         const rate = v.agendadas > 0 ? ((v.realizadas / v.agendadas) * 100).toFixed(1) + '%' : '—';
+        let metaStr, atualStr, pctStr;
+        if (team === 'Novos Negócios') {
+            const target = SDR_META_REALIZADAS * 2;
+            metaStr = `${target} realizadas`;
+            atualStr = `${v.realizadas}`;
+            pctStr = target > 0 ? Math.round((v.realizadas / target) * 100) + '%' : '—';
+        } else if (team === 'Farmer') {
+            metaStr = `${SDR_META_REALIZADAS} real. + ${SDR_META_OPOS} OPOs`;
+            const pct1 = Math.round((v.realizadas / SDR_META_REALIZADAS) * 100);
+            const pct2 = Math.round((v.opos / SDR_META_OPOS) * 100);
+            atualStr = `${v.realizadas} / ${v.opos}`;
+            pctStr = `${pct1}% / ${pct2}%`;
+        } else { // Sankhya
+            metaStr = `${SDR_META_OPOS} OPOs`;
+            atualStr = `${v.opos}`;
+            pctStr = Math.round((v.opos / SDR_META_OPOS) * 100) + '%';
+        }
         return `<tr>
             <td><strong>${team}</strong></td>
             <td>${v.agendadas}</td>
             <td>${v.realizadas}</td>
             <td>${v.noShow}</td>
             <td>${rate}</td>
+            <td>${v.opos}</td>
+            <td>${metaStr}</td>
+            <td><strong>${pctStr}</strong></td>
         </tr>`;
     }).join('');
     // Linha de total
     const totalAgT = Object.values(teams).reduce((s, v) => s + v.agendadas, 0);
     const totalRe = Object.values(teams).reduce((s, v) => s + v.realizadas, 0);
     const totalNs = Object.values(teams).reduce((s, v) => s + v.noShow, 0);
+    const totalOp = Object.values(teams).reduce((s, v) => s + v.opos, 0);
     const totalRate = totalAgT > 0 ? ((totalRe / totalAgT) * 100).toFixed(1) + '%' : '—';
     document.getElementById('tbodySec7Times').innerHTML = tableRows +
         `<tr style="background:rgba(255,255,255,0.03);font-weight:700;border-top:2px solid rgba(255,255,255,0.12);">
@@ -12632,6 +12765,9 @@ function renderSection7Times() {
             <td>${totalRe}</td>
             <td>${totalNs}</td>
             <td>${totalRate}</td>
+            <td>${totalOp}</td>
+            <td>—</td>
+            <td>—</td>
         </tr>`;
     window._sec7Times_data = teams;
 }
@@ -12643,6 +12779,7 @@ function exportSection7Times() {
         agendadas: v.agendadas,
         realizadas: v.realizadas,
         noShow: v.noShow,
+        opos: v.opos || 0,
         rate: v.agendadas > 0 ? ((v.realizadas / v.agendadas) * 100).toFixed(1) + '%' : '—'
     }));
     exportToExcel(rows, [
@@ -12650,6 +12787,7 @@ function exportSection7Times() {
         { header: 'Agendadas', getValue: d => d.agendadas },
         { header: 'Realizadas', getValue: d => d.realizadas },
         { header: 'No Show', getValue: d => d.noShow },
+        { header: 'OPOs (propostas geradas)', getValue: d => d.opos },
         { header: 'Taxa Realização', getValue: d => d.rate }
     ], 'reunioes_por_time');
 }
