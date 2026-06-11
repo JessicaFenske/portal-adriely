@@ -571,6 +571,27 @@
         </div>
     </div>
 
+    <!-- MCP Token Modal: shown once after generation -->
+    <div class="modal-bg" id="mcpTokenModalBg">
+        <div class="modal" style="max-width:560px;">
+            <h3><span class="icon" style="background:rgba(56,189,248,0.18);color:#7dd3fc;">🔐</span> Token MCP gerado</h3>
+            <p>Token de <strong id="mcpTokenUser">—</strong>.</p>
+            <p style="color:#fca5a5;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.5;">
+                ⚠️ <strong>Este token será exibido apenas uma vez.</strong> Copie agora e envie pra pessoa por canal seguro (e-mail interno, 1Password, Bitwarden). Não cole em chat público.
+            </p>
+            <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);padding:14px;border-radius:8px;margin:14px 0;">
+                <code id="mcpTokenValue" style="font-family:'JetBrains Mono','Consolas',monospace;font-size:13px;word-break:break-all;color:#7dd3fc;user-select:all;">—</code>
+            </div>
+            <p style="font-size:12px;color:#94a3b8;line-height:1.5;">
+                Pra usar: a pessoa precisa instalar a pasta <code>lincros-mcp/</code> (peça pra Jessica) e adicionar esse token na config do Claude Desktop. Instruções completas no <code>README.md</code> da pasta.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeMcpTokenModal()">Fechar</button>
+                <button type="button" class="btn-confirm" id="mcpTokenCopyBtn">📋 Copiar token</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-bg" id="addUserModalBg">
         <div class="modal">
             <h3><span class="icon" style="background:rgba(108,63,181,0.18);color:#c4b5fd;">＋</span> Adicionar novo usuário</h3>
@@ -818,6 +839,13 @@
                     menuItems.push(`<button class="menu-item" onclick="toggleAdmin('${escapeHtml(u.email)}', '${escapeHtml(u.name)}', ${!u.isAdmin})"><span class="ico">${u.isAdmin ? '☆' : '⭐'}</span> ${u.isAdmin ? 'Remover acesso de admin' : 'Tornar administrador(a)'}</button>`);
                 }
                 menuItems.push(`<button class="menu-item" onclick="resetPassword('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">🔄</span> Resetar senha</button>`);
+                menuItems.push('<div class="menu-divider"></div>');
+                if (u.hasMcpToken) {
+                    menuItems.push(`<button class="menu-item" onclick="generateMcpToken('${escapeHtml(u.email)}', '${escapeHtml(u.name)}', true)"><span class="ico">🔁</span> Regenerar token MCP</button>`);
+                    menuItems.push(`<button class="menu-item danger" onclick="revokeMcpToken('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">🚫</span> Revogar token MCP</button>`);
+                } else {
+                    menuItems.push(`<button class="menu-item" onclick="generateMcpToken('${escapeHtml(u.email)}', '${escapeHtml(u.name)}', false)"><span class="ico">🔐</span> Gerar token MCP</button>`);
+                }
                 if (!isSelf) {
                     menuItems.push('<div class="menu-divider"></div>');
                     menuItems.push(`<button class="menu-item danger" onclick="deleteUser('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')"><span class="ico">🗑️</span> Excluir usuário</button>`);
@@ -989,6 +1017,73 @@
             } catch (e) { showToast('Erro de rede', 'error'); }
         }
 
+        async function generateMcpToken(email, name, isRegen) {
+            closeAllKebabs();
+            const ok = await confirmDialog({
+                title: isRegen ? 'Regenerar token MCP' : 'Gerar token MCP',
+                icon: isRegen ? '🔁' : '🔐',
+                body: isRegen
+                    ? `Regenerar o token MCP de <strong>${escapeHtml(name)}</strong>?<br><br>O token atual será <strong>invalidado imediatamente</strong> e um novo será exibido (uma única vez). O usuário precisará atualizar a config do Claude Desktop.`
+                    : `Gerar um token MCP para <strong>${escapeHtml(name)}</strong> (<code>${escapeHtml(email)}</code>)?<br><br>O token será exibido <strong>uma única vez</strong> nesta tela — copie e envie por canal seguro (não cole em chat público).<br><br>Com esse token, a pessoa poderá conectar o Claude Desktop ao portal e fazer consultas aos dados conforme o nível de acesso dela.`,
+                confirmLabel: isRegen ? 'Regenerar' : 'Gerar token',
+                danger: isRegen
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/generate-mcp-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email })
+                });
+                const data = await r.json();
+                if (!r.ok) return showToast(data.error || 'Falha ao gerar token', 'error');
+                showMcpTokenModal(name, email, data.token);
+                loadUsers();
+            } catch (e) { showToast('Erro de rede', 'error'); }
+        }
+
+        async function revokeMcpToken(email, name) {
+            closeAllKebabs();
+            const ok = await confirmDialog({
+                title: 'Revogar token MCP',
+                icon: '🚫',
+                body: `Revogar o token MCP de <strong>${escapeHtml(name)}</strong>?<br><br>O acesso via Claude Desktop será <strong>cortado imediatamente</strong>. Não é possível recuperar o token — só gerar um novo.`,
+                confirmLabel: 'Revogar',
+                danger: true
+            });
+            if (!ok) return;
+            try {
+                const r = await fetch('/api/admin/revoke-mcp-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ email })
+                });
+                const data = await r.json();
+                if (!r.ok) return showToast(data.error || 'Falha ao revogar', 'error');
+                showToast(data.message || 'Token revogado.', 'success');
+                loadUsers();
+            } catch (e) { showToast('Erro de rede', 'error'); }
+        }
+
+        function showMcpTokenModal(name, email, token) {
+            const bg = document.getElementById('mcpTokenModalBg');
+            document.getElementById('mcpTokenUser').textContent = `${name} · ${email}`;
+            document.getElementById('mcpTokenValue').textContent = token;
+            bg.classList.add('show');
+            document.getElementById('mcpTokenCopyBtn').onclick = async () => {
+                try {
+                    await navigator.clipboard.writeText(token);
+                    document.getElementById('mcpTokenCopyBtn').textContent = '✓ Copiado!';
+                    setTimeout(() => { document.getElementById('mcpTokenCopyBtn').textContent = '📋 Copiar token'; }, 2000);
+                } catch (e) { showToast('Falha ao copiar — selecione manualmente', 'error'); }
+            };
+        }
+        function closeMcpTokenModal() {
+            document.getElementById('mcpTokenModalBg').classList.remove('show');
+        }
+
         async function deleteUser(email, name) {
             closeAllKebabs();
             const ok = await confirmDialog({
@@ -1057,6 +1152,9 @@
         });
         document.getElementById('addUserModalBg').addEventListener('click', (e) => {
             if (e.target === document.getElementById('addUserModalBg')) closeAddUserModal();
+        });
+        document.getElementById('mcpTokenModalBg').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('mcpTokenModalBg')) closeMcpTokenModal();
         });
 
         // ============ Wire up ============

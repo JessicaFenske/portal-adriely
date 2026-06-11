@@ -759,7 +759,9 @@ const server = http.createServer(async (req, res) => {
             mustChangePassword: !!x.mustChangePassword,
             passwordChangedAt: x.passwordChangedAt || null,
             lastLoginAt: x.lastLoginAt || null,
-            createdAt: x.createdAt || null
+            createdAt: x.createdAt || null,
+            hasMcpToken: !!x.mcpTokenHash,
+            mcpTokenCreatedAt: x.mcpTokenCreatedAt || null
         }));
         return jsonReply(res, 200, { users });
     }
@@ -866,6 +868,254 @@ const server = http.createServer(async (req, res) => {
         try { await updateUser(target.email, { isAdmin: makeAdmin, adminChangedAt: new Date().toISOString(), adminChangedBy: u.email }); }
         catch (e) { return jsonReply(res, 500, { error: 'Falha ao atualizar. Tente novamente.' }); }
         return jsonReply(res, 200, { ok: true, message: makeAdmin ? `${target.name} agora é administrador(a).` : `${target.name} não é mais administrador(a).` });
+    }
+
+    // ========== MCP Token Management ==========
+    // Gera token MCP pra um usuário (só admin). Retorna o token EM CLARO uma única vez,
+    // depois armazenamos apenas o hash. Se o usuário perder, gera de novo.
+    if (urlPath === '/api/admin/generate-mcp-token' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        const target = findUser(targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'Usuário não encontrado' });
+        // Gera token: prefix "mcp_" + 40 chars random hex
+        const token = 'mcp_' + crypto.randomBytes(20).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        try {
+            await updateUser(target.email, {
+                mcpTokenHash: tokenHash,
+                mcpTokenCreatedAt: new Date().toISOString(),
+                mcpTokenCreatedBy: u.email
+            });
+        } catch (e) { return jsonReply(res, 500, { error: 'Falha ao salvar token' }); }
+        return jsonReply(res, 200, { ok: true, token, message: `Token MCP gerado pra ${target.name}. ATENÇÃO: copie agora, ele não será mostrado de novo.` });
+    }
+
+    if (urlPath === '/api/admin/revoke-mcp-token' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u || !u.isAdmin) return jsonReply(res, 403, { error: 'forbidden' });
+        const body = await readJSON(req);
+        const targetEmail = String(body.email || '').toLowerCase().trim();
+        const target = findUser(targetEmail);
+        if (!target) return jsonReply(res, 404, { error: 'Usuário não encontrado' });
+        try {
+            await updateUser(target.email, {
+                mcpTokenHash: null,
+                mcpTokenCreatedAt: null,
+                mcpTokenRevokedAt: new Date().toISOString(),
+                mcpTokenRevokedBy: u.email
+            });
+        } catch (e) { return jsonReply(res, 500, { error: 'Falha ao revogar token' }); }
+        return jsonReply(res, 200, { ok: true, message: `Token MCP de ${target.name} revogado.` });
+    }
+
+    // ========== MCP Query Endpoint (auth via Bearer token) ==========
+    // Esse endpoint NÃO usa sessão de cookie — usa Bearer token gerado pelo admin.
+    // É chamado pelo servidor MCP rodando no PC do líder via Claude Desktop.
+    if (urlPath === '/api/mcp/query' && req.method === 'POST') {
+        const authHeader = req.headers['authorization'] || '';
+        const m = authHeader.match(/^Bearer\s+(mcp_[a-f0-9]{40})\s*$/i);
+        if (!m) return jsonReply(res, 401, { error: 'Bearer token MCP requerido' });
+        const providedToken = m[1];
+        const providedHash = crypto.createHash('sha256').update(providedToken).digest('hex');
+        const mcpUser = loadUsers().find(u => u.mcpTokenHash === providedHash);
+        if (!mcpUser) return jsonReply(res, 401, { error: 'Token MCP inválido ou revogado' });
+
+        const body = await readJSON(req);
+        const queryType = String(body.type || '').toLowerCase().trim();
+        const params = body.params || {};
+
+        // Carrega caches locais pra responder (sem auth de cookie)
+        const won = (responseCache.won?.data?.value || []);
+        const lost = (responseCache.lost?.data?.value || []);
+        const open = (responseCache.open?.data?.value || []);
+
+        const SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+        const NEW_BIZ = ['Funil de Vendas', 'Sankhya'];
+        const FARMER_PIP = ['Farmer', 'Farmer IPCA'];
+        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+        const getMRR = (d) => { const p = (d.OtherProperties || []).find(x => x.FieldKey === FIELD_MRR); return p?.DecimalValue || 0; };
+        const getSetup = (d) => { const p = (d.OtherProperties || []).find(x => x.FieldKey === FIELD_SETUP); return p?.DecimalValue || 0; };
+        const getPipelineName = (d) => d.Pipeline?.Name || '';
+        const isSalesPipeline = (d) => SALES_PIPELINES.includes(getPipelineName(d));
+        const getOwnerName = (d) => d.Owner?.Name || '';
+
+        // Filtra por período
+        const periodToRange = (period) => {
+            const now = new Date();
+            const y = now.getFullYear(), m = now.getMonth();
+            if (period === 'this_month') return { start: new Date(y,m,1), end: new Date(y,m+1,0,23,59,59) };
+            if (period === 'last_month') return { start: new Date(y,m-1,1), end: new Date(y,m,0,23,59,59) };
+            if (period === 'this_quarter') { const q = Math.floor(m/3)*3; return { start: new Date(y,q,1), end: new Date(y,q+3,0,23,59,59) }; }
+            if (period === 'last_6_months') return { start: new Date(y,m-6,1), end: new Date(y,m+1,0,23,59,59) };
+            if (period === 'this_year') return { start: new Date(y,0,1), end: new Date(y,11,31,23,59,59) };
+            return null; // global
+        };
+        const inRange = (iso, range) => { if (!range) return true; if (!iso) return false; const t = new Date(iso).getTime(); return t >= range.start.getTime() && t <= range.end.getTime(); };
+
+        // Filtro de permissão: admin vê tudo, leader só seu pipeline, vendedor só seus deals
+        const isAdmin = !!mcpUser.isAdmin;
+        const PIPELINE_LEADERS = {
+            'jessica.fenske@lincros.com': 'Funil de Vendas',
+            'jessica.martins@lincros.com': 'Farmer',
+            'luis.esteves@lincros.com': 'Sankhya'
+        };
+        const leaderPipeline = PIPELINE_LEADERS[mcpUser.email.toLowerCase()];
+        const canSeeDeal = (d) => {
+            if (!isSalesPipeline(d)) return false;
+            if (isAdmin) return true;
+            if (leaderPipeline) {
+                if (leaderPipeline === 'Funil de Vendas' || leaderPipeline === 'Sankhya') {
+                    return NEW_BIZ.includes(getPipelineName(d)); // novos negocios vê funil + sankhya
+                }
+                return FARMER_PIP.includes(getPipelineName(d));
+            }
+            // Vendedor comum: só seus deals
+            return getOwnerName(d) === mcpUser.name;
+        };
+
+        let result;
+        switch (queryType) {
+            case 'whoami':
+                result = {
+                    name: mcpUser.name,
+                    email: mcpUser.email,
+                    accessLevel: isAdmin ? 'admin' : (leaderPipeline ? 'leader' : 'vendedor'),
+                    leaderPipeline: leaderPipeline || null,
+                    visibleDeals: (won.concat(lost, open)).filter(canSeeDeal).length
+                };
+                break;
+            case 'overview': {
+                const range = periodToRange(params.period || 'this_month');
+                const wonInRange = won.filter(d => canSeeDeal(d) && inRange(d.FinishDate, range));
+                const lostInRange = lost.filter(d => canSeeDeal(d) && inRange(d.FinishDate, range));
+                const openVisible = open.filter(canSeeDeal);
+                const totalMrr = wonInRange.filter(d => getPipelineName(d) !== 'Farmer IPCA').reduce((s,d) => s + getMRR(d), 0);
+                const totalSetup = wonInRange.reduce((s,d) => s + getSetup(d), 0);
+                result = {
+                    period: params.period || 'this_month',
+                    wonCount: wonInRange.length,
+                    lostCount: lostInRange.length,
+                    openCount: openVisible.length,
+                    openMrrPotential: openVisible.reduce((s,d) => s + getMRR(d), 0),
+                    totalMrrNew: totalMrr,
+                    totalSetup,
+                    winRate: (wonInRange.length + lostInRange.length) > 0 ? Math.round(wonInRange.length / (wonInRange.length + lostInRange.length) * 100) : 0,
+                    avgTicketMrr: wonInRange.length > 0 ? Math.round(totalMrr / wonInRange.length) : 0
+                };
+                break;
+            }
+            case 'funnel_metrics': {
+                const range = periodToRange(params.period || 'last_6_months');
+                const wonInRange = won.filter(d => canSeeDeal(d) && inRange(d.FinishDate, range));
+                const lostInRange = lost.filter(d => canSeeDeal(d) && inRange(d.FinishDate, range));
+                const isNewBiz = (d) => NEW_BIZ.includes(getPipelineName(d));
+                const isFarmer = (d) => FARMER_PIP.includes(getPipelineName(d));
+                const aggregate = (deals, filter) => {
+                    const map = {};
+                    deals.filter(filter).forEach(d => {
+                        const o = getOwnerName(d); if (!o) return;
+                        if (!map[o]) map[o] = { won: 0, lost: 0, mrrSum: 0, cycleSum: 0, cycleCount: 0 };
+                        map[o].lost++; // overwritten by won below
+                    });
+                    return map;
+                };
+                const calcModelMetrics = (filter) => {
+                    const map = {};
+                    wonInRange.filter(filter).forEach(d => {
+                        const o = getOwnerName(d); if (!o) return;
+                        if (!map[o]) map[o] = { won: 0, lost: 0, mrrSum: 0, cycleSum: 0, cycleCount: 0 };
+                        map[o].won++;
+                        map[o].mrrSum += getMRR(d);
+                        if (d.CreateDate && d.FinishDate) {
+                            const days = (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000;
+                            if (days >= 0) { map[o].cycleSum += days; map[o].cycleCount++; }
+                        }
+                    });
+                    lostInRange.filter(filter).forEach(d => {
+                        const o = getOwnerName(d); if (!o) return;
+                        if (!map[o]) map[o] = { won: 0, lost: 0, mrrSum: 0, cycleSum: 0, cycleCount: 0 };
+                        map[o].lost++;
+                    });
+                    return Object.entries(map).map(([owner, v]) => ({
+                        owner,
+                        won: v.won, lost: v.lost,
+                        cr: (v.won + v.lost) > 0 ? Math.round(v.won / (v.won + v.lost) * 100) : null,
+                        vm: v.won > 0 ? Math.round(v.mrrSum / v.won) : null,
+                        deltaT: v.cycleCount > 0 ? Math.round(v.cycleSum / v.cycleCount) : null
+                    })).sort((a, b) => (b.cr || 0) - (a.cr || 0));
+                };
+                result = {
+                    period: params.period || 'last_6_months',
+                    novosNegocios: calcModelMetrics(isNewBiz),
+                    farmer: calcModelMetrics(isFarmer)
+                };
+                break;
+            }
+            case 'vendor_performance': {
+                const name = params.vendor || '';
+                if (!name) return jsonReply(res, 400, { error: 'param "vendor" obrigatório' });
+                const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                const match = (d) => norm(getOwnerName(d)).includes(norm(name));
+                const range = periodToRange(params.period || 'this_quarter');
+                const vWon = won.filter(d => canSeeDeal(d) && match(d) && inRange(d.FinishDate, range));
+                const vLost = lost.filter(d => canSeeDeal(d) && match(d) && inRange(d.FinishDate, range));
+                const vOpen = open.filter(d => canSeeDeal(d) && match(d));
+                result = {
+                    vendor: name,
+                    period: params.period || 'this_quarter',
+                    wonCount: vWon.length,
+                    lostCount: vLost.length,
+                    openCount: vOpen.length,
+                    totalMrr: vWon.filter(d => getPipelineName(d) !== 'Farmer IPCA').reduce((s,d) => s + getMRR(d), 0),
+                    openMrr: vOpen.reduce((s,d) => s + getMRR(d), 0),
+                    winRate: (vWon.length + vLost.length) > 0 ? Math.round(vWon.length / (vWon.length + vLost.length) * 100) : 0,
+                    avgCycle: (function() {
+                        const cycles = vWon.filter(d => d.CreateDate && d.FinishDate).map(d => (new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000);
+                        return cycles.length > 0 ? Math.round(cycles.reduce((s,c)=>s+c,0) / cycles.length) : null;
+                    })(),
+                    topOpenDeals: vOpen.sort((a,b) => getMRR(b) - getMRR(a)).slice(0, 5).map(d => ({
+                        title: d.Title, mrr: getMRR(d), setup: getSetup(d), stage: d.Stage?.Name, pipeline: getPipelineName(d), daysOpen: Math.floor((Date.now() - new Date(d.CreateDate).getTime()) / 86400000)
+                    }))
+                };
+                break;
+            }
+            case 'deals_at_risk': {
+                const visibleOpen = open.filter(canSeeDeal);
+                const risks = visibleOpen.map(d => {
+                    const daysSinceUpdate = Math.floor((Date.now() - new Date(d.LastUpdateDate || d.CreateDate).getTime()) / 86400000);
+                    let reason = null, severity = 0;
+                    if (daysSinceUpdate >= 21 && (d.Stage?.Ordination ?? -1) >= 2) { reason = `Estagnado em ${d.Stage?.Name} há ${daysSinceUpdate}d`; severity = 3; }
+                    else if (daysSinceUpdate >= 14) { reason = `Sem atividade há ${daysSinceUpdate}d`; severity = 2; }
+                    else if (daysSinceUpdate >= 7 && getMRR(d) > 5000) { reason = `Deal grande sem atividade há ${daysSinceUpdate}d`; severity = 1; }
+                    return reason ? { title: d.Title, owner: getOwnerName(d), mrr: getMRR(d), stage: d.Stage?.Name, pipeline: getPipelineName(d), daysSinceUpdate, reason, severity } : null;
+                }).filter(Boolean).sort((a, b) => b.severity - a.severity || b.daysSinceUpdate - a.daysSinceUpdate).slice(0, params.limit || 20);
+                result = { deals: risks, count: risks.length };
+                break;
+            }
+            case 'top_sellers': {
+                const range = periodToRange(params.period || 'this_month');
+                const sellerMrr = {};
+                won.filter(d => canSeeDeal(d) && inRange(d.FinishDate, range) && getPipelineName(d) !== 'Farmer IPCA').forEach(d => {
+                    const o = getOwnerName(d); if (!o) return;
+                    sellerMrr[o] = (sellerMrr[o] || { count: 0, mrr: 0 });
+                    sellerMrr[o].count++;
+                    sellerMrr[o].mrr += getMRR(d);
+                });
+                result = {
+                    period: params.period || 'this_month',
+                    sellers: Object.entries(sellerMrr).sort((a,b) => b[1].mrr - a[1].mrr).slice(0, params.limit || 10).map(([name, v]) => ({ name, mrr: v.mrr, deals: v.count }))
+                };
+                break;
+            }
+            default:
+                return jsonReply(res, 400, { error: `tipo de query desconhecido: ${queryType}. Tipos válidos: whoami, overview, funnel_metrics, vendor_performance, deals_at_risk, top_sellers` });
+        }
+
+        return jsonReply(res, 200, { ok: true, data: result, queryType, accessLevel: isAdmin ? 'admin' : (leaderPipeline ? 'leader' : 'vendedor') });
     }
 
     if (urlPath === '/api/admin/send-reminder' && req.method === 'POST') {
