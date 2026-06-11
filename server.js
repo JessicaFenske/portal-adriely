@@ -22,6 +22,7 @@ if (!process.env.SESSION_SECRET) {
 }
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM = process.env.RESEND_FROM || 'Portal Lincros <onboarding@resend.dev>';
+const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidades.onrender.com';
 const SESSION_DAYS = 30;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
@@ -901,6 +902,119 @@ const server = http.createServer(async (req, res) => {
             r.on('error', () => resolve(0)); r.write(payload); r.end();
         });
         return jsonReply(res, 200, { ok: true, message: `Lembrete enviado para ${target.email}` });
+    }
+
+    // ==================== Chat IA "Lia" (Gemini Flash) ====================
+    if (urlPath === '/api/chat' && req.method === 'POST') {
+        const u = getCurrentUser(req);
+        if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!GEMINI_API_KEY) return jsonReply(res, 500, { error: 'IA não configurada — peça pro admin configurar GEMINI_API_KEY no Render.' });
+
+        const body = await readJSON(req);
+        const messages = body.messages || [];
+        const dataContext = body.dataContext || {};
+        const userInfo = body.userInfo || {};
+
+        // Validações simples
+        if (!messages.length) return jsonReply(res, 400, { error: 'mensagens vazias' });
+        if (messages.length > 30) return jsonReply(res, 400, { error: 'histórico muito longo' });
+        const lastUserMsg = messages[messages.length - 1];
+        if (!lastUserMsg || lastUserMsg.role !== 'user') return jsonReply(res, 400, { error: 'última mensagem deve ser do usuário' });
+        if (lastUserMsg.text && lastUserMsg.text.length > 2000) return jsonReply(res, 400, { error: 'pergunta muito longa (máx 2000 caracteres)' });
+
+        // Determina nível de acesso
+        const accessLevel = u.isAdmin ? 'admin'
+            : (userInfo.isLeader ? 'leader' : 'vendedor');
+        const userName = u.name || u.email;
+
+        // System prompt
+        const systemPrompt = `Você é a "Lia", assistente de IA da Lincros pra vendas e operações comerciais.
+
+CONTEXTO DO USUÁRIO LOGADO:
+- Nome: ${userName}
+- E-mail: ${u.email}
+- Papel: ${accessLevel === 'admin' ? 'Administrador(a)' : accessLevel === 'leader' ? `Líder de funil (${userInfo.leaderPipeline || 'pipeline atribuído'})` : 'Vendedor(a)'}
+
+REGRAS DE ACESSO (CRÍTICO — NÃO QUEBRE):
+${accessLevel === 'admin' ? '- Você pode ver e analisar dados de TODOS os vendedores, funis e pipelines.' : ''}
+${accessLevel === 'leader' ? `- Você pode ver dados do funil "${userInfo.leaderPipeline}" e todos os vendedores DESSE funil.\n- Para outros funis, oriente o usuário a falar com o líder respectivo.` : ''}
+${accessLevel === 'vendedor' ? '- Você só pode ver dados PESSOAIS do usuário (deals dele, performance dele).\n- Se ele perguntar sobre OUTRO vendedor especificamente (ex: "como tá o Bruno?"), recuse educadamente: "Você não tem acesso a métricas individuais de outros vendedores. Fala com a sua liderança se precisar disso."\n- Pode mostrar dados agregados do funil (ex: total ganho do mês), mas NUNCA performance individual de outro vendedor.' : ''}
+
+DADOS DISPONÍVEIS NESTA CONVERSA:
+${JSON.stringify(dataContext, null, 2).slice(0, 8000)}
+
+DIRETRIZES:
+1. Use português brasileiro casual mas profissional. Pode usar "vc" ocasionalmente, mas sem exagero.
+2. Seja CONCISO e ACIONÁVEL. Vendedor não tem tempo pra ler parágrafo longo.
+3. Cite números específicos sempre que tiver dado.
+4. Use frameworks: MEDDIC (Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion), SPIN (Situation/Problem/Implication/Need-payoff), SPICED (Situation, Pain, Impact, Critical Event, Decision Criteria) quando relevante.
+5. Sugira AÇÃO CONCRETA, não só análise. Ex: "Marque uma call de qualificação com X" em vez de "considere uma call".
+6. Se faltar dado pra responder, diga: "Não tenho esse dado aqui — confira em [seção do dashboard]" + sugira o caminho.
+7. Formate respostas em markdown leve (negrito **assim**, listas com -, links). Pode usar emojis com moderação.
+8. Quando o usuário pedir cálculo (ex: "quanto preciso fechar pra bater meta"), faça a conta com os dados que tem.
+9. NUNCA invente dados. Se não tem informação, fala que não tem.
+10. Se a pergunta for fora de escopo (vendas/operação Lincros), redirecione gentilmente.`;
+
+        // Monta contents pro Gemini
+        const contents = messages.map(m => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.text || '' }]
+        }));
+
+        const payload = JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1024,
+                topP: 0.95
+            },
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+            ]
+        });
+
+        const reply = await new Promise((resolve) => {
+            const opts = {
+                hostname: 'generativelanguage.googleapis.com',
+                path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(payload)
+                }
+            };
+            const r = https.request(opts, (rr) => {
+                const chunks = [];
+                rr.on('data', c => chunks.push(c));
+                rr.on('end', () => {
+                    const raw = Buffer.concat(chunks).toString('utf8');
+                    try {
+                        const json = JSON.parse(raw);
+                        if (rr.statusCode < 200 || rr.statusCode >= 300) {
+                            console.error('[chat] Gemini HTTP', rr.statusCode, raw.slice(0, 400));
+                            return resolve({ error: 'Erro na IA: ' + (json.error?.message || 'HTTP ' + rr.statusCode) });
+                        }
+                        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (!text) return resolve({ error: 'Sem resposta da IA' });
+                        resolve({ text });
+                    } catch (e) {
+                        console.error('[chat] parse error:', e.message);
+                        resolve({ error: 'Erro ao processar resposta da IA' });
+                    }
+                });
+            });
+            r.on('error', (e) => { console.error('[chat] request error:', e.message); resolve({ error: 'Falha de conexão com a IA' }); });
+            r.setTimeout(30000, () => { r.destroy(); resolve({ error: 'IA demorou demais pra responder' }); });
+            r.write(payload);
+            r.end();
+        });
+
+        if (reply.error) return jsonReply(res, 502, { error: reply.error });
+        return jsonReply(res, 200, { text: reply.text });
     }
 
     // ==================== Middleware de proteção ====================

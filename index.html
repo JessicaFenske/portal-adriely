@@ -4260,6 +4260,277 @@
             .hp-section-header h2 { font-size: 15px; gap: 10px; }
             .hp-section-sub { margin-left: 0; margin-top: 6px; font-size: 12px; }
         }
+
+        /* ==================== CHAT IA "Lia" ==================== */
+        #liaBubble {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6, #c084fc);
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(108, 63, 181, 0.5);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #liaBubble:hover { transform: scale(1.08); box-shadow: 0 10px 32px rgba(139, 92, 246, 0.65); }
+        #liaBubble.hidden { display: none; }
+        .lia-bubble-icon { position: relative; z-index: 1; }
+        .lia-bubble-pulse {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.4);
+            animation: liaPulse 2.5s ease-out infinite;
+        }
+        @keyframes liaPulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+        #liaWindow {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 400px;
+            max-width: calc(100vw - 32px);
+            height: 600px;
+            max-height: calc(100vh - 48px);
+            background: linear-gradient(180deg, rgba(20, 20, 40, 0.98), rgba(15, 15, 30, 0.99));
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            border-radius: 18px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.2s, transform 0.2s;
+            transform-origin: bottom right;
+        }
+        #liaWindow.lia-closed {
+            opacity: 0;
+            transform: scale(0.85) translateY(20px);
+            pointer-events: none;
+        }
+        #liaWindow.lia-open {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        .lia-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(108, 63, 181, 0.4), rgba(139, 92, 246, 0.2));
+            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+        }
+        .lia-header-avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c084fc, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .lia-header-text { flex: 1; min-width: 0; }
+        .lia-header-name { font-size: 14px; font-weight: 700; color: #fff; }
+        .lia-header-status { font-size: 11.5px; color: #c4b5fd; margin-top: 1px; }
+        .lia-header-status::before {
+            content: '•';
+            color: #10b981;
+            font-size: 16px;
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+        .lia-header-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #c4b5fd;
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .lia-header-close:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+        .lia-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+        .lia-msg {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 13.5px;
+            line-height: 1.55;
+            word-wrap: break-word;
+        }
+        .lia-msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .lia-msg.bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e5e7eb;
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-bottom-left-radius: 4px;
+        }
+        .lia-msg.bot strong { color: #fff; font-weight: 700; }
+        .lia-msg.bot em { color: #fcd34d; font-style: italic; }
+        .lia-msg.bot code { background: rgba(15, 15, 30, 0.6); padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 12px; color: #c084fc; }
+        .lia-msg.bot ul, .lia-msg.bot ol { margin: 6px 0; padding-left: 22px; }
+        .lia-msg.bot li { margin: 3px 0; }
+        .lia-msg.bot a { color: #c4b5fd; text-decoration: underline; }
+        .lia-msg.system {
+            align-self: center;
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px dashed rgba(139, 92, 246, 0.25);
+            color: #94a3b8;
+            font-size: 12px;
+            font-style: italic;
+            max-width: 95%;
+            text-align: center;
+        }
+        .lia-msg.error {
+            align-self: flex-start;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+            font-size: 12.5px;
+        }
+        .lia-typing {
+            align-self: flex-start;
+            display: flex;
+            gap: 3px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-radius: 14px;
+            border-bottom-left-radius: 4px;
+        }
+        .lia-typing span {
+            width: 7px; height: 7px;
+            background: #c4b5fd;
+            border-radius: 50%;
+            animation: liaTyping 1.2s ease-in-out infinite;
+        }
+        .lia-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .lia-typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes liaTyping {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        .lia-suggestions {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            overflow-x: auto;
+            border-top: 1px solid rgba(139, 92, 246, 0.12);
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+        }
+        .lia-suggestion {
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .lia-suggestion:hover { background: rgba(139, 92, 246, 0.22); color: #fff; }
+
+        .lia-input-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 10px 12px;
+            border-top: 1px solid rgba(139, 92, 246, 0.15);
+            background: rgba(15, 15, 30, 0.5);
+        }
+        .lia-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-radius: 12px;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            max-height: 120px;
+            outline: none;
+            line-height: 1.4;
+        }
+        .lia-input:focus { border-color: #8b5cf6; }
+        .lia-input::placeholder { color: #6c5ca0; }
+        .lia-send {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .lia-send:hover { box-shadow: 0 4px 14px rgba(139, 92, 246, 0.5); }
+        .lia-send:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+        .lia-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px 10px;
+            font-size: 10.5px;
+            color: #6c5ca0;
+        }
+        .lia-clear {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 10.5px;
+            cursor: pointer;
+            padding: 4px 6px;
+        }
+        .lia-clear:hover { color: #c4b5fd; }
+        .lia-disclaimer { font-style: italic; }
+
+        @media (max-width: 720px) {
+            #liaBubble { bottom: 16px; right: 16px; width: 50px; height: 50px; font-size: 22px; }
+            #liaWindow {
+                bottom: 0; right: 0; left: 0;
+                width: 100%; max-width: 100vw;
+                height: 90vh;
+                max-height: 90vh;
+                border-radius: 18px 18px 0 0;
+            }
+            .lia-input { font-size: 16px; }
+        }
+
     </style>
 </head>
 <body>
@@ -6546,6 +6817,291 @@ async function fetchCurrentUser() {
         }
     } catch (e) { /* silencioso */ }
 }
+// ==================== CHAT IA "Lia" ====================
+const LIA_STORAGE_KEY = 'lia_chat_history';
+let liaMessages = []; // {role: 'user'|'assistant', text}
+let liaSending = false;
+
+function liaToggle() {
+    const win = document.getElementById('liaWindow');
+    const bubble = document.getElementById('liaBubble');
+    const isOpen = win.classList.contains('lia-open');
+    if (isOpen) {
+        win.classList.remove('lia-open');
+        win.classList.add('lia-closed');
+        bubble.classList.remove('hidden');
+    } else {
+        win.classList.remove('lia-closed');
+        win.classList.add('lia-open');
+        bubble.classList.add('hidden');
+        liaLoadHistory();
+        if (liaMessages.length === 0) liaShowWelcome();
+        liaRenderSuggestions();
+        setTimeout(() => document.getElementById('liaInput').focus(), 200);
+    }
+}
+
+function liaLoadHistory() {
+    try {
+        const raw = localStorage.getItem(LIA_STORAGE_KEY);
+        if (raw) {
+            const data = JSON.parse(raw);
+            // Invalida se for de outro dia (sessão nova diária)
+            const today = new Date().toISOString().slice(0, 10);
+            if (data.date === today && Array.isArray(data.messages)) {
+                liaMessages = data.messages;
+                liaRenderMessages();
+                return;
+            }
+        }
+    } catch (e) {}
+    liaMessages = [];
+    liaRenderMessages();
+}
+
+function liaSaveHistory() {
+    try {
+        const today = new Date().toISOString().slice(0, 10);
+        localStorage.setItem(LIA_STORAGE_KEY, JSON.stringify({ date: today, messages: liaMessages.slice(-30) }));
+    } catch (e) {}
+}
+
+function liaShowWelcome() {
+    const myName = (typeof _hvCurrentUserName === 'string' && _hvCurrentUserName) ? _hvCurrentUserName.split(' ')[0] : 'colega';
+    const greeting = `Oi ${myName}! 👋 Sou a Lia, sua assistente de IA pra vendas. Posso te ajudar com:\n\n- 📊 Análise dos seus deals\n- 🎯 Sugestões MEDDIC / SPIN pra deals específicos\n- 📈 Cálculos de pipeline, conversão, meta\n- 🚨 Identificar riscos e oportunidades\n\nPergunta o que quiser ou clica numa sugestão abaixo.`;
+    addLiaMessage('assistant', greeting);
+}
+
+function liaRenderSuggestions() {
+    const sugDiv = document.getElementById('liaSuggestions');
+    // Sugestões baseadas no perfil do usuário
+    const isAdmin = typeof _hvIsAdmin === 'function' && _hvIsAdmin();
+    const myEmail = typeof _hvCurrentEmail === 'function' ? _hvCurrentEmail() : null;
+    const isLeader = myEmail && typeof PIPELINE_LEADERS !== 'undefined' && PIPELINE_LEADERS[myEmail.toLowerCase()];
+    let sugs;
+    if (isAdmin || isLeader) {
+        sugs = [
+            '📊 Como tá o pipeline geral esse mês?',
+            '🚨 Quais vendedores precisam de atenção?',
+            '🏆 Quem tá puxando os resultados?',
+            '🎯 Onde tem maior gargalo de conversão?'
+        ];
+    } else {
+        sugs = [
+            '📊 Como tá meu pipeline?',
+            '🚨 Quais meus deals em risco?',
+            '🎯 Que MEDDIC me falta nos top deals?',
+            '📈 Quanto preciso fechar pra bater minha meta?'
+        ];
+    }
+    sugDiv.innerHTML = sugs.map(s => `<button class="lia-suggestion" onclick="liaUseSuggestion('${s.replace(/'/g, "\\'")}')">${s}</button>`).join('');
+}
+
+function liaUseSuggestion(text) {
+    const input = document.getElementById('liaInput');
+    // Remove emoji+espaço do início pra ficar mais natural
+    input.value = text.replace(/^[\W_]+\s*/, '');
+    input.focus();
+    liaSend();
+}
+
+function addLiaMessage(role, text) {
+    liaMessages.push({ role, text });
+    liaRenderMessages();
+    liaSaveHistory();
+}
+
+function liaRenderMessages() {
+    const cont = document.getElementById('liaMessages');
+    cont.innerHTML = liaMessages.map(m => {
+        if (m.role === 'system') return `<div class="lia-msg system">${liaFormat(m.text)}</div>`;
+        if (m.role === 'error') return `<div class="lia-msg error">${liaFormat(m.text)}</div>`;
+        if (m.role === 'user') return `<div class="lia-msg user">${liaEscapeHtml(m.text)}</div>`;
+        return `<div class="lia-msg bot">${liaFormat(m.text)}</div>`;
+    }).join('');
+    cont.scrollTop = cont.scrollHeight;
+}
+
+function liaEscapeHtml(s) {
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Markdown leve: **bold**, *italic*, `code`, listas, quebras
+function liaFormat(s) {
+    let html = liaEscapeHtml(s || '');
+    // Listas (linhas começando com - )
+    html = html.replace(/(^|\n)- (.+)/g, '$1<li>$2</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+    // Negrito **texto**
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Itálico *texto* (cuidado pra não pegar listas)
+    html = html.replace(/(^|\s)\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    // Código inline `texto`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Quebras de linha
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
+function liaShowTyping() {
+    const cont = document.getElementById('liaMessages');
+    const typing = document.createElement('div');
+    typing.className = 'lia-typing';
+    typing.id = 'liaTyping';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    cont.appendChild(typing);
+    cont.scrollTop = cont.scrollHeight;
+}
+
+function liaHideTyping() {
+    const t = document.getElementById('liaTyping');
+    if (t) t.remove();
+}
+
+// Coleta contexto de dados do usuário pra mandar pra IA
+function liaBuildDataContext() {
+    const myName = typeof _hvCurrentUserName === 'string' ? _hvCurrentUserName : null;
+    const myEmail = typeof _hvCurrentEmail === 'function' ? _hvCurrentEmail() : null;
+    const isAdmin = typeof _hvIsAdmin === 'function' && _hvIsAdmin();
+    const leaderPipeline = myEmail && typeof PIPELINE_LEADERS !== 'undefined' ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
+    const ctx = {
+        userName: myName,
+        accessLevel: isAdmin ? 'admin' : (leaderPipeline ? 'leader' : 'vendedor'),
+        leaderPipeline: leaderPipeline || null,
+        currentDate: new Date().toISOString().slice(0, 10)
+    };
+    // Dados gerais sempre disponíveis (agregados)
+    const NEW_BIZ = ['Funil de Vendas', 'Sankhya'];
+    const FARMER_PIP = ['Farmer', 'Farmer IPCA'];
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const inMonth = (iso) => iso && new Date(iso) >= monthStart;
+    if (isAdmin || leaderPipeline) {
+        const allWon = (wonDeals || []).filter(d => inMonth(d.FinishDate));
+        const byPipeline = {};
+        allWon.forEach(d => {
+            const p = getPipelineName(d);
+            if (!byPipeline[p]) byPipeline[p] = { count: 0, mrr: 0, setup: 0 };
+            byPipeline[p].count++;
+            byPipeline[p].mrr += getMRR(d);
+            byPipeline[p].setup += getSetup(d);
+        });
+        ctx.thisMonthByPipeline = byPipeline;
+        ctx.thisMonthTotalDeals = allWon.length;
+        ctx.thisMonthTotalMRR = allWon.reduce((s,d) => s + getMRR(d), 0);
+        ctx.thisMonthTotalSetup = allWon.reduce((s,d) => s + getSetup(d), 0);
+        // Ranking de vendedores no mês (top 5)
+        const sellerMrr = {};
+        allWon.forEach(d => {
+            const o = d.Owner?.Name; if (!o) return;
+            if (typeof isSdrName === 'function' && isSdrName(o)) return;
+            sellerMrr[o] = (sellerMrr[o] || 0) + getMRR(d);
+        });
+        ctx.topSellersThisMonth = Object.entries(sellerMrr).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([name, mrr]) => ({ name, mrr }));
+    }
+    // Dados pessoais (sempre quando o usuário tem deals atribuídos)
+    if (myName) {
+        const ownerName = typeof _cpMatchUserToOwner === 'function' ? _cpMatchUserToOwner(myName, [...(wonDeals||[]), ...(lostDeals||[]), ...(dashOpenDeals||[])]) : null;
+        if (ownerName) {
+            const isSalesP = (d) => typeof SALES_PIPELINES !== 'undefined' && SALES_PIPELINES.includes(getPipelineName(d));
+            const myWon = (wonDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
+            const myLost = (lostDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
+            const myOpen = (dashOpenDeals || []).filter(d => d.Owner?.Name === ownerName && isSalesP(d));
+            ctx.me = {
+                ownerName,
+                wonMonthCount: myWon.filter(d => inMonth(d.FinishDate)).length,
+                wonMonthMRR: myWon.filter(d => inMonth(d.FinishDate)).reduce((s,d) => s + getMRR(d), 0),
+                openCount: myOpen.length,
+                openMRR: myOpen.reduce((s,d) => s + getMRR(d), 0),
+                wonTotal: myWon.length,
+                lostTotal: myLost.length,
+                winRate: (myWon.length + myLost.length) > 0 ? Math.round(myWon.length / (myWon.length + myLost.length) * 100) : 0,
+                topOpenDeals: myOpen.sort((a,b) => getMRR(b) - getMRR(a)).slice(0, 5).map(d => ({
+                    id: d.Id,
+                    title: d.Title,
+                    stage: d.Stage?.Name,
+                    mrr: getMRR(d),
+                    setup: getSetup(d),
+                    daysOpen: Math.floor((Date.now() - new Date(d.CreateDate).getTime()) / 86400000),
+                    cargo: typeof getContactCargo === 'function' ? getContactCargo(d) : null,
+                    meddicScore: typeof _cpMeddicScore === 'function' ? _cpMeddicScore(d).score : null
+                }))
+            };
+        }
+    }
+    return ctx;
+}
+
+async function liaSend() {
+    if (liaSending) return;
+    const input = document.getElementById('liaInput');
+    const text = input.value.trim();
+    if (!text) return;
+    liaSending = true;
+    input.value = '';
+    input.disabled = true;
+    document.getElementById('liaSend').disabled = true;
+
+    addLiaMessage('user', text);
+    liaShowTyping();
+
+    const dataContext = liaBuildDataContext();
+    const userInfo = {
+        isLeader: !!dataContext.leaderPipeline,
+        leaderPipeline: dataContext.leaderPipeline
+    };
+    // Manda só as últimas N mensagens pra não estourar contexto
+    const payloadMessages = liaMessages.slice(-12).map(m => ({ role: m.role, text: m.text }));
+
+    try {
+        const r = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ messages: payloadMessages, dataContext, userInfo })
+        });
+        const data = await r.json();
+        liaHideTyping();
+        if (!r.ok || data.error) {
+            addLiaMessage('error', '⚠️ ' + (data.error || 'Algo deu errado. Tenta de novo.'));
+        } else if (data.text) {
+            addLiaMessage('assistant', data.text);
+        }
+    } catch (e) {
+        liaHideTyping();
+        addLiaMessage('error', '⚠️ Erro de conexão. Tenta de novo.');
+    } finally {
+        liaSending = false;
+        input.disabled = false;
+        document.getElementById('liaSend').disabled = false;
+        input.focus();
+    }
+}
+
+function liaClearChat() {
+    if (!confirm('Limpar conversa atual?')) return;
+    liaMessages = [];
+    liaSaveHistory();
+    liaRenderMessages();
+    liaShowWelcome();
+}
+
+// Auto-resize do textarea + Enter pra enviar
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('liaInput');
+    if (!input) return;
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            liaSend();
+        }
+    });
+});
+
 async function logoutUser() {
     try { await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
     window.location.href = '/login';
@@ -16633,5 +17189,36 @@ setInterval(() => {
     console.log('Auto-refresh executado:', new Date().toLocaleTimeString());
 }, 5 * 60 * 1000);
 </script>
+
+    <!-- ==================== CHAT IA "Lia" ==================== -->
+    <button id="liaBubble" onclick="liaToggle()" title="Conversar com a Lia (IA)">
+        <span class="lia-bubble-icon">💬</span>
+        <span class="lia-bubble-pulse"></span>
+    </button>
+    <div id="liaWindow" class="lia-closed">
+        <div class="lia-header">
+            <div class="lia-header-avatar">
+                <span>✨</span>
+            </div>
+            <div class="lia-header-text">
+                <div class="lia-header-name">Lia · IA Lincros</div>
+                <div class="lia-header-status">Online · pronta pra ajudar</div>
+            </div>
+            <button class="lia-header-close" onclick="liaToggle()" title="Fechar">✕</button>
+        </div>
+        <div id="liaMessages" class="lia-messages"></div>
+        <div id="liaSuggestions" class="lia-suggestions"></div>
+        <div class="lia-input-area">
+            <textarea id="liaInput" class="lia-input" placeholder="Pergunta algo sobre seu pipeline, deals, MEDDIC..." rows="1" maxlength="2000"></textarea>
+            <button id="liaSend" class="lia-send" onclick="liaSend()" title="Enviar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+        <div class="lia-footer">
+            <button class="lia-clear" onclick="liaClearChat()" title="Nova conversa">🔄 Nova conversa</button>
+            <span class="lia-disclaimer">⚠️ IA pode errar · valide dados críticos</span>
+        </div>
+    </div>
+
 </body>
 </html>
