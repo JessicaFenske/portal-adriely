@@ -684,6 +684,15 @@
         }
         .sub-filter select:focus { border-color: #6c3fb5; }
         .sub-filter select option { background: #1a1a2e; color: #e0e0e0; }
+        /* Garante que TODAS as <option> dos selects sigam o tema dark
+           (independente de classes específicas — corrige branco esbranquiçado em vários lugares) */
+        select option, select option:checked {
+            background-color: #1a1a2e !important;
+            color: #e5e7eb !important;
+        }
+        select option:hover, select option:focus {
+            background-color: #2d2d4a !important;
+        }
 
         /* Section Period Select */
         .section-period-select {
