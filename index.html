@@ -5598,6 +5598,8 @@
                         <div id="sec7TimesCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableSec7Times')">Mostrar/ocultar tabela consolidada</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7Times()">&#128229; Exportar Excel</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;background:rgba(250,204,21,0.15);border:1px solid #facc15;color:#facc15;" onclick="debugOpoSec7Times()">&#128269; Debug OPO</button>
+                        <div id="opoDebugBox" style="display:none;margin-top:14px;background:#0f0f1e;border:1px solid rgba(250,204,21,0.3);border-radius:8px;padding:14px;font-family:'Consolas',monospace;font-size:12px;color:#e0e0e0;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto;"></div>
                         <div class="collapsible-table" id="tableSec7Times"><table><thead><tr>
                             <th>Time</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th><th>OPOs</th><th>Meta</th><th>% Meta</th>
                         </tr></thead><tbody id="tbodySec7Times"></tbody></table></div>
@@ -13315,6 +13317,88 @@ function exportSection7Times() {
         { header: 'OPOs (propostas geradas)', getValue: d => d.opos },
         { header: 'Taxa Realização', getValue: d => d.rate }
     ], 'reunioes_por_time');
+}
+
+// Debug: roda diagnóstico de detecção de OPO no deal exemplo + cards do mês
+function debugOpoSec7Times() {
+    const box = document.getElementById('opoDebugBox');
+    box.style.display = 'block';
+    const lines = [];
+    const log = (msg) => lines.push(msg);
+
+    // 1) Deal exemplo (Célia Alimentos OPO Maja)
+    const exId = 605099444;
+    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const d = all.find(x => x.Id === exId);
+    log(`=== DEAL EXEMPLO #${exId} (Célia Alimentos) ===`);
+    if (!d) {
+        log('❌ Deal NÃO encontrado em wonDeals/lostDeals/dashOpenDeals.');
+        log('   → cache do dashboard pode estar desatualizado, ou o deal não está em pipelines monitorados.');
+    } else {
+        log(`Pipeline: ${d.Pipeline?.Name} | Stage: ${d.Stage?.Name} (ord ${d.Stage?.Ordination})`);
+        log(`Owner: ${d.Owner?.Name} | LastUpdate: ${d.LastUpdateDate}`);
+        log(`hasProposalSent: ${hasProposalSent(d)}`);
+        log(`getProposalDate: ${getProposalDate(d)}`);
+        log(`getSDR (campo customizado): ${typeof getSDR === 'function' ? getSDR(d) : '— getSDR não existe'}`);
+        log(`OtherProperties count: ${(d.OtherProperties||[]).length}`);
+        const propMarcador = (d.OtherProperties||[]).filter(p => {
+            const v = (p.ObjectValueName || p.StringValue || '').toLowerCase();
+            const fn = (p.FieldName || '').toLowerCase();
+            return v.includes('proposta') || fn.includes('marcador') || fn.includes('proposta');
+        });
+        log(`Props ligadas a proposta/marcador: ${propMarcador.length}`);
+        propMarcador.forEach(p => {
+            log(`  • FieldName="${p.FieldName}" Key=${p.FieldKey} ObjVal="${p.ObjectValueName||''}" StrVal="${p.StringValue||''}" DtVal=${p.DateTimeValue||'—'}`);
+        });
+    }
+
+    // 2) Stats globais do mês
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const inMonth = (iso) => iso && new Date(iso) >= monthStart && new Date(iso) <= monthEnd;
+
+    log('');
+    log('=== TASKS "Proposta Enviada/Gerada" carregadas ===');
+    const propTasks = (typeof getPropostaEnviadaTasks === 'function') ? getPropostaEnviadaTasks() : [];
+    log(`Total: ${propTasks.length}`);
+    const propTasksMonth = propTasks.filter(t => inMonth(t.CreateDate));
+    log(`Criadas neste mês: ${propTasksMonth.length}`);
+    if (propTasksMonth.length > 0) {
+        log('Primeiras 5:');
+        propTasksMonth.slice(0,5).forEach(t => {
+            const cr = dashUsersById[t.CreatorId] || '?';
+            log(`  • "${t.Title}" por ${cr} em ${new Date(t.CreateDate).toLocaleDateString('pt-BR')} (Deal ${t.DealId})`);
+        });
+    }
+
+    log('');
+    log('=== DEALS COM hasProposalSent + data no mês ===');
+    const withProp = all.filter(d => hasProposalSent(d));
+    log(`Total deals com proposta detectada (qualquer época): ${withProp.length}`);
+    const withPropInMonth = withProp.filter(d => {
+        const pd = getProposalDate(d) || d.LastUpdateDate;
+        return inMonth(pd);
+    });
+    log(`Com data no mês (proposta OU LastUpdate): ${withPropInMonth.length}`);
+
+    // Por pipeline
+    const byPipe = {};
+    withPropInMonth.forEach(d => {
+        const p = d.Pipeline?.Name || '?';
+        byPipe[p] = (byPipe[p] || 0) + 1;
+    });
+    log('Por pipeline:');
+    Object.entries(byPipe).sort((a,b) => b[1]-a[1]).forEach(([p, n]) => log(`  • ${p}: ${n}`));
+
+    log('');
+    log('=== ATRIBUIÇÃO POR SDR (countOposByCanonicalSdr) ===');
+    const sp = (typeof getSectionPeriod === 'function') ? getSectionPeriod('sec7Times') : { start: monthStart, end: monthEnd };
+    const result = (typeof countOposByCanonicalSdr === 'function') ? countOposByCanonicalSdr(sp) : {};
+    log(`Período: ${sp.start?.toLocaleDateString('pt-BR')} → ${sp.end?.toLocaleDateString('pt-BR')}`);
+    log(`Resultado: ${JSON.stringify(result, null, 2)}`);
+
+    box.textContent = lines.join('\n');
 }
 
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
