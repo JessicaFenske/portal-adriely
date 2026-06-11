@@ -906,15 +906,16 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { ok: true, message: `Lembrete enviado para ${target.email}` });
     }
 
-    // ==================== Chat IA "Lia" (Claude Haiku 4.5 / Gemini fallback) ====================
+    // ==================== Chat IA "Lia" (somente Claude Haiku 4.5 / Anthropic) ====================
+    // Provider Gemini foi descontinuado por razões de privacidade — só Claude (Anthropic, no-training).
     if (urlPath === '/api/chat' && req.method === 'POST') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
-        // Sem chave configurada: rejeita amigavelmente
-        if (!ANTHROPIC_API_KEY && !GEMINI_API_KEY) {
-            return jsonReply(res, 500, { error: 'IA não configurada — peça pro admin configurar ANTHROPIC_API_KEY (ou GEMINI_API_KEY) no Render.' });
+        // Só funciona com Claude (Anthropic). Sem essa key configurada, recusa.
+        if (!ANTHROPIC_API_KEY) {
+            return jsonReply(res, 503, { error: 'IA temporariamente indisponível — aguardando configuração da chave Anthropic. Fale com a Jessica.' });
         }
-        const useClaude = !!ANTHROPIC_API_KEY; // prioriza Claude se ambos existirem
+        const useClaude = true; // sempre Claude (Gemini fallback removido)
 
         const body = await readJSON(req);
         const messages = body.messages || [];
@@ -961,57 +962,29 @@ DIRETRIZES:
 9. NUNCA invente dados. Se não tem informação, fala que não tem.
 10. Se a pergunta for fora de escopo (vendas/operação Lincros), redirecione gentilmente.`;
 
-        // Monta payload conforme provider escolhido
-        let opts, payload;
-        if (useClaude) {
-            // Anthropic Claude API
-            // Mensagens já vem com role 'user'|'assistant' (formato Anthropic-compatível)
-            const claudeMessages = messages.map(m => ({
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.text || ''
-            }));
-            payload = JSON.stringify({
-                model: ANTHROPIC_MODEL,
-                max_tokens: 1024,
-                system: systemPrompt,
-                messages: claudeMessages,
-                temperature: 0.7
-            });
-            opts = {
-                hostname: 'api.anthropic.com',
-                path: '/v1/messages',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(payload),
-                    'x-api-key': ANTHROPIC_API_KEY,
-                    'anthropic-version': '2023-06-01'
-                }
-            };
-        } else {
-            // Google Gemini (fallback)
-            const contents = messages.map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.text || '' }]
-            }));
-            payload = JSON.stringify({
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents,
-                generationConfig: { temperature: 0.7, maxOutputTokens: 1024, topP: 0.95 },
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
-                ]
-            });
-            opts = {
-                hostname: 'generativelanguage.googleapis.com',
-                path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-            };
-        }
+        // Anthropic Claude API
+        const claudeMessages = messages.map(m => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.text || ''
+        }));
+        const payload = JSON.stringify({
+            model: ANTHROPIC_MODEL,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: claudeMessages,
+            temperature: 0.7
+        });
+        const opts = {
+            hostname: 'api.anthropic.com',
+            path: '/v1/messages',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            }
+        };
 
         const reply = await new Promise((resolve) => {
             const r = https.request(opts, (rr) => {
@@ -1022,18 +995,12 @@ DIRETRIZES:
                     try {
                         const json = JSON.parse(raw);
                         if (rr.statusCode < 200 || rr.statusCode >= 300) {
-                            console.error(`[chat] ${useClaude ? 'Claude' : 'Gemini'} HTTP`, rr.statusCode, raw.slice(0, 400));
+                            console.error('[chat] Claude HTTP', rr.statusCode, raw.slice(0, 400));
                             const msg = json.error?.message || (typeof json.error === 'string' ? json.error : `HTTP ${rr.statusCode}`);
                             return resolve({ error: 'Erro na IA: ' + msg });
                         }
-                        // Parsing diferente por provider
-                        let text;
-                        if (useClaude) {
-                            // Claude: content array de blocks, pegamos os blocks de texto
-                            text = (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-                        } else {
-                            text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                        }
+                        // Claude: content array de blocks, pegamos os blocks de texto
+                        const text = (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
                         if (!text) return resolve({ error: 'Sem resposta da IA' });
                         resolve({ text });
                     } catch (e) {

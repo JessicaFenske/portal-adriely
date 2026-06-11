@@ -6868,7 +6868,7 @@ function liaSaveHistory() {
 
 function liaShowWelcome() {
     const myName = (typeof _hvCurrentUserName === 'string' && _hvCurrentUserName) ? _hvCurrentUserName.split(' ')[0] : 'colega';
-    const greeting = `Oi ${myName}! 👋 Sou a Lia, sua assistente de IA pra vendas. Posso te ajudar com:\n\n- 📊 Análise dos seus deals\n- 🎯 Sugestões MEDDIC / SPIN pra deals específicos\n- 📈 Cálculos de pipeline, conversão, meta\n- 🚨 Identificar riscos e oportunidades\n\nPergunta o que quiser ou clica numa sugestão abaixo.`;
+    const greeting = `Oi ${myName}! 👋 Sou a Lia, sua assistente de IA pra vendas — uso o **Claude da Anthropic** (privacidade enterprise, sem treinar com seus dados). Posso te ajudar com:\n\n- 📊 Análise dos seus deals\n- 🎯 Sugestões MEDDIC / SPIN pra deals específicos\n- 📈 Cálculos de pipeline, conversão, meta\n- 🚨 Identificar riscos e oportunidades\n\nPergunta o que quiser ou clica numa sugestão abaixo.`;
     addLiaMessage('assistant', greeting);
 }
 
