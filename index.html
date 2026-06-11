@@ -4597,6 +4597,9 @@
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7');">
                         <span class="sub-num">&#128197;</span><span class="sub-label">Reuniões por SDR</span>
                     </div>
+                    <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('sec7Times');">
+                        <span class="sub-num">&#128101;</span><span class="sub-label">Reuniões por Time</span>
+                    </div>
                     <div class="nav-sub-item" onclick="showView('dashboard'); scrollToDashSection('secCompliance');">
                         <span class="sub-num" style="background:rgba(239,68,68,0.2);color:#ef4444;">&#9888;&#65039;</span><span class="sub-label">Compliance Realizadas</span>
                     </div>
@@ -5567,6 +5570,36 @@
                         <textarea id="investigateInput" placeholder="605069900&#10;https://app10.ploomes.com/deal/604914654&#10;..." style="width:100%;min-height:120px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:12px;font-family:monospace;font-size:12px;margin-bottom:12px;"></textarea>
                         <button onclick="runInvestigate()" style="background:#facc15;color:#0a0a14;font-weight:700;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;">Analisar</button>
                         <div id="investigateResults" style="margin-top:18px;"></div>
+                    </div>
+                </div>
+
+                <!-- Section 7-Times: Reuniões por Time (soma por equipe) -->
+                <div class="section-card full-width" id="sec7Times">
+                    <div class="section-header">
+                        <h2><span class="section-num">&#128101;</span> Reuniões por Time — Novos Negócios, Farmer e Sankhya</h2>
+                        <div class="sub-filter">
+                            <select class="section-period-select" id="periodSec7Times" onchange="renderSection7Times()">
+                                <option value="global">Global</option>
+                                <option value="thisMonth" selected>Este mês</option>
+                                <option value="lastMonth">Mês passado</option>
+                                <option value="thisQuarter">Este trimestre</option>
+                                <option value="lastQuarter">Trimestre anterior</option>
+                                <option value="last6">Último 6 meses</option>
+                                <option value="thisYear">Este ano</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
+                            Soma de agendadas, realizadas e no-show por time, classificadas pelo funil do deal vinculado à reunião.
+                            <strong style="color:#facc15;">Sankhya</strong> inclui o proxy da Maja (movimentações de etapa) já que ela não cria tasks no Ploomes.
+                        </div>
+                        <div id="sec7TimesCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
+                        <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableSec7Times')">Mostrar/ocultar tabela consolidada</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7Times()">&#128229; Exportar Excel</button>
+                        <div class="collapsible-table" id="tableSec7Times"><table><thead><tr>
+                            <th>Time</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th>
+                        </tr></thead><tbody id="tbodySec7Times"></tbody></table></div>
                     </div>
                 </div>
 
@@ -12396,6 +12429,231 @@ function showIntermodalDrilldown(kind) {
     showDrilldown(title, deals, columns, isLossKind ? 'lost' : 'open');
 }
 
+// --- Section 7Times: Reuniões por Time (Novos Negócios, Farmer, Sankhya) ---
+// Agrega agendadas, realizadas e no-show classificando pelo funil do deal vinculado.
+// Times:
+//   - Novos Negócios: Funil de Vendas + SDR Inbound + SDR Outbound
+//   - Farmer:         Farmer + Farmer IPCA + SDR Farmer
+//   - Sankhya:        Sankhya + SDR Sankhya  (inclui proxy da Maja, que não cria tasks)
+function getTeamFromPipeline(pipelineName) {
+    if (!pipelineName) return null;
+    const p = pipelineName.toLowerCase();
+    if (p.includes('sankhya')) return 'Sankhya';
+    if (p.includes('farmer')) return 'Farmer';
+    if (p === 'funil de vendas' || p === 'sdr inbound' || p === 'sdr outbound') return 'Novos Negócios';
+    return null;
+}
+
+function renderSection7Times() {
+    ensureDealsIndex();
+    const sp = getSectionPeriod('sec7Times');
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const inPeriodLocal = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    const now = new Date();
+
+    const teams = {
+        'Novos Negócios': { agendadas: 0, realizadas: 0, noShow: 0 },
+        'Farmer':         { agendadas: 0, realizadas: 0, noShow: 0 },
+        'Sankhya':        { agendadas: 0, realizadas: 0, noShow: 0 }
+    };
+
+    // === Agendadas ===
+    // Criadas no período + creator é SDR + deal mapeia pra algum time.
+    const agendadaByDeal = new Map();
+    const realizedDealIds = new Set();
+    const meetings = meetingsForPeriod(sp);
+    meetings.forEach(t => {
+        if (!t.DealId) return;
+        const creatorName = dashUsersById[t.CreatorId] || '';
+        if (!getCanonicalSdrName(creatorName)) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const team = getTeamFromPipeline(getPipelineName(deal));
+        if (!team) return;
+        teams[team].agendadas++;
+        if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, { task: t, team });
+    });
+
+    // Index global de agendadas (sem filtro de período) — usado pra resolver criador da
+    // Realizada quando o creator dela é "Automação". Mesma lógica usada em renderSection7.
+    const agendadaByDealGlobal = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = norm(t.Title);
+        if (!tn.includes('reuniao agendada')) return;
+        if (!agendadaByDealGlobal.has(t.DealId)) agendadaByDealGlobal.set(t.DealId, t);
+    });
+
+    // === Realizadas ===
+    // Mesma regra do sec7: "Reunião Realizada" Finished=true + FinishDate/DateTime no período.
+    // Atribuição: SDR creator da Realizada (ou fallback creator da Agendada).
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = norm(t.Title);
+        if (!tn.includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
+        const refDate = t.FinishDate || t.DateTime;
+        if (!inPeriodLocal(refDate)) return;
+        let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (!canonical) {
+            const ag = agendadaByDealGlobal.get(t.DealId);
+            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
+        if (!canonical) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const team = getTeamFromPipeline(getPipelineName(deal));
+        if (!team) return;
+        if (realizedDealIds.has(t.DealId)) return;
+        teams[team].realizadas++;
+        realizedDealIds.add(t.DealId);
+    });
+
+    // === Proxy Sankhya (Maja) ===
+    // Mesma lógica do sec7: deals do pipeline Sankhya com sinais de movimentação.
+    const SANKHYA_DESCARTE = /descart/i;
+    const isMajaName = (name) => (name || '').toLowerCase().includes('maja');
+    const allDealsForSankhyaProxy = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    allDealsForSankhyaProxy.forEach(d => {
+        if (getPipelineName(d) !== 'Sankhya') return;
+        if (!inPeriodLocal(d.CreateDate) && !inPeriodLocal(d.LastUpdateDate)) return;
+        const ownerName = d.Owner?.Name || '';
+        const stageOrd = d.Stage?.Ordination ?? -1;
+        const stageName = d.Stage?.Name || '';
+        const isDescarte = SANKHYA_DESCARTE.test(stageName);
+        const mrr = getMRR(d), setup = getSetup(d);
+        // Agendada Sankhya: deal passou pro executivo (Owner != Maja)
+        if (!isMajaName(ownerName)) {
+            teams['Sankhya'].agendadas++;
+        }
+        // Realizada Sankhya: stage>=1 não-descarte OU primeira etapa com valor
+        if (!isDescarte) {
+            const isPrimeiraComValor = stageOrd === 0 && (mrr > 0 || setup > 0);
+            const isSegundaOuMais = stageOrd >= 1;
+            if (isPrimeiraComValor || isSegundaOuMais) {
+                teams['Sankhya'].realizadas++;
+            }
+        }
+    });
+
+    // === No Show ===
+    // Regras do sec7: card devolvido pro SDR OU task agendada vencida sem realização.
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const cardReturnedToSdr = (deal) => {
+        if (!deal || !isSalesPipeline(deal)) return false;
+        return !!getCanonicalSdrName(getOwnerName(deal));
+    };
+    const noShowDealIds = new Set();
+    meetings.forEach(t => {
+        if (!t.DealId) return;
+        if (realizedDealIds.has(t.DealId)) return;
+        if (noShowDealIds.has(t.DealId)) return;
+        if (!getCanonicalSdrName(dashUsersById[t.CreatorId] || '')) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const team = getTeamFromPipeline(getPipelineName(deal));
+        if (!team) return;
+        // (A) Card devolvido pro SDR
+        if (cardReturnedToSdr(deal)) {
+            teams[team].noShow++;
+            noShowDealIds.add(t.DealId);
+            return;
+        }
+        // (B) Vencida sem realização
+        const dt = new Date(t.DateTime);
+        if (dt > now) return;
+        if (t.Finished === true) return;
+        const inSdrPipe = SDR_PIPES.includes(getPipelineName(deal));
+        const ownerIsSdr = !!getCanonicalSdrName(getOwnerName(deal));
+        if (!inSdrPipe && !ownerIsSdr) return;
+        teams[team].noShow++;
+        noShowDealIds.add(t.DealId);
+    });
+
+    // === Render cards ===
+    const teamMeta = {
+        'Novos Negócios': { icon: '🚀', color: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.45)' },
+        'Farmer':         { icon: '🌱', color: '#22c55e', soft: 'rgba(34, 197, 94, 0.12)',  border: 'rgba(34, 197, 94, 0.45)'  },
+        'Sankhya':        { icon: '🏛️', color: '#facc15', soft: 'rgba(250, 204, 21, 0.12)', border: 'rgba(250, 204, 21, 0.45)' }
+    };
+    const totalAg = teams['Novos Negócios'].agendadas + teams['Farmer'].agendadas + teams['Sankhya'].agendadas;
+    const cardsHtml = Object.entries(teams).map(([team, v]) => {
+        const m = teamMeta[team];
+        const rate = v.agendadas > 0 ? Math.round((v.realizadas / v.agendadas) * 100) : 0;
+        const shareOfTotal = totalAg > 0 ? Math.round((v.agendadas / totalAg) * 100) : 0;
+        return `
+            <div style="background:${m.soft};border:1px solid ${m.border};border-radius:12px;padding:18px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                    <span style="font-size:24px;">${m.icon}</span>
+                    <h3 style="margin:0;color:${m.color};font-size:15px;font-weight:700;letter-spacing:0.3px;">${team}</h3>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:11px;color:#b794f4;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">📅 Agendadas</div>
+                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.agendadas}</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:11px;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">✅ Realizadas</div>
+                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.realizadas}</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:11px;color:#ef4444;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">❌ No Show</div>
+                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.noShow}</div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#a0a0b8;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">
+                    <span>Taxa realização: <strong style="color:${m.color};">${v.agendadas > 0 ? rate + '%' : '—'}</strong></span>
+                    <span>${shareOfTotal}% do total</span>
+                </div>
+            </div>`;
+    }).join('');
+    document.getElementById('sec7TimesCards').innerHTML = cardsHtml;
+
+    // === Tabela ===
+    const tableRows = Object.entries(teams).map(([team, v]) => {
+        const rate = v.agendadas > 0 ? ((v.realizadas / v.agendadas) * 100).toFixed(1) + '%' : '—';
+        return `<tr>
+            <td><strong>${team}</strong></td>
+            <td>${v.agendadas}</td>
+            <td>${v.realizadas}</td>
+            <td>${v.noShow}</td>
+            <td>${rate}</td>
+        </tr>`;
+    }).join('');
+    // Linha de total
+    const totalAgT = Object.values(teams).reduce((s, v) => s + v.agendadas, 0);
+    const totalRe = Object.values(teams).reduce((s, v) => s + v.realizadas, 0);
+    const totalNs = Object.values(teams).reduce((s, v) => s + v.noShow, 0);
+    const totalRate = totalAgT > 0 ? ((totalRe / totalAgT) * 100).toFixed(1) + '%' : '—';
+    document.getElementById('tbodySec7Times').innerHTML = tableRows +
+        `<tr style="background:rgba(255,255,255,0.03);font-weight:700;border-top:2px solid rgba(255,255,255,0.12);">
+            <td>TOTAL</td>
+            <td>${totalAgT}</td>
+            <td>${totalRe}</td>
+            <td>${totalNs}</td>
+            <td>${totalRate}</td>
+        </tr>`;
+    window._sec7Times_data = teams;
+}
+
+function exportSection7Times() {
+    const teams = window._sec7Times_data || {};
+    const rows = Object.entries(teams).map(([team, v]) => ({
+        team,
+        agendadas: v.agendadas,
+        realizadas: v.realizadas,
+        noShow: v.noShow,
+        rate: v.agendadas > 0 ? ((v.realizadas / v.agendadas) * 100).toFixed(1) + '%' : '—'
+    }));
+    exportToExcel(rows, [
+        { header: 'Time', getValue: d => d.team },
+        { header: 'Agendadas', getValue: d => d.agendadas },
+        { header: 'Realizadas', getValue: d => d.realizadas },
+        { header: 'No Show', getValue: d => d.noShow },
+        { header: 'Taxa Realização', getValue: d => d.rate }
+    ], 'reunioes_por_time');
+}
+
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
 const SDR_PIPELINES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
 function renderSection7b() {
@@ -13058,7 +13316,7 @@ function renderAllDash() {
     renderSection3();
     renderSection4(); renderSection5(); renderSection6();
     renderSection5b(); renderSection6b();
-    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderCompliance(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9(); renderSecMetrics();
+    renderSectionAnalise(); renderSectionStuck(); renderSection7(); renderSection7Times(); renderCompliance(); renderMetaReverse(); renderSection7Inter(); renderSection7b(); renderSection7c(); renderSection7d(); renderSection8(); renderSection9(); renderSecMetrics();
 }
 
 async function loadDashboard() {
