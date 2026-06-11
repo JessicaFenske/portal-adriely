@@ -6633,7 +6633,23 @@ function scrollToDashSection(secId) {
     } else {
         const el = document.getElementById(secId);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
+        // Marca imediatamente o item clicado e re-confirma após o smooth scroll (~600ms)
+        // pra evitar que o scrollspy fique preso na seção anterior durante a animação.
+        forceScrollspyHighlight(secId);
+        setTimeout(() => forceScrollspyHighlight(secId), 700);
     }
+}
+
+// Força highlight de um item específico do sidebar (substitui o scrollspy automático
+// durante navegação programática via click no menu)
+function forceScrollspyHighlight(secId) {
+    document.querySelectorAll('.nav-sub-item.scrollspy-active')
+        .forEach(el => el.classList.remove('scrollspy-active'));
+    document.querySelectorAll('.nav-sub-item').forEach(item => {
+        const onclick = item.getAttribute('onclick') || '';
+        const m = onclick.match(/scrollToDashSection\(['"]([^'"]+)['"]\)/);
+        if (m && m[1] === secId) item.classList.add('scrollspy-active');
+    });
 }
 
 // === Scrollspy: realça na sidebar o item do relatório atualmente visível ===
