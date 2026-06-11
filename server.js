@@ -13,7 +13,7 @@ const RD_PUBLIC_TOKEN = '00bbd955e27e47c643cab874adf517a5'; // RD Marketing toke
 const RD_PRIVATE_TOKEN = 'd0dd9d50d65ab0efefa3687ec6af3bc2'; // RD Marketing token privado (API legada)
 const RD_CLIENT_ID = '893969';
 const CACHE_DIR = '/tmp/portal-cache';
-const CACHE_VERSION = 11; // v11: expande Contact.OtherProperties pra trazer Cargo
+const CACHE_VERSION = 12; // v12: adiciona Interactions pra "última atividade real" no cockpit
 
 // ==================== Auth config ====================
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
@@ -460,6 +460,9 @@ async function refreshAll() {
     // Sem $select pra trazer todos os campos (Finished, FinishDate, etc).
     const oneTwentyDaysAgo = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString();
     refreshOne('meetings', odataEncode(`/Tasks?$filter=DateTime ge ${oneTwentyDaysAgo} and startswith(Title,'Reun')&$orderby=DateTime desc`));
+    // Interactions = WhatsApp, e-mail, calls registradas no Ploomes (não atualiza LastUpdateDate do deal)
+    // Necessário pra calcular "última atividade real" — sem isso o cockpit acusa dias errados
+    refreshOne('interactions', odataEncode(`/Interactions?$filter=Date ge ${oneTwentyDaysAgo}&$select=Id,DealId,Date,TypeId&$orderby=Date desc`));
     // Lista de usuarios para resolver OwnerId -> Name nas atividades
     refreshOne('users', odataEncode('/Users?$select=Id,Name'));
 }

@@ -7093,7 +7093,7 @@ document.getElementById('contactModal').addEventListener('click', (e) => {
 });
 
 // ==================== DASHBOARD VIEW ====================
-let wonDeals = [], lostDeals = [], dashOpenDeals = [], dashOrders = [], dashMeetings = [], dashUsersById = {};
+let wonDeals = [], lostDeals = [], dashOpenDeals = [], dashOrders = [], dashMeetings = [], dashInteractions = [], dashUsersById = {};
 let periodStart = null, periodEnd = null;
 let charts = {};
 let activeFunnelPipeline = 'Funil de Vendas';
@@ -8071,6 +8071,60 @@ function _cpDaysSince(iso) {
     if (!iso) return null;
     return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
+// Calcula a ÚLTIMA atividade real de um deal considerando:
+// 1) LastUpdateDate do deal (mudou campo)
+// 2) Tasks (Reuniões / atividades) relacionadas
+// 3) Interactions (WhatsApp/email/calls registradas no Ploomes)
+// Sem (3), o LastUpdateDate não conta WhatsApp e o cockpit acusa dias errados.
+const _cpInteractionsByDeal = { built: false, map: new Map() };
+function _cpBuildInteractionIndex() {
+    if (_cpInteractionsByDeal.built) return;
+    (dashInteractions || []).forEach(it => {
+        if (!it.DealId || !it.Date) return;
+        const cur = _cpInteractionsByDeal.map.get(it.DealId);
+        const t = new Date(it.Date).getTime();
+        if (!cur || t > cur) _cpInteractionsByDeal.map.set(it.DealId, t);
+    });
+    _cpInteractionsByDeal.built = true;
+}
+const _cpTasksByDeal = { built: false, map: new Map() };
+function _cpBuildTaskIndex() {
+    if (_cpTasksByDeal.built) return;
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const cur = _cpTasksByDeal.map.get(t.DealId) || 0;
+        const dates = [t.FinishDate, t.DateTime, t.CreateDate].filter(Boolean).map(d => new Date(d).getTime());
+        const maxT = dates.length ? Math.max(...dates) : 0;
+        if (maxT > cur) _cpTasksByDeal.map.set(t.DealId, maxT);
+    });
+    _cpTasksByDeal.built = true;
+}
+function _cpLastActivityForDeal(deal) {
+    if (!deal) return null;
+    _cpBuildInteractionIndex();
+    _cpBuildTaskIndex();
+    const candidates = [];
+    if (deal.LastUpdateDate) candidates.push(new Date(deal.LastUpdateDate).getTime());
+    if (deal.CreateDate) candidates.push(new Date(deal.CreateDate).getTime());
+    const taskT = _cpTasksByDeal.map.get(deal.Id);
+    if (taskT) candidates.push(taskT);
+    const interT = _cpInteractionsByDeal.map.get(deal.Id);
+    if (interT) candidates.push(interT);
+    if (!candidates.length) return null;
+    return new Date(Math.max(...candidates));
+}
+function _cpDaysSinceActivity(deal) {
+    const dt = _cpLastActivityForDeal(deal);
+    if (!dt) return null;
+    return Math.floor((Date.now() - dt.getTime()) / 86400000);
+}
+// Reseta os índices quando dashMeetings/dashInteractions atualizam (próximo render)
+function _cpResetActivityIndex() {
+    _cpInteractionsByDeal.built = false;
+    _cpInteractionsByDeal.map.clear();
+    _cpTasksByDeal.built = false;
+    _cpTasksByDeal.map.clear();
+}
 // Leadtime ideal Lincros = 30 dias do CreateDate até fechamento
 // Pra deals abertos: se já passou de 30d, gera alerta visual urgente
 const CP_IDEAL_LEADTIME_DAYS = 30;
@@ -8341,7 +8395,7 @@ function _cpDealsForPractice(pipelineName, practiceIndex, ctx) {
         if (practiceIndex === 4) {
             // Cadência sem retorno: deals sem atividade ≥ 10d
             return open
-                .map(d => ({ deal: d, extra: _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0 }))
+                .map(d => ({ deal: d, extra: (_cpDaysSinceActivity(d) ?? 0) }))
                 .filter(x => x.extra >= 10 && getMRR(x.deal) > 0)
                 .sort((a, b) => b.extra - a.extra)
                 .slice(0, 3);
@@ -8359,7 +8413,7 @@ function _cpDealsForPractice(pipelineName, practiceIndex, ctx) {
         if (practiceIndex === 2) {
             // Health score: deals sem atividade > 30d em Farmer (sinal de risco)
             return open
-                .map(d => ({ deal: d, extra: _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0 }))
+                .map(d => ({ deal: d, extra: (_cpDaysSinceActivity(d) ?? 0) }))
                 .filter(x => x.extra >= 30)
                 .sort((a, b) => b.extra - a.extra)
                 .slice(0, 3);
@@ -8603,7 +8657,7 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     const bigRisks = pipelineOpen
         .filter(d => getMRR(d) >= ticketMedio * 0.8 || getMRR(d) >= 5000) // deals de valor
         .map(d => {
-            const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0;
+            const daysSinceUpdate = (_cpDaysSinceActivity(d) ?? 0);
             const propDate = getProposalDate(d);
             const daysSinceProposal = propDate ? _cpDaysSince(propDate) : null;
             let reason = null, sev = 0;
@@ -8930,7 +8984,7 @@ async function renderCockpit() {
     // Critérios: (a) sem atividade > 14d (b) proposta sem retorno > 7d (c) stage avançado parado > 21d
     const risks = [];
     myOpen.forEach(d => {
-        const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate);
+        const daysSinceUpdate = _cpDaysSinceActivity(d);
         const propDate = getProposalDate(d);
         const daysSinceProposal = propDate ? _cpDaysSince(propDate) : null;
         const stageOrd = d.Stage?.Ordination ?? -1;
@@ -8976,7 +9030,7 @@ async function renderCockpit() {
     const chances = myOpen.map(d => {
         const mrr = getMRR(d), setup = getSetup(d);
         const stageOrd = d.Stage?.Ordination ?? 0;
-        const daysSinceUpdate = _cpDaysSince(d.LastUpdateDate || d.CreateDate) || 0;
+        const daysSinceUpdate = (_cpDaysSinceActivity(d) ?? 0);
         const activityBoost = daysSinceUpdate < 7 ? 10000 : daysSinceUpdate < 14 ? 3000 : 0;
         const hasProposal = !!getProposalDate(d);
         const score = mrr + setup * 0.3 + (stageOrd * 5000) + activityBoost + (hasProposal ? 8000 : 0);
@@ -12185,19 +12239,23 @@ async function loadDashboard() {
     try {
         loadingMsg.textContent = 'Carregando dados do cache...';
         // Use server-side cache - all datasets loaded in parallel, shared across team
-        const [won, lost, open, orders, meetings, users] = await Promise.all([
+        const [won, lost, open, orders, meetings, users, interactions] = await Promise.all([
             fetchCached('won'),
             fetchCached('lost'),
             fetchCached('open'),
             fetchCached('orders').catch(() => []),
             fetchCached('meetings').catch(() => []),
-            fetchCached('users').catch(() => [])
+            fetchCached('users').catch(() => []),
+            fetchCached('interactions').catch(() => [])
         ]);
         wonDeals = won;
         lostDeals = lost;
         dashOpenDeals = open;
         dashOrders = orders || [];
         dashMeetings = meetings || [];
+        dashInteractions = interactions || [];
+        // Reseta índices de atividade do cockpit pra recalcular com dados novos
+        if (typeof _cpResetActivityIndex === 'function') _cpResetActivityIndex();
         dashUsersById = {};
         (users || []).forEach(u => { dashUsersById[u.Id] = u.Name; });
         // Fallback: se cache de meetings veio vazio, busca direto via API (últimos 120d)
