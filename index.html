@@ -12137,7 +12137,12 @@ function renderSection9() {
             stageOrdMap[d.Stage.Name] = d.Stage.Ordination;
         }
     });
-    Object.entries(stageOrdMap).map(([name, ord]) => ({ name, ordination: ord })).sort((a, b) => a.ordination - b.ordination).forEach(s => uniqueStages.push(s));
+    // Exclui "Descarte" do funil — é uma saída, não um próximo passo
+    Object.entries(stageOrdMap)
+        .map(([name, ord]) => ({ name, ordination: ord }))
+        .filter(s => !/descart/i.test(s.name))
+        .sort((a, b) => a.ordination - b.ordination)
+        .forEach(s => uniqueStages.push(s));
 
     // Combine section-specific filter with global owner filter (AND logic)
     const ownerMatch = d => (!selectedOwner || getOwnerName(d) === selectedOwner) && ownerMatchesGlobal(d);
@@ -12146,48 +12151,84 @@ function renderSection9() {
     const openFiltered = dashOpenDeals.filter(d => getPipelineName(d) === activeFunnelPipeline && inPeriodSection(d.CreateDate, sp.start, sp.end) && ownerMatch(d));
     const wonCount = wonFiltered.length;
 
-    // Build deals-per-stage map for drilldown
+    // Build deals-per-stage map for drilldown + dias médios na etapa (deals abertos)
     window._sec9_stageDeals = {};
+    const stageAvgDays = {};
     const funnelFinal = uniqueStages.map(stage => {
         const openAtStage = openFiltered.filter(d => (d.Stage?.Ordination || 0) >= stage.ordination);
         const lostAtOrAfter = lostFiltered.filter(d => (d.Stage?.Ordination || 0) >= stage.ordination);
         const stageDeals = [...openAtStage, ...wonFiltered, ...lostAtOrAfter];
         window._sec9_stageDeals[stage.name] = stageDeals;
-        return { name: stage.name, count: openAtStage.length + wonCount + lostAtOrAfter.length };
+        // Dias médios em ABERTOS atualmente nesta etapa exata (não as posteriores)
+        const openExact = openFiltered.filter(d => d.Stage?.Name === stage.name);
+        if (openExact.length > 0) {
+            const days = openExact.map(d => {
+                const ref = d.LastUpdateDate || d.CreateDate;
+                if (!ref) return null;
+                return Math.floor((Date.now() - new Date(ref).getTime()) / 86400000);
+            }).filter(v => v !== null && v >= 0);
+            stageAvgDays[stage.name] = days.length ? Math.round(days.reduce((a,b) => a+b, 0) / days.length) : null;
+        } else {
+            stageAvgDays[stage.name] = null;
+        }
+        return { name: stage.name, count: openAtStage.length + wonCount + lostAtOrAfter.length, openCount: openExact.length };
     });
 
-    const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
-    const purpleShades = ['#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#6366f1','#818cf8','#a78bfa'];
-
-    // Funil visual com transicoes explicitas entre etapas
+    // === Funil visual trapezoidal (mesmo estilo da Análise de Funil) ===
     const html = [];
+    const maxCount = funnelFinal.length > 0 ? Math.max(...funnelFinal.map(s => s.count), 1) : 1;
+    const palette = ['#3b82f6','#8b5cf6','#a78bfa','#22c55e','#16a34a'];
+
     funnelFinal.forEach((stage, i) => {
-        const pct = maxCount > 0 ? (stage.count / maxCount * 100) : 0;
-        const color = purpleShades[i % purpleShades.length];
+        const widthRatio = Math.max(0.32, stage.count / maxCount);
+        const widthPct = (widthRatio * 100).toFixed(0);
+        const color = palette[i] || '#8b5cf6';
+        const lightColor = i < palette.length - 1 ? palette[i+1] : '#b794f4';
+        const topPct = i === 0 ? 100 : ((stage.count / (funnelFinal[0].count || 1)) * 100);
         const escapedStage = stage.name.replace(/'/g, "\\'");
-        html.push(`<div class="funnel-stage" style="cursor:pointer;" onclick="showStageDrilldown('${activeFunnelPipeline.replace(/'/g, "\\'")}', '${escapedStage}')">
-            <div class="funnel-label">${stage.name}</div>
-            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.max(pct, 5)}%;background:${color};">${stage.count}</div></div>
-            <div class="funnel-pct"></div>
+        const avgDays = stageAvgDays[stage.name];
+        let daysBadge = '';
+        if (avgDays !== null && stage.openCount > 0) {
+            const dColor = avgDays >= 45 ? '#ef4444' : avgDays >= 21 ? '#f59e0b' : '#22c55e';
+            const dLabel = avgDays >= 45 ? '🐢 estagnado' : avgDays >= 21 ? '⚠️ lento' : '⚡ saudável';
+            daysBadge = `<div style="background:rgba(0,0,0,0.35);border:1px solid ${dColor};color:${dColor};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-top:5px;display:inline-block;" title="Média dos ${stage.openCount} deals abertos atualmente nesta etapa">⏱️ ${avgDays}d em média · ${dLabel}</div>`;
+        }
+        html.push(`<div class="af-funnel-stage" style="width:${widthPct}%;--stage-color:${color};--stage-color-light:${lightColor};cursor:pointer;" onclick="showStageDrilldown('${activeFunnelPipeline.replace(/'/g, "\\'")}', '${escapedStage}')">
+            <div class="stage-info">
+                <div class="stage-title">${stage.name}</div>
+                <div class="stage-sub">${topPct.toFixed(1)}% do topo</div>
+                ${daysBadge}
+            </div>
+            <div class="stage-numbers">
+                <div class="stage-pct">${stage.count} deals</div>
+                <div class="stage-count">${stage.count}</div>
+            </div>
         </div>`);
-        // Transicao entre etapas
+        // Seta entre etapas
         if (i < funnelFinal.length - 1) {
             const currCount = stage.count;
             const nextCount = funnelFinal[i + 1].count;
             const advanced = nextCount;
             const lost = currCount - nextCount;
-            const convPct = currCount > 0 ? (nextCount / currCount) * 100 : 0;
-            let convClass = 'conv-ok';
-            if (convPct < 20) convClass = 'conv-crit';
-            else if (convPct < 50) convClass = 'conv-warn';
-            html.push(`<div class="funnel-transition ${convClass}">
-                <div class="ft-arrow">&darr;</div>
-                <div class="ft-content">
-                    <span class="ft-pct">${convPct.toFixed(1)}%</span>
-                    <span class="ft-sep">converteram</span>
-                    <span class="ft-numbers">${advanced} de ${currCount} avançaram${lost > 0 ? ' &middot; ' + lost + ' caíram aqui' : ''}</span>
-                </div>
-            </div>`);
+            // Quando origem é 0, não mostrar % falso
+            if (currCount === 0) {
+                html.push(`<div class="af-funnel-arrow" style="--arrow-color:#64748b;">
+                    <div class="arrow-icon">&darr;</div>
+                    <div class="arrow-pct">—</div>
+                    <div class="arrow-label">SEM DADOS</div>
+                    <div class="arrow-detail">Nenhum deal nesta transição no período</div>
+                </div>`);
+            } else {
+                const convPct = (nextCount / currCount) * 100;
+                const cls = convPct >= 50 ? 'ok' : convPct >= 20 ? 'warn' : 'crit';
+                const label = convPct >= 50 ? 'SAUDÁVEL' : convPct >= 20 ? 'ATENÇÃO' : 'GARGALO';
+                html.push(`<div class="af-funnel-arrow ${cls}">
+                    <div class="arrow-icon">&darr;</div>
+                    <div class="arrow-pct">${convPct.toFixed(1)}%</div>
+                    <div class="arrow-label">${label}</div>
+                    <div class="arrow-detail">${advanced} de ${currCount} avançaram${lost > 0 ? ' &middot; ' + lost + ' caíram aqui' : ''}</div>
+                </div>`);
+            }
         }
     });
     document.getElementById('funnelContainer').innerHTML = html.join('');
