@@ -12450,6 +12450,37 @@ function countOposForTeamInPeriod(teamPipelineFilter, sp) {
     }).length;
 }
 
+// Atribui OPOs por SDR (criador da Agendada do deal). Pra deals Sankhya sem Agendada
+// rastreável, defaulta pra Maja (proxy, ela não cria tasks).
+function countOposByCanonicalSdr(sp) {
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    // Index agendadas por dealId
+    const agendadaByDeal = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
+    });
+    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const opoBySdr = {}; // canonical → count
+    all.forEach(d => {
+        if (!hasProposalSent(d)) return;
+        const propDate = getProposalDate(d);
+        if (!propDate) return;
+        const dt = new Date(propDate);
+        if (!sp.start || !sp.end || dt < sp.start || dt > sp.end) return;
+        // Procura o SDR via Agendada
+        const ag = agendadaByDeal.get(d.Id);
+        let canonical = null;
+        if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        // Fallback Sankhya → Maja (proxy)
+        if (!canonical && getPipelineName(d) === 'Sankhya') canonical = 'Maja Siqueira';
+        if (!canonical) return;
+        opoBySdr[canonical] = (opoBySdr[canonical] || 0) + 1;
+    });
+    return opoBySdr;
+}
+
 // Pace do mês: hoje / total de dias do mês corrente.
 // Só faz sentido pra "thisMonth" — em outros períodos retorna 1 (meta cheia).
 function getMonthlyPace(periodSelectId) {
@@ -12624,7 +12655,8 @@ function renderSection7Times() {
         noShowDealIds.add(t.DealId);
     });
 
-    // === OPOs por time (propostas geradas no período) ===
+    // === OPOs ===
+    // (a) OPOs por time (pipeline do deal) — pra KPI visível
     const opoNovos = countOposForTeamInPeriod(p => {
         const l = (p||'').toLowerCase();
         return l === 'funil de vendas' || l === 'sdr inbound' || l === 'sdr outbound';
@@ -12634,6 +12666,12 @@ function renderSection7Times() {
     teams['Novos Negócios'].opos = opoNovos;
     teams['Farmer'].opos = opoFarmer;
     teams['Sankhya'].opos = opoSankhya;
+
+    // (b) OPOs por SDR (Agendada-creator) — pra metas individuais.
+    // Maja meta = só Sankhya | Agnes meta = Farmer + Sankhya (qualquer OPO atribuído a ela)
+    const opoBySdr = countOposByCanonicalSdr(sp);
+    const opoMaja = opoBySdr['Maja Siqueira'] || 0;
+    const opoAgnes = opoBySdr['Agnes Roberta'] || 0;
 
     // === Render cards ===
     const pace = getMonthlyPace('periodSec7Times');
@@ -12653,25 +12691,26 @@ function renderSection7Times() {
             const target = SDR_META_REALIZADAS * 2;
             bars += renderMetaBar({ label: '✅ Realizadas (Gui + Samira)', atual: v.realizadas, meta: target, pace, color: teamMeta[team].color });
         } else if (team === 'Farmer') {
-            // Adriely (25 realizadas) + Agnes (30 OPOs)
+            // Adriely (25 realizadas) + Agnes (30 OPOs — Farmer + Sankhya)
             bars += renderMetaBar({ label: '✅ Realizadas (Adriely)', atual: v.realizadas, meta: SDR_META_REALIZADAS, pace, color: teamMeta[team].color });
-            bars += renderMetaBar({ label: '📝 OPOs (Agnes — propostas geradas)', atual: v.opos, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
-            // Reverso da meta de OPO: precisa quantas realizadas?
-            const convRtoO = v.realizadas > 0 ? v.opos / v.realizadas : 0.5; // fallback 50%
-            if (v.opos < SDR_META_OPOS) {
+            bars += renderMetaBar({ label: '📝 OPOs Agnes (Farmer + Sankhya)', atual: opoAgnes, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
+            // Reverso: Agnes — usa conv geral (realizadas Farmer+Sankhya → OPOs Agnes)
+            const realizadasAgnes = v.realizadas + (teams['Sankhya'].realizadas || 0);
+            const convRtoO = realizadasAgnes > 0 ? opoAgnes / realizadasAgnes : 0.5;
+            if (opoAgnes < SDR_META_OPOS) {
                 const reqReal = convRtoO > 0 ? Math.ceil(SDR_META_OPOS / convRtoO) : null;
                 if (reqReal) {
-                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Agnes bater 30 OPOs com a conversão atual (<strong>${Math.round(convRtoO*100)}%</strong>), o time precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas no mês.</div>`;
+                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Agnes bater 30 OPOs (conv atual <strong>${Math.round(convRtoO*100)}%</strong>), precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas no mês (Farmer+Sankhya).</div>`;
                 }
             }
         } else if (team === 'Sankhya') {
-            // Maja = 30 OPOs
-            bars += renderMetaBar({ label: '📝 OPOs (Maja — propostas geradas)', atual: v.opos, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
-            const convRtoO = v.realizadas > 0 ? v.opos / v.realizadas : 0.5;
-            if (v.opos < SDR_META_OPOS) {
+            // Maja = 30 OPOs (só Sankhya)
+            bars += renderMetaBar({ label: '📝 OPOs Maja (só Sankhya)', atual: opoMaja, meta: SDR_META_OPOS, pace, color: teamMeta[team].color });
+            const convRtoO = v.realizadas > 0 ? opoMaja / v.realizadas : 0.5;
+            if (opoMaja < SDR_META_OPOS) {
                 const reqReal = convRtoO > 0 ? Math.ceil(SDR_META_OPOS / convRtoO) : null;
                 if (reqReal) {
-                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Maja bater 30 OPOs com a conversão atual (<strong>${Math.round(convRtoO*100)}%</strong>), o time precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas no mês.</div>`;
+                    reverseHint = `<div style="font-size:10.5px;color:#94a3b8;margin-top:6px;line-height:1.5;">💡 Pra Maja bater 30 OPOs (conv atual <strong>${Math.round(convRtoO*100)}%</strong>), precisa de ~<strong style="color:#fff;">${reqReal}</strong> realizadas Sankhya no mês.</div>`;
                 }
             }
         }
