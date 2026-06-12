@@ -5591,15 +5591,13 @@
                     </div>
                     <div class="section-body">
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
-                            Soma de agendadas, realizadas e no-show por time, classificadas pelo funil do deal vinculado à reunião.
-                            <strong style="color:#facc15;">Sankhya</strong> inclui o proxy da Maja (movimentações de etapa) já que ela não cria tasks no Ploomes.<br>
-                            <strong>Metas:</strong> Gui + Samira + Adriely (NN) = <strong style="color:#22c55e;">25 realizadas/mês cada</strong> (total 75) · Maja (Sankhya) e Agnes (Farmer) = <strong style="color:#facc15;">30 OPOs/mês cada</strong> (propostas geradas).
+                            Reuniões classificadas pelo funil do deal · <strong style="color:#facc15;">Sankhya</strong> inclui proxy da Maja.<br>
+                            <strong style="color:#facc15;">📝 OPOs</strong> = oportunidades onde o SDR agendou a reunião E o deal recebeu o marcador "Proposta Gerada" (ou task "Proposta Enviada"). Atribuído ao SDR que criou a Agendada original.<br>
+                            <strong>Metas:</strong> Gui + Samira + Adriely (NN) = <strong style="color:#22c55e;">25 realizadas/mês cada</strong> (total 75) · Maja (Sankhya) e Agnes (Farmer) = <strong style="color:#facc15;">30 OPOs/mês cada</strong>.
                         </div>
                         <div id="sec7TimesCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;"></div>
                         <button class="table-toggle" style="margin-top:14px;" onclick="toggleTable('tableSec7Times')">Mostrar/ocultar tabela consolidada</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection7Times()">&#128229; Exportar Excel</button>
-                        <button class="export-btn" style="margin-top:12px;margin-left:8px;background:rgba(250,204,21,0.15);border:1px solid #facc15;color:#facc15;" onclick="debugOpoSec7Times()">&#128269; Debug OPO</button>
-                        <div id="opoDebugBox" style="display:none;margin-top:14px;background:#0f0f1e;border:1px solid rgba(250,204,21,0.3);border-radius:8px;padding:14px;font-family:'Consolas',monospace;font-size:12px;color:#e0e0e0;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto;"></div>
                         <div class="collapsible-table" id="tableSec7Times"><table><thead><tr>
                             <th>Time</th><th>Agendadas</th><th>Realizadas</th><th>No Show</th><th>Taxa Realização</th><th>OPOs</th><th>Meta</th><th>% Meta</th>
                         </tr></thead><tbody id="tbodySec7Times"></tbody></table></div>
@@ -12883,51 +12881,36 @@ function getPropostaEnviadaTasks() {
     });
 }
 
-// Conta OPOs num pipeline específico no período, combinando:
-//  (1) Deals com marcador "Proposta Gerada" / campo Data Proposta (NN)
-//  (2) Deals com task "Proposta Enviada" criada no período (Sankhya/Farmer)
-function countOposForTeamInPeriod(teamPipelineFilter, sp) {
-    const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
-    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    const matched = new Set();
-    // (1) Marcador / campo nativo
-    all.forEach(d => {
-        if (!teamPipelineFilter(getPipelineName(d))) return;
-        if (!hasProposalSent(d)) return;
-        const propDate = getProposalDate(d) || d.LastUpdateDate;
-        if (!inPeriod(propDate)) return;
-        matched.add(d.Id);
-    });
-    // (2) Task "Proposta Enviada/Gerada" — usa CreateDate da task
-    const dealById = {};
-    all.forEach(d => { dealById[d.Id] = d; });
-    getPropostaEnviadaTasks().forEach(t => {
-        if (!t.DealId) return;
-        if (!inPeriod(t.CreateDate)) return;
-        const d = dealById[t.DealId];
-        if (!d) return;
-        if (!teamPipelineFilter(getPipelineName(d))) return;
-        matched.add(d.Id);
-    });
-    return matched.size;
-}
+// Mapping SDR canonical → time. Usado pra somar OPOs no card de time.
+const SDR_TO_TEAM = {
+    'Guilherme Tomio': 'Novos Negócios',
+    'Samira Cristina': 'Novos Negócios',
+    'Adriely':         'Novos Negócios',
+    'Agnes Roberta':   'Farmer',
+    'Maja Siqueira':   'Sankhya'
+};
 
-// Atribui OPOs por SDR. Prioridade da atribuição:
-//  1) Campo customizado "SDR" do deal (mais confiável — preenchido no Ploomes)
-//  2) Creator da task "Proposta Enviada/Gerada"
-//  3) Creator da Agendada do deal
-//  4) Fallback Sankhya → Maja
+// Atribui OPOs por SDR. Critério de OPO:
+//   Deal tem marcador "Proposta Gerada" OU task "Proposta Enviada/Gerada" no período.
+// Critério de atribuição (prioridade — privilegia atuação do SDR via Agendada):
+//   1) Creator da Agendada do deal (SDR que originou a oportunidade)
+//   2) Creator da task "Proposta Enviada/Gerada"
+//   3) Campo customizado SDR do deal
+//   4) Fallback Sankhya → Maja
 function countOposByCanonicalSdr(sp) {
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
-    // Index agendadas
+    // Index agendadas (todas, não só do período — pra captar OPO de deal cuja agendada
+    // foi em mês anterior)
     const agendadaByDeal = new Map();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
         if (!norm(t.Title).includes('reuniao agendada')) return;
-        if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
+        const prev = agendadaByDeal.get(t.DealId);
+        // Mantém a Agendada MAIS ANTIGA (a original — a primeira ação do SDR)
+        if (!prev || new Date(t.CreateDate) < new Date(prev.CreateDate)) agendadaByDeal.set(t.DealId, t);
     });
-    // Index "Proposta Enviada/Gerada" tasks por DealId (mais recente do período)
+    // Index tasks "Proposta Enviada/Gerada" no período
     const propTaskByDeal = new Map();
     getPropostaEnviadaTasks().forEach(t => {
         if (!t.DealId) return;
@@ -12940,36 +12923,34 @@ function countOposByCanonicalSdr(sp) {
     const opoBySdr = {};
     const counted = new Set();
 
-    // Função auxiliar pra resolver SDR canonical de um deal com fallbacks
+    // Resolve SDR canonical do deal — privilegia quem AGENDOU
     const resolveSdr = (d) => {
-        // (1) Campo customizado SDR (mais confiável)
-        const sdrField = typeof getSDR === 'function' ? getSDR(d) : '';
-        let canonical = getCanonicalSdrName(sdrField);
-        if (canonical) return canonical;
-        // (2) Creator da task Proposta
-        const task = propTaskByDeal.get(d.Id);
-        if (task) {
-            canonical = getCanonicalSdrName(dashUsersById[task.CreatorId] || task.Creator?.Name || '');
-            if (canonical) return canonical;
-        }
-        // (3) Creator da Agendada
+        // (1) Creator da Agendada (atuação do SDR — fonte primária)
         const ag = agendadaByDeal.get(d.Id);
         if (ag) {
-            canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
-            if (canonical) return canonical;
+            const c = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+            if (c) return c;
         }
-        // (4) Fallback Sankhya → Maja
+        // (2) Creator da task Proposta (caso ainda)
+        const task = propTaskByDeal.get(d.Id);
+        if (task) {
+            const c = getCanonicalSdrName(dashUsersById[task.CreatorId] || task.Creator?.Name || '');
+            if (c) return c;
+        }
+        // (3) Campo customizado SDR do deal
+        const sdrField = typeof getSDR === 'function' ? getSDR(d) : '';
+        const c3 = getCanonicalSdrName(sdrField);
+        if (c3) return c3;
+        // (4) Fallback Sankhya → Maja (proxy, ela não cria task)
         if (getPipelineName(d) === 'Sankhya') return 'Maja Siqueira';
         return null;
     };
 
-    // Itera deals que SÃO OPO (têm marcador OU task Proposta Enviada no período)
+    // Itera deals que SÃO OPO (marcador OU task Proposta no período)
     all.forEach(d => {
         if (counted.has(d.Id)) return;
         let isOpo = false;
-        // OPO via task no período
         if (propTaskByDeal.has(d.Id)) isOpo = true;
-        // OPO via marcador/campo nativo
         if (!isOpo && hasProposalSent(d)) {
             const propDate = getProposalDate(d) || d.LastUpdateDate;
             if (inPeriod(propDate)) isOpo = true;
@@ -12982,6 +12963,16 @@ function countOposByCanonicalSdr(sp) {
     });
 
     return opoBySdr;
+}
+
+// Soma OPOs por time a partir do mapa SDR → count
+function opoByTeamFromSdrMap(opoBySdr) {
+    const result = { 'Novos Negócios': 0, 'Farmer': 0, 'Sankhya': 0 };
+    Object.entries(opoBySdr).forEach(([sdr, n]) => {
+        const team = SDR_TO_TEAM[sdr];
+        if (team) result[team] += n;
+    });
+    return result;
 }
 
 // Pace do mês: hoje / total de dias do mês corrente.
@@ -13159,20 +13150,14 @@ function renderSection7Times() {
     });
 
     // === OPOs ===
-    // (a) OPOs por time (pipeline do deal) — pra KPI visível
-    const opoNovos = countOposForTeamInPeriod(p => {
-        const l = (p||'').toLowerCase();
-        return l === 'funil de vendas' || l === 'sdr inbound' || l === 'sdr outbound';
-    }, sp);
-    const opoFarmer = countOposForTeamInPeriod(p => (p||'').toLowerCase().includes('farmer'), sp);
-    const opoSankhya = countOposForTeamInPeriod(p => (p||'').toLowerCase().includes('sankhya'), sp);
-    teams['Novos Negócios'].opos = opoNovos;
-    teams['Farmer'].opos = opoFarmer;
-    teams['Sankhya'].opos = opoSankhya;
-
-    // (b) OPOs por SDR (Agendada-creator) — pra metas individuais.
-    // Maja meta = só Sankhya | Agnes meta = Farmer + Sankhya (qualquer OPO atribuído a ela)
+    // OPO = deal com marcador "Proposta Gerada" OU task "Proposta Enviada/Gerada"
+    // no período, atribuído ao SDR que ORIGINOU (criou a Agendada).
+    // Card de time = soma dos SDRs do time.
     const opoBySdr = countOposByCanonicalSdr(sp);
+    const opoByTeam = opoByTeamFromSdrMap(opoBySdr);
+    teams['Novos Negócios'].opos = opoByTeam['Novos Negócios'];
+    teams['Farmer'].opos = opoByTeam['Farmer'];
+    teams['Sankhya'].opos = opoByTeam['Sankhya'];
     const opoMaja = opoBySdr['Maja Siqueira'] || 0;
     const opoAgnes = opoBySdr['Agnes Roberta'] || 0;
 
@@ -13229,28 +13214,33 @@ function renderSection7Times() {
         const m = teamMeta[team];
         const rate = v.agendadas > 0 ? Math.round((v.realizadas / v.agendadas) * 100) : 0;
         const shareOfTotal = totalAg > 0 ? Math.round((v.agendadas / totalAg) * 100) : 0;
+        const opoConvRate = v.realizadas > 0 ? Math.round((v.opos / v.realizadas) * 100) : 0;
         return `
             <div style="background:${m.soft};border:1px solid ${m.border};border-radius:12px;padding:18px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                     <span style="font-size:24px;">${m.icon}</span>
                     <h3 style="margin:0;color:${m.color};font-size:15px;font-weight:700;letter-spacing:0.3px;">${team}</h3>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
                     <div style="text-align:center;">
-                        <div style="font-size:11px;color:#b794f4;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">📅 Agendadas</div>
-                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.agendadas}</div>
+                        <div style="font-size:10.5px;color:#b794f4;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;margin-bottom:4px;">📅 Agend.</div>
+                        <div style="font-size:24px;font-weight:800;color:#fff;line-height:1;">${v.agendadas}</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:11px;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">✅ Realizadas</div>
-                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.realizadas}</div>
+                        <div style="font-size:10.5px;color:#22c55e;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;margin-bottom:4px;">✅ Realiz.</div>
+                        <div style="font-size:24px;font-weight:800;color:#fff;line-height:1;">${v.realizadas}</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:11px;color:#ef4444;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">❌ No Show</div>
-                        <div style="font-size:28px;font-weight:800;color:#fff;line-height:1;">${v.noShow}</div>
+                        <div style="font-size:10.5px;color:#ef4444;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;margin-bottom:4px;">❌ No Show</div>
+                        <div style="font-size:24px;font-weight:800;color:#fff;line-height:1;">${v.noShow}</div>
+                    </div>
+                    <div style="text-align:center;background:rgba(250,204,21,0.08);border-radius:8px;padding:4px 2px;margin:-4px -2px;">
+                        <div style="font-size:10.5px;color:#facc15;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;margin-bottom:4px;">📝 OPOs</div>
+                        <div style="font-size:24px;font-weight:800;color:#facc15;line-height:1;">${v.opos}</div>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:12px;color:#a0a0b8;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px;">
-                    <span>Taxa realização: <strong style="color:${m.color};">${v.agendadas > 0 ? rate + '%' : '—'}</strong></span>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#a0a0b8;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px;line-height:1.5;">
+                    <span>Realização: <strong style="color:${m.color};">${v.agendadas > 0 ? rate + '%' : '—'}</strong> · OPO/Realiz: <strong style="color:#facc15;">${v.realizadas > 0 ? opoConvRate + '%' : '—'}</strong></span>
                     <span>${shareOfTotal}% do total</span>
                 </div>
                 ${buildMetaBlock(team, v)}
@@ -13329,88 +13319,6 @@ function exportSection7Times() {
         { header: 'OPOs (propostas geradas)', getValue: d => d.opos },
         { header: 'Taxa Realização', getValue: d => d.rate }
     ], 'reunioes_por_time');
-}
-
-// Debug: roda diagnóstico de detecção de OPO no deal exemplo + cards do mês
-function debugOpoSec7Times() {
-    const box = document.getElementById('opoDebugBox');
-    box.style.display = 'block';
-    const lines = [];
-    const log = (msg) => lines.push(msg);
-
-    // 1) Deal exemplo (Célia Alimentos OPO Maja)
-    const exId = 605099444;
-    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    const d = all.find(x => x.Id === exId);
-    log(`=== DEAL EXEMPLO #${exId} (Célia Alimentos) ===`);
-    if (!d) {
-        log('❌ Deal NÃO encontrado em wonDeals/lostDeals/dashOpenDeals.');
-        log('   → cache do dashboard pode estar desatualizado, ou o deal não está em pipelines monitorados.');
-    } else {
-        log(`Pipeline: ${d.Pipeline?.Name} | Stage: ${d.Stage?.Name} (ord ${d.Stage?.Ordination})`);
-        log(`Owner: ${d.Owner?.Name} | LastUpdate: ${d.LastUpdateDate}`);
-        log(`hasProposalSent: ${hasProposalSent(d)}`);
-        log(`getProposalDate: ${getProposalDate(d)}`);
-        log(`getSDR (campo customizado): ${typeof getSDR === 'function' ? getSDR(d) : '— getSDR não existe'}`);
-        log(`OtherProperties count: ${(d.OtherProperties||[]).length}`);
-        const propMarcador = (d.OtherProperties||[]).filter(p => {
-            const v = (p.ObjectValueName || p.StringValue || '').toLowerCase();
-            const fn = (p.FieldName || '').toLowerCase();
-            return v.includes('proposta') || fn.includes('marcador') || fn.includes('proposta');
-        });
-        log(`Props ligadas a proposta/marcador: ${propMarcador.length}`);
-        propMarcador.forEach(p => {
-            log(`  • FieldName="${p.FieldName}" Key=${p.FieldKey} ObjVal="${p.ObjectValueName||''}" StrVal="${p.StringValue||''}" DtVal=${p.DateTimeValue||'—'}`);
-        });
-    }
-
-    // 2) Stats globais do mês
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const inMonth = (iso) => iso && new Date(iso) >= monthStart && new Date(iso) <= monthEnd;
-
-    log('');
-    log('=== TASKS "Proposta Enviada/Gerada" carregadas ===');
-    const propTasks = (typeof getPropostaEnviadaTasks === 'function') ? getPropostaEnviadaTasks() : [];
-    log(`Total: ${propTasks.length}`);
-    const propTasksMonth = propTasks.filter(t => inMonth(t.CreateDate));
-    log(`Criadas neste mês: ${propTasksMonth.length}`);
-    if (propTasksMonth.length > 0) {
-        log('Primeiras 5:');
-        propTasksMonth.slice(0,5).forEach(t => {
-            const cr = dashUsersById[t.CreatorId] || '?';
-            log(`  • "${t.Title}" por ${cr} em ${new Date(t.CreateDate).toLocaleDateString('pt-BR')} (Deal ${t.DealId})`);
-        });
-    }
-
-    log('');
-    log('=== DEALS COM hasProposalSent + data no mês ===');
-    const withProp = all.filter(d => hasProposalSent(d));
-    log(`Total deals com proposta detectada (qualquer época): ${withProp.length}`);
-    const withPropInMonth = withProp.filter(d => {
-        const pd = getProposalDate(d) || d.LastUpdateDate;
-        return inMonth(pd);
-    });
-    log(`Com data no mês (proposta OU LastUpdate): ${withPropInMonth.length}`);
-
-    // Por pipeline
-    const byPipe = {};
-    withPropInMonth.forEach(d => {
-        const p = d.Pipeline?.Name || '?';
-        byPipe[p] = (byPipe[p] || 0) + 1;
-    });
-    log('Por pipeline:');
-    Object.entries(byPipe).sort((a,b) => b[1]-a[1]).forEach(([p, n]) => log(`  • ${p}: ${n}`));
-
-    log('');
-    log('=== ATRIBUIÇÃO POR SDR (countOposByCanonicalSdr) ===');
-    const sp = (typeof getSectionPeriod === 'function') ? getSectionPeriod('sec7Times') : { start: monthStart, end: monthEnd };
-    const result = (typeof countOposByCanonicalSdr === 'function') ? countOposByCanonicalSdr(sp) : {};
-    log(`Período: ${sp.start?.toLocaleDateString('pt-BR')} → ${sp.end?.toLocaleDateString('pt-BR')}`);
-    log(`Resultado: ${JSON.stringify(result, null, 2)}`);
-
-    box.textContent = lines.join('\n');
 }
 
 // --- Section 7b: Descartes por Pré-Vendedor (deals perdidos nos funis SDR) ---
