@@ -9893,10 +9893,25 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     }
 
     // ===== Insights diagnósticos =====
-    _setH('.cp-insights-card .cp-card-header h2', '<span class="cp-icon">🔬</span> Diagnóstico das suas reuniões');
-    _setT('.cp-insights-card .cp-card-sub', 'Padrões do seu mês — onde tá apertando e onde dá pra ganhar');
+    _setH('.cp-insights-card .cp-card-header h2', '<span class="cp-icon">🔬</span> Diagnóstico de performance');
+    _setT('.cp-insights-card .cp-card-sub', 'Onde você converte mais, canais que mais funcionam e ritmo de prospecção');
 
-    // Taxa No-show = (Agendadas vencidas sem realizada) / (Agendadas vencidas)
+    // ===== Helpers comuns =====
+    // Universo de deals da SDR: deals em que ela é o SDR (campo customizado) OU dono atual
+    const allDealsAll = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const dealsById = {};
+    allDealsAll.forEach(d => { dealsById[d.Id] = d; });
+
+    const myDeals = allDealsAll.filter(d => {
+        const sdrField = typeof getSDR === 'function' ? getSDR(d) : '';
+        if (getCanonicalSdrName(sdrField) === canonicalSdr) return true;
+        if (getCanonicalSdrName(getOwnerName(d)) === canonicalSdr) return true;
+        // Caso especial Sankhya/Maja: deals do pipeline Sankhya sem SDR atribuído
+        if (/maja/i.test(canonicalSdr) && getPipelineName(d) === 'Sankhya') return true;
+        return false;
+    });
+
+    // (1) Taxa No-show — Agendadas vencidas sem realizada
     const overdueAgendadas = (dashMeetings || []).filter(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return false;
         const creator = dashUsersById[t.CreatorId] || '';
@@ -9906,19 +9921,138 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     const noShowCount = overdueAgendadas.filter(t => !realizadaByDealConcluded.has(t.DealId)).length;
     const noShowRate = overdueAgendadas.length > 0 ? Math.round((noShowCount / overdueAgendadas.length) * 100) : 0;
 
-    // Tempo médio agendar → realizar (em dias)
+    // (2) Tempo agendar → realizar (intervalo entre Agendada criada e Realizada concluída)
     const leadTimes = myRealizadasMonth.map(r => {
         const ag = agendadaByDealAll.get(r.DealId);
         if (!ag) return null;
         const diff = (new Date(r.FinishDate || r.DateTime) - new Date(ag.CreateDate)) / 86400000;
         return diff >= 0 ? diff : null;
     }).filter(v => v !== null);
-    const avgLeadTime = leadTimes.length > 0 ? (leadTimes.reduce((a,b) => a+b, 0) / leadTimes.length).toFixed(1) : '—';
+    const avgLeadTime = leadTimes.length > 0 ? (leadTimes.reduce((a,b) => a+b, 0) / leadTimes.length).toFixed(1) : null;
 
-    // Conversão realizada → OPO (só faz sentido pra Maja/Agnes)
-    const convOpoRealizada = myRealizadasMonth.length > 0 ? Math.round((myOposMonth.length / myRealizadasMonth.length) * 100) : 0;
+    // (3) Segmento que mais converte — ganhos / (ganhos + perdidos) por segmento
+    const segConvMap = {};
+    const wonIds = new Set((wonDeals || []).map(d => d.Id));
+    const lostIds = new Set((lostDeals || []).map(d => d.Id));
+    myDeals.forEach(d => {
+        const seg = (typeof getContactSegment === 'function') ? (getContactSegment(d) || 'Sem segmento') : 'Sem segmento';
+        if (!segConvMap[seg]) segConvMap[seg] = { won: 0, lost: 0, total: 0 };
+        segConvMap[seg].total++;
+        if (wonIds.has(d.Id)) segConvMap[seg].won++;
+        else if (lostIds.has(d.Id)) segConvMap[seg].lost++;
+    });
+    let bestSeg = null, bestSegRate = 0, bestSegSampleSize = 0;
+    Object.entries(segConvMap).forEach(([seg, v]) => {
+        if (seg === 'Sem segmento') return;
+        const decided = v.won + v.lost;
+        if (decided < 3) return; // amostra mínima
+        const rate = v.won / decided;
+        if (rate > bestSegRate) { bestSegRate = rate; bestSeg = seg; bestSegSampleSize = decided; }
+    });
+
+    // (4) Origem que mais vira OPO (no mês)
+    const opoByOrigin = {};
+    myOposMonth.forEach(d => {
+        const orig = d.Origin?.Name || 'Sem origem';
+        if (orig === 'Sem origem') return; // ignora sem origem mapeada
+        opoByOrigin[orig] = (opoByOrigin[orig] || 0) + 1;
+    });
+    const topOpoOriginEntry = Object.entries(opoByOrigin).sort((a,b) => b[1] - a[1])[0];
+
+    // (5) Tempo lead → primeiro contato (em horas/dias)
+    // Usa a primeira Interaction (call/email/WA) registrada no deal após a CreateDate
+    const firstContactHrs = [];
+    myDeals.forEach(d => {
+        if (!d.CreateDate) return;
+        const interactions = (dashInteractions || []).filter(it => it.DealId === d.Id);
+        if (interactions.length === 0) return;
+        const first = interactions.slice().sort((a, b) => new Date(a.Date) - new Date(b.Date))[0];
+        const hrs = (new Date(first.Date) - new Date(d.CreateDate)) / 3600000;
+        if (hrs >= 0 && hrs < 30 * 24) firstContactHrs.push(hrs); // cap em 30 dias
+    });
+    const avgFirstContactH = firstContactHrs.length > 0 ? (firstContactHrs.reduce((s,h)=>s+h, 0) / firstContactHrs.length) : null;
+    const firstContactLabel = avgFirstContactH !== null
+        ? (avgFirstContactH < 24 ? `${Math.round(avgFirstContactH)}h` : `${(avgFirstContactH/24).toFixed(1)}d`)
+        : null;
+
+    // (6) Canal que mais gera agenda — último canal de Interaction ANTES de cada Agendada
+    const channelCounts = {};
+    myAgendadasMonth.forEach(t => {
+        if (!t.DealId) return;
+        const agDate = new Date(t.CreateDate);
+        const before = (dashInteractions || [])
+            .filter(it => it.DealId === t.DealId && new Date(it.Date) < agDate)
+            .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+        if (before.length === 0) return;
+        const channel = before[0].InteractionType?.Name || 'Outro';
+        channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+    });
+    const topChannelEntry = Object.entries(channelCounts).sort((a,b) => b[1] - a[1])[0];
+    const totalChannelHits = Object.values(channelCounts).reduce((s,n) => s+n, 0);
+
+    // (7) Tempo lead → agenda
+    const leadToAgendaHrs = [];
+    myAgendadasMonth.forEach(t => {
+        if (!t.DealId || !inThisMonth(t.CreateDate)) return;
+        const d = dealsById[t.DealId];
+        if (!d?.CreateDate) return;
+        const hrs = (new Date(t.CreateDate) - new Date(d.CreateDate)) / 3600000;
+        if (hrs >= 0 && hrs < 60 * 24) leadToAgendaHrs.push(hrs); // cap 60d
+    });
+    const avgLeadToAgendaH = leadToAgendaHrs.length > 0 ? (leadToAgendaHrs.reduce((s,h)=>s+h, 0) / leadToAgendaHrs.length) : null;
+    const leadToAgendaLabel = avgLeadToAgendaH !== null
+        ? (avgLeadToAgendaH < 24 ? `${Math.round(avgLeadToAgendaH)}h` : `${(avgLeadToAgendaH/24).toFixed(1)}d`)
+        : null;
 
     const insights = [
+        {
+            icon: '🎯',
+            title: 'Segmento que mais converte',
+            value: bestSeg ? `${(bestSegRate*100).toFixed(0)}%` : '—',
+            sub: bestSeg ? `${bestSeg} · ${bestSegSampleSize} deals decididos` : 'Sem segmento com 3+ deals decididos ainda',
+            tone: bestSegRate >= 0.4 ? 'good' : (bestSegRate >= 0.2 ? 'warn' : 'neutral'),
+            tip: bestSeg ? `💡 Priorize prospecção nesse segmento — é onde você fecha melhor.` : ''
+        },
+        {
+            icon: '🌐',
+            title: 'Origem que mais gera OPO',
+            value: topOpoOriginEntry ? topOpoOriginEntry[0] : '—',
+            sub: topOpoOriginEntry ? `${topOpoOriginEntry[1]} OPO${topOpoOriginEntry[1] > 1 ? 's' : ''} esse mês` : 'Sem OPO atribuído a origem mapeada no mês',
+            tone: 'neutral',
+            tip: topOpoOriginEntry ? `💡 Concentre o tempo de qualificação em leads dessa origem.` : ''
+        },
+        {
+            icon: '⚡',
+            title: 'Tempo lead → 1º contato',
+            value: firstContactLabel || '—',
+            sub: avgFirstContactH !== null ? `Média em ${firstContactHrs.length} deals com interação registrada` : 'Sem interações suficientes registradas',
+            tone: avgFirstContactH !== null && avgFirstContactH < 24 ? 'good' : (avgFirstContactH !== null && avgFirstContactH < 72 ? 'warn' : 'bad'),
+            tip: avgFirstContactH !== null && avgFirstContactH > 24 ? '💡 SLA de mercado é < 1h — quanto antes, maior chance de agendar.' : (avgFirstContactH !== null ? '✅ SLA dentro do esperado.' : '')
+        },
+        {
+            icon: '📞',
+            title: 'Canal preferido pra agendar',
+            value: topChannelEntry ? topChannelEntry[0] : '—',
+            sub: topChannelEntry ? `${topChannelEntry[1]} de ${totalChannelHits} agendas (${Math.round((topChannelEntry[1]/totalChannelHits)*100)}%)` : 'Sem interação registrada antes das agendas',
+            tone: 'neutral',
+            tip: topChannelEntry ? `💡 Continue usando ${topChannelEntry[0]} pro contato decisivo — é o que mais converte pra você.` : '💡 Registre as interações (call/email/WA) no Ploomes pra desbloquear esse insight.'
+        },
+        {
+            icon: '🏁',
+            title: 'Tempo lead → agenda marcada',
+            value: leadToAgendaLabel || '—',
+            sub: avgLeadToAgendaH !== null ? `Média em ${leadToAgendaHrs.length} agendas do mês` : 'Sem agendas suficientes do mês',
+            tone: avgLeadToAgendaH !== null && avgLeadToAgendaH < 48 ? 'good' : (avgLeadToAgendaH !== null && avgLeadToAgendaH < 168 ? 'warn' : 'bad'),
+            tip: avgLeadToAgendaH !== null && avgLeadToAgendaH > 168 ? '💡 Lead esfria após 7 dias — atue nos primeiros 2 dias.' : (avgLeadToAgendaH !== null ? '✅ Ritmo bom — agendamento rápido.' : '')
+        },
+        {
+            icon: '⏱️',
+            title: 'Tempo agendada → realizada',
+            value: avgLeadTime !== null ? `${avgLeadTime}d` : '—',
+            sub: avgLeadTime !== null ? `Quantos dias do agendamento até a reunião acontecer` : 'Sem realizadas no mês',
+            tone: avgLeadTime !== null && parseFloat(avgLeadTime) < 5 ? 'good' : (avgLeadTime !== null && parseFloat(avgLeadTime) < 8 ? 'warn' : 'bad'),
+            tip: avgLeadTime !== null && parseFloat(avgLeadTime) > 7 ? '💡 Agendamentos longe demais perdem engajamento — tente fechar em até 5 dias.' : (avgLeadTime !== null ? '✅ Ritmo bom — agendamentos próximos da decisão.' : '')
+        },
         {
             icon: '🚫',
             title: 'Taxa de No-Show',
@@ -9927,26 +10061,18 @@ function _cpRenderSdrCockpit(canonicalSdr) {
             tone: noShowRate > 30 ? 'bad' : (noShowRate > 15 ? 'warn' : 'good'),
             tip: noShowRate > 30 ? '💡 Confirma sempre 30min antes via WhatsApp + e-mail.' : (noShowRate > 15 ? '💡 Tá razoável, mas dá pra melhorar com confirmação dupla.' : '✅ Excelente disciplina de confirmação.')
         },
-        {
-            icon: '⏱️',
-            title: 'Tempo médio agendar → realizar',
-            value: avgLeadTime === '—' ? '—' : `${avgLeadTime}d`,
-            sub: `Quanto tempo do agendamento até a reunião acontecer`,
-            tone: 'neutral',
-            tip: avgLeadTime > 7 ? '💡 Agendamentos longe demais perdem engajamento — tente fechar em até 5 dias.' : '✅ Ritmo bom — agendamentos próximos da decisão.'
-        },
         isOpoSdr ? {
             icon: '📝',
             title: 'Conversão Realizada → OPO',
-            value: myRealizadasMonth.length > 0 ? `${convOpoRealizada}%` : '—',
+            value: myRealizadasMonth.length > 0 ? `${Math.round((myOposMonth.length / myRealizadasMonth.length) * 100)}%` : '—',
             sub: `${myOposMonth.length} OPOs de ${myRealizadasMonth.length} realizadas no mês`,
-            tone: convOpoRealizada >= 60 ? 'good' : (convOpoRealizada >= 40 ? 'warn' : 'bad'),
-            tip: convOpoRealizada < 40 ? '💡 Foco em qualificação MEDDIC — chega na reunião com Pain + Metric pré-mapeados.' : '✅ Boa taxa de qualificação até OPO.'
+            tone: myRealizadasMonth.length > 0 && (myOposMonth.length / myRealizadasMonth.length) >= 0.6 ? 'good' : (myRealizadasMonth.length > 0 && (myOposMonth.length / myRealizadasMonth.length) >= 0.4 ? 'warn' : 'bad'),
+            tip: myRealizadasMonth.length > 0 && (myOposMonth.length / myRealizadasMonth.length) < 0.4 ? '💡 Foco em qualificação MEDDIC — chega na reunião com Pain + Metric pré-mapeados.' : '✅ Boa taxa de qualificação até OPO.'
         } : {
-            icon: '🎯',
-            title: 'Cards na sua fila',
+            icon: '🔄',
+            title: 'Cards devolvidos pelo vendedor',
             value: `${cardsDevolvidos.length}`,
-            sub: cardsDevolvidos.length > 0 ? 'Cards devolvidos pelo vendedor — retomar' : 'Sem cards devolvidos',
+            sub: cardsDevolvidos.length > 0 ? 'Voltaram pro seu funil — bora retomar' : 'Sem cards devolvidos',
             tone: cardsDevolvidos.length > 3 ? 'bad' : (cardsDevolvidos.length > 0 ? 'warn' : 'good'),
             tip: cardsDevolvidos.length > 3 ? '💡 Volume alto de devoluções — alinhe critérios de handoff com o vendedor.' : ''
         }
