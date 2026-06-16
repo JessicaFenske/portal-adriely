@@ -3521,10 +3521,61 @@
 
             /* Capacity planning grids */
             .cap-funnel { grid-template-columns: 1fr !important; gap: 10px; padding: 0 4px; }
+
+            /* ============ Sec7Times (Reuniões por Time) — mobile ============ */
+            /* Cards: 1 coluna full-width, padding interno menor */
+            #sec7TimesCards { grid-template-columns: 1fr !important; gap: 12px !important; }
+            #sec7TimesCards > div { padding: 14px !important; }
+            /* KPI grid (4 cols Agend/Realiz/NoShow/OPOs): em mobile, 2x2 */
+            #sec7TimesCards > div > div[style*="grid-template-columns:repeat(4,1fr)"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+            /* Rodapé do card (Realização % · OPO/Realiz % · share) → 2 linhas */
+            #sec7TimesCards > div > div[style*="justify-content:space-between"] {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 4px !important;
+            }
+            /* Tabela do sec7Times: barras de progresso da meta em mobile */
+            #sec7TimesCards .cp-meta-bar { font-size: 11px; }
+
+            /* ============ Sec7 / Pré-Vendedor — 3 charts side-by-side → empilha ============ */
+            #sec7 .section-body > div[style*="grid-template-columns:repeat(3"] {
+                grid-template-columns: 1fr !important;
+                gap: 18px !important;
+            }
+            /* Reduz altura dos charts pra não dominar a tela */
+            #sec7 .chart-container { min-height: 220px; }
+
+            /* ============ Cockpit SDR — KPIs grid ============ */
+            /* Já caem em 2 cols via .kpi-row, mas reforço pro impersonate SDR */
+            #view-cockpit #cpKpis { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+            #view-cockpit .cp-kpi-card { padding: 10px 12px !important; }
+            #view-cockpit .cp-kpi-card .value { font-size: 20px !important; }
+            #view-cockpit .cp-kpi-card .label { font-size: 10px !important; }
+            /* Hero meta — não disputar espaço com saudação */
+            #view-cockpit .cp-hero { flex-direction: column; align-items: flex-start !important; gap: 12px; }
+            #view-cockpit .cp-hero-meta { align-self: stretch; text-align: left !important; }
+
+            /* Coaching SPIN no cockpit SDR: 1 coluna */
+            #view-cockpit .cp-coaching-card div[style*="grid-template-columns:repeat(auto-fit"] {
+                grid-template-columns: 1fr !important;
+            }
         }
 
         /* Telefones pequenos (até 480px) — ajustes finos extras */
         @media (max-width: 480px) {
+            /* sec7Times: KPIs em 4 itens 2x2 com fontes menores */
+            #sec7TimesCards > div > div[style*="grid-template-columns:repeat(4,1fr)"] > div {
+                padding: 6px !important;
+            }
+            #sec7TimesCards > div > div[style*="grid-template-columns:repeat(4,1fr)"] div[style*="font-size:24px"] {
+                font-size: 20px !important;
+            }
+            #sec7TimesCards > div > div[style*="grid-template-columns:repeat(4,1fr)"] div[style*="font-size:10.5px"] {
+                font-size: 9.5px !important;
+            }
             .op-header h1 { font-size: 17px !important; }
             #view-analise-funil .af-cover-title { font-size: 20px !important; }
             .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr) !important; }
