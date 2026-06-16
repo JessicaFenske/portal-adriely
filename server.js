@@ -22,7 +22,8 @@ if (!process.env.SESSION_SECRET) {
 }
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM = process.env.RESEND_FROM || 'Portal Lincros <onboarding@resend.dev>';
-const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+// Gemini foi descontinuado em favor de Claude (Anthropic, sem treinamento de modelos).
+// A variável GEMINI_API_KEY foi removida — toda chamada de IA passa por ANTHROPIC_API_KEY.
 const ANTHROPIC_API_KEY = (process.env.ANTHROPIC_API_KEY || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
 const ANTHROPIC_MODEL = (process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5').trim();
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://portal-de-oportunidades.onrender.com';
