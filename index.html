@@ -3763,6 +3763,12 @@
             border-left: 3px solid #8b5cf6;
             border-radius: 10px;
             padding: 12px 14px;
+            transition: background 0.15s, transform 0.15s, border-color 0.15s;
+        }
+        .cp-insight-card.cp-card-clickable:hover {
+            background: rgba(251, 191, 36, 0.08);
+            border-color: rgba(251, 191, 36, 0.4);
+            transform: translateY(-1px);
         }
         .cp-insight-emoji { font-size: 22px; line-height: 1; margin-bottom: 6px; }
         .cp-insight-text { font-size: 13px; color: #e0e0e0; line-height: 1.45; }
@@ -9290,6 +9296,31 @@ const PIPELINE_BEST_PRACTICES = {
     }
 };
 
+// Abre o drilldown com os deals abertos do vendedor selecionado (cards de alerta líder)
+function _cpOpenAlertSellerDeals(sellerName) {
+    const deals = (window._cpAlertSellersDeals || {})[sellerName] || [];
+    if (deals.length === 0) {
+        if (typeof showToast === 'function') showToast('Não tem deals em aberto pra mostrar', 'info');
+        return;
+    }
+    // Ordena por MRR desc (maior potencial primeiro)
+    const sorted = deals.slice().sort((a, b) => getMRR(b) - getMRR(a));
+    const totalMrr = sorted.reduce((s, d) => s + getMRR(d), 0);
+    const title = `${sellerName} — ${sorted.length} deals em aberto (R$ ${(totalMrr/1000).toFixed(1)}k em potencial)`;
+    const columns = [
+        { header: 'Título', getValue: d => d.Title || '' },
+        { header: 'Funil', getValue: d => getPipelineName(d) },
+        { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
+        { header: 'MRR', getValue: d => getMRR(d) },
+        { header: 'Setup', getValue: d => getSetup(d) },
+        { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
+        { header: 'Última atividade', getValue: d => formatDate(d.LastUpdateDate) },
+        { header: 'Origem', getValue: d => d.Origin?.Name || '—' },
+        { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ];
+    showDrilldown(title, sorted, columns, 'open');
+}
+
 function _cpRenderLeaderCockpit(leaderPipeline) {
     const config = PIPELINE_BEST_PRACTICES[leaderPipeline];
     if (!config) return false;
@@ -9385,9 +9416,11 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     pipelineOpen.forEach(d => {
         const o = d.Owner?.Name; if (!o) return;
         if (typeof isSdrName === 'function' && isSdrName(o)) return; // SDR não é vendedor
-        if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0 };
+        if (!sellerStats[o]) sellerStats[o] = { mrrMonth: 0, dealsMonth: 0, open: 0, mrrOpen: 0, openDeals: [] };
         sellerStats[o].open++;
         sellerStats[o].mrrOpen += getMRR(d);
+        if (!sellerStats[o].openDeals) sellerStats[o].openDeals = [];
+        sellerStats[o].openDeals.push(d);
     });
     const sellerEntries = Object.entries(sellerStats).map(([name, v]) => ({ name, ...v }));
     const topSellers = sellerEntries.slice().sort((a, b) => b.mrrMonth - a.mrrMonth).slice(0, 5);
@@ -9507,12 +9540,15 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
     if (alertSellers.length === 0) {
         insightsEl.innerHTML = '<div class="cp-empty-mini" style="grid-column:1/-1">🎉 Time inteiro com pelo menos 1 ganho no mês. Continue puxando.</div>';
     } else {
-        insightsEl.innerHTML = alertSellers.map(s => `<div class="cp-insight-card" style="border-left-color:#fbbf24;">
+        // Guarda deals num cache global pra abrir no drilldown sem precisar recalcular
+        window._cpAlertSellersDeals = window._cpAlertSellersDeals || {};
+        alertSellers.forEach(s => { window._cpAlertSellersDeals[s.name] = s.openDeals || []; });
+        insightsEl.innerHTML = alertSellers.map(s => `<div class="cp-insight-card cp-card-clickable" style="border-left-color:#fbbf24;cursor:pointer;" onclick="_cpOpenAlertSellerDeals('${(s.name || '').replace(/'/g,'\\\'')}')" title="Clique pra ver os ${s.open} deals em aberto">
             <div class="cp-insight-emoji">⚠️</div>
             <div class="cp-insight-text">
                 <strong>${s.name}</strong> ainda sem fechamentos esse mês.<br>
                 <span class="number">${s.open}</span> deal${s.open > 1 ? 's' : ''} aberto${s.open > 1 ? 's' : ''} · <span class="number">${_cpFmtMoney(s.mrrOpen)}</span> em potencial.<br>
-                <em style="color:#94a3b8;font-size:12px;">Marque pipeline review e investigue onde tá travando.</em>
+                <em style="color:#94a3b8;font-size:12px;">Clique pra ver os deals · pauta de pipeline review.</em>
             </div>
         </div>`).join('');
     }
