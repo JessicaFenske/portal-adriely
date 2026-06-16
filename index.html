@@ -3568,6 +3568,11 @@
             #view-cockpit .cp-coaching-card div[style*="grid-template-columns:repeat(auto-fit"] {
                 grid-template-columns: 1fr !important;
             }
+
+            /* SDR advanced: cadência + descartes empilham */
+            #cpSdrPatternRow { grid-template-columns: 1fr !important; gap: 14px !important; }
+            /* Trajetória: cards menores */
+            #cpSdrTrend { grid-template-columns: 1fr !important; gap: 12px !important; }
         }
 
         /* Telefones pequenos (até 480px) — ajustes finos extras */
@@ -4814,6 +4819,51 @@
                             <div class="cp-card-sub">Padrões de vitória, gaps de qualificação e oportunidades — baseado no seu histórico</div>
                         </div>
                         <div class="cp-insights-grid" id="cpInsightsGrid"></div>
+                    </div>
+
+                    <!-- ============ ANÁLISES ESTRATÉGICAS — só pra SDR ============ -->
+                    <div id="cpSdrAdvanced" style="display:none;">
+                        <!-- Funil de Conversão Visual -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🔻</span> Funil de Conversão</h2>
+                                <div class="cp-card-sub">Volume e taxa de conversão em cada etapa do seu mês</div>
+                            </div>
+                            <div id="cpSdrFunnel" style="padding:6px 4px 4px;"></div>
+                        </div>
+                        <!-- Comparativa com o time -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">📊</span> Você vs Time</h2>
+                                <div class="cp-card-sub">Como você está em comparação com a média da sua equipe</div>
+                            </div>
+                            <div id="cpSdrCompare" style="padding:6px 4px 4px;"></div>
+                        </div>
+                        <!-- Trajetória 8 semanas -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">📈</span> Trajetória — 8 semanas</h2>
+                                <div class="cp-card-sub">Sua evolução semanal: agendadas, realizadas e OPOs — direção e momentum</div>
+                            </div>
+                            <div id="cpSdrTrend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:8px 4px 4px;"></div>
+                        </div>
+                        <!-- Padrão por dia da semana + Top motivos descarte -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;" id="cpSdrPatternRow">
+                            <div class="cp-insights-card">
+                                <div class="cp-card-header">
+                                    <h2><span class="cp-icon">🗓️</span> Cadência semanal</h2>
+                                    <div class="cp-card-sub">Quais dias você mais agenda e converte</div>
+                                </div>
+                                <div id="cpSdrDow" style="padding:6px 4px 4px;"></div>
+                            </div>
+                            <div class="cp-insights-card">
+                                <div class="cp-card-header">
+                                    <h2><span class="cp-icon">📝</span> Por que perdem</h2>
+                                    <div class="cp-card-sub">Top motivos de descarte — onde aprender</div>
+                                </div>
+                                <div id="cpSdrLossReasons" style="padding:6px 4px 4px;"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Coaching MEDDIC -->
@@ -9328,6 +9378,9 @@ function _cpOpenAlertSellerDeals(sellerName) {
 }
 
 function _cpRenderLeaderCockpit(leaderPipeline) {
+    // Garante que blocos exclusivos do SDR não vazem
+    const _sdrAdv = document.getElementById('cpSdrAdvanced');
+    if (_sdrAdv) _sdrAdv.style.display = 'none';
     const config = PIPELINE_BEST_PRACTICES[leaderPipeline];
     if (!config) return false;
     const me = _hvCurrentUserName || 'Líder';
@@ -10121,7 +10174,338 @@ function _cpRenderSdrCockpit(canonicalSdr) {
         </div>
     `;
 
+    // ===== Render análises estratégicas avançadas =====
+    document.getElementById('cpSdrAdvanced').style.display = 'block';
+    _cpRenderSdrAdvanced({
+        canonicalSdr, isOpoSdr,
+        myDeals, myAgendadasMonth, myRealizadasMonth, myOposMonth,
+        agendadaByDealAll, monthStart, monthEnd, now, inThisMonth
+    });
+
     return true;
+}
+
+// Análises estratégicas avançadas do cockpit SDR.
+// Renderiza: Funil de conversão, Comparativa com time, Trajetória 8 semanas,
+// Cadência por dia da semana, Top motivos de descarte.
+function _cpRenderSdrAdvanced(ctx) {
+    const { canonicalSdr, isOpoSdr, myDeals, myAgendadasMonth, myRealizadasMonth, myOposMonth, agendadaByDealAll, monthStart, monthEnd, now, inThisMonth } = ctx;
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const allDealsAll = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+
+    // ============ (1) FUNIL DE CONVERSÃO ============
+    // Etapas: Leads → Contactados → Agendados → Realizados → OPOs
+    // Leads = deals em pipelines SDR criados no mês com SDR=canonicalSdr (ou owner SDR)
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const monthLeads = myDeals.filter(d => inThisMonth(d.CreateDate));
+    const monthLeadsCount = monthLeads.length;
+    // Contactados = deals com >= 1 interaction registrada
+    const contactedSet = new Set();
+    (dashInteractions || []).forEach(it => {
+        if (!it.DealId) return;
+        if (monthLeads.find(d => d.Id === it.DealId)) contactedSet.add(it.DealId);
+    });
+    const contactedCount = contactedSet.size;
+    const agendadasCount = myAgendadasMonth.length;
+    const realizadasCount = myRealizadasMonth.length;
+    const oposCount = myOposMonth.length;
+
+    const funnelStages = [
+        { label: '👥 Leads', count: monthLeadsCount, color: '#94a3b8', desc: 'novos no mês' },
+        { label: '📞 Contactados', count: contactedCount, color: '#38bdf8', desc: 'com interação registrada' },
+        { label: '📅 Agendados', count: agendadasCount, color: '#8b5cf6', desc: 'reuniões marcadas' },
+        { label: '✅ Realizados', count: realizadasCount, color: '#22c55e', desc: 'reuniões concluídas' },
+        { label: '📝 OPOs', count: oposCount, color: '#facc15', desc: 'propostas geradas' }
+    ];
+    const maxFunnelVal = Math.max(monthLeadsCount, 1);
+    const funnelHtml = funnelStages.map((s, i) => {
+        const pct = Math.round((s.count / maxFunnelVal) * 100);
+        const prev = i > 0 ? funnelStages[i - 1] : null;
+        const convFromPrev = prev && prev.count > 0 ? Math.round((s.count / prev.count) * 100) : null;
+        const convBadge = convFromPrev !== null
+            ? `<span style="font-size:11px;color:${convFromPrev >= 50 ? '#22c55e' : convFromPrev >= 25 ? '#facc15' : '#ef4444'};font-weight:700;background:rgba(255,255,255,0.04);padding:3px 8px;border-radius:20px;margin-left:8px;">↓ ${convFromPrev}%</span>`
+            : '';
+        return `
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+                    <span style="font-size:13px;color:#e5e7eb;font-weight:600;">${s.label} <span style="color:#94a3b8;font-weight:400;font-size:11px;">· ${s.desc}</span></span>
+                    <span><strong style="color:${s.color};font-size:18px;">${s.count}</strong>${convBadge}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:6px;height:14px;overflow:hidden;">
+                    <div style="height:100%;width:${Math.max(2, pct)}%;background:linear-gradient(90deg, ${s.color} 0%, ${s.color}cc 100%);border-radius:6px;"></div>
+                </div>
+            </div>`;
+    }).join('');
+    // Diagnóstico geral
+    const lead2agenda = monthLeadsCount > 0 ? Math.round((agendadasCount / monthLeadsCount) * 100) : 0;
+    const agenda2real = agendadasCount > 0 ? Math.round((realizadasCount / agendadasCount) * 100) : 0;
+    const real2opo = realizadasCount > 0 ? Math.round((oposCount / realizadasCount) * 100) : 0;
+    let worstStage = null, worstRate = 100;
+    [['Lead → Agenda', lead2agenda], ['Agenda → Realiz.', agenda2real], ['Realiz. → OPO', real2opo]].forEach(([k, v]) => {
+        if (v < worstRate) { worstRate = v; worstStage = k; }
+    });
+    const funnelInsight = worstStage && worstRate < 50
+        ? `<div style="margin-top:12px;padding:10px 12px;background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;border-radius:6px;font-size:12px;color:#fca5a5;line-height:1.5;">⚠️ <strong>Gargalo:</strong> ${worstStage} (${worstRate}%) — esse é o estágio com maior perda de volume. Foco aqui pode dobrar o output do mês.</div>`
+        : (worstStage ? `<div style="margin-top:12px;padding:10px 12px;background:rgba(34,197,94,0.06);border-left:3px solid #22c55e;border-radius:6px;font-size:12px;color:#86efac;line-height:1.5;">✅ Funil saudável — todas as etapas com conversão acima de 50%.</div>` : '');
+    document.getElementById('cpSdrFunnel').innerHTML = funnelHtml + funnelInsight;
+
+    // ============ (2) COMPARATIVA COM O TIME ============
+    // Calcula médias do time (apenas SDRs ativos)
+    const teamSdrs = ['Samira Cristina', 'Guilherme Tomio', 'Adriely', 'Maja Siqueira', 'Agnes Roberta'];
+    const teamMonthMetrics = teamSdrs.map(sdr => {
+        const ags = (dashMeetings || []).filter(t => {
+            if (!norm(t.Title).includes('reuniao agendada')) return false;
+            if (getCanonicalSdrName(dashUsersById[t.CreatorId] || '') !== sdr) return false;
+            return inThisMonth(t.CreateDate);
+        });
+        const reals = (dashMeetings || []).filter(t => {
+            if (!norm(t.Title).includes('reuniao realizada')) return false;
+            if (t.Finished !== true) return false;
+            const ref = t.FinishDate || t.DateTime;
+            if (!inThisMonth(ref)) return false;
+            let canon = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+            if (!canon) {
+                const ag = agendadaByDealAll.get(t.DealId);
+                if (ag) canon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+            }
+            return canon === sdr;
+        });
+        return { sdr, ags: ags.length, reals: reals.length, taxa: ags.length > 0 ? (reals.length / ags.length) * 100 : 0 };
+    });
+    const teamAvgAg = teamMonthMetrics.reduce((s, t) => s + t.ags, 0) / teamSdrs.length;
+    const teamAvgReal = teamMonthMetrics.reduce((s, t) => s + t.reals, 0) / teamSdrs.length;
+    const teamAvgTaxa = teamMonthMetrics.reduce((s, t) => s + t.taxa, 0) / teamSdrs.length;
+    const myTaxa = myAgendadasMonth.length > 0 ? (myRealizadasMonth.length / myAgendadasMonth.length) * 100 : 0;
+    const top = teamMonthMetrics.slice().sort((a, b) => b.reals - a.reals)[0];
+
+    const cmpRow = (label, mine, avg, topVal, fmt) => {
+        const maxVal = Math.max(mine, avg, topVal, 1);
+        const mineBar = (mine / maxVal) * 100;
+        const avgBar = (avg / maxVal) * 100;
+        const topBar = (topVal / maxVal) * 100;
+        const vsAvg = avg > 0 ? Math.round(((mine - avg) / avg) * 100) : 0;
+        const vsAvgLabel = vsAvg > 0 ? `+${vsAvg}%` : `${vsAvg}%`;
+        const vsAvgColor = vsAvg >= 0 ? '#22c55e' : '#ef4444';
+        const bar = (color, w) => `<div style="background:rgba(255,255,255,0.04);height:10px;border-radius:5px;overflow:hidden;"><div style="height:100%;width:${Math.max(2, w)}%;background:${color};border-radius:5px;"></div></div>`;
+        return `
+            <div style="margin-bottom:14px;">
+                <div style="font-size:12.5px;color:#e5e7eb;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;">
+                    <span>${label}</span>
+                    <span style="color:${vsAvgColor};font-weight:700;font-size:11px;">${vsAvgLabel} vs média</span>
+                </div>
+                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:10.5px;color:#c4b5fd;font-weight:600;min-width:60px;">Você</span>${bar('#8b5cf6', mineBar)}<span style="font-size:11px;color:#fff;font-weight:700;min-width:50px;text-align:right;">${fmt(mine)}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:10.5px;color:#94a3b8;min-width:60px;">Média</span>${bar('rgba(148,163,184,0.6)', avgBar)}<span style="font-size:11px;color:#94a3b8;min-width:50px;text-align:right;">${fmt(avg)}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;">
+                    <span style="font-size:10.5px;color:#fcd34d;min-width:60px;">🥇 Top</span>${bar('#facc15', topBar)}<span style="font-size:11px;color:#fcd34d;min-width:50px;text-align:right;">${fmt(topVal)}</span>
+                </div>
+            </div>`;
+    };
+    document.getElementById('cpSdrCompare').innerHTML = `
+        ${cmpRow('📅 Agendadas no mês', myAgendadasMonth.length, teamAvgAg, top.ags, n => Math.round(n))}
+        ${cmpRow('✅ Realizadas no mês', myRealizadasMonth.length, teamAvgReal, top.reals, n => Math.round(n))}
+        ${cmpRow('📊 Taxa de realização', myTaxa, teamAvgTaxa, top.taxa, n => `${n.toFixed(0)}%`)}
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;font-style:italic;line-height:1.5;">
+            Comparativa com os outros SDRs do time. Topo da lista (🥇) é o melhor performer do mês em Realizadas.
+        </div>
+    `;
+
+    // ============ (3) TRAJETÓRIA 8 SEMANAS ============
+    // Calcula agendadas/realizadas/opos por semana nas últimas 8 semanas
+    const WEEKS = 8;
+    const today0 = new Date();
+    today0.setHours(0, 0, 0, 0);
+    // Início da semana atual (segunda-feira)
+    const dow = today0.getDay();
+    const mondayThis = new Date(today0.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
+    const weeks = [];
+    for (let i = WEEKS - 1; i >= 0; i--) {
+        const start = new Date(mondayThis.getTime() - i * 7 * 86400000);
+        const end = new Date(start.getTime() + 7 * 86400000 - 1);
+        weeks.push({ start, end, label: start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) });
+    }
+    const inRange = (iso, w) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= w.start.getTime() && t <= w.end.getTime(); };
+    const weeklyAg = weeks.map(w => (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        if (getCanonicalSdrName(dashUsersById[t.CreatorId] || '') !== canonicalSdr) return false;
+        return inRange(t.CreateDate, w);
+    }).length);
+    const weeklyReal = weeks.map(w => (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return false;
+        if (t.Finished !== true) return false;
+        let canon = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (!canon) {
+            const ag = agendadaByDealAll.get(t.DealId);
+            if (ag) canon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
+        if (canon !== canonicalSdr) return false;
+        return inRange(t.FinishDate || t.DateTime, w);
+    }).length);
+    // OPOs por semana — usa SDR field + Agendada creator
+    const propTaskBy = new Map();
+    if (typeof getPropostaEnviadaTasks === 'function') {
+        getPropostaEnviadaTasks().forEach(t => {
+            if (!t.DealId) return;
+            const prev = propTaskBy.get(t.DealId);
+            if (!prev || new Date(t.CreateDate) > new Date(prev.CreateDate)) propTaskBy.set(t.DealId, t);
+        });
+    }
+    const dealIsMyOpo = (d) => {
+        const sdrField = typeof getSDR === 'function' ? getSDR(d) : '';
+        if (getCanonicalSdrName(sdrField) === canonicalSdr) return true;
+        const task = propTaskBy.get(d.Id);
+        if (task && getCanonicalSdrName(dashUsersById[task.CreatorId] || '') === canonicalSdr) return true;
+        const ag = agendadaByDealAll.get(d.Id);
+        if (ag && getCanonicalSdrName(dashUsersById[ag.CreatorId] || '') === canonicalSdr) return true;
+        if (/maja/i.test(canonicalSdr) && getPipelineName(d) === 'Sankhya') return true;
+        return false;
+    };
+    const weeklyOpos = weeks.map(w => allDealsAll.filter(d => {
+        if (!hasProposalSent(d)) return false;
+        const propDate = getProposalDate(d) || d.LastUpdateDate;
+        if (!inRange(propDate, w)) return false;
+        return dealIsMyOpo(d);
+    }).length);
+
+    const sparkSeries = [
+        { title: '📅 Agendadas', color: '#8b5cf6', data: weeklyAg },
+        { title: '✅ Realizadas', color: '#22c55e', data: weeklyReal },
+        { title: '📝 OPOs', color: '#facc15', data: weeklyOpos }
+    ];
+    const renderSpark = (s) => {
+        const maxV = Math.max(...s.data, 1);
+        const last = s.data[s.data.length - 1];
+        const prev = s.data[s.data.length - 2] || 0;
+        const trend = last > prev ? '↑' : (last < prev ? '↓' : '→');
+        const trendColor = last > prev ? '#22c55e' : (last < prev ? '#ef4444' : '#94a3b8');
+        // Calcula média das 4 semanas anteriores vs últimas 4 (momentum)
+        const recent4 = s.data.slice(-4).reduce((sm, v) => sm + v, 0) / 4;
+        const prev4 = s.data.slice(0, 4).reduce((sm, v) => sm + v, 0) / 4;
+        const momentumPct = prev4 > 0 ? Math.round(((recent4 - prev4) / prev4) * 100) : 0;
+        // SVG sparkline
+        const W = 240, H = 60;
+        const xStep = W / (s.data.length - 1);
+        const points = s.data.map((v, i) => `${(i * xStep).toFixed(1)},${(H - (v / maxV) * H * 0.85 - 4).toFixed(1)}`).join(' ');
+        const dotCx = (s.data.length - 1) * xStep;
+        const dotCy = H - (last / maxV) * H * 0.85 - 4;
+        return `
+            <div class="cp-insight-card" style="border-left-color:${s.color};padding:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                    <strong style="font-size:13px;color:#fff;">${s.title}</strong>
+                    <span style="font-size:18px;color:${s.color};font-weight:800;">${last}<span style="font-size:14px;color:${trendColor};margin-left:4px;">${trend}</span></span>
+                </div>
+                <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;">
+                    <polyline fill="none" stroke="${s.color}" stroke-width="2" points="${points}" />
+                    <circle cx="${dotCx}" cy="${dotCy}" r="3.5" fill="${s.color}" />
+                </svg>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:4px;">
+                    <span>${weeks[0].label}</span>
+                    <span>hoje</span>
+                </div>
+                <div style="margin-top:6px;font-size:11px;color:${momentumPct > 0 ? '#86efac' : (momentumPct < 0 ? '#fca5a5' : '#94a3b8')};line-height:1.4;">
+                    Momentum: ${momentumPct > 0 ? '+' : ''}${momentumPct}% (últimas 4 sem vs 4 anteriores)
+                </div>
+            </div>`;
+    };
+    document.getElementById('cpSdrTrend').innerHTML = sparkSeries.map(renderSpark).join('');
+
+    // ============ (4) CADÊNCIA POR DIA DA SEMANA ============
+    // Agrega agendadas criadas e realizadas concluídas por dia da semana (últimos 60 dias)
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 86400000);
+    const dowAg = [0, 0, 0, 0, 0, 0, 0];
+    const dowReal = [0, 0, 0, 0, 0, 0, 0];
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const isAg = norm(t.Title).includes('reuniao agendada');
+        const isReal = norm(t.Title).includes('reuniao realizada');
+        if (!isAg && !isReal) return;
+        const creator = dashUsersById[t.CreatorId] || '';
+        let canon = getCanonicalSdrName(creator);
+        if (!canon && isReal) {
+            const ag2 = agendadaByDealAll.get(t.DealId);
+            if (ag2) canon = getCanonicalSdrName(dashUsersById[ag2.CreatorId] || '');
+        }
+        if (canon !== canonicalSdr) return;
+        const ref = isReal ? (t.FinishDate || t.DateTime) : t.CreateDate;
+        if (!ref) return;
+        const dt = new Date(ref);
+        if (dt < sixtyDaysAgo) return;
+        if (isAg) dowAg[dt.getDay()]++;
+        else if (isReal && t.Finished === true) dowReal[dt.getDay()]++;
+    });
+    const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const maxDow = Math.max(...dowAg, ...dowReal, 1);
+    let bestDayAg = 1, bestDayReal = 1;
+    for (let i = 0; i < 7; i++) {
+        if (dowAg[i] > dowAg[bestDayAg]) bestDayAg = i;
+        if (dowReal[i] > dowReal[bestDayReal]) bestDayReal = i;
+    }
+    const dowHtml = `
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;line-height:1.5;">Últimos 60 dias · barras roxas = agendadas criadas, verdes = realizadas concluídas</div>
+        <div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;">
+            ${DOW_LABELS.map((d, i) => {
+                const isWeekend = (i === 0 || i === 6);
+                const pctAg = (dowAg[i] / maxDow) * 100;
+                const pctReal = (dowReal[i] / maxDow) * 100;
+                return `
+                    <div style="text-align:center;${isWeekend ? 'opacity:0.5;' : ''}">
+                        <div style="height:80px;display:flex;flex-direction:column-reverse;align-items:center;gap:2px;justify-content:flex-start;">
+                            <div style="width:14px;background:#22c55e;border-radius:2px;height:${pctReal}%;min-height:${dowReal[i] > 0 ? '4px' : '0'};" title="${dowReal[i]} realizadas"></div>
+                            <div style="width:14px;background:#8b5cf6;border-radius:2px;height:${pctAg}%;min-height:${dowAg[i] > 0 ? '4px' : '0'};" title="${dowAg[i]} agendadas"></div>
+                        </div>
+                        <div style="font-size:11px;color:${i === bestDayAg ? '#c4b5fd' : '#94a3b8'};margin-top:6px;font-weight:${i === bestDayAg ? '700' : '400'};">${d}</div>
+                        <div style="font-size:10px;color:#94a3b8;">${dowAg[i] + dowReal[i]}</div>
+                    </div>`;
+            }).join('')}
+        </div>
+        <div style="margin-top:12px;font-size:11.5px;color:#94a3b8;line-height:1.5;">
+            🎯 <strong style="color:#c4b5fd;">${DOW_LABELS[bestDayAg]}</strong> é o seu dia mais produtivo pra <strong>agendar</strong> · <strong style="color:#86efac;">${DOW_LABELS[bestDayReal]}</strong> pra <strong>realizar</strong>.
+        </div>
+    `;
+    document.getElementById('cpSdrDow').innerHTML = dowHtml;
+
+    // ============ (5) TOP MOTIVOS DE DESCARTE ============
+    // Deals perdidos da SDR (qualquer época) — analisa motivos
+    const myLostDeals = (lostDeals || []).filter(d => {
+        const sdrField = typeof getSDR === 'function' ? getSDR(d) : '';
+        if (getCanonicalSdrName(sdrField) === canonicalSdr) return true;
+        if (getCanonicalSdrName(getOwnerName(d)) === canonicalSdr) return true;
+        return false;
+    });
+    const lossReasonsMap = {};
+    myLostDeals.forEach(d => {
+        const r = d.LossReason?.Name || '(sem motivo registrado)';
+        lossReasonsMap[r] = (lossReasonsMap[r] || 0) + 1;
+    });
+    const topLoss = Object.entries(lossReasonsMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const totalLoss = myLostDeals.length;
+    if (totalLoss === 0) {
+        document.getElementById('cpSdrLossReasons').innerHTML = `<div style="padding:20px;text-align:center;color:#86efac;font-size:13px;">🎉 Sem deals descartados atribuídos a você ainda.</div>`;
+    } else {
+        document.getElementById('cpSdrLossReasons').innerHTML = `
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;line-height:1.5;">${totalLoss} deals descartados (período completo do cache)</div>
+            ${topLoss.map(([r, n], i) => {
+                const pct = Math.round((n / totalLoss) * 100);
+                const colors = ['#ef4444', '#f97316', '#facc15', '#94a3b8', '#94a3b8'];
+                return `
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                            <span style="color:#e5e7eb;">${i + 1}. ${r}</span>
+                            <span style="color:${colors[i]};font-weight:700;">${n} <span style="color:#94a3b8;font-weight:400;">(${pct}%)</span></span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);height:8px;border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${pct}%;background:${colors[i]};border-radius:4px;"></div>
+                        </div>
+                    </div>`;
+            }).join('')}
+            <div style="margin-top:12px;padding:10px 12px;background:rgba(139,92,246,0.06);border-left:3px solid #8b5cf6;border-radius:6px;font-size:12px;color:#c4b5fd;line-height:1.5;">
+                💡 <strong>Use no coaching:</strong> revise se o top motivo é qualificação (você passou cedo demais) ou ICP (lead não era pra Lincros). Cada caso tem solução diferente.
+            </div>
+        `;
+    }
 }
 
 async function renderCockpit() {
@@ -10194,6 +10578,10 @@ async function renderCockpit() {
 
     document.getElementById('cpEmptyState').style.display = 'none';
     document.getElementById('cpMainContent').style.display = 'block';
+
+    // Esconde bloco exclusivo de SDR (caso esteja vindo de impersonate de SDR)
+    const _sdrAdvVendor = document.getElementById('cpSdrAdvanced');
+    if (_sdrAdvVendor) _sdrAdvVendor.style.display = 'none';
 
     // Reset headers caso esteja vindo do leader render (impersonate)
     const _setH = (selector, html) => { const el = document.querySelector(selector); if (el) el.innerHTML = html; };
