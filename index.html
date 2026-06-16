@@ -4821,6 +4821,34 @@
                         <div class="cp-insights-grid" id="cpInsightsGrid"></div>
                     </div>
 
+                    <!-- ============ ANÁLISES ESTRATÉGICAS DE PRÉ-VENDAS — só pra LÍDER ============ -->
+                    <div id="cpLeaderPreSales" style="display:none;">
+                        <!-- Funil completo do time (Lead → Win) -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🔻</span> Funil completo do time — Lead até Win</h2>
+                                <div class="cp-card-sub">Visão end-to-end de pré-vendas + vendas no mês · identifica gargalo da operação</div>
+                            </div>
+                            <div id="cpLeaderFunnel" style="padding:6px 4px 4px;"></div>
+                        </div>
+                        <!-- Performance dos SDRs do time todo -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🎯</span> Performance da Pré-Vendas — time todo</h2>
+                                <div class="cp-card-sub">Ranking dos SDRs por geração de oportunidade · clique no card pra investigar</div>
+                            </div>
+                            <div id="cpLeaderSdrPerf" style="padding:6px 4px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;"></div>
+                        </div>
+                        <!-- Handoff SDR → Vendedor -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🤝</span> Handoff Pré-Vendas → Vendas</h2>
+                                <div class="cp-card-sub">Velocidade da transição + taxa de devolução · onde a pré-vendas e vendas conversam (ou não)</div>
+                            </div>
+                            <div id="cpLeaderHandoff" style="padding:6px 4px 4px;"></div>
+                        </div>
+                    </div>
+
                     <!-- ============ ANÁLISES ESTRATÉGICAS — só pra SDR ============ -->
                     <div id="cpSdrAdvanced" style="display:none;">
                         <!-- Funil de Conversão Visual -->
@@ -9631,7 +9659,289 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
         </div>`;
     }).join('');
 
+    // ===== Análises estratégicas de Pré-Vendas (visão do líder) =====
+    _cpRenderLeaderPreSales({ leaderPipeline, now, monthStart, monthEnd, inThisMonth });
+
     return true;
+}
+
+// Análises de gestão de PRÉ-VENDAS no cockpit do líder.
+// Renderiza: funil completo Lead→Win, performance dos 5 SDRs e handoff SDR→Vendedor.
+function _cpRenderLeaderPreSales(ctx) {
+    const { leaderPipeline, now, monthStart, monthEnd, inThisMonth } = ctx;
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const adv = document.getElementById('cpLeaderPreSales');
+    if (!adv) return;
+    adv.style.display = 'block';
+
+    const allDealsAll = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+
+    // ============ (1) FUNIL COMPLETO DO TIME — Lead até Win ============
+    // Considera deals criados no mês em qualquer pipeline de pré-vendas + vendas
+    const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
+    const SALES_PIPES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+    const ALL_TEAM_PIPES = [...SDR_PIPES, ...SALES_PIPES];
+    const isTeamDeal = (d) => ALL_TEAM_PIPES.includes(getPipelineName(d));
+    const monthLeads = allDealsAll.filter(d => isTeamDeal(d) && inThisMonth(d.CreateDate));
+    const leadsCount = monthLeads.length;
+
+    // Contactados: leads com >= 1 interaction
+    const contactedSet = new Set();
+    (dashInteractions || []).forEach(it => {
+        if (!it.DealId) return;
+        if (monthLeads.find(d => d.Id === it.DealId)) contactedSet.add(it.DealId);
+    });
+    const contactedCount = contactedSet.size;
+
+    // Agendadas criadas no mês por SDRs (qualquer pipeline da operação)
+    const agendadasMonth = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        if (!getCanonicalSdrName(dashUsersById[t.CreatorId] || '')) return false;
+        return inThisMonth(t.CreateDate);
+    });
+
+    // Realizadas: task Reunião Realizada Finished=true no mês
+    const agendadaByDealGlobal = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!agendadaByDealGlobal.has(t.DealId)) agendadaByDealGlobal.set(t.DealId, t);
+    });
+    const realizadasMonth = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return false;
+        if (t.Finished !== true) return false;
+        const ref = t.FinishDate || t.DateTime;
+        if (!inThisMonth(ref)) return false;
+        let canon = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (!canon) {
+            const ag = agendadaByDealGlobal.get(t.DealId);
+            if (ag) canon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+        }
+        return !!canon;
+    });
+
+    // OPOs do mês (deals com marcador Proposta OU task Proposta Enviada)
+    const propTaskByDealMonth = new Map();
+    if (typeof getPropostaEnviadaTasks === 'function') {
+        getPropostaEnviadaTasks().forEach(t => {
+            if (!t.DealId || !inThisMonth(t.CreateDate)) return;
+            const prev = propTaskByDealMonth.get(t.DealId);
+            if (!prev || new Date(t.CreateDate) > new Date(prev.CreateDate)) propTaskByDealMonth.set(t.DealId, t);
+        });
+    }
+    const oposMonth = allDealsAll.filter(d => {
+        let isOpo = false;
+        if (propTaskByDealMonth.has(d.Id)) isOpo = true;
+        if (!isOpo && hasProposalSent(d)) {
+            const pd = getProposalDate(d) || d.LastUpdateDate;
+            if (inThisMonth(pd)) isOpo = true;
+        }
+        return isOpo && isTeamDeal(d);
+    });
+
+    // Ganhos do mês (deals em SALES_PIPES com FinishDate no mês)
+    const wonMonth = (wonDeals || []).filter(d => SALES_PIPES.includes(getPipelineName(d)) && inThisMonth(d.FinishDate));
+    const wonMrr = wonMonth.reduce((s, d) => s + getMRR(d), 0);
+
+    const funnelStages = [
+        { label: '👥 Leads novos', count: leadsCount, color: '#94a3b8', desc: 'deals criados no mês' },
+        { label: '📞 Contactados', count: contactedCount, color: '#38bdf8', desc: 'com interação registrada' },
+        { label: '📅 Agendados', count: agendadasMonth.length, color: '#8b5cf6', desc: 'reuniões marcadas pela pré-vendas' },
+        { label: '✅ Realizados', count: realizadasMonth.length, color: '#22c55e', desc: 'reuniões concluídas' },
+        { label: '📝 OPOs', count: oposMonth.length, color: '#facc15', desc: 'propostas geradas' },
+        { label: '🏆 Ganhos', count: wonMonth.length, color: '#ef4444', desc: `${_cpFmtMoney(wonMrr)} de MRR fechado` }
+    ];
+    const maxVal = Math.max(leadsCount, 1);
+    const funnelHtml = funnelStages.map((s, i) => {
+        const pct = Math.round((s.count / maxVal) * 100);
+        const prev = i > 0 ? funnelStages[i - 1] : null;
+        const convFromPrev = prev && prev.count > 0 ? Math.round((s.count / prev.count) * 100) : null;
+        const convBadge = convFromPrev !== null
+            ? `<span style="font-size:11px;color:${convFromPrev >= 50 ? '#22c55e' : convFromPrev >= 25 ? '#facc15' : '#ef4444'};font-weight:700;background:rgba(255,255,255,0.04);padding:3px 8px;border-radius:20px;margin-left:8px;">↓ ${convFromPrev}%</span>`
+            : '';
+        return `
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+                    <span style="font-size:13px;color:#e5e7eb;font-weight:600;">${s.label} <span style="color:#94a3b8;font-weight:400;font-size:11px;">· ${s.desc}</span></span>
+                    <span><strong style="color:${s.color};font-size:18px;">${s.count}</strong>${convBadge}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:6px;height:14px;overflow:hidden;">
+                    <div style="height:100%;width:${Math.max(2, pct)}%;background:linear-gradient(90deg, ${s.color} 0%, ${s.color}cc 100%);border-radius:6px;"></div>
+                </div>
+            </div>`;
+    }).join('');
+    // Identifica gargalo (etapa com pior conversão)
+    let worstStage = null, worstRate = 100;
+    for (let i = 1; i < funnelStages.length; i++) {
+        const prev = funnelStages[i - 1];
+        if (prev.count > 0) {
+            const r = (funnelStages[i].count / prev.count) * 100;
+            if (r < worstRate) { worstRate = r; worstStage = `${prev.label.replace(/^[^\w]+/, '').trim()} → ${funnelStages[i].label.replace(/^[^\w]+/, '').trim()}`; }
+        }
+    }
+    const insight = worstStage && worstRate < 50
+        ? `<div style="margin-top:14px;padding:12px 14px;background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;border-radius:6px;font-size:12.5px;color:#fca5a5;line-height:1.55;">⚠️ <strong>Gargalo do mês:</strong> ${worstStage} (${Math.round(worstRate)}%) — onde a operação tá perdendo mais volume. Pauta de 1:1 com a área responsável.</div>`
+        : `<div style="margin-top:14px;padding:12px 14px;background:rgba(34,197,94,0.06);border-left:3px solid #22c55e;border-radius:6px;font-size:12.5px;color:#86efac;line-height:1.55;">✅ Operação saudável — todas as etapas convertem acima de 50%.</div>`;
+    document.getElementById('cpLeaderFunnel').innerHTML = funnelHtml + insight;
+
+    // ============ (2) PERFORMANCE DOS SDRs ============
+    const SDRS = [
+        { canonical: 'Samira Cristina',  team: 'Novos Negócios', target: 25, metric: 'realizadas', color: '#8b5cf6' },
+        { canonical: 'Guilherme Tomio',  team: 'Novos Negócios', target: 25, metric: 'realizadas', color: '#8b5cf6' },
+        { canonical: 'Adriely',          team: 'Novos Negócios', target: 25, metric: 'realizadas', color: '#8b5cf6' },
+        { canonical: 'Agnes Roberta',    team: 'Farmer',         target: 30, metric: 'opos',       color: '#22c55e' },
+        { canonical: 'Maja Siqueira',    team: 'Sankhya',        target: 30, metric: 'opos',       color: '#facc15' }
+    ];
+    const opoBySdrFull = (typeof countOposByCanonicalSdr === 'function')
+        ? countOposByCanonicalSdr({ start: monthStart, end: monthEnd })
+        : {};
+
+    const sdrPerfData = SDRS.map(sdr => {
+        const ags = agendadasMonth.filter(t => getCanonicalSdrName(dashUsersById[t.CreatorId] || '') === sdr.canonical).length;
+        const reals = realizadasMonth.filter(t => {
+            let canon = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+            if (!canon) {
+                const ag = agendadaByDealGlobal.get(t.DealId);
+                if (ag) canon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+            }
+            return canon === sdr.canonical;
+        }).length;
+        const opos = opoBySdrFull[sdr.canonical] || 0;
+        const targetMet = sdr.metric === 'opos' ? opos : reals;
+        const pct = sdr.target > 0 ? Math.round((targetMet / sdr.target) * 100) : 0;
+        return { ...sdr, ags, reals, opos, targetMet, pct };
+    }).sort((a, b) => b.pct - a.pct);
+
+    document.getElementById('cpLeaderSdrPerf').innerHTML = sdrPerfData.map((sdr, idx) => {
+        const tone = sdr.pct >= 80 ? '#22c55e' : sdr.pct >= 50 ? '#facc15' : '#ef4444';
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+        const metricLabel = sdr.metric === 'opos' ? 'OPOs' : 'Realiz.';
+        return `
+            <div class="cp-insight-card" style="border-left-color:${sdr.color};padding:14px;cursor:pointer;" onclick="_cpImpersonateAsSdr('${sdr.canonical.replace(/'/g, '\\\'')}')">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                    <strong style="font-size:14px;color:#fff;">${medal} ${sdr.canonical.split(/\s+/)[0]}</strong>
+                    <span style="font-size:10px;color:${sdr.color};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(255,255,255,0.04);padding:2px 8px;border-radius:10px;">${sdr.team}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+                    <span style="font-size:11px;color:#94a3b8;">${metricLabel} no mês</span>
+                    <span style="font-size:22px;color:${tone};font-weight:800;">${sdr.targetMet}<span style="font-size:13px;color:#94a3b8;font-weight:400;"> / ${sdr.target}</span></span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:4px;height:6px;overflow:hidden;margin-bottom:8px;">
+                    <div style="height:100%;width:${Math.min(100, sdr.pct)}%;background:${tone};border-radius:4px;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+                    <span>📅 ${sdr.ags} ag · ✅ ${sdr.reals} real · 📝 ${sdr.opos} OPO</span>
+                    <strong style="color:${tone};">${sdr.pct}%</strong>
+                </div>
+            </div>`;
+    }).join('') + `<div style="grid-column:1 / -1;margin-top:8px;font-size:11.5px;color:#94a3b8;line-height:1.5;">💡 Clique no card pra entrar na visão de qualquer SDR e ver o cockpit dela em detalhe (impersonate).</div>`;
+
+    // ============ (3) HANDOFF SDR → VENDEDOR ============
+    // Métricas:
+    // - Tempo médio OPO gerada → 1ª atividade do vendedor no deal
+    //   (Usa OPOs do mês, calcula diff entre data da Proposta e a próxima Interaction
+    //    em deal já em pipeline de Vendas)
+    // - Taxa de devolução: deals em SALES_PIPES com Owner = SDR canonical (devolvidos)
+    // - Total de OPOs gerados no mês por pré-vendas
+    const handoffTimes = [];
+    oposMonth.forEach(d => {
+        // Só faz sentido pra deals que JÁ estão em pipeline de vendas (Sankhya/Farmer/Funil)
+        if (!SALES_PIPES.includes(getPipelineName(d))) return;
+        const propDate = getProposalDate(d) || d.LastUpdateDate;
+        if (!propDate) return;
+        const propT = new Date(propDate).getTime();
+        // Achar primeira interação DEPOIS do OPO
+        const after = (dashInteractions || [])
+            .filter(it => it.DealId === d.Id && new Date(it.Date).getTime() > propT)
+            .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+        if (after.length === 0) return;
+        const hrs = (new Date(after[0].Date).getTime() - propT) / 3600000;
+        if (hrs >= 0 && hrs < 30 * 24) handoffTimes.push(hrs);
+    });
+    const avgHandoffH = handoffTimes.length > 0 ? handoffTimes.reduce((s, h) => s + h, 0) / handoffTimes.length : null;
+    const handoffLabel = avgHandoffH !== null
+        ? (avgHandoffH < 24 ? `${Math.round(avgHandoffH)}h` : `${(avgHandoffH / 24).toFixed(1)}d`)
+        : '—';
+
+    // Devolvidos: deals em SALES_PIPES com Owner = SDR canonical
+    const returnedDeals = (dashOpenDeals || []).filter(d => {
+        if (!SALES_PIPES.includes(getPipelineName(d))) return false;
+        return !!getCanonicalSdrName(getOwnerName(d));
+    });
+    // Por vendedor (proxy: a partir dos deals onde owner = SDR, identificamos qual vendedor
+    // recebeu o deal originalmente via SDR field do deal)
+    const returnedByPrevOwner = {};
+    returnedDeals.forEach(d => {
+        // Aqui usamos o SDR field se tiver, senão "Não rastreado"
+        const k = (typeof getSDR === 'function' && getSDR(d)) || 'Não rastreado';
+        returnedByPrevOwner[k] = (returnedByPrevOwner[k] || 0) + 1;
+    });
+
+    // OPOs por vendedor — quem está recebendo mais oportunidades
+    const opoByVendor = {};
+    oposMonth.forEach(d => {
+        if (!SALES_PIPES.includes(getPipelineName(d))) return;
+        const v = getOwnerName(d);
+        if (!v) return;
+        if (typeof isSdrName === 'function' && isSdrName(v)) return; // SDR não conta
+        opoByVendor[v] = (opoByVendor[v] || 0) + 1;
+    });
+    const topVendors = Object.entries(opoByVendor).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const totalOposVendor = Object.values(opoByVendor).reduce((s, n) => s + n, 0);
+
+    const handoffTone = avgHandoffH !== null && avgHandoffH < 24 ? '#22c55e' : (avgHandoffH !== null && avgHandoffH < 72 ? '#facc15' : '#ef4444');
+    const handoffTipText = avgHandoffH === null
+        ? 'Sem dados de interação suficientes pós-OPO.'
+        : avgHandoffH < 24 ? '✅ Velocidade excelente — vendedor atua no mesmo dia.'
+        : avgHandoffH < 72 ? '💡 OK mas dá pra melhorar — meta < 24h.'
+        : '⚠️ Lead esfria — vendedor demora pra retomar. Alinhe SLA.';
+
+    document.getElementById('cpLeaderHandoff').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px;">
+            <div class="cp-insight-card" style="border-left-color:${handoffTone};padding:14px;">
+                <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">⏱ Tempo OPO → 1ª ação vendedor</div>
+                <div style="font-size:28px;font-weight:800;color:${handoffTone};line-height:1;">${handoffLabel}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5;">${handoffTipText}</div>
+            </div>
+            <div class="cp-insight-card" style="border-left-color:${returnedDeals.length > 5 ? '#ef4444' : returnedDeals.length > 0 ? '#facc15' : '#22c55e'};padding:14px;">
+                <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">🔄 Cards devolvidos pelo vendedor</div>
+                <div style="font-size:28px;font-weight:800;color:${returnedDeals.length > 5 ? '#ef4444' : returnedDeals.length > 0 ? '#facc15' : '#22c55e'};line-height:1;">${returnedDeals.length}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5;">${returnedDeals.length > 0 ? 'Deals que voltaram pro SDR — investigue gap de qualificação' : 'Nenhum card devolvido — handoff fluindo bem'}</div>
+            </div>
+            <div class="cp-insight-card" style="border-left-color:#facc15;padding:14px;">
+                <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">📝 OPOs gerados no mês (vendas)</div>
+                <div style="font-size:28px;font-weight:800;color:#facc15;line-height:1;">${totalOposVendor}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5;">Distribuídos em ${Object.keys(opoByVendor).length} vendedor${Object.keys(opoByVendor).length === 1 ? '' : 'es'}</div>
+            </div>
+        </div>
+        ${topVendors.length > 0 ? `
+            <div style="margin-top:12px;font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px;">Quem mais recebeu oportunidades:</div>
+            ${topVendors.map(([v, n], i) => {
+                const pct = Math.round((n / totalOposVendor) * 100);
+                const cl = ['#facc15', '#fb923c', '#94a3b8', '#94a3b8', '#94a3b8'][i] || '#94a3b8';
+                return `
+                    <div style="margin-bottom:6px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+                            <span style="color:#e5e7eb;">${i + 1}. ${v}</span>
+                            <span style="color:${cl};font-weight:700;">${n} OPO${n > 1 ? 's' : ''} <span style="color:#94a3b8;font-weight:400;">(${pct}%)</span></span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);height:6px;border-radius:3px;overflow:hidden;">
+                            <div style="height:100%;width:${pct}%;background:${cl};border-radius:3px;"></div>
+                        </div>
+                    </div>`;
+            }).join('')}
+        ` : ''}
+    `;
+}
+
+// Helper pra impersonate SDR a partir de card clicável (Cockpit Líder)
+function _cpImpersonateAsSdr(sdrName) {
+    if (typeof _cpSetImpersonate === 'function') {
+        _cpSetImpersonate('SDR::' + sdrName);
+        if (typeof renderCockpit === 'function') renderCockpit();
+        // Rola pro topo pra visualizar a impersonação
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 // ==================== COCKPIT SDR (Pré-Vendas) ====================
@@ -9639,6 +9949,9 @@ function _cpRenderLeaderCockpit(leaderPipeline) {
 // agenda do dia, compliance gaps, cards devolvidos, próximas reuniões, KPIs e
 // coaching SPIN qualificador. Reusa os containers do view-cockpit.
 function _cpRenderSdrCockpit(canonicalSdr) {
+    // Esconde bloco exclusivo do líder (caso esteja vindo de leader render)
+    const _ldrPS = document.getElementById('cpLeaderPreSales');
+    if (_ldrPS) _ldrPS.style.display = 'none';
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const firstName = canonicalSdr.split(/\s+/)[0];
 
@@ -10579,9 +10892,11 @@ async function renderCockpit() {
     document.getElementById('cpEmptyState').style.display = 'none';
     document.getElementById('cpMainContent').style.display = 'block';
 
-    // Esconde bloco exclusivo de SDR (caso esteja vindo de impersonate de SDR)
+    // Esconde blocos exclusivos de SDR e Líder (caso esteja vindo de impersonate)
     const _sdrAdvVendor = document.getElementById('cpSdrAdvanced');
     if (_sdrAdvVendor) _sdrAdvVendor.style.display = 'none';
+    const _leaderPSVendor = document.getElementById('cpLeaderPreSales');
+    if (_leaderPSVendor) _leaderPSVendor.style.display = 'none';
 
     // Reset headers caso esteja vindo do leader render (impersonate)
     const _setH = (selector, html) => { const el = document.querySelector(selector); if (el) el.innerHTML = html; };
