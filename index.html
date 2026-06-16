@@ -1045,18 +1045,24 @@
 
         .fc-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            padding: 20px 30px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 14px;
+            padding: 18px 24px;
+        }
+        @media (max-width: 1300px) {
+            .fc-kpi-grid { padding: 16px 18px; }
         }
         @media (max-width: 900px) {
             .fc-kpi-grid { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
         }
         .fc-totals-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 16px;
             padding: 0 30px 20px;
+        }
+        @media (max-width: 1300px) {
+            .fc-totals-grid { padding: 0 20px 16px; gap: 14px; }
         }
         @media (max-width: 900px) {
             .fc-totals-grid { grid-template-columns: 1fr; gap: 14px; padding: 0 16px 16px; }
