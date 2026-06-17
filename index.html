@@ -5749,21 +5749,28 @@
                 <div class="section-card" id="secCompliance">
                     <div class="section-header">
                         <h2><span class="section-num">&#9888;&#65039;</span> Compliance — Reuniões Realizadas (Novos Negócios)</h2>
-                        <div class="sub-filter">
+                        <div class="sub-filter" style="display:flex;gap:8px;align-items:center;">
                             <select class="section-period-select" id="periodSecCompliance" onchange="renderCompliance()">
                                 <option value="global">Global</option>
                                 <option value="thisMonth" selected>Este mês</option>
                                 <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                             </select>
+                            <select class="section-period-select" id="sdrFilterCompliance" onchange="renderCompliance()" style="min-width:140px;">
+                                <option value="">Todos SDRs</option>
+                                <option value="Samira Cristina">Samira Cristina</option>
+                                <option value="Guilherme Tomio">Guilherme Tomio</option>
+                                <option value="Adriely">Adriely</option>
+                                <option value="Agnes Roberta">Agnes Roberta</option>
+                            </select>
                         </div>
                     </div>
                     <div class="section-body">
-                        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#fca5a5;line-height:1.6;">
-                            <strong style="color:#ef4444;">Por que esse painel existe:</strong> a tarefa <strong style="color:#fff;">"Reunião Realizada"</strong> é criada automaticamente no Ploomes quando a Agendada vence, mas precisa ser marcada como <strong style="color:#fff;">concluída (Finished=true)</strong> manualmente pelo SDR após a reunião. Sem essa marcação, todas as métricas de pré-vendas ficam cegas. <strong>Meta: ≥80% das agendadas vencidas têm Realizada marcada como concluída.</strong>
-                        </div>
-                        <div id="complianceKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;"></div>
-                        <div id="complianceByExec" style="overflow-x:auto;margin-bottom:14px;"></div>
+                        <!-- Hero: explicação + KPIs num bloco visual unificado -->
+                        <div id="complianceHero" style="background:linear-gradient(135deg, rgba(239,68,68,0.08), rgba(108,63,181,0.05));border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:18px 20px;margin-bottom:14px;"></div>
+                        <!-- Tabela ranking SDRs -->
+                        <div id="complianceByExec" style="overflow-x:auto;margin-bottom:18px;"></div>
+                        <!-- Deals pendentes (lista de cobrança) -->
                         <div id="complianceDeals" style="overflow-x:auto;"></div>
                     </div>
                 </div>
@@ -12399,10 +12406,11 @@ function getCanonicalSdrName(name) {
 // Sinaliza pro líder cobrar o SDR a marcar a task no Ploomes — sem isso métricas ficam cegas.
 function renderCompliance() {
     if (!dashMeetings || dashMeetings.length === 0) {
-        document.getElementById('complianceKpis').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8888a0;padding:20px;">Aguardando carregamento das tasks…</div>';
+        document.getElementById('complianceHero').innerHTML = '<div style="text-align:center;color:#8888a0;padding:20px;">Aguardando carregamento das tasks…</div>';
         return;
     }
     const sp = getSectionPeriod('secCompliance');
+    const sdrFilter = document.getElementById('sdrFilterCompliance')?.value || '';
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
     const now = new Date();
@@ -12416,26 +12424,24 @@ function renderCompliance() {
         if (tn.includes('reuniao agendada')) {
             if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, t);
         } else if (tn.includes('reuniao realizada')) {
-            // Preserva a com Finished=true se existir
             const existing = realizadaByDeal.get(t.DealId);
             if (!existing || (!existing.Finished && t.Finished)) realizadaByDeal.set(t.DealId, t);
         }
     });
 
     // Aggrega por SDR
-    const sdrStats = {}; // canonical -> { vencidas, finished, pendingDeals: [] }
+    const sdrStats = {};
     const ensure = (n) => { if (!sdrStats[n]) sdrStats[n] = { vencidas: 0, finished: 0, pendingDeals: [] }; };
 
     agendadaByDeal.forEach((agTask, dealId) => {
-        // Agendada precisa estar no período (criada/agendada no período)
         if (!inPeriod(agTask.DateTime)) return;
-        // E precisa estar vencida (data passou — meet já deveria ter acontecido)
         if (new Date(agTask.DateTime) > now) return;
         const sdrName = dashUsersById[agTask.CreatorId] || '';
         const canonical = getCanonicalSdrName(sdrName);
         if (!canonical) return;
-        // Maja não conta aqui (usa proxy Sankhya separado)
-        if (canonical === 'Maja Siqueira') return;
+        if (canonical === 'Maja Siqueira') return; // proxy Sankhya separado
+        // Aplica filtro de SDR
+        if (sdrFilter && canonical !== sdrFilter) return;
         ensure(canonical);
         sdrStats[canonical].vencidas++;
         const realTask = realizadaByDeal.get(dealId);
@@ -12460,20 +12466,46 @@ function renderCompliance() {
     const totalFinished = sdrRows.reduce((s, r) => s + r.finished, 0);
     const totalPending = totalVencidas - totalFinished;
     const overallRate = totalVencidas > 0 ? (totalFinished / totalVencidas * 100) : 0;
-
-    // KPIs
-    const kpiHtml = (label, val, sub, color) => `
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px;">
-            <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
-            <div style="font-size:22px;color:${color};font-weight:700;margin-top:4px;line-height:1;">${val}</div>
-            <div style="font-size:10.5px;color:#6d6d85;margin-top:4px;">${sub}</div>
-        </div>`;
     const rateColor = overallRate >= 80 ? '#22c55e' : overallRate >= 50 ? '#f59e0b' : '#ef4444';
-    document.getElementById('complianceKpis').innerHTML =
-        kpiHtml('Agendadas Vencidas', totalVencidas, 'No período (data passou)', '#60a5fa') +
-        kpiHtml('Marcadas como Finished', totalFinished, 'Tasks Realizada concluídas', '#22c55e') +
-        kpiHtml('Taxa de Preenchimento', overallRate.toFixed(0) + '%', overallRate >= 80 ? '🟢 Saudável' : overallRate >= 50 ? '🟡 Precisa atenção' : '🔴 Crítico', rateColor) +
-        kpiHtml('Pendentes (cobrar)', totalPending, totalPending > 0 ? '🚨 Reuniões sem marcar' : '✅ Tudo em dia', totalPending > 0 ? '#ef4444' : '#22c55e');
+    const rateStatus = overallRate >= 80 ? '🟢 SAUDÁVEL' : overallRate >= 50 ? '🟡 ATENÇÃO' : '🔴 CRÍTICO';
+    const focusName = sdrFilter ? sdrFilter : 'time todo';
+
+    // ===== HERO unificado: explicação + Taxa de Preenchimento gigante + KPIs compactos =====
+    document.getElementById('complianceHero').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:24px;align-items:center;">
+            <!-- Esquerda: taxa gigante + status -->
+            <div style="text-align:center;">
+                <div style="font-size:11px;color:#fca5a5;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Taxa de Preenchimento · ${focusName}</div>
+                <div style="font-size:72px;color:${rateColor};font-weight:800;line-height:1;letter-spacing:-1px;">${overallRate.toFixed(0)}<span style="font-size:32px;opacity:0.6;">%</span></div>
+                <div style="font-size:13px;color:${rateColor};font-weight:700;margin-top:6px;letter-spacing:1px;">${rateStatus}</div>
+                <div style="font-size:11px;color:#8888a0;margin-top:4px;">Meta: ≥80%</div>
+                <div style="background:rgba(255,255,255,0.05);border-radius:6px;height:8px;overflow:hidden;margin-top:12px;position:relative;">
+                    <div style="height:100%;width:${Math.min(100, overallRate)}%;background:${rateColor};border-radius:6px;transition:width 0.4s;"></div>
+                    <div style="position:absolute;top:-2px;left:80%;width:2px;height:12px;background:#fff;opacity:0.6;" title="Meta: 80%"></div>
+                </div>
+            </div>
+            <!-- Direita: 3 KPIs compactos lado a lado + explicação -->
+            <div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                    <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;text-align:center;">
+                        <div style="font-size:9.5px;color:#60a5fa;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;margin-bottom:4px;">⏳ Vencidas</div>
+                        <div style="font-size:24px;color:#fff;font-weight:800;line-height:1;">${totalVencidas}</div>
+                    </div>
+                    <div style="background:rgba(34,197,94,0.08);border-radius:8px;padding:10px 12px;text-align:center;">
+                        <div style="font-size:9.5px;color:#22c55e;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;margin-bottom:4px;">✅ Marcadas</div>
+                        <div style="font-size:24px;color:#22c55e;font-weight:800;line-height:1;">${totalFinished}</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 12px;text-align:center;">
+                        <div style="font-size:9.5px;color:#ef4444;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;margin-bottom:4px;">🚨 Pendentes</div>
+                        <div style="font-size:24px;color:${totalPending > 0 ? '#ef4444' : '#22c55e'};font-weight:800;line-height:1;">${totalPending}</div>
+                    </div>
+                </div>
+                <div style="font-size:11.5px;color:#fca5a5;line-height:1.55;">
+                    <strong style="color:#ef4444;">Por que importa:</strong> task <strong style="color:#fff;">"Reunião Realizada"</strong> é criada automaticamente, mas precisa ser <strong style="color:#fff;">marcada como Finished</strong> pelo SDR após a reunião. Sem isso, as métricas de pré-vendas ficam cegas.
+                </div>
+            </div>
+        </div>
+    `;
 
     // Tabela por SDR
     let byExecHtml = '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
