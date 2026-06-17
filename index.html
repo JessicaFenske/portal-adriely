@@ -12291,11 +12291,14 @@ function _intHasText(it, needle) {
     const n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     return n(it?.Content).includes(n(needle));
 }
+// Match mais permissivo: se tipo é Reunião E o content contém "agendada"/"realizada"
+// (com ou sem "Reunião" antes). Cobre variações tipo "Realizada", "Reunião realizada",
+// "Realizada com sucesso", etc.
 function interactionIsReuniaoAgendada(it) {
-    return _intIsReuniaoType(it) && _intHasText(it, 'reuniao agendada');
+    return _intIsReuniaoType(it) && _intHasText(it, 'agendada');
 }
 function interactionIsReuniaoRealizada(it) {
-    return _intIsReuniaoType(it) && _intHasText(it, 'reuniao realizada');
+    return _intIsReuniaoType(it) && _intHasText(it, 'realizada');
 }
 // Agendadas registradas como interaction por SDR no período
 function interactionAgendadasForPeriod(sp) {
