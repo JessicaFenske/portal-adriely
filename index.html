@@ -12224,6 +12224,52 @@ function meetingsForPeriod(sp) {
         return true;
     });
 }
+
+// ============ Detecção de Reunião via INTERACTION ============
+// Algumas SDRs (ex: Samira) registram Reunião Agendada/Realizada como Interaction
+// no Ploomes, não como Task. Esses helpers permitem detectar e somar isso ao total.
+function _intIsReuniaoType(it) {
+    const tn = (it?.InteractionType?.Name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    return tn.includes('reuniao');
+}
+function _intHasText(it, needle) {
+    const n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    return n(it?.Content).includes(n(needle));
+}
+function interactionIsReuniaoAgendada(it) {
+    return _intIsReuniaoType(it) && _intHasText(it, 'reuniao agendada');
+}
+function interactionIsReuniaoRealizada(it) {
+    return _intIsReuniaoType(it) && _intHasText(it, 'reuniao realizada');
+}
+// Agendadas registradas como interaction por SDR no período
+function interactionAgendadasForPeriod(sp) {
+    const start = sp?.start || periodStart;
+    const end = sp?.end || periodEnd;
+    return (dashInteractions || []).filter(it => {
+        if (!interactionIsReuniaoAgendada(it)) return false;
+        if (start && end) {
+            const dt = new Date(it.Date);
+            if (dt < start || dt > end) return false;
+        }
+        const creator = dashUsersById[it.CreatorId] || '';
+        return !!getCanonicalSdrName(creator);
+    });
+}
+// Realizadas registradas como interaction por SDR no período
+function interactionRealizadasForPeriod(sp) {
+    const start = sp?.start || periodStart;
+    const end = sp?.end || periodEnd;
+    return (dashInteractions || []).filter(it => {
+        if (!interactionIsReuniaoRealizada(it)) return false;
+        if (start && end) {
+            const dt = new Date(it.Date);
+            if (dt < start || dt > end) return false;
+        }
+        const creator = dashUsersById[it.CreatorId] || '';
+        return !!getCanonicalSdrName(creator);
+    });
+}
 function getMeetingOrigin(t) {
     if (!t.DealId) return '';
     // 1) Tenta cache local (won/lost/open)
@@ -12459,10 +12505,13 @@ function renderSection7() {
     // Conjunto de dealIds que tiveram "Reunião Agendada" no período (pra detectar realizadas/noshow)
     const dealsWithAgendada = new Set();
     const taskBySdrDeal = {}; // canonicalSdr → dealId → task (a primeira)
+    // Dedup de agendadas: 1 deal = 1 agendada (mesmo se SDR criou múltiplas tasks/interactions)
+    const agendadaCountedDealIds = new Set();
     meetings.forEach(t => {
         const creatorName = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creatorName);
         if (!canonical) return;
+        if (t.DealId && agendadaCountedDealIds.has(t.DealId)) return;
         ensureSdr(canonical);
         sdrAgg[canonical].count++;
         sdrAgg[canonical].tasks.push(t);
@@ -12470,8 +12519,28 @@ function renderSection7() {
         if (deal) {
             sdrAgg[canonical].deals.push(deal);
             dealsWithAgendada.add(deal.Id);
+            agendadaCountedDealIds.add(deal.Id);
             taskBySdrDeal[canonical] = taskBySdrDeal[canonical] || {};
             if (!taskBySdrDeal[canonical][deal.Id]) taskBySdrDeal[canonical][deal.Id] = t;
+        }
+    });
+
+    // === Reuniões Agendadas via INTERACTION ===
+    // SDRs como Samira preferem registrar como interaction. Dedup pelo DealId pra
+    // não contar a mesma reunião duas vezes (task + interaction).
+    interactionAgendadasForPeriod(sp).forEach(it => {
+        if (it.DealId && agendadaCountedDealIds.has(it.DealId)) return;
+        const creator = dashUsersById[it.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        ensureSdr(canonical);
+        sdrAgg[canonical].count++;
+        sdrAgg[canonical].tasks.push(it);
+        const deal = it.DealId ? (window._dashOpenDealsById?.[it.DealId]) : null;
+        if (deal) {
+            sdrAgg[canonical].deals.push(deal);
+            dealsWithAgendada.add(deal.Id);
+            agendadaCountedDealIds.add(deal.Id);
         }
     });
 
@@ -12532,6 +12601,16 @@ function renderSection7() {
         }
         if (!canonical) return;
         markRealizada(canonical, t, window._dashOpenDealsById?.[t.DealId]);
+    });
+
+    // === Reuniões Realizadas via INTERACTION ===
+    // SDRs como Samira registram "Reunião Realizada" como interaction. Dedup com tasks.
+    interactionRealizadasForPeriod(sp).forEach(it => {
+        if (!it.DealId || realizedDealIds.has(it.DealId)) return;
+        const creator = dashUsersById[it.CreatorId] || '';
+        const canonical = getCanonicalSdrName(creator);
+        if (!canonical) return;
+        markRealizada(canonical, it, window._dashOpenDealsById?.[it.DealId]);
     });
 
     // === PROXY SANKHYA: Maja não cria tasks no Ploomes (compliance baixo conhecido).
@@ -13960,11 +14039,13 @@ function renderSection7Times() {
 
     // === Agendadas ===
     // Criadas no período + creator é SDR + deal mapeia pra algum time.
+    // Dedupe por DealId (task OU interaction = 1 agendada por deal).
     const agendadaByDeal = new Map();
     const realizedDealIds = new Set();
+    const agendadaCountedDealIds = new Set();
     const meetings = meetingsForPeriod(sp);
     meetings.forEach(t => {
-        if (!t.DealId) return;
+        if (!t.DealId || agendadaCountedDealIds.has(t.DealId)) return;
         const creatorName = dashUsersById[t.CreatorId] || '';
         if (!getCanonicalSdrName(creatorName)) return;
         const deal = window._dashOpenDealsById?.[t.DealId];
@@ -13972,7 +14053,19 @@ function renderSection7Times() {
         const team = getTeamFromPipeline(getPipelineName(deal));
         if (!team) return;
         teams[team].agendadas++;
+        agendadaCountedDealIds.add(t.DealId);
         if (!agendadaByDeal.has(t.DealId)) agendadaByDeal.set(t.DealId, { task: t, team });
+    });
+    // Inclui interactions tipo Reunião com texto "Agendada"
+    interactionAgendadasForPeriod(sp).forEach(it => {
+        if (!it.DealId || agendadaCountedDealIds.has(it.DealId)) return;
+        const deal = window._dashOpenDealsById?.[it.DealId];
+        if (!deal) return;
+        const team = getTeamFromPipeline(getPipelineName(deal));
+        if (!team) return;
+        teams[team].agendadas++;
+        agendadaCountedDealIds.add(it.DealId);
+        if (!agendadaByDeal.has(it.DealId)) agendadaByDeal.set(it.DealId, { task: it, team });
     });
 
     // Index global de agendadas (sem filtro de período) — usado pra resolver criador da
@@ -14008,6 +14101,18 @@ function renderSection7Times() {
         if (realizedDealIds.has(t.DealId)) return;
         teams[team].realizadas++;
         realizedDealIds.add(t.DealId);
+    });
+    // === Realizadas via INTERACTION ===
+    interactionRealizadasForPeriod(sp).forEach(it => {
+        if (!it.DealId || realizedDealIds.has(it.DealId)) return;
+        const creator = dashUsersById[it.CreatorId] || '';
+        if (!getCanonicalSdrName(creator)) return;
+        const deal = window._dashOpenDealsById?.[it.DealId];
+        if (!deal) return;
+        const team = getTeamFromPipeline(getPipelineName(deal));
+        if (!team) return;
+        teams[team].realizadas++;
+        realizedDealIds.add(it.DealId);
     });
 
     // === Proxy Sankhya (Maja) ===
