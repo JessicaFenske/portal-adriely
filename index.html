@@ -9693,31 +9693,51 @@ function _cpRenderLeaderPreSales(ctx) {
     });
     const contactedCount = contactedSet.size;
 
-    // Agendadas criadas no mês por SDRs (qualquer pipeline da operação)
-    const agendadasMonth = (dashMeetings || []).filter(t => {
-        if (!norm(t.Title).includes('reuniao agendada')) return false;
-        if (!getCanonicalSdrName(dashUsersById[t.CreatorId] || '')) return false;
-        return inThisMonth(t.CreateDate);
+    // Agendadas criadas no mês por SDRs (Tasks + Interactions, dedup por DealId)
+    const agendadaDealSet = new Set();
+    const agendadasMonth = [];
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!getCanonicalSdrName(dashUsersById[t.CreatorId] || '')) return;
+        if (!inThisMonth(t.CreateDate)) return;
+        if (t.DealId && agendadaDealSet.has(t.DealId)) return;
+        if (t.DealId) agendadaDealSet.add(t.DealId);
+        agendadasMonth.push(t);
+    });
+    (typeof interactionAgendadasForPeriod === 'function' ? interactionAgendadasForPeriod({ start: monthStart, end: monthEnd }) : []).forEach(it => {
+        if (it.DealId && agendadaDealSet.has(it.DealId)) return;
+        if (it.DealId) agendadaDealSet.add(it.DealId);
+        agendadasMonth.push({ ...it, CreateDate: it.Date, Title: 'Reunião Agendada' });
     });
 
-    // Realizadas: task Reunião Realizada Finished=true no mês
+    // Realizadas (Tasks + Interactions, dedup)
     const agendadaByDealGlobal = new Map();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
         if (!norm(t.Title).includes('reuniao agendada')) return;
         if (!agendadaByDealGlobal.has(t.DealId)) agendadaByDealGlobal.set(t.DealId, t);
     });
-    const realizadasMonth = (dashMeetings || []).filter(t => {
-        if (!norm(t.Title).includes('reuniao realizada')) return false;
-        if (t.Finished !== true) return false;
+    const realizadaDealSet = new Set();
+    const realizadasMonth = [];
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
         const ref = t.FinishDate || t.DateTime;
-        if (!inThisMonth(ref)) return false;
+        if (!inThisMonth(ref)) return;
         let canon = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
         if (!canon) {
             const ag = agendadaByDealGlobal.get(t.DealId);
             if (ag) canon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
         }
-        return !!canon;
+        if (!canon) return;
+        if (t.DealId && realizadaDealSet.has(t.DealId)) return;
+        if (t.DealId) realizadaDealSet.add(t.DealId);
+        realizadasMonth.push(t);
+    });
+    (typeof interactionRealizadasForPeriod === 'function' ? interactionRealizadasForPeriod({ start: monthStart, end: monthEnd }) : []).forEach(it => {
+        if (it.DealId && realizadaDealSet.has(it.DealId)) return;
+        if (it.DealId) realizadaDealSet.add(it.DealId);
+        realizadasMonth.push({ ...it, FinishDate: it.Date, Title: 'Reunião Realizada' });
     });
 
     // OPOs do mês (deals com marcador Proposta OU task Proposta Enviada)
@@ -9984,26 +10004,55 @@ function _cpRenderSdrCockpit(canonicalSdr) {
         if (!agendadaByDealAll.has(t.DealId)) agendadaByDealAll.set(t.DealId, t);
     });
 
-    // Agendadas criadas pelo SDR este mês
-    const myAgendadasMonth = (dashMeetings || []).filter(t => {
-        if (!norm(t.Title).includes('reuniao agendada')) return false;
+    // Agendadas criadas pelo SDR este mês (Tasks + Interactions, dedup por DealId)
+    const myAgendadaDealSet = new Set();
+    const myAgendadasMonth = [];
+    // (a) Tasks "Reunião Agendada"
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return;
         const creator = dashUsersById[t.CreatorId] || '';
-        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
-        return inThisMonth(t.CreateDate);
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return;
+        if (!inThisMonth(t.CreateDate)) return;
+        if (t.DealId && myAgendadaDealSet.has(t.DealId)) return;
+        if (t.DealId) myAgendadaDealSet.add(t.DealId);
+        myAgendadasMonth.push(t);
+    });
+    // (b) Interactions tipo Reunião com texto "Reunião Agendada"
+    (typeof interactionAgendadasForPeriod === 'function' ? interactionAgendadasForPeriod({ start: monthStart, end: monthEnd }) : []).forEach(it => {
+        const creator = dashUsersById[it.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return;
+        if (it.DealId && myAgendadaDealSet.has(it.DealId)) return;
+        if (it.DealId) myAgendadaDealSet.add(it.DealId);
+        // Normaliza pra ter CreateDate (usado em todo o código downstream)
+        myAgendadasMonth.push({ ...it, CreateDate: it.Date, Title: 'Reunião Agendada' });
     });
 
-    // Realizadas atribuídas ao SDR este mês (via creator da Realizada OU da Agendada)
-    const myRealizadasMonth = (dashMeetings || []).filter(t => {
-        if (!norm(t.Title).includes('reuniao realizada')) return false;
-        if (t.Finished !== true) return false;
+    // Realizadas atribuídas ao SDR este mês (Tasks + Interactions, dedup por DealId)
+    const myRealizadaDealSet = new Set();
+    const myRealizadasMonth = [];
+    // (a) Tasks "Reunião Realizada" Finished=true
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
         const refDate = t.FinishDate || t.DateTime;
-        if (!inThisMonth(refDate)) return false;
+        if (!inThisMonth(refDate)) return;
         let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
         if (!canonical) {
             const ag = agendadaByDealAll.get(t.DealId);
             if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
         }
-        return canonical === canonicalSdr;
+        if (canonical !== canonicalSdr) return;
+        if (t.DealId && myRealizadaDealSet.has(t.DealId)) return;
+        if (t.DealId) myRealizadaDealSet.add(t.DealId);
+        myRealizadasMonth.push(t);
+    });
+    // (b) Interactions tipo Reunião com texto "Reunião Realizada"
+    (typeof interactionRealizadasForPeriod === 'function' ? interactionRealizadasForPeriod({ start: monthStart, end: monthEnd }) : []).forEach(it => {
+        const creator = dashUsersById[it.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return;
+        if (it.DealId && myRealizadaDealSet.has(it.DealId)) return;
+        if (it.DealId) myRealizadaDealSet.add(it.DealId);
+        myRealizadasMonth.push({ ...it, FinishDate: it.Date, DateTime: it.Date, Title: 'Reunião Realizada' });
     });
 
     // OPOs atribuídos ao SDR este mês. Prioridade de atribuição:
@@ -10512,11 +10561,17 @@ function _cpRenderSdrAdvanced(ctx) {
     const SDR_PIPES = ['SDR Inbound', 'SDR Outbound', 'SDR Farmer', 'SDR Sankhya'];
     const monthLeads = myDeals.filter(d => inThisMonth(d.CreateDate));
     const monthLeadsCount = monthLeads.length;
-    // Contactados = deals com >= 1 interaction registrada
+    // Contactados = deals que a SDR registrou ≥1 interaction NO MÊS
+    // (qualquer deal — independente de quando foi criado).
+    // Antes restringia a monthLeads do mês corrente, o que zerava SDRs que trabalham
+    // deals de meses anteriores.
     const contactedSet = new Set();
     (dashInteractions || []).forEach(it => {
         if (!it.DealId) return;
-        if (monthLeads.find(d => d.Id === it.DealId)) contactedSet.add(it.DealId);
+        if (!inThisMonth(it.Date)) return;
+        const creator = dashUsersById[it.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return;
+        contactedSet.add(it.DealId);
     });
     const contactedCount = contactedSet.size;
     const agendadasCount = myAgendadasMonth.length;
