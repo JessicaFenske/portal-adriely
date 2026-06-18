@@ -13476,7 +13476,9 @@ async function renderSection7Inter() {
     const sp = getSectionPeriod('sec7Inter');
     const periodStart_ = sp?.start || periodStart;
     const periodEnd_ = sp?.end || periodEnd;
-    const isIntermodal = d => /intermodal/i.test(d?.Origin?.Name || '');
+    // Origem do deal com fallback (Contact.Origin + custom field) — agora pega
+    // deals onde a origem Intermodal só está no contato ou em campo customizado.
+    const isIntermodal = d => /intermodal/i.test(getDealOrigin(d) || '');
     const inRange = (iso) => {
         if (!iso) return false;
         const dt = new Date(iso);
