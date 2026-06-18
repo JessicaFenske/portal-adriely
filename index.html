@@ -713,6 +713,11 @@
         }
         .section-period-select option { background: #1a1a2e; color: #e0e0e0; }
 
+        /* Multi-select de SDRs (Compliance) */
+        .multi-select-trigger { background: #1a1a2e; }
+        .multi-select-menu .ms-opt:hover { background: rgba(108, 63, 181, 0.15); }
+        .multi-select-menu input[type="checkbox"] { accent-color: #8b5cf6; cursor: pointer; }
+
         /* Collapsible table */
         .table-toggle {
             display: inline-flex;
@@ -5756,13 +5761,31 @@
                                 <option value="lastMonth">Mês passado</option>
                                 <option value="thisQuarter">Este trimestre</option>
                             </select>
-                            <select class="section-period-select" id="sdrFilterCompliance" onchange="renderCompliance()" style="min-width:140px;">
-                                <option value="">Todos SDRs</option>
-                                <option value="Samira Cristina">Samira Cristina</option>
-                                <option value="Guilherme Tomio">Guilherme Tomio</option>
-                                <option value="Adriely">Adriely</option>
-                                <option value="Agnes Roberta">Agnes Roberta</option>
-                            </select>
+                            <!-- Multi-select de SDRs (custom) -->
+                            <div class="multi-select" id="sdrFilterContainer" style="position:relative;min-width:150px;">
+                                <button type="button" class="multi-select-trigger section-period-select" id="sdrFilterTrigger" onclick="toggleSdrFilterMenu(event)" style="width:100%;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                                    <span id="sdrFilterLabel">Todos SDRs</span>
+                                    <span style="opacity:0.6;font-size:10px;">▾</span>
+                                </button>
+                                <div class="multi-select-menu" id="sdrFilterMenu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1a2e;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:180px;">
+                                    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#e0e0e0;" class="ms-opt">
+                                        <input type="checkbox" class="sdr-filter-cb" value="Samira Cristina" checked onchange="renderCompliance()"> Samira Cristina
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#e0e0e0;" class="ms-opt">
+                                        <input type="checkbox" class="sdr-filter-cb" value="Guilherme Tomio" checked onchange="renderCompliance()"> Guilherme Tomio
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#e0e0e0;" class="ms-opt">
+                                        <input type="checkbox" class="sdr-filter-cb" value="Adriely" checked onchange="renderCompliance()"> Adriely
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#e0e0e0;" class="ms-opt">
+                                        <input type="checkbox" class="sdr-filter-cb" value="Agnes Roberta" checked onchange="renderCompliance()"> Agnes Roberta
+                                    </label>
+                                    <div style="display:flex;gap:6px;padding:6px 10px 4px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;">
+                                        <button type="button" onclick="setSdrFilterAll(true)" style="flex:1;font-size:11px;background:rgba(108,63,181,0.15);color:#c4b5fd;border:1px solid rgba(108,63,181,0.3);border-radius:4px;padding:5px;cursor:pointer;">Todos</button>
+                                        <button type="button" onclick="setSdrFilterAll(false)" style="flex:1;font-size:11px;background:rgba(255,255,255,0.05);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:5px;cursor:pointer;">Nenhum</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="section-body">
@@ -12404,13 +12427,43 @@ function getCanonicalSdrName(name) {
 // ==================== COMPLIANCE NOVOS NEGÓCIOS ====================
 // Detecta agendadas vencidas (DateTime passou) sem Realizada Finished=true.
 // Sinaliza pro líder cobrar o SDR a marcar a task no Ploomes — sem isso métricas ficam cegas.
+// Multi-select de SDRs (Compliance) — helpers globais
+function toggleSdrFilterMenu(ev) {
+    if (ev) ev.stopPropagation();
+    const menu = document.getElementById('sdrFilterMenu');
+    if (!menu) return;
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+function setSdrFilterAll(checked) {
+    document.querySelectorAll('.sdr-filter-cb').forEach(cb => { cb.checked = checked; });
+    if (typeof renderCompliance === 'function') renderCompliance();
+}
+// Fecha menu ao clicar fora
+document.addEventListener('click', (ev) => {
+    const container = document.getElementById('sdrFilterContainer');
+    const menu = document.getElementById('sdrFilterMenu');
+    if (!container || !menu) return;
+    if (!container.contains(ev.target)) menu.style.display = 'none';
+});
+
 function renderCompliance() {
     if (!dashMeetings || dashMeetings.length === 0) {
         document.getElementById('complianceHero').innerHTML = '<div style="text-align:center;color:#8888a0;padding:20px;">Aguardando carregamento das tasks…</div>';
         return;
     }
     const sp = getSectionPeriod('secCompliance');
-    const sdrFilter = document.getElementById('sdrFilterCompliance')?.value || '';
+    // Multi-select de SDRs: lê checkboxes marcados.
+    // Se NENHUM marcado OU TODOS marcados → trata como "todos" (sdrFilterSet vazio = sem filtro).
+    const sdrCbs = Array.from(document.querySelectorAll('.sdr-filter-cb'));
+    const checked = sdrCbs.filter(cb => cb.checked).map(cb => cb.value);
+    const sdrFilterSet = (checked.length === 0 || checked.length === sdrCbs.length) ? null : new Set(checked);
+    // Atualiza label visível do trigger
+    const triggerLabel = document.getElementById('sdrFilterLabel');
+    if (triggerLabel) {
+        if (!sdrFilterSet) triggerLabel.textContent = 'Todos SDRs';
+        else if (checked.length === 1) triggerLabel.textContent = checked[0].split(/\s+/)[0];
+        else triggerLabel.textContent = `${checked.length} SDRs`;
+    }
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const inPeriod = (iso) => iso && sp.start && sp.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
     const now = new Date();
@@ -12440,8 +12493,8 @@ function renderCompliance() {
         const canonical = getCanonicalSdrName(sdrName);
         if (!canonical) return;
         if (canonical === 'Maja Siqueira') return; // proxy Sankhya separado
-        // Aplica filtro de SDR
-        if (sdrFilter && canonical !== sdrFilter) return;
+        // Aplica filtro multi-SDR
+        if (sdrFilterSet && !sdrFilterSet.has(canonical)) return;
         ensure(canonical);
         sdrStats[canonical].vencidas++;
         const realTask = realizadaByDeal.get(dealId);
@@ -12468,7 +12521,9 @@ function renderCompliance() {
     const overallRate = totalVencidas > 0 ? (totalFinished / totalVencidas * 100) : 0;
     const rateColor = overallRate >= 80 ? '#22c55e' : overallRate >= 50 ? '#f59e0b' : '#ef4444';
     const rateStatus = overallRate >= 80 ? '🟢 SAUDÁVEL' : overallRate >= 50 ? '🟡 ATENÇÃO' : '🔴 CRÍTICO';
-    const focusName = sdrFilter ? sdrFilter : 'time todo';
+    const focusName = !sdrFilterSet
+        ? 'time todo'
+        : (checked.length === 1 ? checked[0] : `${checked.length} SDRs selecionados`);
 
     // ===== HERO unificado: explicação + Taxa de Preenchimento gigante + KPIs compactos =====
     document.getElementById('complianceHero').innerHTML = `
