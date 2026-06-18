@@ -5841,10 +5841,19 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <!-- Botões grandes de drilldown direto -->
-                        <div id="interActionButtons" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;"></div>
-                        <!-- KPI cards no topo: contagem agregada de todos os funis -->
-                        <div id="interTopKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;"></div>
+                        <!-- Botões grandes de drilldown direto: grid auto-fit pra alinhar -->
+                        <div id="interActionButtons" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:18px;"></div>
+                        <!-- KPIs agrupados: Pré-Vendas (4 cards) + Vendas (3 cards) com separação visual -->
+                        <div id="interGroupedKpis" style="display:flex;flex-direction:column;gap:16px;margin-bottom:18px;">
+                            <div>
+                                <div style="font-size:10.5px;color:#a78bfa;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:8px;">📞 Pré-Vendas</div>
+                                <div id="interTopKpisPrevendas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:10.5px;color:#22c55e;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:8px;">💰 Vendas</div>
+                                <div id="interTopKpisVendas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;"></div>
+                            </div>
+                        </div>
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:14px;line-height:1.6;">
                             <div style="margin-bottom:4px;"><span style="color:#b794f4;">&#9755;</span> Clique nos botões, cards ou barras pra abrir a lista de negócios. KPIs agregam <strong style="color:#b794f4;">todos os funis</strong>.</div>
                             <div style="color:#6d6d85;font-size:10.5px;">
@@ -13896,41 +13905,46 @@ async function renderSection7Inter() {
         .map(([p,c]) => `${p}: ${c}`)
         .join(' · ') || '—';
 
-    const topKpiEl = document.getElementById('interTopKpis');
-    if (topKpiEl) {
+    const prevendasEl = document.getElementById('interTopKpisPrevendas');
+    const vendasEl = document.getElementById('interTopKpisVendas');
+    if (prevendasEl && vendasEl) {
         const fmtBRL = v => 'R$ ' + (v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const bigKpi = (label, val, color, sub, clickHandler) => {
             const cursor = clickHandler ? 'cursor:pointer;' : '';
             const onclickAttr = clickHandler ? `onclick="${clickHandler}"` : '';
-            return `<div ${onclickAttr} style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;transition:border-color 0.15s;${cursor}" onmouseover="this.style.borderColor='${color}';" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';">
-                <div style="font-size:10.5px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${label}</div>
-                <div style="font-size:26px;color:${color};font-weight:700;margin-top:6px;line-height:1;">${val}</div>
-                <div style="font-size:10.5px;color:#6d6d85;margin-top:6px;">${sub}</div>
+            return `<div ${onclickAttr} style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 14px;transition:border-color 0.15s, transform 0.15s;${cursor}min-width:0;" onmouseover="this.style.borderColor='${color}';this.style.transform='translateY(-1px)';" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.transform='translateY(0)';">
+                <div style="font-size:10px;color:#8888a0;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;line-height:1.3;min-height:26px;">${label}</div>
+                <div style="font-size:clamp(18px, 2.2vw, 24px);color:${color};font-weight:700;margin-top:6px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${val}</div>
+                <div style="font-size:10px;color:#6d6d85;margin-top:6px;line-height:1.35;min-height:14px;">${sub}</div>
             </div>`;
         };
-        topKpiEl.innerHTML =
-            bigKpi('Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `Intermodal com task no período${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
-            bigKpi('Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('Setup em Propostas', fmtBRL(propostasSetupSum), '#c084fc', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
-            bigKpi('Vendas Fechadas', vendasDeals.length, '#b794f4', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`) +
-            bigKpi('Descartados (Pré-vendas)', descartadosDeals.length, '#f87171', topDescMotivo ? `Top motivo: ${topDescMotivo[0]} (${topDescMotivo[1]})` : 'sem descartes no período', `showIntermodalDrilldown('discards')`) +
-            bigKpi('Perdidos (Vendedores)', perdidosDeals.length, '#ef4444', `MRR perdido: ${fmtBRL(perdidosMrrSum)}${topPerdMotivo ? ' · Top: '+topPerdMotivo[0]+' ('+topPerdMotivo[1]+')' : ''}`, `showIntermodalDrilldown('losses')`);
+        // Pré-Vendas: 4 cards (Reuniões + Propostas + MRR + Setup)
+        prevendasEl.innerHTML =
+            bigKpi('📅 Reuniões Agendadas', reunioesAgendadasDeals.length, '#22c55e', `Intermodal com task no período${reunioesAgendadasDeals.length>0?' · '+reuniaoBreakdown:''}`, `showIntermodalDrilldown('meetings')`) +
+            bigKpi('📄 Propostas Enviadas', propostasDealsAll.length, '#60a5fa', pipelinesBreakdown, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('💵 MRR em Propostas', fmtBRL(propostasMrrSum), '#a78bfa', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`) +
+            bigKpi('🔧 Setup em Propostas', fmtBRL(propostasSetupSum), '#c084fc', `${propostasDealsAll.length} proposta${propostasDealsAll.length===1?'':'s'}`, `showIntermodalDrilldown('proposals')`);
+        // Vendas: 3 cards (Fechadas + Descartados + Perdidos)
+        vendasEl.innerHTML =
+            bigKpi('✅ Vendas Fechadas', vendasDeals.length, '#22c55e', `MRR ganho: ${fmtBRL(vendasMrrSum)}${vendasSetupSum>0?' · Setup: '+fmtBRL(vendasSetupSum):''}`, `showIntermodalDrilldown('sales')`) +
+            bigKpi('🗑️ Descartados (Pré-vendas)', descartadosDeals.length, '#f87171', topDescMotivo ? `Top: ${topDescMotivo[0]} (${topDescMotivo[1]})` : 'sem descartes', `showIntermodalDrilldown('discards')`) +
+            bigKpi('❌ Perdidos (Vendedores)', perdidosDeals.length, '#ef4444', `MRR perdido: ${fmtBRL(perdidosMrrSum)}${topPerdMotivo ? ' · Top: '+topPerdMotivo[0]+' ('+topPerdMotivo[1]+')' : ''}`, `showIntermodalDrilldown('losses')`);
     }
 
-    // === Botões grandes de drilldown direto ===
+    // === Botões grandes de drilldown direto (grid auto-fit pra alinhar) ===
     const actionsEl = document.getElementById('interActionButtons');
     if (actionsEl) {
         const btn = (label, count, color, kind) => count > 0 ? `
-            <button onclick="showIntermodalDrilldown('${kind}')" style="background:${color}25;border:1.5px solid ${color};color:${color};padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='${color}40';" onmouseout="this.style.background='${color}25';">
-                ${label} <span style="background:${color};color:#0a0a14;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;">${count}</span>
+            <button onclick="showIntermodalDrilldown('${kind}')" style="background:${color}1F;border:1.5px solid ${color};color:${color};padding:10px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background 0.15s, transform 0.15s;min-width:0;" onmouseover="this.style.background='${color}35';this.style.transform='translateY(-1px)';" onmouseout="this.style.background='${color}1F';this.style.transform='translateY(0)';">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;">${label}</span>
+                <span style="background:${color};color:#0a0a14;border-radius:10px;padding:2px 8px;font-size:11.5px;font-weight:700;flex-shrink:0;">${count}</span>
             </button>` : '';
         actionsEl.innerHTML =
-            btn('&#128197; Ver reuniões agendadas', reunioesAgendadasDeals.length, '#22c55e', 'meetings') +
-            btn('&#128196; Ver propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
-            btn('&#9989; Ver vendas', vendasDeals.length, '#b794f4', 'sales') +
-            btn('&#128465; Ver descartados (pré-vendas)', descartadosDeals.length, '#f87171', 'discards') +
-            btn('&#10060; Ver perdidos (vendedores)', perdidosDeals.length, '#ef4444', 'losses');
+            btn('&#128197; Reuniões', reunioesAgendadasDeals.length, '#22c55e', 'meetings') +
+            btn('&#128196; Propostas', propostasDealsAll.length, '#60a5fa', 'proposals') +
+            btn('&#9989; Vendas', vendasDeals.length, '#b794f4', 'sales') +
+            btn('&#128465; Descartados', descartadosDeals.length, '#f87171', 'discards') +
+            btn('&#10060; Perdidos', perdidosDeals.length, '#ef4444', 'losses');
     }
 
     // Expõe pra drilldown
