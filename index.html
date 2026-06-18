@@ -8038,6 +8038,22 @@ function getPipelineName(deal) { return deal.Pipeline?.Name || ''; }
 function getOwnerName(deal) { return deal.Owner?.Name || ''; }
 function getMRR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_MRR); return p?.DecimalValue || 0; }
 function getSetup(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SETUP); return p?.DecimalValue || 0; }
+// Origem do deal com fallbacks: (1) deal.Origin nativa → (2) Contact.Origin → (3) campo customizado "Origem" em OtherProperties
+function getDealOrigin(deal) {
+    if (!deal) return '';
+    if (deal.Origin?.Name) return deal.Origin.Name;
+    if (deal.Contact?.Origin?.Name) return deal.Contact.Origin.Name;
+    // Fallback: procura campo customizado contendo "origem" no FieldName
+    const props = deal.OtherProperties || [];
+    for (const p of props) {
+        const fn = (p.FieldName || '').toLowerCase();
+        if (fn.includes('origem') || fn.includes('origin')) {
+            const v = p.ObjectValueName || p.StringValue;
+            if (v) return v;
+        }
+    }
+    return '';
+}
 function getSDR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SDR); return p?.ObjectValueName || ''; }
 function getProposalDate(deal) {
     // 1) Campo nativo de Data Proposta Enviada
@@ -9140,9 +9156,9 @@ function _cpMeddicScore(d) {
     const checks = {
         M: { label: 'Métricas (MRR/Setup)', ok: (getMRR(d) > 0 || getSetup(d) > 0), tip: 'Defina o valor proposto pra ter algo concreto pra negociar.' },
         E: { label: 'Decisor (Economic Buyer)', ok: !!isCargoDecisao(getContactCargo(d)), tip: 'Identifique o cargo de quem decide. Sem decisor = sem fechamento.' },
-        D1: { label: 'Critérios de decisão', ok: !!(d.Origin?.Name), tip: 'Mapeie como o cliente compara fornecedores (preço, prazo, integração, etc).' },
+        D1: { label: 'Critérios de decisão', ok: !!getDealOrigin(d), tip: 'Mapeie como o cliente compara fornecedores (preço, prazo, integração, etc).' },
         D2: { label: 'Processo de decisão', ok: !!getProposalDate(d), tip: 'Envie proposta formal e marque next step com data.' },
-        I: { label: 'Dor identificada', ok: !!(d.Origin?.Name || d.Title), tip: 'Anote a dor específica: "Hoje gasta X horas/mês com Y, perde Z R$".' },
+        I: { label: 'Dor identificada', ok: !!(getDealOrigin(d) || d.Title), tip: 'Anote a dor específica: "Hoje gasta X horas/mês com Y, perde Z R$".' },
         C: { label: 'Champion interno', ok: !!d.ContactId, tip: 'Construa relacionamento com alguém que vende internamente por você.' }
     };
     const score = Object.values(checks).filter(c => c.ok).length;
@@ -9429,7 +9445,7 @@ function _cpOpenAlertSellerDeals(sellerName) {
         { header: 'Setup', getValue: d => getSetup(d) },
         { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
         { header: 'Última atividade', getValue: d => formatDate(d.LastUpdateDate) },
-        { header: 'Origem', getValue: d => d.Origin?.Name || '—' },
+        { header: 'Origem', getValue: d => getDealOrigin(d) || '—' },
         { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
     ];
     showDrilldown(title, sorted, columns, 'open');
@@ -10398,7 +10414,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // (4) Origem que mais vira OPO (no mês)
     const opoByOrigin = {};
     myOposMonth.forEach(d => {
-        const orig = d.Origin?.Name || 'Sem origem';
+        const orig = getDealOrigin(d) || 'Sem origem';
         if (orig === 'Sem origem') return; // ignora sem origem mapeada
         opoByOrigin[orig] = (opoByOrigin[orig] || 0) + 1;
     });
@@ -11185,8 +11201,8 @@ async function renderCockpit() {
     const insights = [];
     // Insight 1: Melhor / pior canal (origem preenchida, sample mínimo, taxa significativa)
     const originStats = {};
-    myWon.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].won++; });
-    myLost.forEach(d => { const o = d.Origin?.Name || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].lost++; });
+    myWon.forEach(d => { const o = getDealOrigin(d) || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].won++; });
+    myLost.forEach(d => { const o = getDealOrigin(d) || '(sem origem)'; if (!originStats[o]) originStats[o] = { won: 0, lost: 0 }; originStats[o].lost++; });
     // Exclui "(sem origem)" do ranking — não é canal, é gap de dado
     const originRates = Object.entries(originStats)
         .filter(([o, v]) => o !== '(sem origem)' && (v.won + v.lost) >= 5)
@@ -12362,7 +12378,7 @@ function getMeetingOrigin(t) {
     if (!t.DealId) return '';
     // 1) Tenta cache local (won/lost/open)
     const local = window._dashOpenDealsById?.[t.DealId];
-    if (local) return local.Origin?.Name || '';
+    if (local) return getDealOrigin(local);
     // 2) Tenta cache resolvido via API (carregado em loadMeetingDealOrigins)
     return window._meetingDealOrigin?.[t.DealId] || '';
 }
@@ -12386,7 +12402,7 @@ async function loadMeetingDealOrigins() {
             const slice = need.slice(i, i + 80);
             const f = encodeURIComponent(slice.map(id => 'Id eq ' + id).join(' or '));
             const r = await fetch(`/api/Deals?%24filter=${f}&%24expand=Origin&%24select=Id,OriginId&%24top=200`).then(r => r.json());
-            (r.value || []).forEach(d => { cache[d.Id] = d.Origin?.Name || ''; });
+            (r.value || []).forEach(d => { cache[d.Id] = getDealOrigin(d); });
         }
         window._meetingDealOrigin = cache;
         window._meetingDealOriginsLoaded = true;
@@ -12841,7 +12857,7 @@ function renderSection7() {
         { header: 'Etapa', getValue: d => d.Stage?.Name || '' },
         { header: 'Responsável', getValue: d => getOwnerName(d) },
         { header: 'SDR', getValue: d => getSDR(d) || '' },
-        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'Origem', getValue: d => getDealOrigin(d) },
         { header: 'MRR', getValue: d => getMRR(d) },
         { header: 'Setup', getValue: d => getSetup(d) },
         { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
@@ -12958,14 +12974,14 @@ function computeAnaliseMetrics() {
         else ok++;
         const sdr = (d.Owner?.Name || '').split(' ')[0] || '(sem)';
         sdrCount[sdr] = (sdrCount[sdr] || 0) + 1;
-        const o = d.Origin?.Name || '(sem origem)';
+        const o = getDealOrigin(d) || '(sem origem)';
         originCount[o] = (originCount[o] || 0) + 1;
     });
 
     // Conversão por origem: % dos que chegaram em Hot vs total na Qualif+Hot
     const originHotCount = {};
     hot.forEach(d => {
-        const o = d.Origin?.Name || '(sem origem)';
+        const o = getDealOrigin(d) || '(sem origem)';
         originHotCount[o] = (originHotCount[o] || 0) + 1;
     });
 
@@ -13226,7 +13242,7 @@ function getStuckLeads() {
             person: d.PersonName || '',
             owner: d.Owner?.Name || '',
             ownerShort: (d.Owner?.Name || '').split(' ')[0] || '(sem owner)',
-            origin: d.Origin?.Name || '(sem origem)',
+            origin: getDealOrigin(d) || '(sem origem)',
             daysInStage: d.DaysInStage || 0,
             taskDate: d.FirstTaskDate || null,
             link: 'https://app10.ploomes.com/deal/' + d.Id
@@ -13939,7 +13955,7 @@ function showIntermodalStageDrilldown(stageName) {
         { header: 'SDR', getValue: d => getSDR(d) || '' },
         { header: 'MRR', getValue: d => getMRR(d) },
         { header: 'Setup', getValue: d => getSetup(d) },
-        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'Origem', getValue: d => getDealOrigin(d) },
         { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
         { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) },
         { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
@@ -13985,7 +14001,7 @@ function showIntermodalDrilldown(kind) {
         { header: 'SDR', getValue: d => getSDR(d) || '' },
         { header: 'MRR', getValue: d => typeof getMRR === 'function' ? getMRR(d) : 0 },
         { header: 'Setup', getValue: d => typeof getSetup === 'function' ? getSetup(d) : 0 },
-        { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+        { header: 'Origem', getValue: d => getDealOrigin(d) },
         { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
         { header: 'Proposta enviada', getValue: d => formatDate(getProposalDate(d)) }
     ];
@@ -14000,7 +14016,7 @@ function showIntermodalDrilldown(kind) {
             { header: 'Motivo da Perda', getValue: d => d.LossReason?.Name || '(sem motivo)' },
             { header: 'MRR', getValue: d => getMRR(d) },
             { header: 'Setup', getValue: d => getSetup(d) },
-            { header: 'Origem', getValue: d => d.Origin?.Name || '' },
+            { header: 'Origem', getValue: d => getDealOrigin(d) },
             { header: 'Criado em', getValue: d => formatDate(d.CreateDate) },
             { header: 'Perdido em', getValue: d => formatDate(d.FinishDate) },
             { header: 'Link', getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
@@ -14691,7 +14707,7 @@ function renderSection7d() {
     // Agrupa por Origin.Name
     const originAgg = {};
     deals.forEach(d => {
-        const origin = d.Origin?.Name || 'Sem origem';
+        const origin = getDealOrigin(d) || 'Sem origem';
         if (!originAgg[origin]) originAgg[origin] = { count: 0, deals: [] };
         originAgg[origin].count++;
         originAgg[origin].deals.push(d);
@@ -18953,7 +18969,7 @@ function renderMarketing(range, rd) {
     const allDealsForPeriod = [...(wonDeals||[]), ...(lostDeals||[]), ...(dashOpenDeals||[])]
         .filter(d => inMktRange(d.CreateDate, range));
     allDealsForPeriod.forEach(d => {
-        const o = d.Origin?.Name || '(sem origem)';
+        const o = getDealOrigin(d) || '(sem origem)';
         const ch = ensureCh(o);
         if (_afMeetingsDealSet.has(d.Id)) ch.reun++;
         const hasProp = (d.OtherProperties||[]).some(op => op.FieldKey === PROP_DATE_FIELD_KEY && op.DateTimeValue && inMktRange(op.DateTimeValue, range));
