@@ -5678,7 +5678,7 @@
                         <div style="font-size:11.5px;color:#8888a0;margin-bottom:12px;line-height:1.6;">
                             <strong style="color:#b794f4;">Agendadas:</strong> tarefa "Reunião Agendada" criada pela SDR no período ·
                             <strong style="color:#22c55e;">Realizadas:</strong> qualquer atividade de reunião (Agendada ou Realizada) marcada como concluída (Done=true) no mês vigente — <strong style="color:#ef4444;">EXCETO</strong> se card foi devolvido pro SDR ·
-                            <strong style="color:#ef4444;">No Show:</strong> card devolvido pro SDR OU agendada vencida sem realização
+                            <strong style="color:#ef4444;">No Show:</strong> agendada vencida sem Realizada concluída (mesma regra de "Pendente" no Compliance) OU card devolvido pelo vendedor
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;">
                             <div>
@@ -12823,13 +12823,13 @@ function renderSection7() {
             return;
         }
 
-        // (B) No-show classico
+        // (B) Agendada vencida sem Realizada concluída — alinha com regra do
+        // Compliance (Pendente). Antes restringia a deals em SDR pipe / Owner SDR,
+        // o que ocultava casos onde a agendada venceu e o card já avançou pro
+        // vendedor sem a task de Realizada ter sido marcada.
         const dt = new Date(t.DateTime);
         if (dt > now) return;
-        if (t.Finished === true) return; // Ploomes: campo é "Finished", não "Done"
-        const inSdrPipe = SDR_PIPES.includes(getPipelineName(deal));
-        const ownerIsSdr = !!getCanonicalSdrName(getOwnerName(deal));
-        if (!inSdrPipe && !ownerIsSdr) return;
+        if (t.Finished === true) return; // task agendada concluída (raro mas válido)
         addNoShow(canonical, t, deal);
     });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
