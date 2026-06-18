@@ -12496,6 +12496,10 @@ function renderCompliance() {
     // Index Agendadas e Realizadas por DealId
     const agendadaByDeal = new Map();
     const realizadaByDeal = new Map();
+    // Set de DealIds com Realizada concluída via TASK (Finished=true) OU INTERACTION.
+    // Alinha com a regra do sec7 — algumas SDRs (ex: Samira) registram realizadas
+    // como Interaction em vez de marcar a task como Finished.
+    const realizadaConcludedSet = new Set();
     (dashMeetings || []).forEach(t => {
         if (!t.DealId) return;
         const tn = norm(t.Title);
@@ -12504,8 +12508,17 @@ function renderCompliance() {
         } else if (tn.includes('reuniao realizada')) {
             const existing = realizadaByDeal.get(t.DealId);
             if (!existing || (!existing.Finished && t.Finished)) realizadaByDeal.set(t.DealId, t);
+            if (t.Finished === true) realizadaConcludedSet.add(t.DealId);
         }
     });
+    // Inclui Realizadas via Interaction
+    if (typeof interactionRealizadasForPeriod === 'function') {
+        // Janela ampla: qualquer realização registrada como interaction conta como concluída
+        const allRange = { start: new Date('2020-01-01'), end: new Date('2099-12-31') };
+        interactionRealizadasForPeriod(allRange).forEach(it => {
+            if (it.DealId) realizadaConcludedSet.add(it.DealId);
+        });
+    }
 
     // Aggrega por SDR
     const sdrStats = {};
@@ -12522,14 +12535,39 @@ function renderCompliance() {
         if (sdrFilterSet && !sdrFilterSet.has(canonical)) return;
         ensure(canonical);
         sdrStats[canonical].vencidas++;
+        // Conclusão pode vir via task (Finished=true) OU via interaction
         const realTask = realizadaByDeal.get(dealId);
-        if (realTask && realTask.Finished === true) {
+        if (realizadaConcludedSet.has(dealId)) {
             sdrStats[canonical].finished++;
         } else {
             const deal = window._dashOpenDealsById?.[dealId];
             sdrStats[canonical].pendingDeals.push({ dealId, agTask, realTask, deal });
         }
     });
+
+    // Também conta agendadas vencidas registradas como INTERACTION (não só task)
+    if (typeof interactionAgendadasForPeriod === 'function') {
+        interactionAgendadasForPeriod(sp).forEach(it => {
+            if (!it.DealId) return;
+            // Dedup: se já contamos via task, pula
+            if (agendadaByDeal.has(it.DealId)) return;
+            const sdrName = dashUsersById[it.CreatorId] || '';
+            const canonical = getCanonicalSdrName(sdrName);
+            if (!canonical || canonical === 'Maja Siqueira') return;
+            if (sdrFilterSet && !sdrFilterSet.has(canonical)) return;
+            // Interaction "Reunião Agendada" → considera vencida no momento do registro
+            const refDate = new Date(it.Date);
+            if (refDate > now) return;
+            ensure(canonical);
+            sdrStats[canonical].vencidas++;
+            if (realizadaConcludedSet.has(it.DealId)) {
+                sdrStats[canonical].finished++;
+            } else {
+                const deal = window._dashOpenDealsById?.[it.DealId];
+                sdrStats[canonical].pendingDeals.push({ dealId: it.DealId, agTask: { DateTime: it.Date, CreatorId: it.CreatorId }, realTask: null, deal });
+            }
+        });
+    }
 
     const sdrRows = Object.entries(sdrStats).map(([sdr, v]) => ({
         sdr,
