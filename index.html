@@ -12833,9 +12833,17 @@ function renderSection7() {
         sdrAgg[canonical].noShowTasks.push(t);
         noShowDealIds.add(t.DealId);
     };
-    meetings.forEach(t => {
+    // Loop unificado: avalia no-show pra cada agendada (TASKS + INTERACTIONS).
+    // Antes só iterava tasks → interactions com agendada vencida sem realizada
+    // ficavam invisíveis. Agora cobre os dois caminhos.
+    const allAgendadasForNoShow = [
+        ...meetings.map(t => ({ entry: t, isInteraction: false })),
+        ...interactionAgendadasForPeriod(sp).map(it => ({ entry: it, isInteraction: true }))
+    ];
+    allAgendadasForNoShow.forEach(({ entry: t, isInteraction }) => {
         if (!t.DealId) return;
-        if (realizedDealIds.has(t.DealId)) return;
+        if (noShowDealIds.has(t.DealId)) return; // dedup
+        if (realizedDealIds.has(t.DealId)) return; // já tem realizada concluída
         const creator = dashUsersById[t.CreatorId] || '';
         const canonical = getCanonicalSdrName(creator);
         if (!canonical) return;
@@ -12848,13 +12856,13 @@ function renderSection7() {
             return;
         }
 
-        // (B) Agendada vencida sem Realizada concluída — alinha com regra do
-        // Compliance (Pendente). Antes restringia a deals em SDR pipe / Owner SDR,
-        // o que ocultava casos onde a agendada venceu e o card já avançou pro
-        // vendedor sem a task de Realizada ter sido marcada.
-        const dt = new Date(t.DateTime);
-        if (dt > now) return;
-        if (t.Finished === true) return; // task agendada concluída (raro mas válido)
+        // (B) Agendada vencida sem Realizada concluída
+        // Pra TASK: usa t.DateTime (quando a reunião estava marcada pra acontecer)
+        // Pra INTERACTION: a interaction "Reunião Agendada" não tem DateTime futuro,
+        //                  ela é registrada DEPOIS. Considera-se vencida no momento.
+        const referenceDate = isInteraction ? new Date(t.Date) : new Date(t.DateTime);
+        if (referenceDate > now) return;
+        if (t.Finished === true) return; // só relevante pra task
         addNoShow(canonical, t, deal);
     });
     const sorted = Object.entries(sdrAgg).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
