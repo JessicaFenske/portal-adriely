@@ -12319,6 +12319,93 @@ function exportSection6b() {
 // Bug fix histórico: antes filtrava por DateTime (quando o meeting está marcado pra acontecer)
 // mas a descrição é "tarefa CRIADA pela SDR no período" → usar CreateDate.
 // Fallback pra DateTime se CreateDate não vier no objeto (ex: caminhos antigos).
+// Debug rápido: ?debugDeal=<dealId> renderiza banner no topo do sec7 com
+// detalhes do deal — agendadas, realizadas (task + interaction), por que
+// está/não está como no-show. Usado pra investigar discrepâncias.
+function runDealDebugIfRequested() {
+    const params = new URLSearchParams(location.search);
+    const dealIdStr = params.get('debugDeal');
+    if (!dealIdStr) return;
+    const dealId = Number(dealIdStr);
+    if (!dealId) return;
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const sec7Body = document.querySelector('#sec7 .section-body');
+    if (!sec7Body) return;
+    // Evita duplicar banner
+    let banner = document.getElementById('dealDebugBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'dealDebugBanner';
+        banner.style.cssText = 'background:#0f0f1e;border:1px solid rgba(250,204,21,0.3);border-radius:8px;padding:14px;margin-bottom:14px;font-family:Consolas,monospace;font-size:12px;color:#e0e0e0;white-space:pre-wrap;line-height:1.55;max-height:420px;overflow-y:auto;';
+        sec7Body.insertBefore(banner, sec7Body.firstChild);
+    }
+    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const deal = all.find(d => d.Id === dealId);
+    const lines = [];
+    lines.push(`🔍 DEBUG DEAL ${dealId}`);
+    lines.push('───────────────────────────────────');
+    if (!deal) {
+        lines.push(`❌ Deal NÃO encontrado em wonDeals/lostDeals/dashOpenDeals.`);
+        lines.push(`   → cache pode estar desatualizado, ou o deal está em pipeline não monitorado.`);
+    } else {
+        lines.push(`✅ Deal encontrado: "${deal.Title || '(sem título)'}"`);
+        lines.push(`   Pipeline: ${deal.Pipeline?.Name} | Stage: ${deal.Stage?.Name}`);
+        lines.push(`   Owner: ${deal.Owner?.Name} | LastUpdate: ${deal.LastUpdateDate || '—'}`);
+    }
+    lines.push('');
+    lines.push('📅 TASKS "Reunião Agendada" deste deal:');
+    const agTasks = (dashMeetings || []).filter(t => t.DealId === dealId && norm(t.Title).includes('reuniao agendada'));
+    if (agTasks.length === 0) lines.push('   (nenhuma)');
+    agTasks.forEach((t, i) => {
+        const creator = dashUsersById[t.CreatorId] || '?';
+        lines.push(`   ${i+1}. DateTime=${t.DateTime} | Created=${t.CreateDate} | Creator=${creator} | Finished=${t.Finished}`);
+    });
+    lines.push('');
+    lines.push('✅ TASKS "Reunião Realizada" deste deal:');
+    const realTasks = (dashMeetings || []).filter(t => t.DealId === dealId && norm(t.Title).includes('reuniao realizada'));
+    if (realTasks.length === 0) lines.push('   (nenhuma)');
+    realTasks.forEach((t, i) => {
+        const creator = dashUsersById[t.CreatorId] || '?';
+        lines.push(`   ${i+1}. FinishDate=${t.FinishDate} | DateTime=${t.DateTime} | Creator=${creator} | Finished=${t.Finished}`);
+    });
+    lines.push('');
+    lines.push('💬 INTERACTIONS tipo Reunião neste deal:');
+    const ints = (dashInteractions || []).filter(it => it.DealId === dealId);
+    const reuniaoInts = ints.filter(it => norm(it.InteractionType?.Name || '').includes('reuniao'));
+    if (reuniaoInts.length === 0) lines.push('   (nenhuma do tipo Reunião)');
+    reuniaoInts.forEach((it, i) => {
+        const creator = dashUsersById[it.CreatorId] || '?';
+        const matchAgend = norm(it.Content||'').includes('agendada');
+        const matchReal = norm(it.Content||'').includes('realizada');
+        lines.push(`   ${i+1}. Date=${it.Date} | Creator=${creator} | match=${matchAgend?'AGENDADA':''} ${matchReal?'REALIZADA':''}`);
+        lines.push(`      Content: "${(it.Content||'').slice(0, 120)}"`);
+    });
+    lines.push('');
+    lines.push('🎯 VEREDICTO:');
+    const sp = (typeof getSectionPeriod === 'function') ? getSectionPeriod('sec7') : null;
+    const inP = (iso) => iso && sp?.start && sp?.end && new Date(iso) >= sp.start && new Date(iso) <= sp.end;
+    const hasRealizadaConcluida = realTasks.some(t => t.Finished === true) || reuniaoInts.some(it => norm(it.Content||'').includes('realizada'));
+    const venceuNoPeriodo = agTasks.some(t => t.DateTime && new Date(t.DateTime) < new Date() && inP(t.DateTime));
+    lines.push(`   Tem Realizada concluída (task ou interaction): ${hasRealizadaConcluida ? 'SIM ✓' : 'NÃO ✗'}`);
+    lines.push(`   Tem Agendada vencida no período: ${venceuNoPeriodo ? 'SIM ✓' : 'NÃO ✗'}`);
+    lines.push(`   Esperado no NO-SHOW? ${venceuNoPeriodo && !hasRealizadaConcluida ? '✅ SIM' : '❌ NÃO'}`);
+    if (!venceuNoPeriodo && agTasks.length > 0) {
+        const futureAg = agTasks.find(t => t.DateTime && new Date(t.DateTime) > new Date());
+        if (futureAg) lines.push(`   ↑ Motivo: agendada com DateTime FUTURO (${futureAg.DateTime})`);
+        else lines.push(`   ↑ Motivo: nenhuma agendada com DateTime dentro do período selecionado`);
+    }
+    if (hasRealizadaConcluida) {
+        lines.push(`   ↑ Realizada detectada — isso bloqueia o no-show.`);
+        if (reuniaoInts.some(it => norm(it.Content||'').includes('realizada'))) {
+            lines.push(`     Origem: INTERACTION com texto 'realizada' (talvez falso positivo?)`);
+        }
+        if (realTasks.some(t => t.Finished === true)) {
+            lines.push(`     Origem: TASK 'Reunião Realizada' com Finished=true`);
+        }
+    }
+    banner.textContent = lines.join('\n');
+}
+
 function meetingsForPeriod(sp) {
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const target = norm('reunião agendada'); // = "reuniao agendada"
@@ -12699,6 +12786,9 @@ function renderCompliance() {
 function renderSection7() {
     ensureDealsIndex();
     const sp = getSectionPeriod('sec7');
+
+    // Debug helper: ?debugDeal=605561994 (Elisil) ou outra id → exibe banner no topo
+    runDealDebugIfRequested();
 
     // === Reuniões Agendadas: Tasks "Reunião Agendada" criadas no período ===
     const meetings = meetingsForPeriod(sp);
