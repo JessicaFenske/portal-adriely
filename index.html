@@ -4854,6 +4854,45 @@
                         </div>
                     </div>
 
+                    <!-- ============ COCKPIT DE MARKETING — só pra Fernanda ============ -->
+                    <div id="cpMarketingExtras" style="display:none;">
+                        <!-- Funil de Aquisição por Origem (Lead → Won) -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🔻</span> Funil de Aquisição — Lead até Won</h2>
+                                <div class="cp-card-sub">Visão end-to-end do mês: o que entra como lead, vira oportunidade e fecha · identifica onde o funil tá perdendo volume</div>
+                            </div>
+                            <div id="cpMktFunnel" style="padding:6px 4px 4px;"></div>
+                        </div>
+                        <!-- Performance por Canal (Investimento + CPL + CAC + ROAS) -->
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">📡</span> Performance por Canal</h2>
+                                <div class="cp-card-sub">Custo por lead · pipeline gerado · ROAS · clique no canal pra editar investimento (salvo neste navegador)</div>
+                            </div>
+                            <div id="cpMktChannels" style="padding:6px 4px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;"></div>
+                            <div style="font-size:11.5px;color:#94a3b8;margin-top:12px;line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                                💡 <strong>Como funciona o input de investimento:</strong> os valores ficam salvos neste navegador (localStorage). Quando plugarmos a API de Google/Meta/LinkedIn, o cálculo vira automático. Por enquanto: clique no canal pra registrar o investimento do mês.
+                            </div>
+                        </div>
+                        <!-- Modal de edição de investimento (escondido) -->
+                        <div id="cpMktInvestModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+                            <div style="background:#1a1a2e;border:1px solid rgba(108,63,181,0.3);border-radius:14px;padding:24px;max-width:420px;width:90%;">
+                                <h3 id="cpMktInvestTitle" style="margin:0 0 12px;color:#fff;font-size:17px;">Investimento — Canal</h3>
+                                <div style="font-size:12px;color:#94a3b8;margin-bottom:14px;">Quanto a Lincros investiu nesse canal no <span id="cpMktInvestMonth"></span>? (R$)</div>
+                                <input type="number" id="cpMktInvestInput" min="0" step="100" placeholder="0" style="width:100%;background:#0f0f1e;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px;color:#fff;font-size:18px;font-weight:600;margin-bottom:16px;">
+                                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                                    <button onclick="closeMktInvestModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>
+                                    <button onclick="saveMktInvestModal()" style="background:#6c3fb5;border:none;color:#fff;padding:8px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ ANÁLISES ESTRATÉGICAS DE PRÉ-VENDAS — só pra LÍDER ============ -->
+                    <!-- (mantém compatibilidade com bloco do líder pré-vendas — começa aqui o conteúdo SDR) -->
+                    <div style="display:none;" id="cpLeaderPreSalesPlaceholderEnd"></div>
+
                     <!-- ============ ANÁLISES ESTRATÉGICAS — só pra SDR ============ -->
                     <div id="cpSdrAdvanced" style="display:none;">
                         <!-- Funil de Conversão Visual -->
@@ -9062,7 +9101,14 @@ function _cpRenderImpersonateBanner() {
     const sdrs = (typeof SDR_CANONICAL === 'object' && SDR_CANONICAL) ? Object.values(SDR_CANONICAL) : [];
     const sellersOptions = sellers.map(s => `<option value="${s.replace(/"/g,'&quot;')}" ${s === current ? 'selected' : ''}>${s}</option>`).join('');
     const sdrsOptions = sdrs.map(s => `<option value="SDR::${s.replace(/"/g,'&quot;')}" ${('SDR::'+s) === current ? 'selected' : ''}>📞 ${s} (SDR)</option>`).join('');
+    // Marketing: emails registrados em MARKETING_LEADERS
+    const mktLeaders = (typeof MARKETING_LEADERS !== 'undefined') ? [...MARKETING_LEADERS] : [];
+    const mktOptions = mktLeaders.map(email => {
+        const display = email.split('@')[0].split('.').map(s => s[0]?.toUpperCase() + s.slice(1)).join(' ');
+        return `<option value="MKT::${email}" ${('MKT::'+email) === current ? 'selected' : ''}>📡 ${display} (Marketing)</option>`;
+    }).join('');
     const options = `<option value="">Minha visão (padrão)</option>` +
+        (mktOptions ? `<optgroup label="Marketing">${mktOptions}</optgroup>` : '') +
         (sdrsOptions ? `<optgroup label="Pré-Vendas (SDR)">${sdrsOptions}</optgroup>` : '') +
         (sellersOptions ? `<optgroup label="Vendedores">${sellersOptions}</optgroup>` : '');
     banner.innerHTML = `
@@ -9395,6 +9441,10 @@ const PIPELINE_LEADERS = {
     'jessica.martins@lincros.com': 'Farmer',
     'luis.esteves@lincros.com': 'Sankhya'
 };
+// Líderes de Marketing — cockpit dedicado com funil por origem + ROI por canal
+const MARKETING_LEADERS = new Set([
+    'fernanda.ribeiro@lincros.com'
+]);
 // Boas práticas curadas por pipeline (expertise em vendas)
 const PIPELINE_BEST_PRACTICES = {
     'Funil de Vendas': {
@@ -9460,10 +9510,442 @@ function _cpOpenAlertSellerDeals(sellerName) {
     showDrilldown(title, sorted, columns, 'open');
 }
 
+// ==================== COCKPIT MARKETING (Líder de Marketing) ====================
+// Renderiza cockpit dedicado pra Fernanda (ou outros líderes de mkt). Foca em:
+//   • Funil de aquisição por origem (Lead → Contato → OPO → Ganho)
+//   • Performance por canal com input MANUAL de investimento (localStorage)
+//   • CPL · CAC · ROAS calculados (até API de ads ser plugada, manual)
+//   • Top/Bottom canais por eficiência
+// Reusa cpKpis / cpFocusActions / cpRiskList / cpChancesList / cpInsightsGrid.
+// Adiciona blocos próprios em cpMarketingExtras.
+
+// Mapeia Origin (free text vindo do Ploomes) → canal canônico
+const CHANNEL_MAP_PATTERNS = [
+    { name: 'Google Ads',       icon: '🔍', color: '#4285F4', patterns: [/google/i, /adwords/i, /sem/i] },
+    { name: 'Meta Ads',         icon: '📘', color: '#1877F2', patterns: [/facebook/i, /\bmeta\b/i, /instagram/i, /\bfb\b/i, /\big\b/i] },
+    { name: 'LinkedIn Ads',     icon: '💼', color: '#0A66C2', patterns: [/linkedin/i, /\blin\b/i] },
+    { name: 'Eventos',          icon: '🎪', color: '#F59E0B', patterns: [/intermodal/i, /evento/i, /feira/i, /congresso/i] },
+    { name: 'E-mail Marketing', icon: '✉️', color: '#06B6D4', patterns: [/^e-?mail/i, /newsletter/i, /campanha de e-?mail/i] },
+    { name: 'Orgânico / SEO',   icon: '🌱', color: '#22C55E', patterns: [/org[âa]nico/i, /seo/i, /\bsite\b/i, /website/i, /busca/i] },
+    { name: 'Indicação',        icon: '🤝', color: '#EC4899', patterns: [/indica[çc][ãa]o/i, /referral/i, /parceiro/i, /partner/i] },
+    { name: 'Outbound / SDR',   icon: '📞', color: '#8B5CF6', patterns: [/outbound/i, /cold/i, /prospect/i, /cad out/i] },
+    { name: 'WhatsApp',         icon: '💬', color: '#25D366', patterns: [/whats/i, /\bwa\b/i, /\bzap\b/i] }
+];
+function getChannelFromOrigin(origin) {
+    if (!origin || origin === '(sem origem)' || origin === 'Sem origem') return 'Sem origem';
+    const o = origin.trim();
+    for (const c of CHANNEL_MAP_PATTERNS) {
+        if (c.patterns.some(p => p.test(o))) return c.name;
+    }
+    return 'Outros';
+}
+function getChannelMeta(channelName) {
+    const found = CHANNEL_MAP_PATTERNS.find(c => c.name === channelName);
+    if (found) return found;
+    if (channelName === 'Sem origem') return { name: channelName, icon: '❓', color: '#6b7280' };
+    return { name: channelName, icon: '📂', color: '#94a3b8' };
+}
+
+// Storage de investimento por mês (localStorage) — chave: mkt_invest_YYYY-MM
+function getMktInvestStore() {
+    try { return JSON.parse(localStorage.getItem('mkt_invest_store') || '{}'); }
+    catch { return {}; }
+}
+function setMktInvestStore(store) {
+    try { localStorage.setItem('mkt_invest_store', JSON.stringify(store)); } catch (e) {}
+}
+function getMktInvestForMonth(monthKey, channel) {
+    const store = getMktInvestStore();
+    return Number(store[monthKey]?.[channel]) || 0;
+}
+function setMktInvestForMonth(monthKey, channel, value) {
+    const store = getMktInvestStore();
+    if (!store[monthKey]) store[monthKey] = {};
+    store[monthKey][channel] = Number(value) || 0;
+    setMktInvestStore(store);
+}
+function monthKeyFromDate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2, '0');
+}
+
+// State temporário do modal
+let _mktInvestModalCtx = null;
+function openMktInvestModal(channelName, monthKey, monthLabel) {
+    _mktInvestModalCtx = { channelName, monthKey };
+    document.getElementById('cpMktInvestTitle').textContent = `Investimento — ${channelName}`;
+    document.getElementById('cpMktInvestMonth').textContent = monthLabel;
+    document.getElementById('cpMktInvestInput').value = getMktInvestForMonth(monthKey, channelName) || '';
+    document.getElementById('cpMktInvestModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('cpMktInvestInput').focus(), 50);
+}
+function closeMktInvestModal() {
+    document.getElementById('cpMktInvestModal').style.display = 'none';
+    _mktInvestModalCtx = null;
+}
+function saveMktInvestModal() {
+    if (!_mktInvestModalCtx) return;
+    const val = parseFloat(document.getElementById('cpMktInvestInput').value) || 0;
+    setMktInvestForMonth(_mktInvestModalCtx.monthKey, _mktInvestModalCtx.channelName, val);
+    closeMktInvestModal();
+    if (typeof renderCockpit === 'function') renderCockpit();
+}
+
+function _cpRenderMarketingCockpit(me) {
+    const firstName = (me || 'Fernanda').split(/\s+/)[0];
+    document.getElementById('cpGreeting').textContent = `${_cpGreetingHour()}, ${firstName}! 📡`;
+    document.getElementById('cpSubtitle').innerHTML = `<strong>Liderança de Marketing</strong> · Seu time gera a demanda que abastece o pipeline comercial. Cada lead tem custo, cada canal tem ROI — e a meta é provar atribuição até o R$ ganho. Esse cockpit liga mídia paga → Ploomes → fechamento.`;
+
+    // Esconde blocos não-mkt
+    ['cpSdrAdvanced', 'cpLeaderPreSales'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    document.querySelector('.cp-coaching-card')?.style && (document.querySelector('.cp-coaching-card').style.display = 'none');
+
+    document.getElementById('cpEmptyState').style.display = 'none';
+    document.getElementById('cpMainContent').style.display = 'block';
+    const _mktExtras = document.getElementById('cpMarketingExtras');
+    if (_mktExtras) _mktExtras.style.display = 'block';
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const inMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart.getTime() && t <= monthEnd.getTime(); };
+    const inLastMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= lastMonthStart.getTime() && t <= lastMonthEnd.getTime(); };
+    const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const monthKey = monthKeyFromDate(now);
+
+    // === Dados do mês ===
+    const allDeals = [..._cpFilterActive(wonDeals || []), ..._cpFilterActive(lostDeals || []), ..._cpFilterActive(dashOpenDeals || [])];
+    const monthLeads = allDeals.filter(d => inMonth(d.CreateDate) && isSalesPipeline(d));
+    const monthWon = (wonDeals || []).filter(d => inMonth(d.FinishDate) && isSalesPipeline(d));
+    const lastMonthLeads = allDeals.filter(d => inLastMonth(d.CreateDate) && isSalesPipeline(d));
+    const lastMonthWon = (wonDeals || []).filter(d => inLastMonth(d.FinishDate) && isSalesPipeline(d));
+
+    // OPOs do mês (deals com proposta gerada)
+    const monthOpos = allDeals.filter(d => {
+        if (!hasProposalSent(d)) return false;
+        const pd = getProposalDate(d) || d.LastUpdateDate;
+        return inMonth(pd);
+    });
+
+    // Agrupa por canal
+    const channelData = {};
+    monthLeads.forEach(d => {
+        const ch = getChannelFromOrigin(getDealOrigin(d));
+        if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
+        channelData[ch].leads.push(d);
+    });
+    monthOpos.forEach(d => {
+        const ch = getChannelFromOrigin(getDealOrigin(d));
+        if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
+        channelData[ch].opos.push(d);
+    });
+    monthWon.forEach(d => {
+        const ch = getChannelFromOrigin(getDealOrigin(d));
+        if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
+        channelData[ch].won.push(d);
+    });
+    // Pipeline aberto attributable (atual)
+    (dashOpenDeals || []).filter(d => isSalesPipeline(d)).forEach(d => {
+        const ch = getChannelFromOrigin(getDealOrigin(d));
+        if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
+        channelData[ch].open.push(d);
+    });
+
+    // Totais
+    const totalLeads = monthLeads.length;
+    const totalOpos = monthOpos.length;
+    const totalWon = monthWon.length;
+    const totalMrrWon = monthWon.reduce((s, d) => s + getMRR(d), 0);
+    const totalPipelineOpen = Object.values(channelData).reduce((s, c) => s + c.open.reduce((s2, d) => s2 + getMRR(d), 0), 0);
+    const lastTotalLeads = lastMonthLeads.length;
+    const lastTotalWon = lastMonthWon.length;
+
+    // Investimento total do mês
+    const investStore = getMktInvestStore();
+    const monthInvest = investStore[monthKey] || {};
+    const totalInvest = Object.values(monthInvest).reduce((s, v) => s + (Number(v)||0), 0);
+    const avgCPL = totalLeads > 0 ? (totalInvest / totalLeads) : 0;
+    const cac = totalWon > 0 ? (totalInvest / totalWon) : 0;
+    const roas = totalInvest > 0 ? (totalMrrWon / totalInvest) : 0; // ROAS de 1 mês — referência inicial
+
+    // Hero meta box
+    const daysLeft = _cpDaysUntilEndOfMonth();
+    document.getElementById('cpHeroMeta').innerHTML = `
+        <div class="label">${monthLabel}</div>
+        <div class="value">${daysLeft}d</div>
+        <div class="small">até fim do mês · <strong style="color:#fcd34d;">R$ ${(totalInvest/1000).toFixed(1)}k investido</strong></div>
+    `;
+    document.getElementById('cpHeroMeta').style.display = '';
+
+    // === KPIs principais ===
+    const leadsDelta = lastTotalLeads > 0 ? ((totalLeads - lastTotalLeads) / lastTotalLeads * 100) : 0;
+    const wonDelta = lastTotalWon > 0 ? ((totalWon - lastTotalWon) / lastTotalWon * 100) : 0;
+    const fmtPct = (v) => (v > 0 ? '+' : '') + v.toFixed(0) + '%';
+    const arrow = (v) => v > 5 ? '↑' : v < -5 ? '↓' : '→';
+    const cls = (v) => v > 5 ? 'up' : v < -5 ? 'down' : 'flat';
+
+    document.getElementById('cpKpis').innerHTML = `
+        <div class="cp-kpi-card">
+            <div class="label">Leads gerados — mês</div>
+            <div class="value">${totalLeads}</div>
+            <div class="delta ${cls(leadsDelta)}">${arrow(leadsDelta)} ${fmtPct(leadsDelta)} vs mês passado</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">CPL médio (todos canais)</div>
+            <div class="value">${avgCPL > 0 ? _cpFmtMoney(avgCPL) : '—'}</div>
+            <div class="delta flat">${totalInvest > 0 ? _cpFmtMoney(totalInvest) + ' investido · ' + totalLeads + ' leads' : 'Preencha investimento p/ calcular'}</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">CAC (Custo por venda)</div>
+            <div class="value">${cac > 0 ? _cpFmtMoney(cac) : '—'}</div>
+            <div class="delta ${cls(wonDelta)}">${totalWon} venda${totalWon === 1 ? '' : 's'} ${lastTotalWon > 0 ? arrow(wonDelta) + ' ' + fmtPct(wonDelta) + ' vs mês passado' : ''}</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">ROAS (MRR ganho / invest)</div>
+            <div class="value" style="color:${roas >= 3 ? '#22c55e' : roas >= 1 ? '#facc15' : '#ef4444'};">${roas > 0 ? roas.toFixed(1) + 'x' : '—'}</div>
+            <div class="delta flat">${roas > 0 ? 'MRR de 1 mês — fica ' + (roas*12).toFixed(0) + 'x se LTV 12 meses' : 'Atribuição via Ploomes Origin'}</div>
+        </div>
+    `;
+
+    // === Foco da semana ===
+    const focusActions = [];
+    // 1) Canal com queda forte
+    const channelDeltas = Object.entries(channelData).map(([ch, d]) => {
+        const lastCh = lastMonthLeads.filter(dl => getChannelFromOrigin(getDealOrigin(dl)) === ch).length;
+        const curr = d.leads.length;
+        return { ch, curr, last: lastCh, delta: lastCh > 0 ? ((curr - lastCh) / lastCh * 100) : 0 };
+    });
+    const dropping = channelDeltas.filter(c => c.last >= 5 && c.delta <= -25).sort((a, b) => a.delta - b.delta)[0];
+    if (dropping) {
+        focusActions.push({ num: 1, title: `Canal ${dropping.ch} caiu ${Math.abs(dropping.delta).toFixed(0)}% em volume de leads`, why: `De ${dropping.last} no mês passado pra ${dropping.curr} agora. Investiga: criativo cansou? Audiência saturada? Concorrente leiloou? Frequência alta? Olha hoje pra não fechar o mês com gap.`, cta: 'Audit do canal' });
+    }
+    // 2) Canal escalando
+    const growing = channelDeltas.filter(c => c.last >= 3 && c.delta >= 50).sort((a, b) => b.delta - a.delta)[0];
+    if (growing) {
+        focusActions.push({ num: focusActions.length + 1, title: `Canal ${growing.ch} cresceu ${growing.delta.toFixed(0)}% — sinal de escala`, why: `De ${growing.last} pra ${growing.curr} leads. Verifica qualidade (taxa OPO) — se mantida, aumentar verba pode dobrar o output do mês.`, cta: 'Escalar verba' });
+    }
+    // 3) Pipeline order vs handoff
+    const oldLeads = monthLeads.filter(d => {
+        const ageDays = (Date.now() - new Date(d.CreateDate).getTime()) / 86400000;
+        return ageDays > 7 && (!d.HasScheduledTasks || (d.FirstTaskDate && new Date(d.FirstTaskDate) < new Date()));
+    });
+    if (oldLeads.length >= 10) {
+        focusActions.push({ num: focusActions.length + 1, title: `${oldLeads.length} leads do mês sem follow-up SDR adequado`, why: `Leads com >7d sem atividade ou com task vencida. Marketing entrega; SDR precisa pegar. Alinhar com líder de pré-vendas pra acelerar handoff — sem isso, custo do lead vira prejuízo.`, cta: 'Falar com Jessica (Pré-vendas)' });
+    }
+    // 4) Atribuição incompleta
+    const semOrigem = monthLeads.filter(d => !getDealOrigin(d)).length;
+    if (semOrigem / Math.max(1, totalLeads) > 0.15) {
+        focusActions.push({ num: focusActions.length + 1, title: `${semOrigem} leads do mês sem origem mapeada (${Math.round(semOrigem/totalLeads*100)}%)`, why: `Quando a origem não está preenchida no Ploomes, atribuição quebra e ROI fica cego. Alinhar com SDRs pra preencher na entrada do lead — UTM no formulário ajuda.`, cta: 'Auditar atribuição' });
+    }
+    // 5) Fallback motivacional
+    if (focusActions.length === 0) {
+        focusActions.push({ num: 1, title: 'Mês saudável — bora aprofundar a atribuição', why: 'Sem alertas críticos. Use o tempo pra: (a) plugar as APIs de Google/Meta/LinkedIn no portal, (b) afinar atribuição com UTMs, (c) testar 1 hipótese de canal novo com budget controlado.', cta: 'Planejar próximo ciclo' });
+    }
+    _setT('.cp-focus-card .cp-card-sub', 'Onde o marketing precisa agir AGORA pra defender o output e escalar o que tá funcionando');
+    document.getElementById('cpFocusActions').innerHTML = focusActions.slice(0, 3).map(a => `<div class="cp-action">
+        <div class="cp-action-num">${a.num}</div>
+        <div class="cp-action-body">
+            <div class="cp-action-title">${a.title}</div>
+            <div class="cp-action-why">${a.why}</div>
+            <span class="cp-action-cta">→ ${a.cta}</span>
+        </div>
+    </div>`).join('');
+
+    // === Top 3 e Bottom 3 canais ===
+    const ranked = Object.entries(channelData).filter(([k]) => k !== 'Sem origem' && k !== 'Outros').map(([ch, d]) => {
+        const invest = Number(monthInvest[ch] || 0);
+        const cpl = d.leads.length > 0 ? (invest / d.leads.length) : (invest > 0 ? Infinity : 0);
+        const wonMrr = d.won.reduce((s, w) => s + getMRR(w), 0);
+        const roasCh = invest > 0 ? wonMrr / invest : 0;
+        const convLeadOpo = d.leads.length > 0 ? d.opos.length / d.leads.length : 0;
+        return { ch, leads: d.leads.length, opos: d.opos.length, won: d.won.length, invest, cpl, wonMrr, roasCh, convLeadOpo };
+    });
+    // Top por ROAS (e leads >= 3 pra ter base)
+    const top = ranked.filter(r => r.invest > 0 && r.leads >= 3).sort((a, b) => b.roasCh - a.roasCh).slice(0, 3);
+    const bottom = ranked.filter(r => r.invest > 0 && r.leads >= 3).sort((a, b) => a.roasCh - b.roasCh).slice(0, 3);
+
+    _setH('.cp-risk .cp-card-header h3', '<span class="cp-icon">🔥</span> Top 3 canais por ROAS');
+    _setT('.cp-risk .cp-card-sub', 'Onde escalar — maior retorno por R$ investido');
+    if (top.length === 0) {
+        document.getElementById('cpRiskList').innerHTML = '<div class="cp-empty-mini">Sem investimento registrado ainda. Clique em algum canal abaixo pra começar.</div>';
+    } else {
+        document.getElementById('cpRiskList').innerHTML = top.map((r, i) => {
+            const meta = getChannelMeta(r.ch);
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title">${medal} ${meta.icon} ${r.ch}</div>
+                <div class="cp-deal-meta">
+                    <span style="color:#22c55e;font-weight:700;">ROAS ${r.roasCh.toFixed(1)}x</span>
+                    <span>· CPL <strong>${_cpFmtMoney(r.cpl)}</strong></span>
+                    <span>· ${r.leads} leads → ${r.won} won</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    _setH('.cp-chances .cp-card-header h3', '<span class="cp-icon">🚨</span> Bottom 3 canais (cortar ou ajustar)');
+    _setT('.cp-chances .cp-card-sub', 'Investimento sem retorno proporcional · pausar criativo, reduzir verba ou mudar audiência');
+    if (bottom.length === 0) {
+        document.getElementById('cpChancesList').innerHTML = '<div class="cp-empty-mini">Sem dados suficientes pra ranking de baixa performance.</div>';
+    } else {
+        document.getElementById('cpChancesList').innerHTML = bottom.map((r, i) => {
+            const meta = getChannelMeta(r.ch);
+            const num = '#' + (i + 1);
+            const tag = r.roasCh < 1 ? '🔴 ROAS < 1x' : r.cpl > avgCPL * 1.5 ? '🟡 CPL alto' : 'Atenção';
+            return `<div class="cp-deal-item">
+                <div class="cp-deal-title">${num} ${meta.icon} ${r.ch}</div>
+                <div class="cp-deal-meta">
+                    <span style="color:#ef4444;font-weight:700;">${tag}</span>
+                    <span>· CPL <strong>${_cpFmtMoney(r.cpl)}</strong></span>
+                    <span>· ${r.leads} leads → ${r.won} won · ROAS ${r.roasCh.toFixed(1)}x</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // === Insights diagnósticos ===
+    _setH('.cp-insights-card .cp-card-header h2', '<span class="cp-icon">🔬</span> Diagnóstico do funil de marketing');
+    _setT('.cp-insights-card .cp-card-sub', 'Onde tá apertando — qualidade de lead, velocidade de handoff e atribuição');
+    const conv = totalLeads > 0 ? totalOpos / totalLeads : 0;
+    const convWon = totalLeads > 0 ? totalWon / totalLeads : 0;
+    const noOrigin = monthLeads.filter(d => !getDealOrigin(d)).length;
+    const noOriginPct = totalLeads > 0 ? noOrigin / totalLeads : 0;
+    const insights = [
+        {
+            icon: '🎯', title: 'Conv. Lead → OPO',
+            value: totalLeads > 0 ? (conv * 100).toFixed(0) + '%' : '—',
+            sub: `${totalOpos} OPOs de ${totalLeads} leads`,
+            tone: conv >= 0.3 ? 'good' : conv >= 0.15 ? 'warn' : 'bad',
+            tip: conv < 0.15 ? '💡 Conversão baixa — investigar qualidade do lead na entrada (formulário curto demais? público errado?).' : '✅ Conversão saudável pro topo de funil.'
+        },
+        {
+            icon: '🏆', title: 'Conv. Lead → Won',
+            value: totalLeads > 0 ? (convWon * 100).toFixed(1) + '%' : '—',
+            sub: `${totalWon} ganhos de ${totalLeads} leads (mês corrente)`,
+            tone: convWon >= 0.05 ? 'good' : convWon >= 0.02 ? 'warn' : 'bad',
+            tip: convWon < 0.02 ? '💡 Conversão final baixa — gargalo provável é qualidade do lead OU handoff lento.' : '✅ Funil convertendo bem.'
+        },
+        {
+            icon: '📊', title: 'Atribuição mapeada',
+            value: totalLeads > 0 ? ((1 - noOriginPct) * 100).toFixed(0) + '%' : '—',
+            sub: `${noOrigin} leads sem origem mapeada`,
+            tone: noOriginPct <= 0.1 ? 'good' : noOriginPct <= 0.25 ? 'warn' : 'bad',
+            tip: noOriginPct > 0.15 ? '💡 Atribuição ruim cega ROI. Pedir SDRs marcarem origem na criação + UTMs nos formulários.' : '✅ Atribuição decente — boa base pra otimização.'
+        },
+        {
+            icon: '⏱️', title: 'Pipeline gerado (aberto)',
+            value: _cpFmtMoney(totalPipelineOpen),
+            sub: 'R$ MRR em deals abertos atribuíveis ao marketing',
+            tone: 'neutral',
+            tip: '💡 Esse é o "depósito" que o marketing tá enchendo. Multiplica pelo win rate histórico (' + (allDeals.length > 0 ? Math.round((wonDeals.length || 0) / Math.max(1, ((wonDeals||[]).length + (lostDeals||[]).length))*100) : 0) + '%) pra estimar receita futura.'
+        }
+    ];
+    const toneColor = (t) => t === 'good' ? '#22c55e' : t === 'bad' ? '#ef4444' : t === 'warn' ? '#facc15' : '#8b5cf6';
+    document.getElementById('cpInsightsGrid').innerHTML = insights.map(i => `
+        <div class="cp-insight-card" style="border-left-color:${toneColor(i.tone)};">
+            <div class="cp-insight-emoji">${i.icon}</div>
+            <div class="cp-insight-text">
+                <strong>${i.title}</strong><br>
+                <span class="number" style="color:${toneColor(i.tone)};">${i.value}</span><br>
+                <span style="color:#94a3b8;font-size:12px;">${i.sub}</span>
+                ${i.tip ? `<br><em style="color:#94a3b8;font-size:11.5px;">${i.tip}</em>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // === Funil de aquisição (Lead → Contato → OPO → Ganho) ===
+    const contactedSet = new Set();
+    (dashInteractions || []).forEach(it => {
+        if (!it.DealId || !inMonth(it.Date)) return;
+        if (monthLeads.find(d => d.Id === it.DealId)) contactedSet.add(it.DealId);
+    });
+    const contactedCount = contactedSet.size;
+    const stages = [
+        { label: '👥 Leads', count: totalLeads, color: '#94a3b8', desc: 'criados no mês (todos pipelines de venda)' },
+        { label: '📞 Contactados', count: contactedCount, color: '#38bdf8', desc: 'com interação registrada' },
+        { label: '📝 OPOs', count: totalOpos, color: '#facc15', desc: 'proposta enviada' },
+        { label: '🏆 Ganhos', count: totalWon, color: '#22c55e', desc: `${_cpFmtMoney(totalMrrWon)} de MRR fechado` }
+    ];
+    const maxV = Math.max(totalLeads, 1);
+    const funnelHtml = stages.map((s, i) => {
+        const pct = Math.round((s.count / maxV) * 100);
+        const prev = i > 0 ? stages[i-1] : null;
+        const convFromPrev = prev && prev.count > 0 ? Math.round((s.count / prev.count) * 100) : null;
+        const convBadge = convFromPrev !== null
+            ? `<span style="font-size:11px;color:${convFromPrev >= 50 ? '#22c55e' : convFromPrev >= 25 ? '#facc15' : '#ef4444'};font-weight:700;background:rgba(255,255,255,0.04);padding:3px 8px;border-radius:20px;margin-left:8px;">↓ ${convFromPrev}%</span>`
+            : '';
+        return `
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+                    <span style="font-size:13px;color:#e5e7eb;font-weight:600;">${s.label} <span style="color:#94a3b8;font-weight:400;font-size:11px;">· ${s.desc}</span></span>
+                    <span><strong style="color:${s.color};font-size:18px;">${s.count}</strong>${convBadge}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:6px;height:14px;overflow:hidden;">
+                    <div style="height:100%;width:${Math.max(2, pct)}%;background:linear-gradient(90deg, ${s.color} 0%, ${s.color}cc 100%);border-radius:6px;"></div>
+                </div>
+            </div>`;
+    }).join('');
+    document.getElementById('cpMktFunnel').innerHTML = funnelHtml;
+
+    // === Cards por canal ===
+    const allChannels = [...new Set([...Object.keys(channelData), ...CHANNEL_MAP_PATTERNS.map(c => c.name)])];
+    // Ordena: canais com dados primeiro, depois vazios
+    allChannels.sort((a, b) => (channelData[b]?.leads?.length || 0) - (channelData[a]?.leads?.length || 0));
+    const cardsHtml = allChannels.map(ch => {
+        const meta = getChannelMeta(ch);
+        const d = channelData[ch] || { leads: [], opos: [], won: [], open: [] };
+        const invest = Number(monthInvest[ch] || 0);
+        const cpl = d.leads.length > 0 ? (invest / d.leads.length) : 0;
+        const wonMrr = d.won.reduce((s, w) => s + getMRR(w), 0);
+        const openMrr = d.open.reduce((s, o) => s + getMRR(o), 0);
+        const roasCh = invest > 0 ? wonMrr / invest : 0;
+        const hasData = invest > 0 || d.leads.length > 0;
+        const opacity = hasData ? '1' : '0.5';
+        return `<div onclick="openMktInvestModal('${ch.replace(/'/g, "\\'")}', '${monthKey}', '${monthLabel}')" style="background:rgba(255,255,255,0.025);border:1px solid ${meta.color}40;border-left:3px solid ${meta.color};border-radius:10px;padding:14px;cursor:pointer;opacity:${opacity};transition:transform 0.15s, border-color 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='${meta.color}';" onmouseout="this.style.transform='translateY(0)';this.style.borderColor='${meta.color}40';">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <strong style="color:#fff;font-size:14px;">${meta.icon} ${ch}</strong>
+                <span style="font-size:10px;color:#94a3b8;cursor:pointer;">✏️ editar</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div>
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Invest.</div>
+                    <div style="font-size:16px;color:#fff;font-weight:700;line-height:1;margin-top:4px;">${invest > 0 ? _cpFmtMoney(invest) : '—'}</div>
+                </div>
+                <div>
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">CPL</div>
+                    <div style="font-size:16px;color:${meta.color};font-weight:700;line-height:1;margin-top:4px;">${cpl > 0 ? _cpFmtMoney(cpl) : '—'}</div>
+                </div>
+                <div>
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Leads</div>
+                    <div style="font-size:16px;color:#fff;font-weight:700;line-height:1;margin-top:4px;">${d.leads.length}</div>
+                </div>
+                <div>
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Ganhos</div>
+                    <div style="font-size:16px;color:#22c55e;font-weight:700;line-height:1;margin-top:4px;">${d.won.length}</div>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">
+                <span>Pipe aberto: <strong style="color:#c4b5fd;">${_cpFmtMoney(openMrr)}</strong></span>
+                ${invest > 0 ? `<span>ROAS: <strong style="color:${roasCh >= 3 ? '#22c55e' : roasCh >= 1 ? '#facc15' : '#ef4444'};">${roasCh.toFixed(1)}x</strong></span>` : '<span style="color:#6b7280;font-style:italic;">sem invest</span>'}
+            </div>
+        </div>`;
+    }).join('');
+    document.getElementById('cpMktChannels').innerHTML = cardsHtml;
+
+    return true;
+}
+
 function _cpRenderLeaderCockpit(leaderPipeline) {
-    // Garante que blocos exclusivos do SDR não vazem
+    // Garante que blocos exclusivos do SDR e Marketing não vazem
     const _sdrAdv = document.getElementById('cpSdrAdvanced');
     if (_sdrAdv) _sdrAdv.style.display = 'none';
+    const _mktExLdr = document.getElementById('cpMarketingExtras');
+    if (_mktExLdr) _mktExLdr.style.display = 'none';
+    const _coachLdr = document.querySelector('.cp-coaching-card');
+    if (_coachLdr) _coachLdr.style.display = '';
     const config = PIPELINE_BEST_PRACTICES[leaderPipeline];
     if (!config) return false;
     const me = _hvCurrentUserName || 'Líder';
@@ -10024,9 +10506,14 @@ function _cpImpersonateAsSdr(sdrName) {
 // agenda do dia, compliance gaps, cards devolvidos, próximas reuniões, KPIs e
 // coaching SPIN qualificador. Reusa os containers do view-cockpit.
 function _cpRenderSdrCockpit(canonicalSdr) {
-    // Esconde bloco exclusivo do líder (caso esteja vindo de leader render)
+    // Esconde blocos exclusivos do líder e do marketing (caso esteja vindo de outro render)
     const _ldrPS = document.getElementById('cpLeaderPreSales');
     if (_ldrPS) _ldrPS.style.display = 'none';
+    const _mktEx = document.getElementById('cpMarketingExtras');
+    if (_mktEx) _mktEx.style.display = 'none';
+    // Mostra coaching SDR de volta (marketing esconde)
+    const _coachSdr = document.querySelector('.cp-coaching-card');
+    if (_coachSdr) _coachSdr.style.display = '';
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const firstName = canonicalSdr.split(/\s+/)[0];
 
@@ -10959,8 +11446,16 @@ async function renderCockpit() {
         if (_cpImpersonateOwner.startsWith('SDR::')) {
             const sdrName = _cpImpersonateOwner.slice(5);
             if (typeof _cpRenderSdrCockpit === 'function' && _cpRenderSdrCockpit(sdrName)) {
-                // Sobrescreve saudação com aviso de impersonate
                 document.getElementById('cpGreeting').textContent = `Visualizando como ${sdrName.split(/\s+/)[0]} 👁️ (SDR)`;
+                return;
+            }
+        }
+        // Impersonate Marketing? Prefixo "MKT::email"
+        if (_cpImpersonateOwner.startsWith('MKT::')) {
+            const mktEmail = _cpImpersonateOwner.slice(5);
+            const display = mktEmail.split('@')[0].split('.').map(s => s[0]?.toUpperCase() + s.slice(1)).join(' ');
+            if (typeof _cpRenderMarketingCockpit === 'function' && _cpRenderMarketingCockpit(display)) {
+                document.getElementById('cpGreeting').textContent = `Visualizando como ${display.split(/\s+/)[0]} 👁️ (Marketing)`;
                 return;
             }
         }
@@ -10969,6 +11464,10 @@ async function renderCockpit() {
     } else {
         // Antes de buscar deals, checa se é líder mapeado de pipeline
         const myEmail = _hvCurrentEmail();
+        // É líder de Marketing? Cockpit dedicado de mkt/performance
+        if (myEmail && MARKETING_LEADERS.has(myEmail.toLowerCase())
+            && typeof _cpRenderMarketingCockpit === 'function'
+            && _cpRenderMarketingCockpit(me)) return;
         const leaderPipeline = myEmail ? PIPELINE_LEADERS[myEmail.toLowerCase()] : null;
         if (leaderPipeline && _cpRenderLeaderCockpit(leaderPipeline)) return;
 
@@ -11002,11 +11501,16 @@ async function renderCockpit() {
     document.getElementById('cpEmptyState').style.display = 'none';
     document.getElementById('cpMainContent').style.display = 'block';
 
-    // Esconde blocos exclusivos de SDR e Líder (caso esteja vindo de impersonate)
+    // Esconde blocos exclusivos de SDR, Líder Pré-Vendas e Marketing (caso vindo de impersonate)
     const _sdrAdvVendor = document.getElementById('cpSdrAdvanced');
     if (_sdrAdvVendor) _sdrAdvVendor.style.display = 'none';
     const _leaderPSVendor = document.getElementById('cpLeaderPreSales');
     if (_leaderPSVendor) _leaderPSVendor.style.display = 'none';
+    const _mktExVendor = document.getElementById('cpMarketingExtras');
+    if (_mktExVendor) _mktExVendor.style.display = 'none';
+    // Mostra coaching de volta (marketing esconde)
+    const _coachVendor = document.querySelector('.cp-coaching-card');
+    if (_coachVendor) _coachVendor.style.display = '';
 
     // Reset headers caso esteja vindo do leader render (impersonate)
     const _setH = (selector, html) => { const el = document.querySelector(selector); if (el) el.innerHTML = html; };
