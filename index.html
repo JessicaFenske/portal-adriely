@@ -13417,9 +13417,35 @@ function getStuckLeads() {
     const now = Date.now();
     // Fonte: dashOpenDeals quando disponível, senao cache direto da API
     const source = (dashOpenDeals && dashOpenDeals.length > 0) ? dashOpenDeals : (stuckDealsCache || []);
+    // Match flexível: pipeline SDR Inbound (case-insensitive, aceita variantes)
+    // + qualquer stage que contenha "qualif" / "triagem" / "pré-qualif"
+    // Antes: filtro estrito quebrava quando o Ploomes renomeava pipeline/stage.
+    const isInboundPipeline = (name) => {
+        const n = (name || '').toLowerCase();
+        return n.includes('sdr inbound') || n === 'inbound' || n === 'sdr - inbound';
+    };
+    const isQualifStage = (name) => {
+        const n = (name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+        return n.includes('qualif') || n.includes('triagem') || n.includes('pre-qualif');
+    };
     const inboundQual = source.filter(d =>
-        d.Pipeline?.Name === 'SDR Inbound' && /Qualifica/i.test(d.Stage?.Name || '') && isNewBizDeal(d)
+        isInboundPipeline(d.Pipeline?.Name) && isQualifStage(d.Stage?.Name) && isNewBizDeal(d)
     );
+    // Diagnóstico: se zero, salva no window pra inspeção
+    if (inboundQual.length === 0) {
+        const allInbound = source.filter(d => isInboundPipeline(d.Pipeline?.Name));
+        const stagesFound = [...new Set(allInbound.map(d => d.Stage?.Name).filter(Boolean))];
+        window._stuckDiag = {
+            sourceLen: source.length,
+            inboundLen: allInbound.length,
+            stagesFound,
+            firstInboundDeal: allInbound[0] ? {
+                Title: allInbound[0].Title,
+                Pipeline: allInbound[0].Pipeline?.Name,
+                Stage: allInbound[0].Stage?.Name
+            } : null
+        };
+    }
     const noTask = [];
     const overdue = [];
     inboundQual.forEach(d => {
@@ -13549,6 +13575,29 @@ async function renderSectionStuck() {
     document.getElementById('stuckAllCount').textContent = noTaskF.length + overdueF.length;
     document.getElementById('stuckNoTaskCount').textContent = noTaskF.length;
     document.getElementById('stuckOverdueCount').textContent = overdueF.length;
+
+    // Diagnóstico visual quando vazio (ajuda a entender se é estado real ou pipeline/stage renomeado)
+    const stuckEmptyHelpId = 'stuckEmptyHelp';
+    let helpEl = document.getElementById(stuckEmptyHelpId);
+    if (total === 0 && window._stuckDiag) {
+        const d = window._stuckDiag;
+        if (!helpEl) {
+            helpEl = document.createElement('div');
+            helpEl.id = stuckEmptyHelpId;
+            helpEl.style.cssText = 'margin-top:12px;padding:10px 12px;background:rgba(250,204,21,0.06);border:1px solid rgba(250,204,21,0.25);border-radius:6px;font-size:11.5px;color:#fcd34d;line-height:1.55;';
+            const kpis = document.getElementById('stuckKpis');
+            if (kpis && kpis.parentNode) kpis.parentNode.insertBefore(helpEl, kpis.nextSibling);
+        }
+        if (d.inboundLen === 0) {
+            helpEl.innerHTML = `⚠️ <strong>Nenhum deal do pipeline "SDR Inbound" encontrado no cache</strong> (${d.sourceLen} deals em aberto verificados). Verifica se o pipeline foi renomeado no Ploomes ou se há permissão de leitura.`;
+        } else if (d.stagesFound.length > 0) {
+            helpEl.innerHTML = `ℹ️ Encontrei <strong>${d.inboundLen} deals em SDR Inbound</strong>, mas nenhum em etapa de "Qualificação". Etapas existentes hoje: <code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;color:#fff;">${d.stagesFound.join('</code> · <code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;color:#fff;">')}</code>. Se a etapa de qualificação foi renomeada, me avisa o novo nome.`;
+        } else {
+            helpEl.innerHTML = `ℹ️ ${d.inboundLen} deals em SDR Inbound, mas sem etapas mapeadas. Provável problema de cache.`;
+        }
+    } else if (helpEl) {
+        helpEl.remove();
+    }
 
     // Constroi linhas unificadas com tipo + severity
     const noTaskRows = noTaskF.map(r => ({ ...r, _type: 'notask', _sortKey: r.daysInStage }));
