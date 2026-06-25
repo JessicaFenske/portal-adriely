@@ -4864,15 +4864,28 @@
                             </div>
                             <div id="cpMktFunnel" style="padding:6px 4px 4px;"></div>
                         </div>
+                        <!-- Mídia Paga — Ao Vivo (Google + Meta APIs) -->
+                        <div class="cp-insights-card" style="margin-top:18px;" id="cpMktAdsLiveCard">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">📡</span> Mídia Paga — Ao Vivo</h2>
+                                <div class="cp-card-sub">Gasto, cliques, conversões e CPL direto das APIs de Google Ads e Meta Ads · mês atual · cache 1h · clique em "Atualizar agora" pra forçar refresh</div>
+                            </div>
+                            <div id="cpMktAdsLive" style="padding:8px 4px 4px;">
+                                <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">
+                                    <span style="display:inline-block;width:14px;height:14px;border:2px solid #6c3fb5;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:8px;"></span>
+                                    Buscando dados de mídia paga…
+                                </div>
+                            </div>
+                        </div>
                         <!-- Performance por Canal (Investimento + CPL + CAC + ROAS) -->
                         <div class="cp-insights-card" style="margin-top:18px;">
                             <div class="cp-card-header">
-                                <h2><span class="cp-icon">📡</span> Performance por Canal</h2>
-                                <div class="cp-card-sub">Custo por lead · pipeline gerado · ROAS · clique no canal pra editar investimento (salvo neste navegador)</div>
+                                <h2><span class="cp-icon">📊</span> Performance por Canal — Atribuição</h2>
+                                <div class="cp-card-sub">Cruza investimento (API ou input manual) com leads/OPOs/Won do Ploomes · CPL · ROAS · canais com 🟢 vêm da API, demais são editáveis (localStorage)</div>
                             </div>
                             <div id="cpMktChannels" style="padding:6px 4px 4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;"></div>
                             <div style="font-size:11.5px;color:#94a3b8;margin-top:12px;line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
-                                💡 <strong>Como funciona o input de investimento:</strong> os valores ficam salvos neste navegador (localStorage). Quando plugarmos a API de Google/Meta/LinkedIn, o cálculo vira automático. Por enquanto: clique no canal pra registrar o investimento do mês.
+                                💡 <strong>Como funciona:</strong> Google Ads e Meta Ads puxam o gasto direto da API (badge 🟢 AO VIVO). Outros canais (Eventos, Indicação, etc) você edita manualmente clicando no card. Quando o LinkedIn Marketing Developer Platform for liberado, ele entra junto na lista de "ao vivo".
                             </div>
                         </div>
                         <!-- Modal de edição de investimento (escondido) -->
@@ -9568,6 +9581,136 @@ function monthKeyFromDate(d) {
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2, '0');
 }
 
+// ====== Ads ao vivo (Google + Meta APIs) ======
+// Cache em memória da resposta de /api/marketing/ads-summary
+async function _cpFetchAdsSummary(force) {
+    try {
+        const url = '/api/marketing/ads-summary' + (force ? '?refresh=1' : '');
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        window._adsCachedSummary = j;
+        return j;
+    } catch (e) {
+        console.error('[ads] fetch failed:', e);
+        return null;
+    }
+}
+
+function _cpFmtMoneyShort(n) {
+    n = Number(n || 0);
+    if (n >= 1000) return 'R$ ' + (n/1000).toFixed(1).replace('.', ',') + 'k';
+    return 'R$ ' + n.toFixed(0);
+}
+
+// Retorna { value, source } — onde source = 'api' (live), 'mock' (sem creds, exemplo), ou 'manual' (localStorage)
+function _cpGetChannelInvest(channelName, monthKey) {
+    const manual = getMktInvestForMonth(monthKey, channelName);
+    const cached = window._adsCachedSummary;
+    const isCurrentMonth = monthKey === monthKeyFromDate(new Date());
+    if (!cached || !isCurrentMonth) return { value: manual, source: 'manual' };
+    let platData = null;
+    if (channelName === 'Google Ads') platData = cached.google;
+    else if (channelName === 'Meta Ads') platData = cached.meta;
+    if (!platData || platData.error) return { value: manual, source: 'manual' };
+    const apiSpend = Number(platData.totals?.spend || 0);
+    if (apiSpend <= 0 && !platData.mock) return { value: manual, source: 'manual' };
+    return { value: apiSpend, source: platData.mock ? 'mock' : 'api' };
+}
+
+function _cpRenderAdsLive(data) {
+    const container = document.getElementById('cpMktAdsLive');
+    if (!container) return;
+    if (!data) {
+        container.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">Falha ao buscar dados de mídia paga. Servidor pode estar reiniciando — recarrega a página.</div>';
+        return;
+    }
+    const fmtMoney = (n) => 'R$ ' + Number(n||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    function platformCard(label, icon, color, plat, configured) {
+        const t = plat?.totals || {};
+        const isMock = !!plat?.mock;
+        const stale = !!plat?.stale;
+        const err = plat?._apiError || plat?.lastError || plat?.error;
+        let badge;
+        if (!configured) badge = '<span style="background:rgba(148,163,184,0.15);color:#94a3b8;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">⚙️ AGUARDANDO CREDS</span>';
+        else if (isMock) badge = '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">🟡 DADOS EXEMPLO</span>';
+        else if (stale) badge = '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">⚠️ CACHE ANTIGO</span>';
+        else badge = '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">🟢 AO VIVO</span>';
+
+        const topCampaigns = (plat?.campaigns || []).slice(0, 3);
+        const campaignsHtml = topCampaigns.length === 0
+            ? '<div style="color:#6b7280;font-size:12px;font-style:italic;text-align:center;padding:12px;">sem campanhas no mês</div>'
+            : topCampaigns.map(c => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(255,255,255,0.02);border-radius:6px;margin-bottom:5px;font-size:11.5px;">
+                    <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;color:#e5e7eb;" title="${(c.name||'').replace(/"/g,'&quot;')}">${c.name||'(sem nome)'}</div>
+                    <div style="display:flex;gap:10px;flex-shrink:0;margin-left:10px;font-weight:600;">
+                        <span style="color:#94a3b8;" title="Gasto">${_cpFmtMoneyShort(c.spend)}</span>
+                        <span style="color:${c.conversions>0?'#22c55e':'#6b7280'};" title="Conversões">${Math.round(c.conversions||0)} conv</span>
+                    </div>
+                </div>`).join('');
+
+        return `<div style="background:rgba(255,255,255,0.025);border:1px solid ${color}40;border-left:3px solid ${color};border-radius:10px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
+                <strong style="color:#fff;font-size:15px;">${icon} ${label}</strong>
+                ${badge}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+                <div>
+                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Gasto</div>
+                    <div style="font-size:15px;color:#fff;font-weight:700;line-height:1.1;margin-top:4px;">${fmtMoney(t.spend)}</div>
+                </div>
+                <div>
+                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Cliques</div>
+                    <div style="font-size:15px;color:#fff;font-weight:700;line-height:1.1;margin-top:4px;">${Number(t.clicks||0).toLocaleString('pt-BR')}</div>
+                </div>
+                <div>
+                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Conv.</div>
+                    <div style="font-size:15px;color:#22c55e;font-weight:700;line-height:1.1;margin-top:4px;">${Math.round(t.conversions||0)}</div>
+                </div>
+                <div>
+                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">CPL</div>
+                    <div style="font-size:15px;color:${color};font-weight:700;line-height:1.1;margin-top:4px;">${t.cpl > 0 ? fmtMoney(t.cpl) : '—'}</div>
+                </div>
+            </div>
+            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:7px;">TOP 3 CAMPANHAS · GASTO</div>
+            ${campaignsHtml}
+            ${err ? `<div style="margin-top:10px;font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.08);padding:7px 10px;border-radius:5px;border-left:2px solid #ef4444;">⚠ ${String(err).slice(0,160)}</div>` : ''}
+        </div>`;
+    }
+
+    const cfg = data.config || {};
+    const fetchedAt = data.fetchedAt ? new Date(data.fetchedAt) : new Date();
+    const fetchedLabel = fetchedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const anyConfigured = cfg.googleAdsConfigured || cfg.metaAdsConfigured;
+
+    container.innerHTML = `
+        ${!anyConfigured ? `
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#fbbf24;">
+                🔧 <strong>Modo demonstração:</strong> nenhuma API plugada ainda. Os números abaixo são de exemplo, pra te mostrar como vai ficar quando as credenciais entrarem no Render.
+            </div>` : ''}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">
+            ${platformCard('Google Ads', '🔍', '#4285F4', data.google, cfg.googleAdsConfigured)}
+            ${platformCard('Meta Ads', '📘', '#1877F2', data.meta, cfg.metaAdsConfigured)}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:11px;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;gap:10px;flex-wrap:wrap;">
+            <span>📅 Última sync: <strong>${fetchedLabel}</strong> · cache 1h · ${anyConfigured ? 'dados reais ou mock conforme config' : 'apenas mock até credenciais entrarem'}</span>
+            <button onclick="_cpRefreshAds()" style="background:rgba(108,63,181,0.18);border:1px solid rgba(108,63,181,0.4);color:#c4b5fd;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">🔄 Atualizar agora</button>
+        </div>
+    `;
+}
+
+async function _cpRefreshAds() {
+    const container = document.getElementById('cpMktAdsLive');
+    if (container) container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;"><span style="display:inline-block;width:14px;height:14px;border:2px solid #6c3fb5;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:8px;"></span>Atualizando…</div>';
+    const data = await _cpFetchAdsSummary(true);
+    _cpRenderAdsLive(data);
+    // Re-render do cockpit pra propagar pros cards de canal (skipFetch evita recursão)
+    if (typeof _cpRenderMarketingCockpit === 'function' && window._hvCurrentUserName) {
+        _cpRenderMarketingCockpit(window._hvCurrentUserName, { skipFetch: true });
+    }
+}
+
 // State temporário do modal
 let _mktInvestModalCtx = null;
 function openMktInvestModal(channelName, monthKey, monthLabel) {
@@ -9590,7 +9733,8 @@ function saveMktInvestModal() {
     if (typeof renderCockpit === 'function') renderCockpit();
 }
 
-function _cpRenderMarketingCockpit(me) {
+function _cpRenderMarketingCockpit(me, _opts) {
+    const _mktOpts = _opts || {};
     const firstName = (me || 'Fernanda').split(/\s+/)[0];
     document.getElementById('cpGreeting').textContent = `${_cpGreetingHour()}, ${firstName}! 📡`;
     document.getElementById('cpSubtitle').innerHTML = `<strong>Liderança de Marketing</strong> · Seu time gera a demanda que abastece o pipeline comercial. Cada lead tem custo, cada canal tem ROI — e a meta é provar atribuição até o R$ ganho. Esse cockpit liga mídia paga → Ploomes → fechamento.`;
@@ -9897,17 +10041,28 @@ function _cpRenderMarketingCockpit(me) {
     const cardsHtml = allChannels.map(ch => {
         const meta = getChannelMeta(ch);
         const d = channelData[ch] || { leads: [], opos: [], won: [], open: [] };
-        const invest = Number(monthInvest[ch] || 0);
+        const investInfo = _cpGetChannelInvest(ch, monthKey);
+        const invest = investInfo.value;
+        const investSource = investInfo.source; // 'api' | 'mock' | 'manual'
         const cpl = d.leads.length > 0 ? (invest / d.leads.length) : 0;
         const wonMrr = d.won.reduce((s, w) => s + getMRR(w), 0);
         const openMrr = d.open.reduce((s, o) => s + getMRR(o), 0);
         const roasCh = invest > 0 ? wonMrr / invest : 0;
         const hasData = invest > 0 || d.leads.length > 0;
         const opacity = hasData ? '1' : '0.5';
-        return `<div onclick="openMktInvestModal('${ch.replace(/'/g, "\\'")}', '${monthKey}', '${monthLabel}')" style="background:rgba(255,255,255,0.025);border:1px solid ${meta.color}40;border-left:3px solid ${meta.color};border-radius:10px;padding:14px;cursor:pointer;opacity:${opacity};transition:transform 0.15s, border-color 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='${meta.color}';" onmouseout="this.style.transform='translateY(0)';this.style.borderColor='${meta.color}40';">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        const isLive = investSource === 'api' || investSource === 'mock';
+        const editLabel = isLive
+            ? (investSource === 'mock'
+                ? '<span style="font-size:10px;background:rgba(245,158,11,0.15);color:#f59e0b;padding:2px 7px;border-radius:10px;font-weight:700;">🟡 EXEMPLO</span>'
+                : '<span style="font-size:10px;background:rgba(34,197,94,0.15);color:#22c55e;padding:2px 7px;border-radius:10px;font-weight:700;">🟢 API</span>')
+            : '<span style="font-size:10px;color:#94a3b8;cursor:pointer;">✏️ editar</span>';
+        const clickHandler = isLive
+            ? `if(typeof showToast==='function')showToast('Esse valor vem direto da API · não editável manualmente','info');`
+            : `openMktInvestModal('${ch.replace(/'/g, "\\'")}', '${monthKey}', '${monthLabel}')`;
+        return `<div onclick="${clickHandler}" style="background:rgba(255,255,255,0.025);border:1px solid ${meta.color}40;border-left:3px solid ${meta.color};border-radius:10px;padding:14px;cursor:pointer;opacity:${opacity};transition:transform 0.15s, border-color 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.borderColor='${meta.color}';" onmouseout="this.style.transform='translateY(0)';this.style.borderColor='${meta.color}40';">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:6px;">
                 <strong style="color:#fff;font-size:14px;">${meta.icon} ${ch}</strong>
-                <span style="font-size:10px;color:#94a3b8;cursor:pointer;">✏️ editar</span>
+                ${editLabel}
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
                 <div>
@@ -9934,6 +10089,24 @@ function _cpRenderMarketingCockpit(me) {
         </div>`;
     }).join('');
     document.getElementById('cpMktChannels').innerHTML = cardsHtml;
+
+    // === Ads ao vivo: render imediato se já temos cache, fetch em background se não ===
+    if (window._adsCachedSummary) {
+        _cpRenderAdsLive(window._adsCachedSummary);
+    }
+    if (!_mktOpts.skipFetch) {
+        _cpFetchAdsSummary(false).then(data => {
+            if (!data) {
+                _cpRenderAdsLive(null);
+                return;
+            }
+            _cpRenderAdsLive(data);
+            // Re-render do cockpit pra cards de canal pegarem o investimento da API
+            if (typeof _cpRenderMarketingCockpit === 'function') {
+                _cpRenderMarketingCockpit(me, { skipFetch: true });
+            }
+        });
+    }
 
     return true;
 }

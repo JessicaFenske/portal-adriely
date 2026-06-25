@@ -37,6 +37,19 @@ function cleanEnv(v) {
 const REDIS_URL = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
 const REDIS_TOKEN = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
 const REDIS_KEY = 'users:list';
+
+// ==================== Marketing Ads (Google + Meta) env ====================
+// Quando essas variáveis estiverem ausentes, os endpoints retornam dados MOCK
+// (assim a Fernanda consegue ver a UI antes das credenciais reais chegarem).
+const GOOGLE_ADS_DEVELOPER_TOKEN = cleanEnv(process.env.GOOGLE_ADS_DEVELOPER_TOKEN);
+const GOOGLE_ADS_CLIENT_ID = cleanEnv(process.env.GOOGLE_ADS_CLIENT_ID);
+const GOOGLE_ADS_CLIENT_SECRET = cleanEnv(process.env.GOOGLE_ADS_CLIENT_SECRET);
+const GOOGLE_ADS_REFRESH_TOKEN = cleanEnv(process.env.GOOGLE_ADS_REFRESH_TOKEN);
+const GOOGLE_ADS_CUSTOMER_ID = cleanEnv(process.env.GOOGLE_ADS_CUSTOMER_ID).replace(/\D/g, '');
+const GOOGLE_ADS_LOGIN_CUSTOMER_ID = cleanEnv(process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID).replace(/\D/g, '');
+const META_ACCESS_TOKEN = cleanEnv(process.env.META_ACCESS_TOKEN);
+const META_AD_ACCOUNT_ID = cleanEnv(process.env.META_AD_ACCOUNT_ID);
+const META_APP_ID = cleanEnv(process.env.META_APP_ID);
 let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
 // ==================== Upstash Redis helpers ====================
@@ -660,6 +673,272 @@ function handleSankhyaApi(req, res, pathname, query) {
     }));
 }
 
+// ==================== Marketing Ads helpers ====================
+// Cache em memória (1h) — depois pode migrar pro Redis se múltiplas instâncias.
+const ADS_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+const adsCache = {
+    google: { data: null, ts: 0, error: null },
+    meta:   { data: null, ts: 0, error: null }
+};
+
+function isGoogleAdsConfigured() {
+    return !!(GOOGLE_ADS_DEVELOPER_TOKEN && GOOGLE_ADS_CLIENT_ID && GOOGLE_ADS_CLIENT_SECRET
+              && GOOGLE_ADS_REFRESH_TOKEN && GOOGLE_ADS_CUSTOMER_ID);
+}
+function isMetaAdsConfigured() {
+    return !!(META_ACCESS_TOKEN && META_AD_ACCOUNT_ID);
+}
+
+// HTTP helper genérico (POST com body, retorna JSON parsed)
+function httpsJsonRequest({ hostname, path: p, method, headers, body }) {
+    return new Promise((resolve, reject) => {
+        const opts = {
+            hostname, path: p, method,
+            headers: Object.assign({}, headers || {})
+        };
+        if (body && !opts.headers['Content-Length']) {
+            opts.headers['Content-Length'] = Buffer.byteLength(body);
+        }
+        const r = https.request(opts, (rr) => {
+            const chunks = [];
+            rr.on('data', c => chunks.push(c));
+            rr.on('end', () => {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                let json;
+                try { json = JSON.parse(raw); } catch { json = { _raw: raw }; }
+                if (rr.statusCode < 200 || rr.statusCode >= 300) {
+                    const msg = (json && (json.error?.message || json.error_description || json.error || json._raw)) || `HTTP ${rr.statusCode}`;
+                    return reject(new Error(`HTTP ${rr.statusCode}: ${typeof msg === 'string' ? msg.slice(0,300) : JSON.stringify(msg).slice(0,300)}`));
+                }
+                resolve(json);
+            });
+        });
+        r.on('error', reject);
+        r.setTimeout(20000, () => { r.destroy(); reject(new Error('timeout')); });
+        if (body) r.write(body);
+        r.end();
+    });
+}
+
+// === GOOGLE ADS ===
+// Troca refresh_token por access_token (válido 1h)
+async function googleAdsAccessToken() {
+    const body = `client_id=${encodeURIComponent(GOOGLE_ADS_CLIENT_ID)}`
+               + `&client_secret=${encodeURIComponent(GOOGLE_ADS_CLIENT_SECRET)}`
+               + `&refresh_token=${encodeURIComponent(GOOGLE_ADS_REFRESH_TOKEN)}`
+               + `&grant_type=refresh_token`;
+    const json = await httpsJsonRequest({
+        hostname: 'oauth2.googleapis.com',
+        path: '/token',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+    });
+    if (!json.access_token) throw new Error('OAuth response sem access_token');
+    return json.access_token;
+}
+
+async function googleAdsFetchThisMonth() {
+    const accessToken = await googleAdsAccessToken();
+    const query = `
+        SELECT
+            campaign.id, campaign.name, campaign.status,
+            metrics.impressions, metrics.clicks, metrics.cost_micros,
+            metrics.conversions, metrics.conversions_value, metrics.ctr, metrics.average_cpc
+        FROM campaign
+        WHERE segments.date DURING THIS_MONTH
+    `.replace(/\s+/g, ' ').trim();
+    const headers = {
+        'Authorization': 'Bearer ' + accessToken,
+        'developer-token': GOOGLE_ADS_DEVELOPER_TOKEN,
+        'Content-Type': 'application/json'
+    };
+    if (GOOGLE_ADS_LOGIN_CUSTOMER_ID) headers['login-customer-id'] = GOOGLE_ADS_LOGIN_CUSTOMER_ID;
+    const json = await httpsJsonRequest({
+        hostname: 'googleads.googleapis.com',
+        path: `/v17/customers/${GOOGLE_ADS_CUSTOMER_ID}/googleAds:search`,
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query })
+    });
+    return normalizeGoogleAds(json);
+}
+
+function normalizeGoogleAds(json) {
+    const results = json.results || [];
+    let totalSpend = 0, totalImp = 0, totalClicks = 0, totalConv = 0, totalConvValue = 0;
+    const campaigns = results.map(r => {
+        const c = r.campaign || {};
+        const m = r.metrics || {};
+        const spend = Number(m.costMicros || 0) / 1_000_000;
+        const imp = Number(m.impressions || 0);
+        const clicks = Number(m.clicks || 0);
+        const conv = Number(m.conversions || 0);
+        const convValue = Number(m.conversionsValue || 0);
+        totalSpend += spend; totalImp += imp; totalClicks += clicks;
+        totalConv += conv; totalConvValue += convValue;
+        return {
+            id: c.id, name: c.name, status: c.status,
+            spend, impressions: imp, clicks, conversions: conv, conversionsValue: convValue,
+            ctr: imp > 0 ? clicks / imp : 0,
+            cpc: clicks > 0 ? spend / clicks : 0,
+            cpl: conv > 0 ? spend / conv : 0
+        };
+    });
+    campaigns.sort((a, b) => b.spend - a.spend);
+    return {
+        source: 'google-ads',
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month',
+        currency: 'BRL',
+        totals: {
+            spend: totalSpend,
+            impressions: totalImp,
+            clicks: totalClicks,
+            conversions: totalConv,
+            conversionsValue: totalConvValue,
+            ctr: totalImp > 0 ? totalClicks / totalImp : 0,
+            cpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
+            cpl: totalConv > 0 ? totalSpend / totalConv : 0,
+            roas: totalSpend > 0 ? totalConvValue / totalSpend : 0
+        },
+        campaigns
+    };
+}
+
+// Mock data — usado enquanto a Fernanda não tem todas as credenciais
+function googleAdsMock() {
+    return {
+        source: 'google-ads',
+        mock: true,
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month',
+        currency: 'BRL',
+        totals: {
+            spend: 8420.50, impressions: 145320, clicks: 2103,
+            conversions: 47, conversionsValue: 188000,
+            ctr: 0.0145, cpc: 4.00, cpl: 179.16, roas: 22.33
+        },
+        campaigns: [
+            { id: '101', name: '[MOCK] Search - Marca Lincros', status: 'ENABLED', spend: 3200, impressions: 52000, clicks: 980, conversions: 28, conversionsValue: 112000, ctr: 0.0188, cpc: 3.27, cpl: 114.28 },
+            { id: '102', name: '[MOCK] Search - TMS Transportadora', status: 'ENABLED', spend: 2870, impressions: 48500, clicks: 612, conversions: 12, conversionsValue: 48000, ctr: 0.0126, cpc: 4.69, cpl: 239.16 },
+            { id: '103', name: '[MOCK] Display - Remarketing', status: 'ENABLED', spend: 1450, impressions: 35200, clicks: 380, conversions: 5, conversionsValue: 20000, ctr: 0.0108, cpc: 3.82, cpl: 290.00 },
+            { id: '104', name: '[MOCK] Performance Max - Lead Gen', status: 'PAUSED', spend: 900.50, impressions: 9620, clicks: 131, conversions: 2, conversionsValue: 8000, ctr: 0.0136, cpc: 6.87, cpl: 450.25 }
+        ]
+    };
+}
+
+async function googleAdsGetCached(force) {
+    const c = adsCache.google;
+    if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
+    if (!isGoogleAdsConfigured()) {
+        const mock = googleAdsMock();
+        c.data = mock; c.ts = Date.now(); c.error = null;
+        return mock;
+    }
+    try {
+        const fresh = await googleAdsFetchThisMonth();
+        c.data = fresh; c.ts = Date.now(); c.error = null;
+        return fresh;
+    } catch (e) {
+        c.error = e.message;
+        // Em caso de erro: se temos cache antigo, retorna ele. Senão mock pra UI não quebrar.
+        if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
+        return Object.assign(googleAdsMock(), { _apiError: e.message });
+    }
+}
+
+// === META ADS ===
+async function metaAdsFetchThisMonth() {
+    const acct = META_AD_ACCOUNT_ID.startsWith('act_') ? META_AD_ACCOUNT_ID : 'act_' + META_AD_ACCOUNT_ID;
+    const fields = ['campaign_id', 'campaign_name', 'spend', 'impressions', 'clicks',
+                    'cpc', 'ctr', 'actions', 'action_values'].join(',');
+    const params = `fields=${fields}&level=campaign&date_preset=this_month&limit=200`
+                 + `&access_token=${encodeURIComponent(META_ACCESS_TOKEN)}`;
+    const json = await httpsJsonRequest({
+        hostname: 'graph.facebook.com',
+        path: `/v19.0/${acct}/insights?${params}`,
+        method: 'GET',
+        headers: {}
+    });
+    return normalizeMetaAds(json);
+}
+
+function normalizeMetaAds(json) {
+    const data = json.data || [];
+    let totalSpend = 0, totalImp = 0, totalClicks = 0, totalLeads = 0, totalLeadValue = 0;
+    const campaigns = data.map(r => {
+        const spend = Number(r.spend || 0);
+        const imp = Number(r.impressions || 0);
+        const clicks = Number(r.clicks || 0);
+        const leadAction = (r.actions || []).find(a => /lead/i.test(a.action_type));
+        const leadValueAction = (r.action_values || []).find(a => /lead/i.test(a.action_type));
+        const leads = Number(leadAction?.value || 0);
+        const leadValue = Number(leadValueAction?.value || 0);
+        totalSpend += spend; totalImp += imp; totalClicks += clicks;
+        totalLeads += leads; totalLeadValue += leadValue;
+        return {
+            id: r.campaign_id, name: r.campaign_name || '(sem nome)',
+            spend, impressions: imp, clicks, conversions: leads, conversionsValue: leadValue,
+            ctr: Number(r.ctr || 0) / 100, cpc: Number(r.cpc || 0),
+            cpl: leads > 0 ? spend / leads : 0
+        };
+    });
+    campaigns.sort((a, b) => b.spend - a.spend);
+    return {
+        source: 'meta-ads',
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month',
+        currency: 'BRL',
+        totals: {
+            spend: totalSpend, impressions: totalImp, clicks: totalClicks,
+            conversions: totalLeads, conversionsValue: totalLeadValue,
+            ctr: totalImp > 0 ? totalClicks / totalImp : 0,
+            cpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
+            cpl: totalLeads > 0 ? totalSpend / totalLeads : 0,
+            roas: totalSpend > 0 ? totalLeadValue / totalSpend : 0
+        },
+        campaigns
+    };
+}
+
+function metaAdsMock() {
+    return {
+        source: 'meta-ads', mock: true,
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month', currency: 'BRL',
+        totals: {
+            spend: 5310.20, impressions: 287400, clicks: 4120,
+            conversions: 62, conversionsValue: 124000,
+            ctr: 0.0143, cpc: 1.29, cpl: 85.65, roas: 23.35
+        },
+        campaigns: [
+            { id: '201', name: '[MOCK] Leads - TMS Transportadoras', spend: 2410, impressions: 138000, clicks: 2050, conversions: 35, conversionsValue: 70000, ctr: 0.0148, cpc: 1.18, cpl: 68.85 },
+            { id: '202', name: '[MOCK] Awareness - Logística B2B', spend: 1620.20, impressions: 95400, clicks: 1380, conversions: 18, conversionsValue: 36000, ctr: 0.0145, cpc: 1.17, cpl: 90.01 },
+            { id: '203', name: '[MOCK] Remarketing - Site Lincros', spend: 1280, impressions: 54000, clicks: 690, conversions: 9, conversionsValue: 18000, ctr: 0.0128, cpc: 1.85, cpl: 142.22 }
+        ]
+    };
+}
+
+async function metaAdsGetCached(force) {
+    const c = adsCache.meta;
+    if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
+    if (!isMetaAdsConfigured()) {
+        const mock = metaAdsMock();
+        c.data = mock; c.ts = Date.now(); c.error = null;
+        return mock;
+    }
+    try {
+        const fresh = await metaAdsFetchThisMonth();
+        c.data = fresh; c.ts = Date.now(); c.error = null;
+        return fresh;
+    } catch (e) {
+        c.error = e.message;
+        if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
+        return Object.assign(metaAdsMock(), { _apiError: e.message });
+    }
+}
+
 // ==================== HTTP server ====================
 const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1162,6 +1441,49 @@ const server = http.createServer(async (req, res) => {
 
     // ==================== Chat IA "Lia" (somente Claude Haiku 4.5 / Anthropic) ====================
     // Provider Gemini foi descontinuado por razões de privacidade — só Claude (Anthropic, no-training).
+    // ==================== Marketing Ads endpoints ====================
+    if (urlPath === '/api/marketing/google-ads' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const force = req.url.includes('refresh=1');
+        try {
+            const data = await googleAdsGetCached(force);
+            return jsonReply(res, 200, data);
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message, source: 'google-ads' });
+        }
+    }
+    if (urlPath === '/api/marketing/meta-ads' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const force = req.url.includes('refresh=1');
+        try {
+            const data = await metaAdsGetCached(force);
+            return jsonReply(res, 200, data);
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message, source: 'meta-ads' });
+        }
+    }
+    // Endpoint combinado — única chamada do frontend pra puxar tudo
+    if (urlPath === '/api/marketing/ads-summary' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const force = req.url.includes('refresh=1');
+        const [google, meta] = await Promise.all([
+            googleAdsGetCached(force).catch(e => ({ error: e.message, source: 'google-ads' })),
+            metaAdsGetCached(force).catch(e => ({ error: e.message, source: 'meta-ads' }))
+        ]);
+        return jsonReply(res, 200, {
+            fetchedAt: new Date().toISOString(),
+            config: {
+                googleAdsConfigured: isGoogleAdsConfigured(),
+                metaAdsConfigured: isMetaAdsConfigured()
+            },
+            google,
+            meta
+        });
+    }
+
     if (urlPath === '/api/chat' && req.method === 'POST') {
         const u = getCurrentUser(req);
         if (!u) return jsonReply(res, 401, { error: 'not authenticated' });
