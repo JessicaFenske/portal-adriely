@@ -662,13 +662,21 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 26px; height: 26px;
-            background: linear-gradient(135deg, #6c3fb5, #8b5cf6);
-            color: white;
-            border-radius: 50%;
-            font-size: 12px;
-            font-weight: 700;
-            box-shadow: 0 0 12px rgba(108, 63, 181, 0.3);
+            width: 30px; height: 30px;
+            background: rgba(108, 63, 181, 0.14);
+            border: 1px solid rgba(108, 63, 181, 0.25);
+            color: #c4b5fd;
+            border-radius: 8px;
+            margin-right: 4px;
+            flex-shrink: 0;
+        }
+        .section-num svg {
+            width: 16px; height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         .section-body { padding: 20px; }
         .chart-container { position: relative; width: 100%; min-height: 280px; }
@@ -688,6 +696,94 @@
         .kpi-card:hover { border-color: rgba(108, 63, 181, 0.3); box-shadow: 0 0 20px rgba(108, 63, 181, 0.1); }
         .kpi-value { font-size: 22px; font-weight: 700; color: #b794f4; text-shadow: 0 0 20px rgba(108, 63, 181, 0.3); }
         .kpi-label { font-size: 11px; color: #6868a0; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+
+        /* ========== Sec1 — Hero "Total faturado" + chart card ========== */
+        .sec1-hero {
+            background: linear-gradient(135deg, rgba(34,197,94,0.10), rgba(108,63,181,0.10));
+            border: 1px solid rgba(34,197,94,0.30);
+            border-radius: 14px;
+            padding: 22px 24px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .sec1-hero-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .sec1-hero-eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #86efac;
+            letter-spacing: 1.2px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sec1-hero-eyebrow .dot {
+            width: 8px; height: 8px; background: #22c55e; border-radius: 50%;
+            box-shadow: 0 0 10px rgba(34,197,94,0.7);
+            animation: pulseDot 2s ease-in-out infinite;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .sec1-hero-value {
+            font-size: 40px;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+            letter-spacing: -1px;
+            margin-top: 6px;
+        }
+        .sec1-hero-sub { font-size: 13px; color: #cbd5e1; margin-top: 6px; }
+        .sec1-hero-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+        .sec1-chip {
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-width: 110px;
+        }
+        .sec1-chip-label {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .sec1-chip-value {
+            font-size: 17px;
+            color: #fff;
+            font-weight: 700;
+            margin-top: 4px;
+            white-space: nowrap;
+        }
+        .sec1-chip.ipca .sec1-chip-value { color: #c084fc; }
+
+        .sec1-chart-card {
+            background: rgba(15,15,30,0.45);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 18px 18px 8px;
+            margin-bottom: 16px;
+        }
+        .sec1-chart-title {
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        @media (max-width: 600px) {
+            .sec1-hero { padding: 16px; gap: 12px; }
+            .sec1-hero-value { font-size: 30px; }
+            .sec1-chip { min-width: calc(50% - 5px); }
+            .sec1-chart-card { padding: 12px 10px 4px; }
+        }
 
         /* Sub-filter */
         .sub-filter { display: flex; gap: 8px; align-items: center; }
@@ -5324,7 +5420,7 @@
                 <!-- Section 1: Oportunidades Ganhas -->
                 <div class="section-card full-width" id="sec1">
                     <div class="section-header">
-                        <h2><span class="section-num">&#9989;</span> Oportunidades Ganhas</h2>
+                        <h2><span class="section-num" data-svg-icon="check"></span> Oportunidades Ganhas</h2>
                         <div class="sub-filter">
                             <select id="wonPipelineFilter" onchange="renderSection1()">
                                 <option value="">Todos os funis</option>
@@ -5358,8 +5454,11 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <div class="kpi-row" id="wonKpis"></div>
-                        <div class="chart-container"><canvas id="chartWon"></canvas></div>
+                        <div id="wonKpis"></div>
+                        <div class="sec1-chart-card">
+                            <div class="sec1-chart-title">Evolução mensal por funil</div>
+                            <div class="chart-container"><canvas id="chartWon"></canvas></div>
+                        </div>
                         <button class="table-toggle" onclick="toggleTable('tableWon')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection1()">&#128229; Exportar Excel</button>
                         <div class="collapsible-table" id="tableWon"><table><thead><tr>
@@ -5371,7 +5470,7 @@
                 <!-- Section 4: Ranking de Vendedores (movida para 2a posicao) -->
                 <div class="section-card full-width" id="sec4">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127942;</span> Ranking de Vendedores</h2>
+                        <h2><span class="section-num" data-svg-icon="trophy"></span> Ranking de Vendedores</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec4" onchange="renderSection4()">
                                 <option value="global">Global</option>
@@ -5406,7 +5505,7 @@
                 <!-- Section 3: Produtos Vendidos (movida para antes das Perdas) -->
                 <div class="section-card full-width" id="sec3">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128230;</span> Produtos Vendidos (MRR vs Setup)</h2>
+                        <h2><span class="section-num" data-svg-icon="package"></span> Produtos Vendidos (MRR vs Setup)</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec3" onchange="renderSection3()">
                                 <option value="global">Global</option>
@@ -5460,7 +5559,7 @@
                 <!-- Section 5: Propostas Enviadas (movida para antes das Perdas) -->
                 <div class="section-card" id="sec5">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128196;</span> Propostas Enviadas</h2>
+                        <h2><span class="section-num" data-svg-icon="file"></span> Propostas Enviadas</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec5" onchange="renderSection5()">
                                 <option value="global">Global</option>
@@ -5486,7 +5585,7 @@
                 <!-- Section 5b: Propostas por Vendedor - Valor (movida para antes das Perdas) -->
                 <div class="section-card" id="sec5b">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128176;</span> Propostas - Valor por Vendedor</h2>
+                        <h2><span class="section-num" data-svg-icon="dollar"></span> Propostas - Valor por Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec5b" onchange="renderSection5b()">
                                 <option value="global">Global</option>
@@ -5512,7 +5611,7 @@
                 <!-- Section 2: Oportunidades Perdidas -->
                 <div class="section-card full-width" id="sec2">
                     <div class="section-header">
-                        <h2><span class="section-num">&#10060;</span> Oportunidades Perdidas</h2>
+                        <h2><span class="section-num" data-svg-icon="x"></span> Oportunidades Perdidas</h2>
                         <div class="sub-filter">
                             <select id="lostPipelineFilter" onchange="renderSection2()">
                                 <option value="">Todos os funis</option>
@@ -5545,7 +5644,7 @@
                 <!-- Section 2b: Perdas por Motivo (MRR + Setup) -->
                 <div class="section-card full-width" id="sec2b">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128680;</span> Perdas por Motivo (MRR e Setup)</h2>
+                        <h2><span class="section-num" data-svg-icon="alert"></span> Perdas por Motivo (MRR e Setup)</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec2b" onchange="renderSection2b()">
                                 <option value="global">Global</option>
@@ -5571,7 +5670,7 @@
                 <!-- Section 2c: Ranking de Perdas por Pessoa e Produto -->
                 <div class="section-card full-width" id="sec2c">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128100;</span> Ranking Perdas por Vendedor e Produto</h2>
+                        <h2><span class="section-num" data-svg-icon="user"></span> Ranking Perdas por Vendedor e Produto</h2>
                         <div class="sub-filter">
                             <select id="lostByPersonMetric" onchange="renderSection2c()">
                                 <option value="total" selected>Total (MRR + Setup)</option>
@@ -5602,7 +5701,7 @@
                 <!-- Section 6: Perdidos por Vendedor -->
                 <div class="section-card" id="sec6">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128078;</span> Perdidos por Vendedor</h2>
+                        <h2><span class="section-num" data-svg-icon="user"></span> Perdidos por Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
                                 <option value="global">Global</option>
@@ -5628,7 +5727,7 @@
                 <!-- Section 6b: Perdidos por Vendedor - Valor (MRR + Setup) -->
                 <div class="section-card" id="sec6b">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128201;</span> Perdidos - Valor por Vendedor</h2>
+                        <h2><span class="section-num" data-svg-icon="trendDown"></span> Perdidos - Valor por Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec6b" onchange="renderSection6b()">
                                 <option value="global">Global</option>
@@ -5781,7 +5880,7 @@
                 <!-- Section 7: Reuniões — Agendadas | Realizadas | No Show por Pré-Vendedor -->
                 <div class="section-card full-width" id="sec7">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128197;</span> Reuniões por Pré-Vendedor — Agendadas, Realizadas e No Show</h2>
+                        <h2><span class="section-num" data-svg-icon="calendar"></span> Reuniões por Pré-Vendedor — Agendadas, Realizadas e No Show</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7" onchange="renderSection7()">
                                 <option value="global">Global</option>
@@ -5842,7 +5941,7 @@
                 <!-- Section 7-Times: Reuniões por Time (soma por equipe) -->
                 <div class="section-card full-width" id="sec7Times">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128101;</span> Reuniões por Time — Novos Negócios, Farmer e Sankhya</h2>
+                        <h2><span class="section-num" data-svg-icon="users"></span> Reuniões por Time — Novos Negócios, Farmer e Sankhya</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7Times" onchange="renderSection7Times()">
                                 <option value="global">Global</option>
@@ -5873,7 +5972,7 @@
                 <!-- Section 7-Compliance: Compliance das tasks Novos Negócios -->
                 <div class="section-card" id="secCompliance">
                     <div class="section-header">
-                        <h2><span class="section-num">&#9888;&#65039;</span> Compliance — Reuniões Realizadas (Novos Negócios)</h2>
+                        <h2><span class="section-num" data-svg-icon="shieldAlert"></span> Compliance — Reuniões Realizadas (Novos Negócios)</h2>
                         <div class="sub-filter" style="display:flex;gap:8px;align-items:center;">
                             <select class="section-period-select" id="periodSecCompliance" onchange="renderCompliance()">
                                 <option value="global">Global</option>
@@ -5921,7 +6020,7 @@
                 <!-- Section 7b: Descartes por Pré-Vendedor -->
                 <div class="section-card" id="sec7b">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128465;&#65039;</span> Descartes por Pré-Vendedor</h2>
+                        <h2><span class="section-num" data-svg-icon="trash"></span> Descartes por Pré-Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7b" onchange="renderSection7b()">
                                 <option value="global">Global</option>
@@ -5947,7 +6046,7 @@
                 <!-- Section 7-Intermodal: Reuniões da origem Intermodal (full-width com 2 gráficos) -->
                 <div class="section-card full-width" id="sec7Inter">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127919;</span> Reuniões - Origem Intermodal</h2>
+                        <h2><span class="section-num" data-svg-icon="target"></span> Reuniões - Origem Intermodal</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec7Inter" onchange="renderSection7Inter()">
                                 <option value="global">Global</option>
@@ -6014,7 +6113,7 @@
                 <!-- Section 7c: Motivos de Descarte -->
                 <div class="section-card" id="sec7c">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128270;</span> Motivos de Descarte</h2>
+                        <h2><span class="section-num" data-svg-icon="search"></span> Motivos de Descarte</h2>
                         <div class="sub-filter">
                             <select id="discardReasonOwnerFilter" onchange="renderSection7c()">
                                 <option value="">Todos os pre-vendedores</option>
@@ -6043,7 +6142,7 @@
                 <!-- Section 7d: Reuniões por Origem -->
                 <div class="section-card" id="sec7d">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127760;</span> Reuniões por Origem</h2>
+                        <h2><span class="section-num" data-svg-icon="globe"></span> Reuniões por Origem</h2>
                         <div class="sub-filter">
                             <select id="meetingsOriginSdrFilter" onchange="renderSection7d()">
                                 <option value="">Todos os pre-vendedores</option>
@@ -6075,7 +6174,7 @@
                 <!-- Section 8: Reuniões por SDR e Segmento -->
                 <div class="section-card full-width" id="sec8">
                     <div class="section-header">
-                        <h2><span class="section-num">&#127919;</span> Reuniões por SDR e Segmento</h2>
+                        <h2><span class="section-num" data-svg-icon="target"></span> Reuniões por SDR e Segmento</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec8" onchange="renderSection8()">
                                 <option value="global">Global</option>
@@ -6101,7 +6200,7 @@
                 <!-- Section 9: Conversão por Etapa -->
                 <div class="section-card full-width" id="sec9">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128200;</span> Conversão por Etapa</h2>
+                        <h2><span class="section-num" data-svg-icon="trendUp"></span> Conversão por Etapa</h2>
                         <div class="sub-filter">
                             <select id="funnelOwnerFilter" onchange="renderSection9()">
                                 <option value="">Todos os executivos</option>
@@ -6131,7 +6230,7 @@
                 <!-- Section 10: Métricas de Funil por Modelo e Vendedor (CR / VM / ΔT) -->
                 <div class="section-card full-width" id="sec10">
                     <div class="section-header">
-                        <h2><span class="section-num">&#128202;</span> Métricas de Funil por Modelo e Vendedor</h2>
+                        <h2><span class="section-num" data-svg-icon="bar"></span> Métricas de Funil por Modelo e Vendedor</h2>
                         <div class="sub-filter">
                             <select class="section-period-select" id="periodSec10" onchange="renderSecMetrics()">
                                 <option value="global">Global (histórico)</option>
@@ -8439,11 +8538,43 @@ function renderSection1() {
     const totalMRRRegular = regularDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalIPCA = ipcaDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalSetupWon = deals.reduce((s, d) => s + getSetup(d), 0);
+    const totalFaturado = totalMRRRegular + totalIPCA + totalSetupWon;
+    // Label do período pra subtítulo do hero
+    const periodKey = (document.getElementById('periodSec1') || {}).value || 'thisMonth';
+    const periodLabels = {
+        global: 'no período total',
+        thisMonth: 'este mês',
+        lastMonth: 'no mês passado',
+        thisQuarter: 'neste trimestre',
+        lastQuarter: 'no trimestre anterior',
+        last6: 'nos últimos 6 meses',
+        thisYear: 'neste ano',
+        customMonth: 'no mês selecionado',
+        customRange: 'no intervalo selecionado'
+    };
+    const periodLabel = periodLabels[periodKey] || 'no período';
     document.getElementById('wonKpis').innerHTML = `
-        <div class="kpi-card"><div class="kpi-value">${deals.length}</div><div class="kpi-label">Negócios ganhos</div></div>
-        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalMRRRegular)}</div><div class="kpi-label">MRR (novo)</div></div>
-        <div class="kpi-card"><div class="kpi-value" style="color:#c084fc;">R$ ${formatMoney(totalIPCA)}</div><div class="kpi-label">IPCA (reajuste)</div></div>
-        <div class="kpi-card"><div class="kpi-value">R$ ${formatMoney(totalSetupWon)}</div><div class="kpi-label">Setup</div></div>
+        <div class="sec1-hero">
+            <div class="sec1-hero-main">
+                <span class="sec1-hero-eyebrow"><span class="dot"></span>Total já faturado ${periodLabel}</span>
+                <div class="sec1-hero-value">R$ ${formatMoney(totalFaturado)}</div>
+                <div class="sec1-hero-sub">${deals.length} negócio${deals.length === 1 ? '' : 's'} fechado${deals.length === 1 ? '' : 's'} · MRR + IPCA + Setup somados</div>
+            </div>
+            <div class="sec1-hero-chips">
+                <div class="sec1-chip">
+                    <div class="sec1-chip-label">MRR (novo)</div>
+                    <div class="sec1-chip-value">R$ ${formatMoney(totalMRRRegular)}</div>
+                </div>
+                <div class="sec1-chip ipca">
+                    <div class="sec1-chip-label">IPCA (reajuste)</div>
+                    <div class="sec1-chip-value">R$ ${formatMoney(totalIPCA)}</div>
+                </div>
+                <div class="sec1-chip">
+                    <div class="sec1-chip-label">Setup</div>
+                    <div class="sec1-chip-value">R$ ${formatMoney(totalSetupWon)}</div>
+                </div>
+            </div>
+        </div>
     `;
     const months = getMonthRangeFor(sp.start, sp.end);
     const pipelines = SALES_PIPELINES.filter(p => !pf || p === pf);
