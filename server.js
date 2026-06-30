@@ -50,6 +50,11 @@ const GOOGLE_ADS_LOGIN_CUSTOMER_ID = cleanEnv(process.env.GOOGLE_ADS_LOGIN_CUSTO
 const META_ACCESS_TOKEN = cleanEnv(process.env.META_ACCESS_TOKEN);
 const META_AD_ACCOUNT_ID = cleanEnv(process.env.META_AD_ACCOUNT_ID);
 const META_APP_ID = cleanEnv(process.env.META_APP_ID);
+const LINKEDIN_CLIENT_ID = cleanEnv(process.env.LINKEDIN_CLIENT_ID);
+const LINKEDIN_CLIENT_SECRET = cleanEnv(process.env.LINKEDIN_CLIENT_SECRET);
+const LINKEDIN_REFRESH_TOKEN = cleanEnv(process.env.LINKEDIN_REFRESH_TOKEN);
+const LINKEDIN_AD_ACCOUNT_ID = cleanEnv(process.env.LINKEDIN_AD_ACCOUNT_ID).replace(/\D/g, '');
+const LINKEDIN_API_VERSION = cleanEnv(process.env.LINKEDIN_API_VERSION) || '202405';
 let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
 // ==================== Upstash Redis helpers ====================
@@ -677,8 +682,9 @@ function handleSankhyaApi(req, res, pathname, query) {
 // Cache em memória (1h) — depois pode migrar pro Redis se múltiplas instâncias.
 const ADS_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
 const adsCache = {
-    google: { data: null, ts: 0, error: null },
-    meta:   { data: null, ts: 0, error: null }
+    google:   { data: null, ts: 0, error: null },
+    meta:     { data: null, ts: 0, error: null },
+    linkedin: { data: null, ts: 0, error: null }
 };
 
 function isGoogleAdsConfigured() {
@@ -687,6 +693,9 @@ function isGoogleAdsConfigured() {
 }
 function isMetaAdsConfigured() {
     return !!(META_ACCESS_TOKEN && META_AD_ACCOUNT_ID);
+}
+function isLinkedinAdsConfigured() {
+    return !!(LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET && LINKEDIN_REFRESH_TOKEN && LINKEDIN_AD_ACCOUNT_ID);
 }
 
 // HTTP helper genérico (POST com body, retorna JSON parsed)
@@ -936,6 +945,167 @@ async function metaAdsGetCached(force) {
         c.error = e.message;
         if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
         return Object.assign(metaAdsMock(), { _apiError: e.message });
+    }
+}
+
+// === LINKEDIN ADS ===
+// OAuth 2.0 refresh token flow — refresh tokens válidos por ~1 ano
+async function linkedinAccessToken() {
+    const body = `grant_type=refresh_token`
+               + `&refresh_token=${encodeURIComponent(LINKEDIN_REFRESH_TOKEN)}`
+               + `&client_id=${encodeURIComponent(LINKEDIN_CLIENT_ID)}`
+               + `&client_secret=${encodeURIComponent(LINKEDIN_CLIENT_SECRET)}`;
+    const json = await httpsJsonRequest({
+        hostname: 'www.linkedin.com',
+        path: '/oauth/v2/accessToken',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+    });
+    if (!json.access_token) throw new Error('LinkedIn OAuth sem access_token');
+    return json.access_token;
+}
+
+async function linkedinAdsFetchThisMonth() {
+    const accessToken = await linkedinAccessToken();
+    const now = new Date();
+    const startY = now.getFullYear(), startM = now.getMonth() + 1, startD = 1;
+    const endY = now.getFullYear(), endM = now.getMonth() + 1, endD = now.getDate();
+    const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
+    // adAnalytics rest endpoint — q=analytics, pivot por campanha
+    const fields = [
+        'impressions', 'clicks', 'costInLocalCurrency',
+        'externalWebsiteConversions', 'oneClickLeads',
+        'pivotValues', 'dateRange'
+    ].join(',');
+    const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
+    const qs = `q=analytics`
+             + `&pivot=CAMPAIGN`
+             + `&dateRange=${encodeURIComponent(dateRange)}`
+             + `&timeGranularity=ALL`
+             + `&accounts=List(${encodeURIComponent(accountUrn)})`
+             + `&fields=${encodeURIComponent(fields)}`;
+    const headers = {
+        'Authorization': 'Bearer ' + accessToken,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json'
+    };
+    const insights = await httpsJsonRequest({
+        hostname: 'api.linkedin.com',
+        path: `/rest/adAnalytics?${qs}`,
+        method: 'GET',
+        headers
+    });
+    // Pega nomes das campanhas — chamada extra (analytics retorna URN da campanha mas não nome)
+    const campaignNames = await linkedinFetchCampaignNames(accessToken, insights, accountUrn).catch(() => ({}));
+    return normalizeLinkedinAds(insights, campaignNames);
+}
+
+async function linkedinFetchCampaignNames(accessToken, insights, accountUrn) {
+    const urns = new Set();
+    for (const r of (insights.elements || [])) {
+        const pv = (r.pivotValues || [])[0];
+        if (pv && pv.startsWith('urn:li:sponsoredCampaign:')) urns.add(pv);
+    }
+    if (!urns.size) return {};
+    const ids = Array.from(urns).map(u => u.replace('urn:li:sponsoredCampaign:', ''));
+    const headers = {
+        'Authorization': 'Bearer ' + accessToken,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0'
+    };
+    const map = {};
+    // Busca em lotes pequenos pra não estourar tamanho de URL
+    for (let i = 0; i < ids.length; i += 20) {
+        const batch = ids.slice(i, i + 20);
+        const idsParam = batch.map(id => `List(urn%3Ali%3AsponsoredCampaign%3A${id})`).join(',');
+        const path = `/rest/adCampaigns?ids=${idsParam}`;
+        try {
+            const j = await httpsJsonRequest({ hostname: 'api.linkedin.com', path, method: 'GET', headers });
+            for (const k of Object.keys(j.results || {})) {
+                map[k] = j.results[k]?.name || k;
+            }
+        } catch { /* não-fatal: nome fica como URN */ }
+    }
+    return map;
+}
+
+function normalizeLinkedinAds(insights, campaignNames) {
+    const elements = insights.elements || [];
+    let totalSpend = 0, totalImp = 0, totalClicks = 0, totalConv = 0;
+    const campaigns = elements.map(r => {
+        const urn = (r.pivotValues || [])[0] || 'unknown';
+        const id = urn.replace('urn:li:sponsoredCampaign:', '');
+        const name = campaignNames[urn] || `Campaign ${id}`;
+        const spend = Number(r.costInLocalCurrency || 0);
+        const imp = Number(r.impressions || 0);
+        const clicks = Number(r.clicks || 0);
+        const webConv = Number(r.externalWebsiteConversions || 0);
+        const leadConv = Number(r.oneClickLeads || 0);
+        const conv = webConv + leadConv;
+        totalSpend += spend; totalImp += imp; totalClicks += clicks; totalConv += conv;
+        return {
+            id, name,
+            spend, impressions: imp, clicks, conversions: conv,
+            conversionsValue: 0, // LinkedIn não retorna valor monetário por padrão
+            ctr: imp > 0 ? clicks / imp : 0,
+            cpc: clicks > 0 ? spend / clicks : 0,
+            cpl: conv > 0 ? spend / conv : 0
+        };
+    });
+    campaigns.sort((a, b) => b.spend - a.spend);
+    return {
+        source: 'linkedin-ads',
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month',
+        currency: 'BRL',
+        totals: {
+            spend: totalSpend, impressions: totalImp, clicks: totalClicks,
+            conversions: totalConv, conversionsValue: 0,
+            ctr: totalImp > 0 ? totalClicks / totalImp : 0,
+            cpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
+            cpl: totalConv > 0 ? totalSpend / totalConv : 0,
+            roas: 0 // sem valor de conversão monetário no LinkedIn
+        },
+        campaigns
+    };
+}
+
+function linkedinAdsMock() {
+    return {
+        source: 'linkedin-ads', mock: true,
+        fetchedAt: new Date().toISOString(),
+        period: 'this_month', currency: 'BRL',
+        totals: {
+            spend: 3920.00, impressions: 62500, clicks: 730,
+            conversions: 18, conversionsValue: 0,
+            ctr: 0.0117, cpc: 5.37, cpl: 217.78, roas: 0
+        },
+        campaigns: [
+            { id: '601', name: '[MOCK] Sponsored Content - Decisores TMS', spend: 1840, impressions: 29000, clicks: 380, conversions: 11, conversionsValue: 0, ctr: 0.0131, cpc: 4.84, cpl: 167.27 },
+            { id: '602', name: '[MOCK] Message Ads - C-Level Logística', spend: 1280, impressions: 18500, clicks: 215, conversions: 5, conversionsValue: 0, ctr: 0.0116, cpc: 5.95, cpl: 256.00 },
+            { id: '603', name: '[MOCK] Lead Gen Form - Diretores Operações', spend: 800, impressions: 15000, clicks: 135, conversions: 2, conversionsValue: 0, ctr: 0.0090, cpc: 5.92, cpl: 400.00 }
+        ]
+    };
+}
+
+async function linkedinAdsGetCached(force) {
+    const c = adsCache.linkedin;
+    if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
+    if (!isLinkedinAdsConfigured()) {
+        const mock = linkedinAdsMock();
+        c.data = mock; c.ts = Date.now(); c.error = null;
+        return mock;
+    }
+    try {
+        const fresh = await linkedinAdsFetchThisMonth();
+        c.data = fresh; c.ts = Date.now(); c.error = null;
+        return fresh;
+    } catch (e) {
+        c.error = e.message;
+        if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
+        return Object.assign(linkedinAdsMock(), { _apiError: e.message });
     }
 }
 
@@ -1464,23 +1634,37 @@ const server = http.createServer(async (req, res) => {
             return jsonReply(res, 502, { error: e.message, source: 'meta-ads' });
         }
     }
+    if (urlPath === '/api/marketing/linkedin-ads' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const force = req.url.includes('refresh=1');
+        try {
+            const data = await linkedinAdsGetCached(force);
+            return jsonReply(res, 200, data);
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message, source: 'linkedin-ads' });
+        }
+    }
     // Endpoint combinado — única chamada do frontend pra puxar tudo
     if (urlPath === '/api/marketing/ads-summary' && req.method === 'GET') {
         const user = getCurrentUser(req);
         if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
         const force = req.url.includes('refresh=1');
-        const [google, meta] = await Promise.all([
+        const [google, meta, linkedin] = await Promise.all([
             googleAdsGetCached(force).catch(e => ({ error: e.message, source: 'google-ads' })),
-            metaAdsGetCached(force).catch(e => ({ error: e.message, source: 'meta-ads' }))
+            metaAdsGetCached(force).catch(e => ({ error: e.message, source: 'meta-ads' })),
+            linkedinAdsGetCached(force).catch(e => ({ error: e.message, source: 'linkedin-ads' }))
         ]);
         return jsonReply(res, 200, {
             fetchedAt: new Date().toISOString(),
             config: {
                 googleAdsConfigured: isGoogleAdsConfigured(),
-                metaAdsConfigured: isMetaAdsConfigured()
+                metaAdsConfigured: isMetaAdsConfigured(),
+                linkedinAdsConfigured: isLinkedinAdsConfigured()
             },
             google,
-            meta
+            meta,
+            linkedin
         });
     }
 
