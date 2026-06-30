@@ -20464,6 +20464,114 @@ function renderMktInsights(m) {
         tips.push({ level: 'warn', title: 'Top perda: "' + topLoss[0] + '" (' + topLoss[1] + 'x)', body: 'Padrao recorrente. Crie objeção scripts especificos para esse motivo e treine vendedores.' });
     }
 
+    // === Inteligência cross-canal (oportunidades + otimização) ===
+    const allChannels = Object.entries(m.channels)
+        .filter(([o, c]) => c.leads >= 5 && o !== '(sem origem)');
+
+    // Helper pra estimar invest por canal (usa o que tá no localStorage)
+    const investByChannel = (origin) => {
+        try {
+            const store = JSON.parse(localStorage.getItem('mkt_invest_store') || '{}');
+            const now = new Date();
+            const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+            return Number(store[monthKey]?.[origin]) || 0;
+        } catch { return 0; }
+    };
+
+    // 1. CANAL GRATUITO QUE TRAZ VOLUME (oportunidade SEO/orgânico)
+    const freeChannelsWithVolume = allChannels.filter(([o, c]) => {
+        const inv = investByChannel(o);
+        return inv === 0 && c.leads >= 10;
+    });
+    if (freeChannelsWithVolume.length > 0) {
+        const top = freeChannelsWithVolume.sort((a, b) => b[1].leads - a[1].leads)[0];
+        tips.push({
+            level: 'ok',
+            title: 'Oportunidade: "' + top[0] + '" gerou ' + top[1].leads + ' leads sem investimento',
+            body: 'Canal orgânico/sem custo direto trazendo volume. Vale acelerar com SEO content ou testar campanhas pagas no mesmo tema pra escalar volume mantendo CPL baixo.'
+        });
+    }
+
+    // 2. MELHOR e PIOR CANAL POR CONVERSÃO MQL (canais com >=10 leads)
+    const channelsByMqlRate = allChannels
+        .map(([o, c]) => ({ origin: o, leads: c.leads, mql: c.mql, rate: c.leads > 0 ? c.mql / c.leads : 0 }))
+        .filter(c => c.leads >= 10);
+
+    if (channelsByMqlRate.length >= 2) {
+        const sorted = channelsByMqlRate.sort((a, b) => b.rate - a.rate);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+        if (best.rate > 0 && worst.rate > 0 && (best.rate / worst.rate) >= 2) {
+            tips.push({
+                level: 'info',
+                title: 'Mix desigual: "' + best.origin + '" qualifica ' + Math.round(best.rate * 100) + '% vs "' + worst.origin + '" só ' + Math.round(worst.rate * 100) + '%',
+                body: 'Canal "' + worst.origin + '" tá trazendo lead errado — verifica palavra-chave/segmentação ou redirecione budget pra "' + best.origin + '" que qualifica melhor.'
+            });
+        }
+        // Canal com taxa MQL absurdamente baixa
+        if (worst.rate < 0.10 && worst.leads >= 20) {
+            tips.push({
+                level: 'crit',
+                title: '"' + worst.origin + '": só ' + Math.round(worst.rate * 100) + '% viram MQL',
+                body: worst.leads + ' leads entraram, ' + worst.mql + ' qualificados. Canal tá puxando público errado — revise criativos/segmentação urgente.'
+            });
+        }
+    }
+
+    // 3. CANAL COM MQLs MAS SDR NÃO CONVERTEU EM REUNIÃO (gargalo SDR)
+    const channelsHighMqlLowReun = allChannels
+        .map(([o, c]) => ({ origin: o, mql: c.mql, reun: c.reun, rate: c.mql > 0 ? c.reun / c.mql : 0 }))
+        .filter(c => c.mql >= 5 && c.rate < 0.20);
+    if (channelsHighMqlLowReun.length > 0) {
+        const top = channelsHighMqlLowReun.sort((a, b) => b.mql - a.mql)[0];
+        tips.push({
+            level: 'warn',
+            title: 'Gargalo SDR: "' + top.origin + '" tem ' + top.mql + ' MQLs mas só ' + top.reun + ' reuniões',
+            body: 'Marketing entregou lead qualificado mas a pré-vendas tá deixando passar (conversão ' + Math.round(top.rate * 100) + '%). Cobre cadência de outreach na semana de chegada do MQL.'
+        });
+    }
+
+    // 4. MELHOR ROI POR CANAL (escalar)
+    const channelsROI = allChannels
+        .map(([o, c]) => {
+            const inv = investByChannel(o);
+            return { origin: o, invest: inv, revenue: c.revenue || 0, ganhos: c.ganhos || 0 };
+        })
+        .filter(c => c.invest > 100 && c.revenue > 0);
+    if (channelsROI.length >= 1) {
+        const top = channelsROI.sort((a, b) => (b.revenue / b.invest) - (a.revenue / a.invest))[0];
+        const topROI = (top.revenue / top.invest);
+        if (topROI >= 2) {
+            tips.push({
+                level: 'ok',
+                title: '🏆 Escalar "' + top.origin + '" — ROI ' + topROI.toFixed(1) + 'x',
+                body: 'Cada R$ 1 nesse canal virou R$ ' + topROI.toFixed(2) + ' em receita (' + top.ganhos + ' ganhos sobre R$ ' + top.invest.toFixed(0) + ' invest). Considera dobrar budget — escala enquanto a eficiência tá alta.'
+            });
+        }
+    }
+
+    // 5. CANAL COM INVEST MAS SEM GANHO HÁ TEMPO (cortar/realocar)
+    const channelsDrying = allChannels
+        .map(([o, c]) => ({ origin: o, invest: investByChannel(o), ganhos: c.ganhos || 0, reun: c.reun || 0 }))
+        .filter(c => c.invest >= 500 && c.ganhos === 0 && c.reun === 0);
+    if (channelsDrying.length > 0) {
+        const worst = channelsDrying.sort((a, b) => b.invest - a.invest)[0];
+        tips.push({
+            level: 'crit',
+            title: '💸 "' + worst.origin + '": R$ ' + worst.invest.toFixed(0) + ' invest sem reunião nem ganho',
+            body: 'Canal sangrando budget. Pausa por 30 dias e realoca pra canais com ROI positivo. Se mantiver, vai compor 100% do prejuízo desse mês.'
+        });
+    }
+
+    // 6. PIPELINE FUTURO POSITIVO mas WIN RATE BAIXA (qualificação)
+    if (m.cohortStillPending >= 20 && winRate > 0 && winRate < 15 && m.totalProp >= 5) {
+        tips.push({
+            level: 'warn',
+            title: 'Volume bom mas conversão final fraca (Win rate ' + pct(winRate) + ')',
+            body: 'Pipeline tá grande (' + m.cohortStillPending + ' MQLs amadurecendo) mas só ' + pct(winRate) + ' vira ganho. Indica leads "soft" sendo qualificados demais. Aperte critério MQL (BANT/MEDDIC) na entrada pra reduzir desperdício na ponta.'
+        });
+    }
+
     const colors = {
         crit: { bg: 'rgba(239,68,68,0.08)', border: '#ef4444', icon: '\uD83D\uDEA8' },
         warn: { bg: 'rgba(251,191,36,0.08)', border: '#fbbf24', icon: '\u26A0\uFE0F' },
