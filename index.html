@@ -4915,7 +4915,8 @@
             user:      '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
             package:   '<svg viewBox="0 0 24 24"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
             file:      '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-            list:      '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+            list:      '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+            lightbulb: '<svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.5.4 1 1.2 1 2v1.3h6V16.7c0-.8.5-1.6 1-2A7 7 0 0 0 12 2z"/></svg>'
         };
         function render() {
             document.querySelectorAll('[data-svg-icon]').forEach(el => {
@@ -5760,7 +5761,7 @@
                 <div class="section-card full-width" id="secAnalise">
                     <div class="section-header">
                         <h2 style="display:flex;align-items:center;gap:10px;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">&#128202;</span>
+                            <span class="section-num" data-svg-icon="bar"></span>
                             Análise Pré-vendas - SDR Inbound
                         </h2>
                         <div class="sub-filter">
@@ -5802,7 +5803,7 @@
                 <!-- Section: Cálculo Reverso de Meta — Pré-vendas -->
                 <div class="section-card full-width" id="secMetaReverse">
                     <div class="section-header">
-                        <h2><span class="section-num" style="background:linear-gradient(135deg,#facc15,#f59e0b);">&#127919;</span> Cálculo Reverso de Meta — Pré-vendas</h2>
+                        <h2><span class="section-num" data-svg-icon="target"></span> Cálculo Reverso de Meta — Pré-vendas</h2>
                         <div class="sub-filter" style="gap:8px;">
                             <select id="metaReverseSdr" onchange="renderMetaReverse()" style="min-width:170px;">
                                 <option value="">Geral (média do time)</option>
@@ -5830,7 +5831,7 @@
                 <div class="section-card full-width" id="secStuck">
                     <div class="section-header" style="padding-bottom:6px;">
                         <h2 style="display:flex;align-items:center;gap:10px;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);">&#9201;&#65039;</span>
+                            <span class="section-num" data-svg-icon="alert"></span>
                             Leads parados - Qualificação SDR Inbound
                         </h2>
                         <div class="sub-filter">
@@ -6444,8 +6445,8 @@
 
                     <!-- LINHA 1: 2 Funis lado-a-lado (Cohort + Flow) em 8 cols | Insights (4) -->
                     <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127922;</span>
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
+                            <span class="section-num" data-svg-icon="bar"></span>
                             Funis de conversão — Safra vs Mês
                         </h2>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;">
@@ -6467,8 +6468,8 @@
                     </div>
 
                     <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128161;</span>
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
+                            <span class="section-num" data-svg-icon="lightbulb"></span>
                             Insights e ações
                         </h2>
                         <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;max-height:480px;"></div>
@@ -6476,9 +6477,9 @@
 
                     <!-- LINHA 2: Evolucao (8) | Motivos (4) -->
                     <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128202;</span>
-                            Evolucao diária
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
+                            <span class="section-num" data-svg-icon="trendUp"></span>
+                            Evolução diária
                         </h2>
                         <div style="position:relative;flex:1;min-height:280px;">
                             <canvas id="mktChartTimeline"></canvas>
@@ -6486,8 +6487,8 @@
                     </div>
 
                     <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#dc2626,#ef4444);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128680;</span>
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
+                            <span class="section-num" data-svg-icon="alert"></span>
                             Motivos de Perda
                         </h2>
                         <div style="overflow:auto;flex:1;max-height:340px;">
@@ -6502,7 +6503,7 @@
                     <div class="dash-card" style="padding:24px;grid-column:span 12;">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px;">
                             <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;display:flex;align-items:center;gap:8px;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#0891b2,#06b6d4);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:#fff;">&#129518;</span>
+                                <span class="section-num" data-svg-icon="target"></span>
                                 Capacity Planning — agendas necessárias pra bater a meta
                             </h2>
                             <button class="mql-refresh-btn" onclick="openCapacityModal()" style="background:linear-gradient(135deg,#0891b2,#06b6d4);font-size:12px;padding:8px 14px;">&#9881;&#65039; Configurar</button>
@@ -6512,8 +6513,8 @@
 
                     <!-- LINHA 3: Performance por canal (full width) -->
                     <div class="dash-card" style="padding:20px;grid-column:span 12;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;">
-                            <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#127919;</span>
+                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
+                            <span class="section-num" data-svg-icon="bar"></span>
                             Performance por canal
                         </h2>
                         <div style="overflow-x:auto;">
@@ -6634,8 +6635,8 @@
                 <div style="padding:20px 30px 30px;">
                     <div class="dash-card" style="padding:20px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;">
-                                <span class="section-num" style="background:linear-gradient(135deg,#6c3fb5,#8b5cf6);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;margin-right:8px;color:#fff;vertical-align:middle;">&#128203;</span>
+                            <h2 style="color:#fff;font-size:15px;margin:0;font-weight:600;display:flex;align-items:center;">
+                                <span class="section-num" data-svg-icon="list"></span>
                                 Lista de MQLs
                             </h2>
                             <button class="export-btn" onclick="exportMqls()">&#128229; Exportar Excel</button>
@@ -19994,6 +19995,18 @@ async function loadMarketing() {
     document.getElementById('mktContentArea').style.display = 'block';
     document.getElementById('mktLastUpdate').textContent =
         `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
+
+    // Dispara fetch dos ads (Meta/Google/LinkedIn) em background
+    // pra adicionar alertas de mídia paga aos Insights quando chegar
+    if (typeof _cpFetchAdsSummary === 'function') {
+        _cpFetchAdsSummary(false).then(adsData => {
+            if (!adsData) return;
+            // Re-renderiza só os Insights pra integrar os alertas de ads
+            if (window._lastMktInsightsArgs) {
+                renderMktInsights(window._lastMktInsightsArgs);
+            }
+        }).catch(e => console.warn('[mkt] ads fetch falhou:', e.message));
+    }
 }
 
 // Custom field keys
@@ -20282,13 +20295,15 @@ function renderMarketing(range, rd) {
         ? '<tr><td colspan="2" style="text-align:center;color:#888;padding:14px;">Nenhum perdido</td></tr>'
         : lossRows.map(([r, c]) => `<tr><td>${r}</td><td style="text-align:right;">${c}</td></tr>`).join('');
 
-    // Insights & Acoes
-    renderMktInsights({
+    // Insights & Acoes (salva args pra re-render quando ads data chegar)
+    const insightsArgs = {
         totalLeads, totalMql, totalReun, totalProp, totalGanho, totalPerd,
         mqlRate, cpl, cac, roi, totalSpend, revenueWon,
         channels, lossCounts,
         flowReun, reunFromPriorSafras, pctPriorSafras, cohortStillPending
-    });
+    };
+    window._lastMktInsightsArgs = insightsArgs;
+    renderMktInsights(insightsArgs);
 
     // Capacity Planning (Lead → MQL → Agenda → Ganho vs meta dos vendedores)
     if (typeof renderCapacityPlanning === 'function') {
@@ -20303,8 +20318,78 @@ function renderMarketing(range, rd) {
     window._mktEnriched = enriched;
 }
 
+// Constrói alertas de mídia paga (Meta/Google/LinkedIn) baseados na API ads-summary
+// Reutiliza window._adsCachedSummary + cross com canais canonical do Ploomes
+function _buildAdsAlertsForMkt(channelsByOrigin) {
+    const out = [];
+    const data = window._adsCachedSummary;
+    if (!data || !data.config) return out;
+
+    // Cross com canais Ploomes via getChannelFromOrigin (Meta → 'Meta Ads' etc)
+    const canonicalGanhos = {};
+    if (channelsByOrigin && typeof getChannelFromOrigin === 'function') {
+        Object.entries(channelsByOrigin).forEach(([origin, ch]) => {
+            const canonical = getChannelFromOrigin(origin);
+            if (!canonicalGanhos[canonical]) canonicalGanhos[canonical] = { revenue: 0, ganhos: 0 };
+            canonicalGanhos[canonical].revenue += ch.revenue || 0;
+            canonicalGanhos[canonical].ganhos += ch.ganhos || 0;
+        });
+    }
+
+    const platforms = [
+        { name: 'Meta Ads', plat: data.meta, cfgKey: 'metaAdsConfigured', canonical: 'Meta Ads' },
+        { name: 'Google Ads', plat: data.google, cfgKey: 'googleAdsConfigured', canonical: 'Google Ads' },
+        { name: 'LinkedIn Ads', plat: data.linkedin, cfgKey: 'linkedinAdsConfigured', canonical: 'LinkedIn Ads' }
+    ];
+    for (const { name, plat, cfgKey, canonical } of platforms) {
+        if (!data.config[cfgKey] || !plat || plat.mock) continue;
+        const t = plat.totals || {};
+        const p = plat.previous?.totals;
+
+        // 1. CTR baixo
+        if (t.impressions > 1000 && t.ctr < 0.005) {
+            out.push({ level: 'crit', title: `${name}: CTR baixo (${(t.ctr*100).toFixed(2)}%)`,
+                body: `Público errado clicando ou criativo fraco. Revisar segmentação ou refazer copy do anúncio.` });
+        }
+        // 2. Gasto sem conversão
+        if (t.spend > 100 && (t.conversions || 0) === 0) {
+            out.push({ level: 'crit', title: `${name}: R$ ${t.spend.toFixed(0)} gastos sem conversão`,
+                body: `Avalia pausar campanhas ou revisar landing page. Sem lead = dinheiro queimado.` });
+        }
+        // 3. CPL alto (>R$ 200) com conversões
+        if (t.cpl > 200 && (t.conversions || 0) > 0) {
+            out.push({ level: 'warn', title: `${name}: CPL acima do benchmark (R$ ${t.cpl.toFixed(0)})`,
+                body: `Benchmark SaaS B2B: R$ 50-150 por lead. Otimizar copy ou estreitar público pra reduzir CPL.` });
+        }
+        // 4. ROAS comercial < 1 (cross com Ploomes)
+        const ganhosCh = canonicalGanhos[canonical];
+        if (ganhosCh && t.spend > 100 && ganhosCh.revenue > 0) {
+            const roas = ganhosCh.revenue / t.spend;
+            if (roas < 1) {
+                out.push({ level: 'crit', title: `${name}: ROAS comercial < 1 (${roas.toFixed(2)}x)`,
+                    body: `Gastou R$ ${t.spend.toFixed(0)}, fechou R$ ${ganhosCh.revenue.toFixed(0)} no canal. Cada R$ 1 investido virou R$ ${roas.toFixed(2)}. Revisar funil de qualificação.` });
+            }
+        }
+        // 5. Gasto despencou >50% vs mês passado
+        if (p && p.spend > 100 && t.spend < p.spend * 0.5) {
+            out.push({ level: 'warn', title: `${name}: gasto caiu ${Math.round((1 - t.spend/p.spend)*100)}% vs mês passado`,
+                body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)}. Pausou campanha? Reduziu budget propositalmente?` });
+        }
+        // 6. Gasto dobrou mas conversões caíram
+        if (p && p.spend > 100 && t.spend > p.spend * 2 && (t.conversions || 0) < (p.conversions || 0)) {
+            out.push({ level: 'crit', title: `${name}: gasto dobrou mas conversões caíram`,
+                body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)} · ${p.conversions || 0} → ${t.conversions || 0} conv. Eficiência despencou — revisar urgente.` });
+        }
+    }
+    return out;
+}
+
 function renderMktInsights(m) {
     const tips = [];
+
+    // === Alertas de Mídia Paga (Meta/Google/LinkedIn) — prioridade máxima ===
+    const adsAlerts = _buildAdsAlertsForMkt(m.channels);
+    adsAlerts.forEach(a => tips.push(a));
 
     // === Cross-indicators: Flow vs Cohort (prioritários no topo) ===
     if (m.flowReun > 0 && typeof m.reunFromPriorSafras === 'number') {
