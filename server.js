@@ -747,15 +747,16 @@ async function googleAdsAccessToken() {
     return json.access_token;
 }
 
-async function googleAdsFetchThisMonth() {
+async function googleAdsFetchPeriod(period) {
     const accessToken = await googleAdsAccessToken();
+    // period: THIS_MONTH | LAST_MONTH
     const query = `
         SELECT
             campaign.id, campaign.name, campaign.status,
             metrics.impressions, metrics.clicks, metrics.cost_micros,
             metrics.conversions, metrics.conversions_value, metrics.ctr, metrics.average_cpc
         FROM campaign
-        WHERE segments.date DURING THIS_MONTH
+        WHERE segments.date DURING ${period}
     `.replace(/\s+/g, ' ').trim();
     const headers = {
         'Authorization': 'Bearer ' + accessToken,
@@ -846,23 +847,29 @@ async function googleAdsGetCached(force) {
         return mock;
     }
     try {
-        const fresh = await googleAdsFetchThisMonth();
-        c.data = fresh; c.ts = Date.now(); c.error = null;
-        return fresh;
+        const [current, previous] = await Promise.all([
+            googleAdsFetchPeriod('THIS_MONTH'),
+            googleAdsFetchPeriod('LAST_MONTH').catch(e => null)
+        ]);
+        const combined = Object.assign({}, current, {
+            previous: previous ? { totals: previous.totals, campaigns: previous.campaigns } : null
+        });
+        c.data = combined; c.ts = Date.now(); c.error = null;
+        return combined;
     } catch (e) {
         c.error = e.message;
-        // Em caso de erro: se temos cache antigo, retorna ele. Senão mock pra UI não quebrar.
         if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
         return Object.assign(googleAdsMock(), { _apiError: e.message });
     }
 }
 
 // === META ADS ===
-async function metaAdsFetchThisMonth() {
+async function metaAdsFetchPeriod(datePreset) {
+    // datePreset: this_month | last_month
     const acct = META_AD_ACCOUNT_ID.startsWith('act_') ? META_AD_ACCOUNT_ID : 'act_' + META_AD_ACCOUNT_ID;
     const fields = ['campaign_id', 'campaign_name', 'spend', 'impressions', 'clicks',
                     'cpc', 'ctr', 'actions', 'action_values'].join(',');
-    const params = `fields=${fields}&level=campaign&date_preset=this_month&limit=200`
+    const params = `fields=${fields}&level=campaign&date_preset=${datePreset}&limit=200`
                  + `&access_token=${encodeURIComponent(META_ACCESS_TOKEN)}`;
     const json = await httpsJsonRequest({
         hostname: 'graph.facebook.com',
@@ -938,9 +945,15 @@ async function metaAdsGetCached(force) {
         return mock;
     }
     try {
-        const fresh = await metaAdsFetchThisMonth();
-        c.data = fresh; c.ts = Date.now(); c.error = null;
-        return fresh;
+        const [current, previous] = await Promise.all([
+            metaAdsFetchPeriod('this_month'),
+            metaAdsFetchPeriod('last_month').catch(e => null)
+        ]);
+        const combined = Object.assign({}, current, {
+            previous: previous ? { totals: previous.totals, campaigns: previous.campaigns } : null
+        });
+        c.data = combined; c.ts = Date.now(); c.error = null;
+        return combined;
     } catch (e) {
         c.error = e.message;
         if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
@@ -966,11 +979,20 @@ async function linkedinAccessToken() {
     return json.access_token;
 }
 
-async function linkedinAdsFetchThisMonth() {
+// monthOffset: 0 = mês atual, -1 = mês passado
+async function linkedinAdsFetchMonth(monthOffset) {
     const accessToken = await linkedinAccessToken();
     const now = new Date();
-    const startY = now.getFullYear(), startM = now.getMonth() + 1, startD = 1;
-    const endY = now.getFullYear(), endM = now.getMonth() + 1, endD = now.getDate();
+    const ref = new Date(now.getFullYear(), now.getMonth() + (monthOffset || 0), 1);
+    const startY = ref.getFullYear(), startM = ref.getMonth() + 1, startD = 1;
+    // Fim: último dia do mês ref (ou hoje se for mês atual)
+    let endY, endM, endD;
+    if (monthOffset === 0 || monthOffset === undefined) {
+        endY = now.getFullYear(); endM = now.getMonth() + 1; endD = now.getDate();
+    } else {
+        const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+        endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
+    }
     const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
     // adAnalytics rest endpoint — q=analytics, pivot por campanha
     const fields = [
@@ -1094,20 +1116,27 @@ async function linkedinAdsGetCached(force) {
     const c = adsCache.linkedin;
     if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
     if (!isLinkedinAdsConfigured()) {
-        const mock = linkedinAdsMock();
-        c.data = mock; c.ts = Date.now(); c.error = null;
-        return mock;
+        const m = linkedinAdsMock();
+        c.data = m; c.ts = Date.now(); c.error = null;
+        return m;
     }
     try {
-        const fresh = await linkedinAdsFetchThisMonth();
-        c.data = fresh; c.ts = Date.now(); c.error = null;
-        return fresh;
+        const [current, previous] = await Promise.all([
+            linkedinAdsFetchMonth(0),
+            linkedinAdsFetchMonth(-1).catch(e => null)
+        ]);
+        const combined = Object.assign({}, current, {
+            previous: previous ? { totals: previous.totals, campaigns: previous.campaigns } : null
+        });
+        c.data = combined; c.ts = Date.now(); c.error = null;
+        return combined;
     } catch (e) {
         c.error = e.message;
         if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
         return Object.assign(linkedinAdsMock(), { _apiError: e.message });
     }
 }
+
 
 // ==================== HTTP server ====================
 const server = http.createServer(async (req, res) => {
