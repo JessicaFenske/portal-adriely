@@ -20174,8 +20174,13 @@ function renderMarketing(range, rd) {
         kpi('Reuniões do mês', flowReun.toLocaleString('pt-BR'), '#fbbf24', { trend: reunFromPriorSafras > 0 ? `${reunFromPriorSafras} de safras anteriores (${pct(pctPriorSafras, 0)})` : (flowReun > 0 ? 'todas da safra do mês' : 'sem reuniões agendadas') }) +
         kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
         kpi('Custo/Reunião', isFinite(cpmFlow) ? brl(cpmFlow) : '', '#f59e0b', noSpend ? { empty: emptyHint } : (flowReun === 0 ? { empty: 'Sem reuniões' } : { trend: 'Inv. do mês / Reuniões do mês' })) +
-        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316', noSpend ? { empty: emptyHint } : (totalGanho === 0 ? { empty: 'Sem ganhos no período' } : {})) +
-        kpi('ROI', isFinite(roi) ? pct(roi, 0) : '', roi >= 0 ? '#22c55e' : '#ef4444', noSpend ? { empty: emptyHint } : {});
+        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316',
+            noSpend ? { empty: emptyHint } :
+            (totalGanho === 0 ? { empty: cohortStillPending >= 20 ? 'Em maturação' : 'Sem ganhos no período' } : {})) +
+        kpi('ROI', isFinite(roi) ? pct(roi, 0) : '',
+            roi >= 0 ? '#22c55e' : (cohortStillPending >= 20 && revenueWon === 0 ? '#94a3b8' : '#ef4444'),
+            noSpend ? { empty: emptyHint } :
+            (cohortStillPending >= 20 && revenueWon === 0 ? { empty: 'Em maturação' } : {}));
 
     // === Funil COHORT (safra) === leads/MQLs/Reuniões/Propostas/Ganhos da SAFRA do mês
     const funnelStages = [
@@ -20318,275 +20323,322 @@ function renderMarketing(range, rd) {
     window._mktEnriched = enriched;
 }
 
-// Constrói alertas de mídia paga (Meta/Google/LinkedIn) baseados na API ads-summary
-// Reutiliza window._adsCachedSummary + cross com canais canonical do Ploomes
-function _buildAdsAlertsForMkt(channelsByOrigin) {
-    const out = [];
-    const data = window._adsCachedSummary;
-    if (!data || !data.config) return out;
+// ============================================================
+// MARKETING INSIGHTS ENGINE — declarativo, fácil estender
+// ============================================================
+// Cada regra retorna 0..N insights com:
+//   { category: 'critical'|'opportunity'|'optimization'|'info', title, body }
 
-    // Cross com canais Ploomes via getChannelFromOrigin (Meta → 'Meta Ads' etc)
-    const canonicalGanhos = {};
-    if (channelsByOrigin && typeof getChannelFromOrigin === 'function') {
-        Object.entries(channelsByOrigin).forEach(([origin, ch]) => {
-            const canonical = getChannelFromOrigin(origin);
-            if (!canonicalGanhos[canonical]) canonicalGanhos[canonical] = { revenue: 0, ganhos: 0 };
-            canonicalGanhos[canonical].revenue += ch.revenue || 0;
-            canonicalGanhos[canonical].ganhos += ch.ganhos || 0;
-        });
-    }
+// Helper: investimento por origem (localStorage do mês atual)
+function _mktInvestByOrigin(origin) {
+    try {
+        const store = JSON.parse(localStorage.getItem('mkt_invest_store') || '{}');
+        const now = new Date();
+        const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+        return Number(store[monthKey]?.[origin]) || 0;
+    } catch { return 0; }
+}
 
-    const platforms = [
-        { name: 'Meta Ads', plat: data.meta, cfgKey: 'metaAdsConfigured', canonical: 'Meta Ads' },
-        { name: 'Google Ads', plat: data.google, cfgKey: 'googleAdsConfigured', canonical: 'Google Ads' },
-        { name: 'LinkedIn Ads', plat: data.linkedin, cfgKey: 'linkedinAdsConfigured', canonical: 'LinkedIn Ads' }
-    ];
-    for (const { name, plat, cfgKey, canonical } of platforms) {
-        if (!data.config[cfgKey] || !plat || plat.mock) continue;
-        const t = plat.totals || {};
-        const p = plat.previous?.totals;
+const MKT_INSIGHT_RULES = [
+    // ---- 1. ADS PLATFORMS (Meta/Google/LinkedIn) ----
+    {
+        id: 'ads-platform-health',
+        compute: (m, ctx) => {
+            const out = [];
+            const ads = window._adsCachedSummary;
+            if (!ads || !ads.config) return out;
+            const platforms = [
+                { name: 'Meta Ads', plat: ads.meta, cfgKey: 'metaAdsConfigured', canonical: 'Meta Ads' },
+                { name: 'Google Ads', plat: ads.google, cfgKey: 'googleAdsConfigured', canonical: 'Google Ads' },
+                { name: 'LinkedIn Ads', plat: ads.linkedin, cfgKey: 'linkedinAdsConfigured', canonical: 'LinkedIn Ads' }
+            ];
+            for (const { name, plat, cfgKey, canonical } of platforms) {
+                if (!ads.config[cfgKey] || !plat || plat.mock) continue;
+                const t = plat.totals || {}, p = plat.previous?.totals;
+                if (t.impressions > 1000 && t.ctr < 0.005) {
+                    out.push({ category: 'critical', title: `${name}: CTR baixo (${(t.ctr*100).toFixed(2)}%)`,
+                        body: 'Público errado clicando ou criativo fraco. Revisar segmentação ou refazer copy.' });
+                }
+                if (t.spend > 100 && (t.conversions || 0) === 0) {
+                    out.push({ category: 'critical', title: `${name}: R$ ${t.spend.toFixed(0)} sem conversão`,
+                        body: 'Avalia pausar ou revisar landing page. Sem lead = dinheiro queimado.' });
+                }
+                if (t.cpl > 200 && (t.conversions || 0) > 0) {
+                    out.push({ category: 'optimization', title: `${name}: CPL acima do benchmark (R$ ${t.cpl.toFixed(0)})`,
+                        body: 'Benchmark SaaS B2B: R$ 50-150 por lead. Otimizar copy ou estreitar público.' });
+                }
+                const canGanhos = ctx.canonicalChannels[canonical];
+                if (canGanhos && t.spend > 100 && canGanhos.revenue > 0) {
+                    const roas = canGanhos.revenue / t.spend;
+                    if (roas < 1) {
+                        out.push({ category: 'critical', title: `${name}: ROAS comercial < 1 (${roas.toFixed(2)}x)`,
+                            body: `Gastou R$ ${t.spend.toFixed(0)}, fechou R$ ${canGanhos.revenue.toFixed(0)}. Cada R$ 1 virou R$ ${roas.toFixed(2)}. Revisar funil.` });
+                    }
+                }
+                if (p && p.spend > 100 && t.spend < p.spend * 0.5) {
+                    out.push({ category: 'optimization', title: `${name}: gasto caiu ${Math.round((1 - t.spend/p.spend)*100)}% vs mês passado`,
+                        body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)}. Pausou campanha? Reduziu budget?` });
+                }
+                if (p && p.spend > 100 && t.spend > p.spend * 2 && (t.conversions || 0) < (p.conversions || 0)) {
+                    out.push({ category: 'critical', title: `${name}: gasto dobrou, conversões caíram`,
+                        body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)} · ${p.conversions||0} → ${t.conversions||0} conv.` });
+                }
+            }
+            return out;
+        }
+    },
 
-        // 1. CTR baixo
-        if (t.impressions > 1000 && t.ctr < 0.005) {
-            out.push({ level: 'crit', title: `${name}: CTR baixo (${(t.ctr*100).toFixed(2)}%)`,
-                body: `Público errado clicando ou criativo fraco. Revisar segmentação ou refazer copy do anúncio.` });
+    // ---- 2. TAXA MQL ----
+    { id: 'mql-rate', compute: (m) => {
+        if (m.totalLeads < 10) return null;
+        const r = m.mqlRate;
+        if (r < 20) return { category: 'critical', title: `Taxa MQL baixa (${pct(r)})`,
+            body: 'Poucos leads são corporativos. Revise copy do form, deixe telefone obrigatório, valide email corp.' };
+        if (r < 35) return { category: 'optimization', title: `Taxa MQL pode melhorar (${pct(r)})`,
+            body: 'Benchmark B2B: 35%+. Teste landing pages mais específicas por cargo/segmento.' };
+        return { category: 'info', title: `Taxa MQL saudável (${pct(r)})`,
+            body: 'Ótima qualificação no topo do funil. Mantenha o que tá funcionando.' };
+    }},
+
+    // ---- 3. MQL → REUNIÃO ----
+    { id: 'mql-to-meeting', compute: (m) => {
+        if (m.totalMql < 5) return null;
+        const rate = (m.totalReun / m.totalMql) * 100;
+        if (rate < 25) return { category: 'critical', title: `Conversão MQL→Reunião baixa (${pct(rate)})`,
+            body: 'Gap de SDR. Cadência multi-canal (email + ligação + LinkedIn em 5 dias) e treinar speech.' };
+        if (rate < 45) return { category: 'optimization', title: `Conversão MQL→Reunião mediana (${pct(rate)})`,
+            body: 'Personalize abordagem usando segmento/cargo do lead.' };
+        return null;
+    }},
+
+    // ---- 4. REUNIÃO → PROPOSTA ----
+    { id: 'meeting-to-proposal', compute: (m) => {
+        if (m.totalReun < 3) return null;
+        const rate = (m.totalProp / m.totalReun) * 100;
+        if (rate < 50) return { category: 'optimization', title: `Reunião→Proposta baixa (${pct(rate)})`,
+            body: 'Pode ser qualificação fraca. Adote BANT/MEDDIC nas reuniões pra não levar lead não-fit pra proposta.' };
+        return null;
+    }},
+
+    // ---- 5. WIN RATE ----
+    { id: 'win-rate', compute: (m) => {
+        if (m.totalProp < 3) return null;
+        const rate = (m.totalGanho / m.totalProp) * 100;
+        if (rate < 20) return { category: 'critical', title: `Win rate baixa (${pct(rate)})`,
+            body: 'Revise pricing, objeções (ver Motivos de Perda) e reforce prova social/cases.' };
+        if (rate >= 30) return { category: 'info', title: `Win rate forte (${pct(rate)})`,
+            body: 'Ótima conversão final. Foco agora deve ser no topo do funil pra escalar volume.' };
+        return null;
+    }},
+
+    // ---- 6. CONCENTRAÇÃO DE CANAL ----
+    { id: 'channel-concentration', compute: (m, ctx) => {
+        if (ctx.totalLeadsCh < 30) return null;
+        const top = Object.entries(m.channels).sort((a, b) => b[1].leads - a[1].leads)[0];
+        if (!top) return null;
+        const share = (top[1].leads / ctx.totalLeadsCh) * 100;
+        if (share > 60) return { category: 'optimization', title: `Dependência de "${top[0]}" (${pct(share, 0)})`,
+            body: 'Mais da metade dos leads vem de 1 canal. Diversifique testando 1-2 canais novos esse mês.' };
+        return null;
+    }},
+
+    // ---- 7. SEM ORIGEM (mata atribuição) ----
+    { id: 'no-origin', compute: (m, ctx) => {
+        if (ctx.totalLeadsCh < 30) return null;
+        const noOrigin = m.channels['(sem origem)'];
+        if (!noOrigin) return null;
+        const share = noOrigin.leads / ctx.totalLeadsCh;
+        if (share > 0.15) return { category: 'critical', title: `Muitos leads sem origem (${pct(share*100, 0)})`,
+            body: 'Configure UTMs em todas as campanhas e formulários. Sem origem você não mede ROI.' };
+        return null;
+    }},
+
+    // ---- 8. ROI AGREGADO (com smart fallback pra maturação) ----
+    { id: 'aggregate-roi', compute: (m) => {
+        if (m.totalSpend === 0) return { category: 'info', title: 'Cadastre o investimento em mídia',
+            body: 'Clique em "Investimento em mídia" no topo pra calcular CAC, CPL e ROI por canal.' };
+        if (!isFinite(m.roi)) return null;
+        if (m.roi < 0) {
+            if (m.cohortStillPending >= 20) {
+                return { category: 'info', title: `Pipeline ainda maturando (${m.cohortStillPending} MQLs em qualificação)`,
+                    body: `R$ ${m.totalSpend.toFixed(0)} investidos, R$ 0 fechados ainda. Ciclo SaaS B2B: 30-60 dias. ROI atual (${pct(m.roi, 0)}) é provisório.` };
+            }
+            return { category: 'critical', title: `ROI negativo (${pct(m.roi, 0)})`,
+                body: 'Receita abaixo do investido. Pause canais com pior CAC, realoque pros de melhor ROI.' };
         }
-        // 2. Gasto sem conversão
-        if (t.spend > 100 && (t.conversions || 0) === 0) {
-            out.push({ level: 'crit', title: `${name}: R$ ${t.spend.toFixed(0)} gastos sem conversão`,
-                body: `Avalia pausar campanhas ou revisar landing page. Sem lead = dinheiro queimado.` });
-        }
-        // 3. CPL alto (>R$ 200) com conversões
-        if (t.cpl > 200 && (t.conversions || 0) > 0) {
-            out.push({ level: 'warn', title: `${name}: CPL acima do benchmark (R$ ${t.cpl.toFixed(0)})`,
-                body: `Benchmark SaaS B2B: R$ 50-150 por lead. Otimizar copy ou estreitar público pra reduzir CPL.` });
-        }
-        // 4. ROAS comercial < 1 (cross com Ploomes)
-        const ganhosCh = canonicalGanhos[canonical];
-        if (ganhosCh && t.spend > 100 && ganhosCh.revenue > 0) {
-            const roas = ganhosCh.revenue / t.spend;
-            if (roas < 1) {
-                out.push({ level: 'crit', title: `${name}: ROAS comercial < 1 (${roas.toFixed(2)}x)`,
-                    body: `Gastou R$ ${t.spend.toFixed(0)}, fechou R$ ${ganhosCh.revenue.toFixed(0)} no canal. Cada R$ 1 investido virou R$ ${roas.toFixed(2)}. Revisar funil de qualificação.` });
+        if (m.roi < 100) return { category: 'optimization', title: `ROI baixo (${pct(m.roi, 0)})`,
+            body: 'Ainda não dobrou o investimento. Foque no canal com maior ROI absoluto pra acelerar.' };
+        return { category: 'info', title: `ROI saudável (${pct(m.roi, 0)})`,
+            body: 'Já paga o investimento. Dá pra escalar mantendo o mix atual.' };
+    }},
+
+    // ---- 9. TOP MOTIVO DE PERDA ----
+    { id: 'top-loss', compute: (m) => {
+        const top = Object.entries(m.lossCounts || {}).sort((a, b) => b[1] - a[1])[0];
+        if (!top || top[1] < 3) return null;
+        return { category: 'optimization', title: `Top perda: "${top[0]}" (${top[1]}x)`,
+            body: 'Padrão recorrente. Crie objeção scripts específicos e treine vendedores.' };
+    }},
+
+    // ---- 10. CROSS-INDICATORS: FLOW vs COHORT ----
+    { id: 'flow-vs-cohort', compute: (m) => {
+        const out = [];
+        if (m.flowReun > 0 && typeof m.reunFromPriorSafras === 'number') {
+            if (m.reunFromPriorSafras > 0) {
+                out.push({ category: 'info',
+                    title: `Backlog ativo: ${m.reunFromPriorSafras} de ${m.flowReun} reuniões (${pct(m.pctPriorSafras, 0)}) vieram de safras anteriores`,
+                    body: 'Operação colhendo leads de meses passados — sinal de maturação. Se essa % crescer >50%, pode indicar safra atual convertendo devagar.' });
+            } else {
+                out.push({ category: 'info', title: `Todas as ${m.flowReun} reuniões deste mês vieram da safra atual`,
+                    body: 'Conversão rápida. Leads quentes/maduros — boa sinergia marketing↔SDR.' });
             }
         }
-        // 5. Gasto despencou >50% vs mês passado
-        if (p && p.spend > 100 && t.spend < p.spend * 0.5) {
-            out.push({ level: 'warn', title: `${name}: gasto caiu ${Math.round((1 - t.spend/p.spend)*100)}% vs mês passado`,
-                body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)}. Pausou campanha? Reduziu budget propositalmente?` });
+        if (m.cohortStillPending > 0) {
+            out.push({ category: 'info', title: `Pipeline futuro: ${m.cohortStillPending} MQLs desta safra ainda em qualificação`,
+                body: 'Vão amadurecer nos próximos 30-60 dias = reuniões futuras "garantidas". Cobre SDR pra trabalhar antes da temperatura cair.' });
         }
-        // 6. Gasto dobrou mas conversões caíram
-        if (p && p.spend > 100 && t.spend > p.spend * 2 && (t.conversions || 0) < (p.conversions || 0)) {
-            out.push({ level: 'crit', title: `${name}: gasto dobrou mas conversões caíram`,
-                body: `R$ ${p.spend.toFixed(0)} → R$ ${t.spend.toFixed(0)} · ${p.conversions || 0} → ${t.conversions || 0} conv. Eficiência despencou — revisar urgente.` });
+        return out;
+    }},
+
+    // ---- 11. CANAL ORGÂNICO COM VOLUME (oportunidade) ----
+    { id: 'free-channel-opportunity', compute: (m) => {
+        const ch = Object.entries(m.channels)
+            .filter(([o, c]) => c.leads >= 10 && o !== '(sem origem)' && _mktInvestByOrigin(o) === 0)
+            .sort((a, b) => b[1].leads - a[1].leads);
+        if (ch.length === 0) return null;
+        const top = ch[0];
+        return { category: 'opportunity', title: `"${top[0]}" gerou ${top[1].leads} leads sem investimento`,
+            body: 'Canal gratuito trazendo volume. Vale acelerar com SEO content ou testar ads no mesmo tema pra escalar mantendo CPL baixo.' };
+    }},
+
+    // ---- 12. MIX DESIGUAL DE QUALIFICAÇÃO ----
+    { id: 'mix-quality-mql', compute: (m) => {
+        const out = [];
+        const all = Object.entries(m.channels)
+            .filter(([o, c]) => c.leads >= 10 && o !== '(sem origem)')
+            .map(([o, c]) => ({ origin: o, leads: c.leads, mql: c.mql, rate: c.leads > 0 ? c.mql / c.leads : 0 }));
+        if (all.length < 2) return out;
+        const sorted = all.sort((a, b) => b.rate - a.rate);
+        const best = sorted[0], worst = sorted[sorted.length - 1];
+        if (best.rate > 0 && worst.rate > 0 && (best.rate / worst.rate) >= 2) {
+            out.push({ category: 'optimization',
+                title: `Mix desigual: "${best.origin}" qualifica ${Math.round(best.rate*100)}% vs "${worst.origin}" só ${Math.round(worst.rate*100)}%`,
+                body: `"${worst.origin}" tá trazendo lead errado — verifica palavra-chave/segmentação ou redireciona budget pra "${best.origin}".` });
+        }
+        if (worst.rate < 0.10 && worst.leads >= 20) {
+            out.push({ category: 'critical', title: `"${worst.origin}": só ${Math.round(worst.rate*100)}% viram MQL`,
+                body: `${worst.leads} leads entraram, ${worst.mql} qualificados. Canal puxando público errado — revisar urgente.` });
+        }
+        return out;
+    }},
+
+    // ---- 13. GARGALO SDR (MQL alto, reun baixa) ----
+    { id: 'sdr-bottleneck', compute: (m) => {
+        const ch = Object.entries(m.channels)
+            .filter(([o, c]) => o !== '(sem origem)')
+            .map(([o, c]) => ({ origin: o, mql: c.mql, reun: c.reun, rate: c.mql > 0 ? c.reun / c.mql : 0 }))
+            .filter(c => c.mql >= 5 && c.rate < 0.20)
+            .sort((a, b) => b.mql - a.mql);
+        if (ch.length === 0) return null;
+        const top = ch[0];
+        return { category: 'optimization', title: `Gargalo SDR em "${top.origin}": ${top.mql} MQLs, só ${top.reun} reuniões`,
+            body: `Marketing entregou lead qualificado, pré-vendas tá deixando passar (conversão ${Math.round(top.rate*100)}%). Cobre cadência de outreach na semana de chegada.` };
+    }},
+
+    // ---- 14. TOP ROI: ESCALAR ----
+    { id: 'scale-best-roi', compute: (m) => {
+        const ch = Object.entries(m.channels)
+            .filter(([o, c]) => o !== '(sem origem)')
+            .map(([o, c]) => ({ origin: o, invest: _mktInvestByOrigin(o), revenue: c.revenue || 0, ganhos: c.ganhos || 0 }))
+            .filter(c => c.invest > 100 && c.revenue > 0)
+            .sort((a, b) => (b.revenue / b.invest) - (a.revenue / a.invest));
+        if (ch.length === 0) return null;
+        const top = ch[0], roi = top.revenue / top.invest;
+        if (roi < 2) return null;
+        return { category: 'opportunity', title: `Escalar "${top.origin}" — ROI ${roi.toFixed(1)}x`,
+            body: `Cada R$ 1 virou R$ ${roi.toFixed(2)} (${top.ganhos} ganhos sobre R$ ${top.invest.toFixed(0)}). Considere dobrar budget enquanto a eficiência tá alta.` };
+    }},
+
+    // ---- 15. CANAL SANGRANDO (invest sem retorno) ----
+    { id: 'bleeding-channel', compute: (m) => {
+        const ch = Object.entries(m.channels)
+            .filter(([o, c]) => o !== '(sem origem)')
+            .map(([o, c]) => ({ origin: o, invest: _mktInvestByOrigin(o), ganhos: c.ganhos || 0, reun: c.reun || 0 }))
+            .filter(c => c.invest >= 500 && c.ganhos === 0 && c.reun === 0)
+            .sort((a, b) => b.invest - a.invest);
+        if (ch.length === 0) return null;
+        const worst = ch[0];
+        return { category: 'critical', title: `Canal sangrando: "${worst.origin}" — R$ ${worst.invest.toFixed(0)} sem reunião nem ganho`,
+            body: 'Budget escoando sem retorno. Pausa por 30 dias e realoca pra canais com ROI positivo.' };
+    }},
+
+    // ---- 16. VOLUME GRANDE + WIN BAIXA ----
+    { id: 'volume-vs-quality', compute: (m) => {
+        const winRate = m.totalProp > 0 ? (m.totalGanho / m.totalProp) * 100 : 0;
+        if (m.cohortStillPending < 20 || winRate <= 0 || winRate >= 15 || m.totalProp < 5) return null;
+        return { category: 'optimization', title: `Volume bom mas win rate fraca (${pct(winRate)})`,
+            body: `${m.cohortStillPending} MQLs amadurecendo, só ${pct(winRate)} vira ganho. Aperta critério MQL (BANT/MEDDIC) na entrada.` };
+    }}
+];
+
+function _computeMktInsights(m) {
+    const totalLeadsCh = Object.values(m.channels || {}).reduce((s, c) => s + c.leads, 0);
+    const canonicalChannels = {};
+    if (typeof getChannelFromOrigin === 'function') {
+        Object.entries(m.channels || {}).forEach(([origin, ch]) => {
+            const canonical = getChannelFromOrigin(origin);
+            if (!canonicalChannels[canonical]) canonicalChannels[canonical] = { revenue: 0, ganhos: 0 };
+            canonicalChannels[canonical].revenue += ch.revenue || 0;
+            canonicalChannels[canonical].ganhos += ch.ganhos || 0;
+        });
+    }
+    const ctx = { totalLeadsCh, canonicalChannels };
+    const insights = [];
+    for (const rule of MKT_INSIGHT_RULES) {
+        try {
+            const result = rule.compute(m, ctx);
+            if (Array.isArray(result)) result.forEach(r => insights.push(Object.assign({ _ruleId: rule.id }, r)));
+            else if (result) insights.push(Object.assign({ _ruleId: rule.id }, result));
+        } catch (e) {
+            console.warn('[mkt-insights] rule failed:', rule.id, e.message);
         }
     }
-    return out;
+    return insights;
 }
 
 function renderMktInsights(m) {
-    const tips = [];
+    const insights = _computeMktInsights(m);
+    const grouped = { critical: [], opportunity: [], optimization: [], info: [] };
+    insights.forEach(i => { if (grouped[i.category]) grouped[i.category].push(i); });
 
-    // === Alertas de Mídia Paga (Meta/Google/LinkedIn) — prioridade máxima ===
-    const adsAlerts = _buildAdsAlertsForMkt(m.channels);
-    adsAlerts.forEach(a => tips.push(a));
+    const sections = [
+        { key: 'critical',     emoji: '🚨', title: 'Críticos',      color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+        { key: 'opportunity',  emoji: '🚀', title: 'Oportunidades', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+        { key: 'optimization', emoji: '⚡', title: 'Otimizações',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+        { key: 'info',         emoji: 'ℹ️', title: 'Contexto',      color: '#60a5fa', bg: 'rgba(96,165,250,0.10)' }
+    ];
 
-    // === Cross-indicators: Flow vs Cohort (prioritários no topo) ===
-    if (m.flowReun > 0 && typeof m.reunFromPriorSafras === 'number') {
-        if (m.reunFromPriorSafras > 0) {
-            tips.push({
-                level: 'info',
-                title: 'Backlog ativo: ' + m.reunFromPriorSafras + ' de ' + m.flowReun + ' reuniões (' + pct(m.pctPriorSafras, 0) + ') vieram de safras anteriores',
-                body: 'A operação está colhendo leads gerados em meses passados. Bom sinal de maturação — sua geração de mídia tem efeito cauda. Mas atenção: se essa % crescer demais (>50%), pode indicar que a safra ATUAL está convertendo devagar.'
-            });
-        } else {
-            tips.push({
-                level: 'ok',
-                title: 'Todas as ' + m.flowReun + ' reuniões deste mês vieram da safra atual',
-                body: 'Conversão rápida do mês corrente. Pode indicar leads quentes/já maduros entrando — ótima sinergia entre marketing e SDR.'
-            });
-        }
-    }
-    if (m.cohortStillPending > 0) {
-        tips.push({
-            level: 'info',
-            title: 'Pipeline futuro: ' + m.cohortStillPending + ' MQLs desta safra ainda em qualificação',
-            body: 'Esses leads entraram no mês e ainda não viraram reunião. Vão amadurecer nos próximos 30-60 dias = reuniões futuras "garantidas". Cobre SDR pra trabalhar esse backlog antes de cair a temperatura do lead.'
-        });
-    }
-
-    // MQL rate
-    if (m.totalLeads > 10) {
-        if (m.mqlRate < 20) tips.push({ level: 'crit', title: 'Taxa MQL baixa (' + pct(m.mqlRate) + ')', body: 'Poucos leads são corporativos. Revise o copy do form (deixe claro o público-alvo), torne campo de telefone obrigatório, e considere validação de email corp.' });
-        else if (m.mqlRate < 35) tips.push({ level: 'warn', title: 'Taxa MQL pode melhorar (' + pct(m.mqlRate) + ')', body: 'Acima de 35% e benchmark B2B. Teste landing pages mais especificas pelo cargo/segmento.' });
-        else tips.push({ level: 'ok', title: 'Taxa MQL saudável (' + pct(m.mqlRate) + ')', body: 'Otima qualificação no topo do funil. Mantenha.' });
-    }
-    // Reunião rate
-    const reunRate = m.totalMql > 0 ? (m.totalReun / m.totalMql) * 100 : 0;
-    if (m.totalMql > 5) {
-        if (reunRate < 25) tips.push({ level: 'crit', title: 'Conversão MQL\u2192Reunião baixa (' + pct(reunRate) + ')', body: 'Provavel gap de SDR. Revise cadência de outreach (multi-canal: email + ligacao + LinkedIn em 5 dias) e treine speech de qualificação.' });
-        else if (reunRate < 45) tips.push({ level: 'warn', title: 'Conversão MQL\u2192Reunião mediana (' + pct(reunRate) + ')', body: 'Tente personalizar mais a abordagem usando segmento/cargo do lead.' });
-    }
-    // Proposta rate
-    const propRate = m.totalReun > 0 ? (m.totalProp / m.totalReun) * 100 : 0;
-    if (m.totalReun > 3 && propRate < 50) {
-        tips.push({ level: 'warn', title: 'Reunião\u2192Proposta baixa (' + pct(propRate) + ')', body: 'Pode indicar qualificação fraca - adote BANT/MEDDIC nas reunioes pra evitar levar lead não-fit pra proposta.' });
-    }
-    // Win rate
-    const winRate = m.totalProp > 0 ? (m.totalGanho / m.totalProp) * 100 : 0;
-    if (m.totalProp > 3) {
-        if (winRate < 20) tips.push({ level: 'crit', title: 'Win rate baixa (' + pct(winRate) + ')', body: 'Revise pricing, objecoes mais comuns (ver Motivos de Perda), e considere reforcar prova social/cases.' });
-        else if (winRate >= 30) tips.push({ level: 'ok', title: 'Win rate forte (' + pct(winRate) + ')', body: 'Otima conversao final. Foco agora deve ser no topo do funil.' });
-    }
-    // Concentracao de canal
-    const totalLeadsCh = Object.values(m.channels).reduce((s, c) => s + c.leads, 0);
-    const topCh = Object.entries(m.channels).sort((a, b) => b[1].leads - a[1].leads)[0];
-    if (topCh && totalLeadsCh > 30) {
-        const share = (topCh[1].leads / totalLeadsCh) * 100;
-        if (share > 60) tips.push({ level: 'warn', title: 'Dependencia de "' + topCh[0] + '" (' + pct(share, 0) + ')', body: 'Mais da metade dos leads vem de um só canal - risco. Diversifique testando 1-2 canais novos esse mês.' });
-    }
-    // Sem origem
-    const semOrigem = m.channels['(sem origem)'];
-    if (semOrigem && totalLeadsCh > 30 && (semOrigem.leads / totalLeadsCh) > 0.15) {
-        tips.push({ level: 'warn', title: 'Muitos leads sem origem (' + pct((semOrigem.leads/totalLeadsCh)*100, 0) + ')', body: 'Configure UTMs em todas as campanhas e formulários. Sem origem, voce não mede ROI.' });
-    }
-    // ROI
-    if (isFinite(m.roi)) {
-        if (m.roi < 0) tips.push({ level: 'crit', title: 'ROI negativo (' + pct(m.roi, 0) + ')', body: 'Receita gerada esta abaixo do investido. Pause os canais de pior CAC e realoque pros de melhor ROI - veja a tabela "Performance por canal".' });
-        else if (m.roi < 100) tips.push({ level: 'warn', title: 'ROI baixo (' + pct(m.roi, 0) + ')', body: 'Ainda não dobrou o investimento. Foque no canal com maior ROI absoluto.' });
-        else tips.push({ level: 'ok', title: 'ROI saudável (' + pct(m.roi, 0) + ')', body: 'Já paga o investimento. Da pra escalar mantendo o mix atual.' });
-    } else if (m.totalSpend === 0) {
-        tips.push({ level: 'info', title: 'Cadastre o investimento em mídia', body: 'Clique em "Investimento em mídia" no topo pra ter CAC, CPL e ROI por canal.' });
-    }
-    // Top motivo de perda
-    const topLoss = Object.entries(m.lossCounts).sort((a, b) => b[1] - a[1])[0];
-    if (topLoss && topLoss[1] >= 3) {
-        tips.push({ level: 'warn', title: 'Top perda: "' + topLoss[0] + '" (' + topLoss[1] + 'x)', body: 'Padrao recorrente. Crie objeção scripts especificos para esse motivo e treine vendedores.' });
+    let html = '';
+    for (const s of sections) {
+        const items = grouped[s.key];
+        if (items.length === 0) continue;
+        html += `<div style="margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${s.bg};border-radius:6px;margin-bottom:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700;color:${s.color};">
+                <span style="font-size:13px;line-height:1;">${s.emoji}</span>
+                <span>${s.title}</span>
+                <span style="margin-left:auto;background:${s.color};color:#fff;min-width:18px;height:18px;padding:0 6px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">${items.length}</span>
+            </div>
+            ${items.map(i => `
+                <div style="border-left:3px solid ${s.color};background:rgba(255,255,255,0.025);border-radius:5px;padding:9px 12px;margin-bottom:5px;">
+                    <div style="color:#fff;font-size:12.5px;font-weight:600;margin-bottom:3px;line-height:1.3;">${i.title}</div>
+                    <div style="color:#cbd5e1;font-size:11.5px;line-height:1.45;">${i.body}</div>
+                </div>`).join('')}
+        </div>`;
     }
 
-    // === Inteligência cross-canal (oportunidades + otimização) ===
-    const allChannels = Object.entries(m.channels)
-        .filter(([o, c]) => c.leads >= 5 && o !== '(sem origem)');
-
-    // Helper pra estimar invest por canal (usa o que tá no localStorage)
-    const investByChannel = (origin) => {
-        try {
-            const store = JSON.parse(localStorage.getItem('mkt_invest_store') || '{}');
-            const now = new Date();
-            const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-            return Number(store[monthKey]?.[origin]) || 0;
-        } catch { return 0; }
-    };
-
-    // 1. CANAL GRATUITO QUE TRAZ VOLUME (oportunidade SEO/orgânico)
-    const freeChannelsWithVolume = allChannels.filter(([o, c]) => {
-        const inv = investByChannel(o);
-        return inv === 0 && c.leads >= 10;
-    });
-    if (freeChannelsWithVolume.length > 0) {
-        const top = freeChannelsWithVolume.sort((a, b) => b[1].leads - a[1].leads)[0];
-        tips.push({
-            level: 'ok',
-            title: 'Oportunidade: "' + top[0] + '" gerou ' + top[1].leads + ' leads sem investimento',
-            body: 'Canal orgânico/sem custo direto trazendo volume. Vale acelerar com SEO content ou testar campanhas pagas no mesmo tema pra escalar volume mantendo CPL baixo.'
-        });
-    }
-
-    // 2. MELHOR e PIOR CANAL POR CONVERSÃO MQL (canais com >=10 leads)
-    const channelsByMqlRate = allChannels
-        .map(([o, c]) => ({ origin: o, leads: c.leads, mql: c.mql, rate: c.leads > 0 ? c.mql / c.leads : 0 }))
-        .filter(c => c.leads >= 10);
-
-    if (channelsByMqlRate.length >= 2) {
-        const sorted = channelsByMqlRate.sort((a, b) => b.rate - a.rate);
-        const best = sorted[0];
-        const worst = sorted[sorted.length - 1];
-        if (best.rate > 0 && worst.rate > 0 && (best.rate / worst.rate) >= 2) {
-            tips.push({
-                level: 'info',
-                title: 'Mix desigual: "' + best.origin + '" qualifica ' + Math.round(best.rate * 100) + '% vs "' + worst.origin + '" só ' + Math.round(worst.rate * 100) + '%',
-                body: 'Canal "' + worst.origin + '" tá trazendo lead errado — verifica palavra-chave/segmentação ou redirecione budget pra "' + best.origin + '" que qualifica melhor.'
-            });
-        }
-        // Canal com taxa MQL absurdamente baixa
-        if (worst.rate < 0.10 && worst.leads >= 20) {
-            tips.push({
-                level: 'crit',
-                title: '"' + worst.origin + '": só ' + Math.round(worst.rate * 100) + '% viram MQL',
-                body: worst.leads + ' leads entraram, ' + worst.mql + ' qualificados. Canal tá puxando público errado — revise criativos/segmentação urgente.'
-            });
-        }
-    }
-
-    // 3. CANAL COM MQLs MAS SDR NÃO CONVERTEU EM REUNIÃO (gargalo SDR)
-    const channelsHighMqlLowReun = allChannels
-        .map(([o, c]) => ({ origin: o, mql: c.mql, reun: c.reun, rate: c.mql > 0 ? c.reun / c.mql : 0 }))
-        .filter(c => c.mql >= 5 && c.rate < 0.20);
-    if (channelsHighMqlLowReun.length > 0) {
-        const top = channelsHighMqlLowReun.sort((a, b) => b.mql - a.mql)[0];
-        tips.push({
-            level: 'warn',
-            title: 'Gargalo SDR: "' + top.origin + '" tem ' + top.mql + ' MQLs mas só ' + top.reun + ' reuniões',
-            body: 'Marketing entregou lead qualificado mas a pré-vendas tá deixando passar (conversão ' + Math.round(top.rate * 100) + '%). Cobre cadência de outreach na semana de chegada do MQL.'
-        });
-    }
-
-    // 4. MELHOR ROI POR CANAL (escalar)
-    const channelsROI = allChannels
-        .map(([o, c]) => {
-            const inv = investByChannel(o);
-            return { origin: o, invest: inv, revenue: c.revenue || 0, ganhos: c.ganhos || 0 };
-        })
-        .filter(c => c.invest > 100 && c.revenue > 0);
-    if (channelsROI.length >= 1) {
-        const top = channelsROI.sort((a, b) => (b.revenue / b.invest) - (a.revenue / a.invest))[0];
-        const topROI = (top.revenue / top.invest);
-        if (topROI >= 2) {
-            tips.push({
-                level: 'ok',
-                title: '🏆 Escalar "' + top.origin + '" — ROI ' + topROI.toFixed(1) + 'x',
-                body: 'Cada R$ 1 nesse canal virou R$ ' + topROI.toFixed(2) + ' em receita (' + top.ganhos + ' ganhos sobre R$ ' + top.invest.toFixed(0) + ' invest). Considera dobrar budget — escala enquanto a eficiência tá alta.'
-            });
-        }
-    }
-
-    // 5. CANAL COM INVEST MAS SEM GANHO HÁ TEMPO (cortar/realocar)
-    const channelsDrying = allChannels
-        .map(([o, c]) => ({ origin: o, invest: investByChannel(o), ganhos: c.ganhos || 0, reun: c.reun || 0 }))
-        .filter(c => c.invest >= 500 && c.ganhos === 0 && c.reun === 0);
-    if (channelsDrying.length > 0) {
-        const worst = channelsDrying.sort((a, b) => b.invest - a.invest)[0];
-        tips.push({
-            level: 'crit',
-            title: '💸 "' + worst.origin + '": R$ ' + worst.invest.toFixed(0) + ' invest sem reunião nem ganho',
-            body: 'Canal sangrando budget. Pausa por 30 dias e realoca pra canais com ROI positivo. Se mantiver, vai compor 100% do prejuízo desse mês.'
-        });
-    }
-
-    // 6. PIPELINE FUTURO POSITIVO mas WIN RATE BAIXA (qualificação)
-    if (m.cohortStillPending >= 20 && winRate > 0 && winRate < 15 && m.totalProp >= 5) {
-        tips.push({
-            level: 'warn',
-            title: 'Volume bom mas conversão final fraca (Win rate ' + pct(winRate) + ')',
-            body: 'Pipeline tá grande (' + m.cohortStillPending + ' MQLs amadurecendo) mas só ' + pct(winRate) + ' vira ganho. Indica leads "soft" sendo qualificados demais. Aperte critério MQL (BANT/MEDDIC) na entrada pra reduzir desperdício na ponta.'
-        });
-    }
-
-    const colors = {
-        crit: { bg: 'rgba(239,68,68,0.08)', border: '#ef4444', icon: '\uD83D\uDEA8' },
-        warn: { bg: 'rgba(251,191,36,0.08)', border: '#fbbf24', icon: '\u26A0\uFE0F' },
-        ok:   { bg: 'rgba(34,197,94,0.08)', border: '#22c55e', icon: '\u2705' },
-        info: { bg: 'rgba(96,165,250,0.08)', border: '#60a5fa', icon: '\u2139\uFE0F' }
-    };
-    document.getElementById('mktInsights').innerHTML = tips.length === 0
-        ? '<div style="color:#888;text-align:center;padding:20px;font-size:13px;">Carregue mais dados pra gerar insights</div>'
-        : tips.map(t => {
-            const c = colors[t.level];
-            return `<div style="background:${c.bg};border-left:3px solid ${c.border};border-radius:6px;padding:10px 12px;">
-                <div style="color:#fff;font-size:12.5px;font-weight:600;margin-bottom:4px;">${c.icon} ${t.title}</div>
-                <div style="color:#c0c0d0;font-size:11.5px;line-height:1.45;">${t.body}</div>
-            </div>`;
-        }).join('');
+    const el = document.getElementById('mktInsights');
+    if (!el) return;
+    el.innerHTML = html || '<div style="color:#888;text-align:center;padding:20px;font-size:13px;">Sem insights — ajuste o período ou carregue mais dados.</div>';
 }
 
 let mktTimelineChart = null;
