@@ -731,14 +731,15 @@
             50% { opacity: 0.5; }
         }
         .sec1-hero-value {
-            font-size: 40px;
+            font-size: 42px;
             font-weight: 800;
-            color: #fff;
+            color: #4ade80;
             line-height: 1;
             letter-spacing: -1px;
             margin-top: 6px;
+            text-shadow: 0 0 28px rgba(74, 222, 128, 0.25);
         }
-        .sec1-hero-sub { font-size: 13px; color: #cbd5e1; margin-top: 6px; }
+        .sec1-hero-sub { font-size: 13px; color: #cbd5e1; margin-top: 8px; }
         .sec1-hero-chips { display: flex; gap: 10px; flex-wrap: wrap; }
         .sec1-chip {
             background: rgba(255,255,255,0.035);
@@ -762,6 +763,11 @@
             white-space: nowrap;
         }
         .sec1-chip.ipca .sec1-chip-value { color: #c084fc; }
+        .sec1-chip.total {
+            background: rgba(108,63,181,0.10);
+            border-color: rgba(108,63,181,0.30);
+        }
+        .sec1-chip.total .sec1-chip-label { color: #c4b5fd; }
 
         .sec1-chart-card {
             background: rgba(15,15,30,0.45);
@@ -8556,22 +8562,22 @@ function renderSection1() {
     document.getElementById('wonKpis').innerHTML = `
         <div class="sec1-hero">
             <div class="sec1-hero-main">
-                <span class="sec1-hero-eyebrow"><span class="dot"></span>Total já faturado ${periodLabel}</span>
-                <div class="sec1-hero-value">R$ ${formatMoney(totalFaturado)}</div>
-                <div class="sec1-hero-sub">${deals.length} negócio${deals.length === 1 ? '' : 's'} fechado${deals.length === 1 ? '' : 's'} · MRR + IPCA + Setup somados</div>
+                <span class="sec1-hero-eyebrow"><span class="dot"></span>MRR novo fechado ${periodLabel}</span>
+                <div class="sec1-hero-value">R$ ${formatMoney(totalMRRRegular)}</div>
+                <div class="sec1-hero-sub">${deals.length} negócio${deals.length === 1 ? '' : 's'} fechado${deals.length === 1 ? '' : 's'} · receita recorrente que entra todo mês</div>
             </div>
             <div class="sec1-hero-chips">
-                <div class="sec1-chip">
-                    <div class="sec1-chip-label">MRR (novo)</div>
-                    <div class="sec1-chip-value">R$ ${formatMoney(totalMRRRegular)}</div>
-                </div>
                 <div class="sec1-chip ipca">
                     <div class="sec1-chip-label">IPCA (reajuste)</div>
                     <div class="sec1-chip-value">R$ ${formatMoney(totalIPCA)}</div>
                 </div>
                 <div class="sec1-chip">
-                    <div class="sec1-chip-label">Setup</div>
+                    <div class="sec1-chip-label">Setup (one-time)</div>
                     <div class="sec1-chip-value">R$ ${formatMoney(totalSetupWon)}</div>
+                </div>
+                <div class="sec1-chip total">
+                    <div class="sec1-chip-label">Total faturado</div>
+                    <div class="sec1-chip-value">R$ ${formatMoney(totalFaturado)}</div>
                 </div>
             </div>
         </div>
