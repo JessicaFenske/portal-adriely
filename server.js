@@ -1013,23 +1013,20 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // adAnalytics REST — protocol 2.0.0 exige URNs com colons URL-encoded
-    // (%3A) dentro de List(). Sem encoding, LinkedIn rejeita como
-    // "Invalid query parameters".
+    // adAnalytics REST v202506 exige:
+    // - dateRange no formato Rest.li nested object: (start:(year:X,month:Y,day:Z),end:(...))
+    //   (formato "dotted" flat params foi rejeitado com QUERY_PARAM_NOT_ALLOWED)
+    // - timeGranularity=MONTHLY (ALL e DAILY não aceitos nessa combinação)
+    // - accounts com URN unencoded dentro de List()
     const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
-    const accountUrnEncoded = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
-    const fields = 'impressions,clicks,costInLocalCurrency';
+    const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,pivotValues';
+    const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
     const qs = [
         'q=analytics',
         'pivot=CAMPAIGN',
-        'timeGranularity=DAILY',
-        `dateRange.start.day=${startD}`,
-        `dateRange.start.month=${startM}`,
-        `dateRange.start.year=${startY}`,
-        `dateRange.end.day=${endD}`,
-        `dateRange.end.month=${endM}`,
-        `dateRange.end.year=${endY}`,
-        `accounts=List(${accountUrnEncoded})`,
+        'timeGranularity=MONTHLY',
+        `dateRange=${encodeURIComponent(dateRange)}`,
+        `accounts=List(${accountUrn})`,
         `fields=${fields}`
     ].join('&');
     const headers = {
