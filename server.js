@@ -1240,115 +1240,42 @@ async function linkedinAdsDiag() {
     const dateRangeNested = `(start:(year:${sy},month:${sm},day:${sd}),end:(year:${ey},month:${em},day:${ed}))`;
     const urnEnc = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
 
-    // Test 4a: pivots=List(CAMPAIGN) — chave PLURAL + List (mudança nas versões novas)
-    {
-        const qs = [
-            'q=analytics',
-            'pivots=List(CAMPAIGN)',
-            'timeGranularity=MONTHLY',
-            `dateRange=${encodeURIComponent(dateRangeNested)}`,
-            `accounts=List(${urnEnc})`
-        ].join('&');
-        const r = await httpsRawProbe({
-            hostname: 'api.linkedin.com',
-            path: `/rest/adAnalytics?${qs}`,
-            method: 'GET',
-            headers: restHeaders
-        });
-        report.tests.push({
-            name: '4a. pivots=List(CAMPAIGN) — plural + List',
-            path: `GET /rest/adAnalytics?${qs}`,
-            status: r.status, ok: r.ok,
-            elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 800),
-            error: r.error
-        });
-    }
+    // URN raw (colons literais) e URN encoded (%3A)
+    const urnRaw = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
 
-    // Test 4b: sem pivot, timeGranularity=ALL — mínimo absoluto
-    {
-        const qs = [
-            'q=analytics',
-            'timeGranularity=ALL',
-            `dateRange=${encodeURIComponent(dateRangeNested)}`,
-            `accounts=List(${urnEnc})`
-        ].join('&');
-        const r = await httpsRawProbe({
-            hostname: 'api.linkedin.com',
-            path: `/rest/adAnalytics?${qs}`,
-            method: 'GET',
-            headers: restHeaders
-        });
-        report.tests.push({
-            name: '4b. sem pivot + timeGranularity=ALL (mínimo)',
-            path: `GET /rest/adAnalytics?${qs}`,
-            status: r.status, ok: r.ok,
-            elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 800),
-            error: r.error
-        });
-    }
-
-    // Test 4c: pivot singular (antigo) + timeGranularity=ALL + range do mês passado
-    {
-        const qs = [
-            'q=analytics',
-            'pivot=CAMPAIGN',
-            'timeGranularity=ALL',
-            `dateRange=${encodeURIComponent(dateRangeNested)}`,
-            `accounts=List(${urnEnc})`
-        ].join('&');
-        const r = await httpsRawProbe({
-            hostname: 'api.linkedin.com',
-            path: `/rest/adAnalytics?${qs}`,
-            method: 'GET',
-            headers: restHeaders
-        });
-        report.tests.push({
-            name: '4c. pivot singular + timeGranularity=ALL + mês passado',
-            path: `GET /rest/adAnalytics?${qs}`,
-            status: r.status, ok: r.ok,
-            elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 800),
-            error: r.error
-        });
-    }
-
-    // Test 4d: pivots plural + timeGranularity=DAILY + fields
-    {
-        const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues,dateRange';
-        const qs = [
-            'q=analytics',
-            'pivots=List(CAMPAIGN)',
-            'timeGranularity=DAILY',
-            `dateRange=${encodeURIComponent(dateRangeNested)}`,
-            `accounts=List(${urnEnc})`,
-            `fields=${encodeURIComponent(fields)}`
-        ].join('&');
-        const r = await httpsRawProbe({
-            hostname: 'api.linkedin.com',
-            path: `/rest/adAnalytics?${qs}`,
-            method: 'GET',
-            headers: restHeaders
-        });
-        report.tests.push({
-            name: '4d. pivots plural + DAILY + fields',
-            path: `GET /rest/adAnalytics?${qs}`,
-            status: r.status, ok: r.ok,
-            elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 800),
-            error: r.error
-        });
-    }
-
-    // Test 4e: dateRange dot-notation Rest.li 1.0 (fallback)
+    // Test 4a: dateRange RAW (SEM encodeURIComponent) — parênteses/colons/vírgulas literais
+    // Esta é a hipótese principal: LinkedIn Rest.li 2.0 espera esses chars literais na URL
     {
         const qs = [
             'q=analytics',
             'pivot=CAMPAIGN',
             'timeGranularity=MONTHLY',
-            `dateRange.start.year=${sy}`, `dateRange.start.month=${sm}`, `dateRange.start.day=${sd}`,
-            `dateRange.end.year=${ey}`, `dateRange.end.month=${em}`, `dateRange.end.day=${ed}`,
+            `dateRange=${dateRangeNested}`,          // RAW, sem encode
+            `accounts=List(${urnRaw})`               // URN raw dentro do List
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4a. dateRange + accounts TOTALMENTE RAW (sintaxe Rest.li 2.0 literal)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 800),
+            error: r.error
+        });
+    }
+
+    // Test 4b: dateRange RAW + URN encoded (%3A dentro do List raw)
+    {
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${dateRangeNested}`,
             `accounts=List(${urnEnc})`
         ].join('&');
         const r = await httpsRawProbe({
@@ -1358,7 +1285,81 @@ async function linkedinAdsDiag() {
             headers: restHeaders
         });
         report.tests.push({
-            name: '4e. dateRange dot-notation (Rest.li 1.0)',
+            name: '4b. dateRange RAW + accounts=List(URN encoded)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 800),
+            error: r.error
+        });
+    }
+
+    // Test 4c: RAW + pivots plural + List
+    {
+        const qs = [
+            'q=analytics',
+            'pivots=List(CAMPAIGN)',
+            'timeGranularity=MONTHLY',
+            `dateRange=${dateRangeNested}`,
+            `accounts=List(${urnRaw})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4c. RAW + pivots=List(CAMPAIGN) plural',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 800),
+            error: r.error
+        });
+    }
+
+    // Test 4d: RAW + q=statistics (finder alternativo)
+    {
+        const qs = [
+            'q=statistics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${dateRangeNested}`,
+            `accounts=List(${urnRaw})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4d. RAW + q=statistics (finder alternativo)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 800),
+            error: r.error
+        });
+    }
+
+    // Test 4e: RAW + sem pivot + timeGranularity=ALL (mínimo)
+    {
+        const qs = [
+            'q=analytics',
+            'timeGranularity=ALL',
+            `dateRange=${dateRangeNested}`,
+            `accounts=List(${urnRaw})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4e. RAW + sem pivot + timeGranularity=ALL (mínimo)',
             path: `GET /rest/adAnalytics?${qs}`,
             status: r.status, ok: r.ok,
             elementCount: r.json?.elements?.length ?? null,
