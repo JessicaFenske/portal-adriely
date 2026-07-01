@@ -1008,19 +1008,22 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // adAnalytics REST — usa formato dotted (v202405+ deprecou o nested parens)
+    // adAnalytics REST — dotted format (v202405+) + MONTHLY granularity
+    // (ALL foi deprecado em versões recentes; MONTHLY com dateRange de 1 mês retorna
+    // 1 row por campanha, que é o resultado que queremos)
+    const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
     const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues';
     const qs = [
         'q=analytics',
         'pivot=CAMPAIGN',
-        'timeGranularity=ALL',
+        'timeGranularity=MONTHLY',
         `dateRange.start.day=${startD}`,
         `dateRange.start.month=${startM}`,
         `dateRange.start.year=${startY}`,
         `dateRange.end.day=${endD}`,
         `dateRange.end.month=${endM}`,
         `dateRange.end.year=${endY}`,
-        `accounts=List(urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID})`,
+        `accounts=List(${accountUrn})`,
         `fields=${fields}`
     ].join('&');
     const headers = {
