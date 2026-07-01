@@ -1112,6 +1112,258 @@ function normalizeLinkedinAds(insights, campaignNames) {
     };
 }
 
+// Probe HTTPS que NÃO joga erro — retorna {status, ok, bodySnippet, json, error}
+// Usado pelo diagnóstico pra ver a resposta crua de cada camada
+function httpsRawProbe({ hostname, path: p, method, headers, body }) {
+    return new Promise((resolve) => {
+        const opts = { hostname, path: p, method, headers: Object.assign({}, headers || {}) };
+        if (body && !opts.headers['Content-Length']) {
+            opts.headers['Content-Length'] = Buffer.byteLength(body);
+        }
+        const r = https.request(opts, (rr) => {
+            const chunks = [];
+            rr.on('data', c => chunks.push(c));
+            rr.on('end', () => {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                let json = null;
+                try { json = JSON.parse(raw); } catch {}
+                resolve({
+                    status: rr.statusCode,
+                    ok: rr.statusCode >= 200 && rr.statusCode < 300,
+                    bodySnippet: raw.slice(0, 1500),
+                    json,
+                    error: null
+                });
+            });
+        });
+        r.on('error', (e) => resolve({ status: 0, ok: false, bodySnippet: '', json: null, error: e.message }));
+        r.setTimeout(15000, () => { r.destroy(); resolve({ status: 0, ok: false, bodySnippet: '', json: null, error: 'timeout' }); });
+        if (body) r.write(body);
+        r.end();
+    });
+}
+
+// Diagnóstico camada-por-camada da integração LinkedIn Ads.
+// Retorna cada teste com status/body para identificar EXATAMENTE onde quebra.
+async function linkedinAdsDiag() {
+    const report = {
+        fetchedAt: new Date().toISOString(),
+        config: {
+            hasClientId: !!LINKEDIN_CLIENT_ID,
+            hasClientSecret: !!LINKEDIN_CLIENT_SECRET,
+            hasRefreshToken: !!LINKEDIN_REFRESH_TOKEN,
+            adAccountId: LINKEDIN_AD_ACCOUNT_ID || '(vazio)',
+            apiVersion: LINKEDIN_API_VERSION
+        },
+        tests: []
+    };
+
+    // Test 1: OAuth refresh token → access token
+    let accessToken = null;
+    {
+        const body = `grant_type=refresh_token`
+                   + `&refresh_token=${encodeURIComponent(LINKEDIN_REFRESH_TOKEN)}`
+                   + `&client_id=${encodeURIComponent(LINKEDIN_CLIENT_ID)}`
+                   + `&client_secret=${encodeURIComponent(LINKEDIN_CLIENT_SECRET)}`;
+        const r = await httpsRawProbe({
+            hostname: 'www.linkedin.com',
+            path: '/oauth/v2/accessToken',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body
+        });
+        accessToken = r.json?.access_token || null;
+        report.tests.push({
+            name: '1. OAuth refresh_token → access_token',
+            path: 'POST www.linkedin.com/oauth/v2/accessToken',
+            status: r.status,
+            ok: r.ok && !!accessToken,
+            scope: r.json?.scope || null,
+            tokenPreview: accessToken ? (accessToken.slice(0, 12) + '…') : null,
+            bodySnippet: r.ok ? '(token ocultado — scope: ' + (r.json?.scope || 'N/A') + ')' : r.bodySnippet,
+            error: r.error
+        });
+    }
+    if (!accessToken) {
+        report.diagnosis = '🔴 OAuth falhou — verifica LINKEDIN_CLIENT_ID/SECRET/REFRESH_TOKEN.';
+        return report;
+    }
+
+    const restHeaders = {
+        'Authorization': 'Bearer ' + accessToken,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0'
+    };
+
+    // Test 2: /v2/userinfo — token válido em geral (sem escopo específico de ads)
+    {
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: '/v2/userinfo',
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+        });
+        report.tests.push({
+            name: '2. Token básico (/v2/userinfo)',
+            path: 'GET /v2/userinfo',
+            status: r.status, ok: r.ok,
+            bodySnippet: r.bodySnippet.slice(0, 300),
+            error: r.error
+        });
+    }
+
+    // Test 3: /rest/adAccounts/{ID} — acesso à conta específica (prova escopo r_ads)
+    {
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAccounts/${LINKEDIN_AD_ACCOUNT_ID}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: `3. Acesso à AdAccount ${LINKEDIN_AD_ACCOUNT_ID}`,
+            path: `GET /rest/adAccounts/${LINKEDIN_AD_ACCOUNT_ID}`,
+            status: r.status, ok: r.ok,
+            accountName: r.json?.name || null,
+            currency: r.json?.currency || null,
+            bodySnippet: r.bodySnippet.slice(0, 300),
+            error: r.error
+        });
+    }
+
+    // Data range: mês atual (do dia 1 até hoje)
+    const now = new Date();
+    const startY = now.getFullYear(), startM = now.getMonth() + 1, startD = 1;
+    const endY = now.getFullYear(), endM = now.getMonth() + 1, endD = now.getDate();
+    const dateRangeNested = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
+    const urnRaw = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
+    const urnEnc = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
+
+    // Test 4a: adAnalytics — accounts com List() wrapper (formato clássico Rest.li 2.0)
+    {
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `accounts=List(${urnEnc})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4a. adAnalytics — accounts=List(URN encoded)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 500),
+            error: r.error
+        });
+    }
+
+    // Test 4b: adAnalytics — accounts=URN direto (sem List, sem encode)
+    {
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${dateRangeNested}`,
+            `accounts=${urnRaw}`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4b. adAnalytics — accounts=URN raw (sem List, sem encode)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 500),
+            error: r.error
+        });
+    }
+
+    // Test 4c: adAnalytics — com fields explicit
+    {
+        const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues,dateRange';
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `accounts=List(${urnEnc})`,
+            `fields=${encodeURIComponent(fields)}`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4c. adAnalytics — List() encoded + fields explicit',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 500),
+            error: r.error
+        });
+    }
+
+    // Test 4d: adAnalytics — versão 202405 (mais estável, força override)
+    {
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=MONTHLY',
+            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `accounts=List(${urnEnc})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + accessToken,
+                'LinkedIn-Version': '202405',
+                'X-Restli-Protocol-Version': '2.0.0'
+            }
+        });
+        report.tests.push({
+            name: '4d. adAnalytics — LinkedIn-Version=202405 (força versão estável)',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 500),
+            error: r.error
+        });
+    }
+
+    // Diagnóstico automático
+    const t = report.tests;
+    if (!t[1].ok) {
+        report.diagnosis = '🔴 Token OAuth não consegue nem chamar /v2/userinfo. Refresh token pode ter expirado ou credenciais erradas.';
+    } else if (!t[2].ok) {
+        report.diagnosis = `🔴 Token OAuth VÁLIDO, mas SEM ESCOPO r_ads/r_ads_reporting. Precisa regerar refresh_token com esses escopos incluídos.`;
+    } else {
+        const analyticsTests = t.slice(3);
+        const anyOk = analyticsTests.find(x => x.ok);
+        if (anyOk) {
+            report.diagnosis = `🟢 Encontrei formato que funciona: "${anyOk.name}". Preciso ajustar linkedinAdsFetchMonth pra usar essa combinação.`;
+        } else {
+            report.diagnosis = '🟡 Token e conta OK, mas TODAS as variantes de adAnalytics falharam. Prováveis causas: (1) LinkedIn Ads Reporting API não está habilitada no App; (2) A conta não tem dados no mês; (3) Precisa aprovar o app pra Marketing Developer Platform.';
+        }
+    }
+
+    return report;
+}
+
 function linkedinAdsMock() {
     return {
         source: 'linkedin-ads', mock: true,
@@ -1690,6 +1942,21 @@ const server = http.createServer(async (req, res) => {
             return jsonReply(res, 200, data);
         } catch (e) {
             return jsonReply(res, 502, { error: e.message, source: 'linkedin-ads' });
+        }
+    }
+    // Diagnóstico camada-por-camada — só admin
+    if (urlPath === '/api/marketing/linkedin-diag' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
+        if (!isLinkedinAdsConfigured()) {
+            return jsonReply(res, 200, { error: 'LinkedIn não configurado — faltando env vars', configured: false });
+        }
+        try {
+            const report = await linkedinAdsDiag();
+            return jsonReply(res, 200, report);
+        } catch (e) {
+            return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
         }
     }
     // Endpoint combinado — única chamada do frontend pra puxar tudo
