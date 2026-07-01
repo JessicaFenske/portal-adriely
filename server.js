@@ -1008,10 +1008,11 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // adAnalytics REST — versão minimal pra debug
-    // Fields: core apenas. Removido pivotValues (auto-incluído) e conversion-specific
-    // (não disponíveis em todos os accounts, causam ILLEGAL_ARGUMENT)
+    // adAnalytics REST — protocol 2.0.0 exige URNs com colons URL-encoded
+    // (%3A) dentro de List(). Sem encoding, LinkedIn rejeita como
+    // "Invalid query parameters".
     const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
+    const accountUrnEncoded = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
     const fields = 'impressions,clicks,costInLocalCurrency';
     const qs = [
         'q=analytics',
@@ -1023,7 +1024,7 @@ async function linkedinAdsFetchMonth(monthOffset) {
         `dateRange.end.day=${endD}`,
         `dateRange.end.month=${endM}`,
         `dateRange.end.year=${endY}`,
-        `accounts=List(${accountUrn})`,
+        `accounts=List(${accountUrnEncoded})`,
         `fields=${fields}`
     ].join('&');
     const headers = {
