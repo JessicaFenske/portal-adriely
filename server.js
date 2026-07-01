@@ -1000,49 +1000,53 @@ async function linkedinAccessToken() {
 }
 
 // monthOffset: 0 = mês atual, -1 = mês passado
+// Formato descoberto via diagnóstico (2026-07-01):
+//   - dateRange RAW (sem URL encoding — sintaxe Rest.li 2.0 literal)
+//   - accounts=List(URN encoded) — parênteses do List raw, URN encoded (%3A)
+//   - pivot=CAMPAIGN (singular), q=analytics, LinkedIn-Version=202506
 async function linkedinAdsFetchMonth(monthOffset) {
     const accessToken = await linkedinAccessToken();
     const now = new Date();
     const ref = new Date(now.getFullYear(), now.getMonth() + (monthOffset || 0), 1);
     const startY = ref.getFullYear(), startM = ref.getMonth() + 1, startD = 1;
     // Fim: último dia do mês ref (ou hoje se for mês atual)
+    // Edge case: se hoje for dia 1 do mês, força end=start (LinkedIn aceita range de 1 dia)
     let endY, endM, endD;
     if (monthOffset === 0 || monthOffset === undefined) {
-        endY = now.getFullYear(); endM = now.getMonth() + 1; endD = now.getDate();
+        endY = now.getFullYear(); endM = now.getMonth() + 1; endD = Math.max(now.getDate(), 1);
     } else {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // TESTE: remove List() wrapper — algumas versões LinkedIn aceitam URN direto
-    // Também tenta variante que passa accounts como parâmetro no formato reduzido
-    const accountUrn = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
+    const accountUrnEnc = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
     const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
+    const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues,dateRange';
     const qs = [
         'q=analytics',
         'pivot=CAMPAIGN',
         'timeGranularity=MONTHLY',
-        `dateRange=${encodeURIComponent(dateRange)}`,
-        `accounts=${accountUrn}`  // sem List() wrapper
+        `dateRange=${dateRange}`,                        // RAW — parênteses e colons literais
+        `accounts=List(${accountUrnEnc})`,               // List raw, URN encoded dentro
+        `fields=${fields}`
     ].join('&');
     const headers = {
         'Authorization': 'Bearer ' + accessToken,
         'LinkedIn-Version': LINKEDIN_API_VERSION,
         'X-Restli-Protocol-Version': '2.0.0'
     };
-    // Debug: loga URL crua sendo enviada (Render Logs)
-    console.log(`[linkedinAds] version=${LINKEDIN_API_VERSION} · URL: /rest/adAnalytics?${qs}`);
+    console.log(`[linkedinAds] URL: /rest/adAnalytics?${qs}`);
     const insights = await httpsJsonRequest({
         hostname: 'api.linkedin.com',
         path: `/rest/adAnalytics?${qs}`,
         method: 'GET',
         headers
     });
-    // Pega nomes das campanhas — chamada extra (analytics retorna URN da campanha mas não nome)
-    const campaignNames = await linkedinFetchCampaignNames(accessToken, insights, accountUrn).catch(() => ({}));
+    const campaignNames = await linkedinFetchCampaignNames(accessToken, insights).catch(() => ({}));
     return normalizeLinkedinAds(insights, campaignNames);
 }
 
-async function linkedinFetchCampaignNames(accessToken, insights, accountUrn) {
+// Busca nomes das campanhas usadas — mesmo formato Rest.li 2.0 do adAnalytics
+async function linkedinFetchCampaignNames(accessToken, insights) {
     const urns = new Set();
     for (const r of (insights.elements || [])) {
         const pv = (r.pivotValues || [])[0];
@@ -1056,11 +1060,11 @@ async function linkedinFetchCampaignNames(accessToken, insights, accountUrn) {
         'X-Restli-Protocol-Version': '2.0.0'
     };
     const map = {};
-    // Busca em lotes pequenos pra não estourar tamanho de URL
     for (let i = 0; i < ids.length; i += 20) {
         const batch = ids.slice(i, i + 20);
-        const idsParam = batch.map(id => `List(urn%3Ali%3AsponsoredCampaign%3A${id})`).join(',');
-        const path = `/rest/adCampaigns?ids=${idsParam}`;
+        // Rest.li 2.0 batch: ids=List(urn1,urn2,urn3) — UM List com todos os URNs separados por vírgula
+        const urnList = batch.map(id => `urn%3Ali%3AsponsoredCampaign%3A${id}`).join(',');
+        const path = `/rest/adCampaigns?ids=List(${urnList})`;
         try {
             const j = await httpsJsonRequest({ hostname: 'api.linkedin.com', path, method: 'GET', headers });
             for (const k of Object.keys(j.results || {})) {
