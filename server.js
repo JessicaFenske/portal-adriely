@@ -1231,19 +1231,20 @@ async function linkedinAdsDiag() {
         });
     }
 
-    // Data range: mês atual (do dia 1 até hoje)
+    // Range: mês PASSADO inteiro (mais seguro — hoje pode ser dia 1)
     const now = new Date();
-    const startY = now.getFullYear(), startM = now.getMonth() + 1, startD = 1;
-    const endY = now.getFullYear(), endM = now.getMonth() + 1, endD = now.getDate();
-    const dateRangeNested = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
-    const urnRaw = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // dia 0 = último dia do mês anterior
+    const sy = lastMonthStart.getFullYear(), sm = lastMonthStart.getMonth() + 1, sd = 1;
+    const ey = lastMonthEnd.getFullYear(), em = lastMonthEnd.getMonth() + 1, ed = lastMonthEnd.getDate();
+    const dateRangeNested = `(start:(year:${sy},month:${sm},day:${sd}),end:(year:${ey},month:${em},day:${ed}))`;
     const urnEnc = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
 
-    // Test 4a: adAnalytics — accounts com List() wrapper (formato clássico Rest.li 2.0)
+    // Test 4a: pivots=List(CAMPAIGN) — chave PLURAL + List (mudança nas versões novas)
     {
         const qs = [
             'q=analytics',
-            'pivot=CAMPAIGN',
+            'pivots=List(CAMPAIGN)',
             'timeGranularity=MONTHLY',
             `dateRange=${encodeURIComponent(dateRangeNested)}`,
             `accounts=List(${urnEnc})`
@@ -1255,23 +1256,22 @@ async function linkedinAdsDiag() {
             headers: restHeaders
         });
         report.tests.push({
-            name: '4a. adAnalytics — accounts=List(URN encoded)',
+            name: '4a. pivots=List(CAMPAIGN) — plural + List',
             path: `GET /rest/adAnalytics?${qs}`,
             status: r.status, ok: r.ok,
             elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 500),
+            bodySnippet: r.bodySnippet.slice(0, 800),
             error: r.error
         });
     }
 
-    // Test 4b: adAnalytics — accounts=URN direto (sem List, sem encode)
+    // Test 4b: sem pivot, timeGranularity=ALL — mínimo absoluto
     {
         const qs = [
             'q=analytics',
-            'pivot=CAMPAIGN',
-            'timeGranularity=MONTHLY',
-            `dateRange=${dateRangeNested}`,
-            `accounts=${urnRaw}`
+            'timeGranularity=ALL',
+            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `accounts=List(${urnEnc})`
         ].join('&');
         const r = await httpsRawProbe({
             hostname: 'api.linkedin.com',
@@ -1280,22 +1280,47 @@ async function linkedinAdsDiag() {
             headers: restHeaders
         });
         report.tests.push({
-            name: '4b. adAnalytics — accounts=URN raw (sem List, sem encode)',
+            name: '4b. sem pivot + timeGranularity=ALL (mínimo)',
             path: `GET /rest/adAnalytics?${qs}`,
             status: r.status, ok: r.ok,
             elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 500),
+            bodySnippet: r.bodySnippet.slice(0, 800),
             error: r.error
         });
     }
 
-    // Test 4c: adAnalytics — com fields explicit
+    // Test 4c: pivot singular (antigo) + timeGranularity=ALL + range do mês passado
+    {
+        const qs = [
+            'q=analytics',
+            'pivot=CAMPAIGN',
+            'timeGranularity=ALL',
+            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `accounts=List(${urnEnc})`
+        ].join('&');
+        const r = await httpsRawProbe({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adAnalytics?${qs}`,
+            method: 'GET',
+            headers: restHeaders
+        });
+        report.tests.push({
+            name: '4c. pivot singular + timeGranularity=ALL + mês passado',
+            path: `GET /rest/adAnalytics?${qs}`,
+            status: r.status, ok: r.ok,
+            elementCount: r.json?.elements?.length ?? null,
+            bodySnippet: r.bodySnippet.slice(0, 800),
+            error: r.error
+        });
+    }
+
+    // Test 4d: pivots plural + timeGranularity=DAILY + fields
     {
         const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues,dateRange';
         const qs = [
             'q=analytics',
-            'pivot=CAMPAIGN',
-            'timeGranularity=MONTHLY',
+            'pivots=List(CAMPAIGN)',
+            'timeGranularity=DAILY',
             `dateRange=${encodeURIComponent(dateRangeNested)}`,
             `accounts=List(${urnEnc})`,
             `fields=${encodeURIComponent(fields)}`
@@ -1307,58 +1332,54 @@ async function linkedinAdsDiag() {
             headers: restHeaders
         });
         report.tests.push({
-            name: '4c. adAnalytics — List() encoded + fields explicit',
+            name: '4d. pivots plural + DAILY + fields',
             path: `GET /rest/adAnalytics?${qs}`,
             status: r.status, ok: r.ok,
             elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 500),
+            bodySnippet: r.bodySnippet.slice(0, 800),
             error: r.error
         });
     }
 
-    // Test 4d: adAnalytics — versão 202405 (mais estável, força override)
+    // Test 4e: dateRange dot-notation Rest.li 1.0 (fallback)
     {
         const qs = [
             'q=analytics',
             'pivot=CAMPAIGN',
             'timeGranularity=MONTHLY',
-            `dateRange=${encodeURIComponent(dateRangeNested)}`,
+            `dateRange.start.year=${sy}`, `dateRange.start.month=${sm}`, `dateRange.start.day=${sd}`,
+            `dateRange.end.year=${ey}`, `dateRange.end.month=${em}`, `dateRange.end.day=${ed}`,
             `accounts=List(${urnEnc})`
         ].join('&');
         const r = await httpsRawProbe({
             hostname: 'api.linkedin.com',
             path: `/rest/adAnalytics?${qs}`,
             method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + accessToken,
-                'LinkedIn-Version': '202405',
-                'X-Restli-Protocol-Version': '2.0.0'
-            }
+            headers: restHeaders
         });
         report.tests.push({
-            name: '4d. adAnalytics — LinkedIn-Version=202405 (força versão estável)',
+            name: '4e. dateRange dot-notation (Rest.li 1.0)',
             path: `GET /rest/adAnalytics?${qs}`,
             status: r.status, ok: r.ok,
             elementCount: r.json?.elements?.length ?? null,
-            bodySnippet: r.bodySnippet.slice(0, 500),
+            bodySnippet: r.bodySnippet.slice(0, 800),
             error: r.error
         });
     }
 
-    // Diagnóstico automático
+    // Diagnóstico automático — ignora /v2/userinfo (falha esperada sem escopo openid)
     const t = report.tests;
-    if (!t[1].ok) {
-        report.diagnosis = '🔴 Token OAuth não consegue nem chamar /v2/userinfo. Refresh token pode ter expirado ou credenciais erradas.';
+    const analyticsTests = t.slice(3);
+    const anyOk = analyticsTests.find(x => x.ok);
+    if (!t[0].ok) {
+        report.diagnosis = '🔴 OAuth falhou — verifica credenciais.';
     } else if (!t[2].ok) {
-        report.diagnosis = `🔴 Token OAuth VÁLIDO, mas SEM ESCOPO r_ads/r_ads_reporting. Precisa regerar refresh_token com esses escopos incluídos.`;
+        report.diagnosis = `🔴 Token não acessa a AdAccount ${LINKEDIN_AD_ACCOUNT_ID}. Verifica se o token foi gerado pelo mesmo user com acesso à conta.`;
+    } else if (anyOk) {
+        report.diagnosis = `🟢 FUNCIONOU: "${anyOk.name}". Vou ajustar linkedinAdsFetchMonth pra usar essa combinação.`;
+        report.workingFormat = anyOk.name;
     } else {
-        const analyticsTests = t.slice(3);
-        const anyOk = analyticsTests.find(x => x.ok);
-        if (anyOk) {
-            report.diagnosis = `🟢 Encontrei formato que funciona: "${anyOk.name}". Preciso ajustar linkedinAdsFetchMonth pra usar essa combinação.`;
-        } else {
-            report.diagnosis = '🟡 Token e conta OK, mas TODAS as variantes de adAnalytics falharam. Prováveis causas: (1) LinkedIn Ads Reporting API não está habilitada no App; (2) A conta não tem dados no mês; (3) Precisa aprovar o app pra Marketing Developer Platform.';
-        }
+        report.diagnosis = '🟡 OAuth OK, conta acessível, mas TODAS as variantes de adAnalytics deram ILLEGAL_ARGUMENT. Verificar se a App LinkedIn tem produto "Marketing Developer Platform" ativado + "Ads Reporting API" aprovado.';
     }
 
     return report;
