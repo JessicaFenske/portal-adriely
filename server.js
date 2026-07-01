@@ -1013,12 +1013,11 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // adAnalytics REST v202506 exige:
-    // - dateRange no formato Rest.li nested object: (start:(year:X,month:Y,day:Z),end:(...))
-    //   (formato "dotted" flat params foi rejeitado com QUERY_PARAM_NOT_ALLOWED)
-    // - timeGranularity=MONTHLY (ALL e DAILY não aceitos nessa combinação)
-    // - accounts com URN unencoded dentro de List()
-    const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
+    // adAnalytics REST v202506 exige combo:
+    // - dateRange Rest.li nested: (start:(year:X,month:Y,day:Z),end:(...)) URL-encoded
+    // - timeGranularity=MONTHLY
+    // - URN dentro de List() com colons URL-encoded (%3A) — Rest.li 2.0.0
+    const accountUrn = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
     const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,pivotValues';
     const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
     const qs = [
