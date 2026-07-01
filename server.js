@@ -714,12 +714,27 @@ function httpsJsonRequest({ hostname, path: p, method, headers, body }) {
             rr.on('end', () => {
                 const raw = Buffer.concat(chunks).toString('utf8');
                 let json;
-                try { json = JSON.parse(raw); } catch { json = { _raw: raw }; }
+                try { json = JSON.parse(raw); } catch { json = null; }
                 if (rr.statusCode < 200 || rr.statusCode >= 300) {
-                    const msg = (json && (json.error?.message || json.error_description || json.error || json._raw)) || `HTTP ${rr.statusCode}`;
-                    return reject(new Error(`HTTP ${rr.statusCode}: ${typeof msg === 'string' ? msg.slice(0,300) : JSON.stringify(msg).slice(0,300)}`));
+                    // Loga o body cru pra debug em Render logs
+                    console.warn(`[httpsJsonRequest] HTTP ${rr.statusCode} ${hostname}${p}`);
+                    console.warn(`[httpsJsonRequest] body: ${raw.slice(0, 600)}`);
+                    // Tenta várias estruturas de erro comuns (Meta, Google, LinkedIn, etc)
+                    let msg;
+                    if (json) {
+                        msg = json.error?.message
+                           || json.error_description
+                           || json.message
+                           || json.serviceErrorMessage
+                           || (typeof json.error === 'string' ? json.error : null)
+                           || (json.errors && json.errors[0]?.message)
+                           || JSON.stringify(json).slice(0, 400);
+                    } else {
+                        msg = raw.slice(0, 400) || `HTTP ${rr.statusCode}`;
+                    }
+                    return reject(new Error(`HTTP ${rr.statusCode}: ${msg}`));
                 }
-                resolve(json);
+                resolve(json || {});
             });
         });
         r.on('error', reject);
