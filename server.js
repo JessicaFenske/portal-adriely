@@ -1008,25 +1008,25 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
-    // adAnalytics rest endpoint — q=analytics, pivot por campanha
-    const fields = [
-        'impressions', 'clicks', 'costInLocalCurrency',
-        'externalWebsiteConversions', 'oneClickLeads',
-        'pivotValues', 'dateRange'
-    ].join(',');
-    const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
-    const qs = `q=analytics`
-             + `&pivot=CAMPAIGN`
-             + `&dateRange=${encodeURIComponent(dateRange)}`
-             + `&timeGranularity=ALL`
-             + `&accounts=List(${encodeURIComponent(accountUrn)})`
-             + `&fields=${encodeURIComponent(fields)}`;
+    // adAnalytics REST — usa formato dotted (v202405+ deprecou o nested parens)
+    const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues';
+    const qs = [
+        'q=analytics',
+        'pivot=CAMPAIGN',
+        'timeGranularity=ALL',
+        `dateRange.start.day=${startD}`,
+        `dateRange.start.month=${startM}`,
+        `dateRange.start.year=${startY}`,
+        `dateRange.end.day=${endD}`,
+        `dateRange.end.month=${endM}`,
+        `dateRange.end.year=${endY}`,
+        `accounts=List(urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID})`,
+        `fields=${fields}`
+    ].join('&');
     const headers = {
         'Authorization': 'Bearer ' + accessToken,
         'LinkedIn-Version': LINKEDIN_API_VERSION,
-        'X-Restli-Protocol-Version': '2.0.0',
-        'Content-Type': 'application/json'
+        'X-Restli-Protocol-Version': '2.0.0'
     };
     const insights = await httpsJsonRequest({
         hostname: 'api.linkedin.com',
