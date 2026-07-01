@@ -1013,8 +1013,8 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // TESTE MINIMAL — sem fields customizados (LinkedIn retorna defaults)
-    // Isola se erro é de query structure ou de field validation
+    // TESTE: remove List() wrapper — algumas versões LinkedIn aceitam URN direto
+    // Também tenta variante que passa accounts como parâmetro no formato reduzido
     const accountUrn = `urn%3Ali%3AsponsoredAccount%3A${LINKEDIN_AD_ACCOUNT_ID}`;
     const dateRange = `(start:(year:${startY},month:${startM},day:${startD}),end:(year:${endY},month:${endM},day:${endD}))`;
     const qs = [
@@ -1022,7 +1022,7 @@ async function linkedinAdsFetchMonth(monthOffset) {
         'pivot=CAMPAIGN',
         'timeGranularity=MONTHLY',
         `dateRange=${encodeURIComponent(dateRange)}`,
-        `accounts=List(${accountUrn})`
+        `accounts=${accountUrn}`  // sem List() wrapper
     ].join('&');
     const headers = {
         'Authorization': 'Bearer ' + accessToken,
