@@ -718,19 +718,24 @@ function httpsJsonRequest({ hostname, path: p, method, headers, body }) {
                 if (rr.statusCode < 200 || rr.statusCode >= 300) {
                     // Loga o body cru pra debug em Render logs
                     console.warn(`[httpsJsonRequest] HTTP ${rr.statusCode} ${hostname}${p}`);
-                    console.warn(`[httpsJsonRequest] body: ${raw.slice(0, 600)}`);
+                    console.warn(`[httpsJsonRequest] body: ${raw.slice(0, 1500)}`);
                     // Tenta várias estruturas de erro comuns (Meta, Google, LinkedIn, etc)
                     let msg;
                     if (json) {
-                        msg = json.error?.message
+                        // LinkedIn: quando message diz "see errorDetails", inclui esse detalhe
+                        const baseMsg = json.error?.message
                            || json.error_description
                            || json.message
                            || json.serviceErrorMessage
                            || (typeof json.error === 'string' ? json.error : null)
-                           || (json.errors && json.errors[0]?.message)
-                           || JSON.stringify(json).slice(0, 400);
+                           || (json.errors && json.errors[0]?.message);
+                        if (baseMsg && json.errorDetails) {
+                            msg = `${baseMsg} · errorDetails: ${JSON.stringify(json.errorDetails).slice(0, 500)}`;
+                        } else {
+                            msg = baseMsg || JSON.stringify(json).slice(0, 800);
+                        }
                     } else {
-                        msg = raw.slice(0, 400) || `HTTP ${rr.statusCode}`;
+                        msg = raw.slice(0, 800) || `HTTP ${rr.statusCode}`;
                     }
                     return reject(new Error(`HTTP ${rr.statusCode}: ${msg}`));
                 }
