@@ -1008,15 +1008,15 @@ async function linkedinAdsFetchMonth(monthOffset) {
         const lastDay = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
         endY = lastDay.getFullYear(); endM = lastDay.getMonth() + 1; endD = lastDay.getDate();
     }
-    // adAnalytics REST — dotted format (v202405+) + MONTHLY granularity
-    // (ALL foi deprecado em versões recentes; MONTHLY com dateRange de 1 mês retorna
-    // 1 row por campanha, que é o resultado que queremos)
+    // adAnalytics REST — versão minimal pra debug
+    // Fields: core apenas. Removido pivotValues (auto-incluído) e conversion-specific
+    // (não disponíveis em todos os accounts, causam ILLEGAL_ARGUMENT)
     const accountUrn = `urn:li:sponsoredAccount:${LINKEDIN_AD_ACCOUNT_ID}`;
-    const fields = 'impressions,clicks,costInLocalCurrency,externalWebsiteConversions,oneClickLeads,pivotValues';
+    const fields = 'impressions,clicks,costInLocalCurrency';
     const qs = [
         'q=analytics',
         'pivot=CAMPAIGN',
-        'timeGranularity=MONTHLY',
+        'timeGranularity=DAILY',
         `dateRange.start.day=${startD}`,
         `dateRange.start.month=${startM}`,
         `dateRange.start.year=${startY}`,
@@ -1031,6 +1031,8 @@ async function linkedinAdsFetchMonth(monthOffset) {
         'LinkedIn-Version': LINKEDIN_API_VERSION,
         'X-Restli-Protocol-Version': '2.0.0'
     };
+    // Debug: loga URL crua sendo enviada (Render Logs)
+    console.log(`[linkedinAds] version=${LINKEDIN_API_VERSION} · URL: /rest/adAnalytics?${qs}`);
     const insights = await httpsJsonRequest({
         hostname: 'api.linkedin.com',
         path: `/rest/adAnalytics?${qs}`,
