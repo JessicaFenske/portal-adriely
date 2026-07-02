@@ -5710,7 +5710,7 @@
                     <div class="section-header">
                         <h2><span class="section-num" data-svg-icon="user"></span> Perdidos por Vendedor</h2>
                         <div class="sub-filter">
-                            <select class="section-period-select" id="sellerSec6" onchange="sec6ShowSellerDrilldown()">
+                            <select class="section-period-select" id="sellerSec6" onchange="renderSection6()">
                                 <option value="all">Todos os vendedores</option>
                             </select>
                             <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
@@ -13151,18 +13151,6 @@ function renderSection5() {
         <td class="money">${formatMoney(s.setup)}</td></tr>`).join('');
 }
 
-// Abre drilldown com deals do vendedor selecionado no dropdown da sec6
-function sec6ShowSellerDrilldown() {
-    const sel = document.getElementById('sellerSec6');
-    if (!sel) return;
-    const name = sel.value;
-    if (name === 'all') return;
-    const sorted = window._sec6_sorted || [];
-    const seller = sorted.find(s => s.name === name);
-    if (!seller) return;
-    showDrilldown(`Perdidos - ${seller.name} (${seller.deals.length} negócios)`, seller.deals, null, 'lostSeller');
-}
-
 // --- Section 6: Perdidos por Vendedor ---
 function renderSection6() {
     const sp = getSectionPeriod('sec6');
@@ -13187,20 +13175,27 @@ function renderSection6() {
         sellerAgg6[name].setup += getSetup(d);
         sellerAgg6[name].deals.push(d);
     });
-    const sorted = Object.entries(sellerAgg6).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
-    window._sec6_sorted = sorted;
+    const allSorted = Object.entries(sellerAgg6).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
 
-    // Popula dropdown de vendedores (preserva seleção se ainda existir)
+    // Popula dropdown com TODOS os vendedores (preserva seleção se ainda existir)
     const sellerSel = document.getElementById('sellerSec6');
+    let selectedSeller = 'all';
     if (sellerSel) {
         const currentValue = sellerSel.value;
-        const alpha = [...sorted].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        const alpha = [...allSorted].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         sellerSel.innerHTML = '<option value="all">Todos os vendedores</option>' +
             alpha.map(s => `<option value="${s.name.replace(/"/g, '&quot;')}">${s.name} (${s.count})</option>`).join('');
         if (currentValue && currentValue !== 'all' && alpha.find(s => s.name === currentValue)) {
             sellerSel.value = currentValue;
+            selectedSeller = currentValue;
+        } else {
+            sellerSel.value = 'all';
         }
     }
+
+    // Aplica filtro por vendedor selecionado
+    const sorted = selectedSeller === 'all' ? allSorted : allSorted.filter(s => s.name === selectedSeller);
+    window._sec6_sorted = sorted;
 
     destroyChart('lostSeller');
     charts.lostSeller = new Chart(document.getElementById('chartLostSeller'), {
