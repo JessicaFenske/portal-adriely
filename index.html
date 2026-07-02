@@ -16716,6 +16716,28 @@ function pmComputeRealRates(team, periodDays) {
 
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
 
+    // Debug: quais pipelines aparecem nos deals que meu filtro tá considerando
+    const pipelinesInOpen = {};
+    (dashOpenDeals || []).forEach(d => {
+        const p = getPipelineName(d);
+        pipelinesInOpen[p] = (pipelinesInOpen[p] || 0) + 1;
+    });
+    console.log(`[PM ${team.name}]`, {
+        commercialPipelines: team.commercialPipelines,
+        meetingPipelines: team.meetingPipelines,
+        wonInTeam: won.length,
+        openInTeam: open.length,
+        ticket: Math.round(ticket),
+        agend,
+        realizadas,
+        salToSql: salToSql !== null ? Math.round(salToSql) + '%' : 'null',
+        sqlToOpo: sqlToOpo !== null ? Math.round(sqlToOpo) + '%' : 'null',
+        opoToGo: opoToGo !== null ? Math.round(opoToGo) + '%' : 'null',
+        pipelinesInDashOpenDeals: pipelinesInOpen,
+        totalDashMeetings: (dashMeetings || []).length,
+        totalDashInteractions: (dashInteractions || []).length
+    });
+
     return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
 }
 
