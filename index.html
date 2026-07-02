@@ -16552,10 +16552,21 @@ function exportSecMetrics() {
 // ============================================================================
 // Mix por time: plano real Lincros 2026 (Novos 64k / Sankhya 106k / Farmer 30k = 200k MRR)
 // Farmer IPCA é excluído: reajuste automático de contrato existente, não é MRR novo comercial
+// commercialPipelines → usado pra ticket médio, SQL→OPO, OPO→GO (só pipelines comerciais)
+// meetingPipelines → usado pra SAL→SQL (inclui pipelines SDR onde ficam as agendadas)
 const PM_TEAMS = [
-    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'], defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
-    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer'],          defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
-    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],         defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
+    { id: 'nn', name: 'Novos Negócios',
+      commercialPipelines: ['Funil de Vendas'],
+      meetingPipelines:    ['Funil de Vendas', 'SDR Inbound', 'SDR Outbound'],
+      defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
+    { id: 'fm', name: 'Farmer',
+      commercialPipelines: ['Farmer'],
+      meetingPipelines:    ['Farmer', 'SDR Farmer'],
+      defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
+    { id: 'sk', name: 'Sankhya',
+      commercialPipelines: ['Sankhya'],
+      meetingPipelines:    ['Sankhya', 'SDR Sankhya'],
+      defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
 ];
 const PM_STAGES = [
     { key: 'lead', label: 'Lead', desc: 'Captação de marketing' },
@@ -16582,7 +16593,8 @@ function pmComputeRealRates(team, periodDays) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - periodDays);
     const endPeriod = new Date();
-    const pMatch = d => team.pipelines.includes(getPipelineName(d));
+    // commercial: só pipelines de venda (ticket médio, SQL→OPO, OPO→GO)
+    const pMatch = d => team.commercialPipelines.includes(getPipelineName(d));
     const won  = (wonDeals || []).filter(d => pMatch(d) && d.FinishDate && new Date(d.FinishDate) >= cutoff);
     const lost = (lostDeals || []).filter(d => pMatch(d) && d.FinishDate && new Date(d.FinishDate) >= cutoff);
     const open = (dashOpenDeals || []).filter(d => pMatch(d));
@@ -16624,9 +16636,10 @@ function pmComputeRealRates(team, periodDays) {
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const sp = { start: cutoff, end: endPeriod };
     const inPeriod = iso => { const dt = iso ? new Date(iso) : null; return dt && dt >= cutoff && dt <= endPeriod; };
+    // meeting: inclui pipelines SDR onde ficam as agendadas antes do deal virar comercial
     const dealMatchesTeam = dealId => {
         const deal = window._dashOpenDealsById?.[dealId];
-        return deal && team.pipelines.includes(getPipelineName(deal));
+        return deal && team.meetingPipelines.includes(getPipelineName(deal));
     };
 
     // Agendadas (tasks + interactions), dedupe por DealId
