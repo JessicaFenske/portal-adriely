@@ -16546,10 +16546,11 @@ function exportSecMetrics() {
 // ============================================================================
 // VIEW: PLANEJAMENTO DE METAS (funil reverso com taxas reais dos pipelines)
 // ============================================================================
+// Mix por time: plano real Lincros 2026 (Novos 64k / Sankhya 106k / Farmer 30k = 200k MRR)
 const PM_TEAMS = [
-    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'],       defaults: { mix: 50, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
-    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer', 'Farmer IPCA'], defaults: { mix: 30, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
-    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],               defaults: { mix: 20, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
+    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'],       defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
+    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer', 'Farmer IPCA'], defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
+    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],               defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
 ];
 const PM_STAGES = [
     { key: 'lead', label: 'Lead', desc: 'Captação de marketing' },
