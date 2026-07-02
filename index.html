@@ -16615,41 +16615,60 @@ function pmComputeRealRates(team, periodDays) {
         if (cC > 0) opoToGo = (wonCount / cC) * 100;
     }
 
-    // SAL → SQL: agendadas vs realizadas do time no período (mesma lógica sec7Times)
+    // SAL → SQL: agendadas vs realizadas do time no período
+    // Replica lógica sec7Times (renderSection7Times) com 4 fontes: tasks agendadas +
+    // interactions agendadas + tasks realizadas + interactions realizadas.
+    // Filtra por team.pipelines (não getTeamFromPipeline) pra respeitar exclusão IPCA.
     let agend = 0, realizadas = 0;
     if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const sp = { start: cutoff, end: endPeriod };
+    const inPeriod = iso => { const dt = iso ? new Date(iso) : null; return dt && dt >= cutoff && dt <= endPeriod; };
+    const dealMatchesTeam = dealId => {
+        const deal = window._dashOpenDealsById?.[dealId];
+        return deal && team.pipelines.includes(getPipelineName(deal));
+    };
+
+    // Agendadas (tasks + interactions), dedupe por DealId
     const agendCounted = new Set();
-    (dashMeetings || []).forEach(t => {
-        if (!t.DealId || agendCounted.has(t.DealId)) return;
-        const tn = norm(t.Title || '');
-        if (!tn.includes('reuniao agendada')) return;
-        const dt = t.CreateDate ? new Date(t.CreateDate) : null;
-        if (!dt || dt < cutoff || dt > endPeriod) return;
-        const creator = dashUsersById?.[t.CreatorId] || '';
-        if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        if (!team.pipelines.includes(getPipelineName(deal))) return;
-        agend++; agendCounted.add(t.DealId);
-    });
+    if (typeof meetingsForPeriod === 'function') {
+        meetingsForPeriod(sp).forEach(t => {
+            if (!t.DealId || agendCounted.has(t.DealId)) return;
+            const creator = dashUsersById?.[t.CreatorId] || '';
+            if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
+            if (!dealMatchesTeam(t.DealId)) return;
+            agend++; agendCounted.add(t.DealId);
+        });
+    }
+    if (typeof interactionAgendadasForPeriod === 'function') {
+        interactionAgendadasForPeriod(sp).forEach(it => {
+            if (!it.DealId || agendCounted.has(it.DealId)) return;
+            if (!dealMatchesTeam(it.DealId)) return;
+            agend++; agendCounted.add(it.DealId);
+        });
+    }
+
+    // Realizadas (tasks Finished=true + interactions), dedupe por DealId
     const realCounted = new Set();
     (dashMeetings || []).forEach(t => {
-        if (!t.DealId) return;
+        if (!t.DealId || realCounted.has(t.DealId)) return;
         const tn = norm(t.Title || '');
         if (!tn.includes('reuniao realizada')) return;
         if (t.Finished !== true) return;
-        const refDate = t.FinishDate || t.DateTime;
-        const dt = refDate ? new Date(refDate) : null;
-        if (!dt || dt < cutoff || dt > endPeriod) return;
-        if (realCounted.has(t.DealId)) return;
+        if (!inPeriod(t.FinishDate || t.DateTime)) return;
         const creator = dashUsersById?.[t.CreatorId] || '';
         if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
-        const deal = window._dashOpenDealsById?.[t.DealId];
-        if (!deal) return;
-        if (!team.pipelines.includes(getPipelineName(deal))) return;
+        if (!dealMatchesTeam(t.DealId)) return;
         realizadas++; realCounted.add(t.DealId);
     });
+    if (typeof interactionRealizadasForPeriod === 'function') {
+        interactionRealizadasForPeriod(sp).forEach(it => {
+            if (!it.DealId || realCounted.has(it.DealId)) return;
+            if (!dealMatchesTeam(it.DealId)) return;
+            realizadas++; realCounted.add(it.DealId);
+        });
+    }
+
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
 
     return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
