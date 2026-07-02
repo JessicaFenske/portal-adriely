@@ -1353,6 +1353,88 @@
         }
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
+
+        /* ==================== VIEW: PLANEJAMENTO DE METAS ==================== */
+        #view-planejamento-metas { font-variant-numeric: tabular-nums; }
+        #view-planejamento-metas .pm-container { max-width: 1240px; margin: 0 auto; padding: 8px 4px 60px; }
+        #view-planejamento-metas .pm-header { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid #2a2e3f; }
+        #view-planejamento-metas .pm-header-text { min-width: 0; }
+        #view-planejamento-metas .pm-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 8px; }
+        #view-planejamento-metas .pm-title { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: -0.02em; color: #e5e7eb; text-wrap: balance; }
+        #view-planejamento-metas .pm-accent { color: #8b5cf6; }
+        #view-planejamento-metas .pm-subtitle { color: #94a3b8; font-size: 14px; max-width: 720px; margin: 0; line-height: 1.55; }
+        #view-planejamento-metas .pm-controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+        #view-planejamento-metas .pm-control { display: flex; flex-direction: column; gap: 6px; }
+        #view-planejamento-metas .pm-control label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+        #view-planejamento-metas .pm-input-wrap { display: inline-flex; align-items: center; background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px; padding: 8px 14px; gap: 8px; transition: border-color 0.15s; }
+        #view-planejamento-metas .pm-input-wrap:focus-within { border-color: #8b5cf6; }
+        #view-planejamento-metas .pm-currency { color: #4ade80; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 18px; font-weight: 700; }
+        #view-planejamento-metas #pmMeta { background: transparent; border: none; color: #4ade80; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 18px; font-weight: 700; width: 130px; padding: 0; outline: none; }
+        #view-planejamento-metas #pmPeriod { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px; padding: 8px 12px; color: #e5e7eb; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; }
+        #view-planejamento-metas .pm-teams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
+        @media (max-width: 1050px) { #view-planejamento-metas .pm-teams-grid { grid-template-columns: 1fr; } #view-planejamento-metas .pm-header { grid-template-columns: 1fr; align-items: start; } #view-planejamento-metas .pm-controls { align-items: stretch; flex-direction: row; flex-wrap: wrap; } }
+        #view-planejamento-metas .pm-team { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+        #view-planejamento-metas .pm-team[data-team="nn"] { border-top: 3px solid #8b5cf6; }
+        #view-planejamento-metas .pm-team[data-team="fm"] { border-top: 3px solid #06b6d4; }
+        #view-planejamento-metas .pm-team[data-team="sk"] { border-top: 3px solid #f59e0b; }
+        #view-planejamento-metas .pm-team-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        #view-planejamento-metas .pm-team-head h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+        #view-planejamento-metas .pm-team[data-team="nn"] .pm-team-head h2 { color: #8b5cf6; }
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-team-head h2 { color: #06b6d4; }
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-team-head h2 { color: #f59e0b; }
+        #view-planejamento-metas .pm-team-goal { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 16px; font-weight: 700; color: #4ade80; }
+        #view-planejamento-metas .pm-team-goal .pct { color: #6b7280; font-weight: 500; font-size: 11px; margin-left: 4px; }
+        #view-planejamento-metas .pm-section-label { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: #6b7280; font-weight: 700; }
+        #view-planejamento-metas .pm-team-desc { color: #94a3b8; font-size: 11px; }
+        #view-planejamento-metas .pm-params { display: flex; flex-direction: column; gap: 6px; background: #252838; border-radius: 10px; padding: 12px 14px; }
+        #view-planejamento-metas .pm-param-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; font-size: 12.5px; }
+        #view-planejamento-metas .pm-param-row .pm-label-wrap { display: flex; align-items: center; gap: 6px; color: #94a3b8; font-weight: 500; min-width: 0; }
+        #view-planejamento-metas .pm-badge { font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; flex-shrink: 0; }
+        #view-planejamento-metas .pm-badge-real { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        #view-planejamento-metas .pm-badge-manual { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+        #view-planejamento-metas .pm-badge-nodata { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+        #view-planejamento-metas .pm-input-inline { display: inline-flex; align-items: center; background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 6px; padding: 4px 8px; transition: border-color 0.15s; }
+        #view-planejamento-metas .pm-input-inline:focus-within { border-color: #8b5cf6; }
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-input-inline:focus-within { border-color: #06b6d4; }
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-input-inline:focus-within { border-color: #f59e0b; }
+        #view-planejamento-metas .pm-input-inline input { background: transparent; border: none; color: #e5e7eb; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12.5px; font-weight: 600; width: 52px; text-align: right; padding: 0; outline: none; -moz-appearance: textfield; }
+        #view-planejamento-metas .pm-input-inline input::-webkit-outer-spin-button,
+        #view-planejamento-metas .pm-input-inline input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #view-planejamento-metas .pm-input-inline .pm-suffix { color: #6b7280; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px; margin-left: 3px; }
+        #view-planejamento-metas .pm-input-inline .pm-prefix { color: #6b7280; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px; margin-right: 3px; }
+        #view-planejamento-metas .pm-params-divider { height: 1px; background: #2a2e3f; margin: 4px 0; }
+        #view-planejamento-metas .pm-funnel { display: flex; flex-direction: column; gap: 4px; }
+        #view-planejamento-metas .pm-funnel-row { position: relative; display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; background: #252838; border-radius: 8px; overflow: hidden; }
+        #view-planejamento-metas .pm-funnel-row .pm-bar { position: absolute; left: 0; top: 0; bottom: 0; z-index: 0; transition: width 0.25s ease; }
+        #view-planejamento-metas .pm-team[data-team="nn"] .pm-funnel-row .pm-bar { background: rgba(139, 92, 246, 0.15); }
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-funnel-row .pm-bar { background: rgba(6, 182, 212, 0.15); }
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-funnel-row .pm-bar { background: rgba(245, 158, 11, 0.15); }
+        #view-planejamento-metas .pm-funnel-row .pm-stage { position: relative; z-index: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+        #view-planejamento-metas .pm-funnel-row .pm-stage-desc { position: relative; z-index: 1; font-size: 10.5px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #view-planejamento-metas .pm-funnel-row .pm-count { position: relative; z-index: 1; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: #e5e7eb; text-align: right; min-width: 56px; }
+        #view-planejamento-metas .pm-funnel-row.go { background: linear-gradient(90deg, rgba(74, 222, 128, 0.10), rgba(74, 222, 128, 0.03)); border: 1px solid rgba(74, 222, 128, 0.25); }
+        #view-planejamento-metas .pm-funnel-row.go .pm-stage { color: #4ade80; }
+        #view-planejamento-metas .pm-funnel-row.go .pm-count { color: #4ade80; }
+        #view-planejamento-metas .pm-funnel-row.go .pm-bar { display: none; }
+        #view-planejamento-metas .pm-totals { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 14px; padding: 22px; }
+        #view-planejamento-metas .pm-totals-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+        #view-planejamento-metas .pm-totals-head h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: #e5e7eb; }
+        #view-planejamento-metas .pm-totals-mrr { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 22px; font-weight: 700; color: #4ade80; }
+        #view-planejamento-metas .pm-totals-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+        @media (max-width: 720px) { #view-planejamento-metas .pm-totals-grid { grid-template-columns: repeat(3, 1fr); } }
+        #view-planejamento-metas .pm-total-cell { background: #252838; border-radius: 10px; padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; text-align: center; }
+        #view-planejamento-metas .pm-total-cell .pm-stage { font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+        #view-planejamento-metas .pm-total-cell .pm-value { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: #e5e7eb; }
+        #view-planejamento-metas .pm-total-cell.go .pm-value { color: #4ade80; }
+        #view-planejamento-metas .pm-total-cell .pm-breakdown { font-size: 9.5px; color: #6b7280; font-family: ui-monospace, "SF Mono", Consolas, monospace; display: flex; justify-content: center; gap: 4px; margin-top: 2px; }
+        #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="nn"] { color: #8b5cf6; }
+        #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="fm"] { color: #06b6d4; }
+        #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="sk"] { color: #f59e0b; }
+        #view-planejamento-metas .pm-note { margin-top: 24px; padding: 16px 20px; background: rgba(139, 92, 246, 0.05); border-left: 3px solid #8b5cf6; border-radius: 6px; font-size: 12.5px; color: #94a3b8; line-height: 1.65; }
+        #view-planejamento-metas .pm-note strong { color: #e5e7eb; font-weight: 600; }
+        #view-planejamento-metas .pm-note ul { margin: 8px 0 8px 0; padding-left: 18px; }
+        #view-planejamento-metas .pm-note li { margin-bottom: 4px; }
+
         /* Análise de Funil — estilo PPT */
         #view-analise-funil .af-cover {
             background: linear-gradient(135deg, #1A1A2E 0%, #0F0F1A 100%);
@@ -4753,6 +4835,10 @@
                 <span class="nav-icon" data-svg-icon="dollar"></span>
                 <span class="nav-label">Forecast</span>
             </div>
+            <div class="nav-item" data-view="planejamento-metas" onclick="showView('planejamento-metas')">
+                <span class="nav-icon" data-svg-icon="target"></span>
+                <span class="nav-label">Planejamento de Metas</span>
+            </div>
             <div class="nav-item" data-view="hall-prevendas" onclick="showView('hall-prevendas')">
                 <span class="nav-icon" data-svg-icon="medal"></span>
                 <span class="nav-label">Hall de Pré-Vendas</span>
@@ -6394,6 +6480,54 @@
             <div class="last-update" id="fcLastUpdate"></div>
         </div>
 
+        <!-- ==================== VIEW: PLANEJAMENTO DE METAS ==================== -->
+        <div id="view-planejamento-metas" style="display:none;">
+            <div class="pm-container">
+                <header class="pm-header">
+                    <div class="pm-header-text">
+                        <div class="pm-eyebrow">Planejamento · Lincros comercial</div>
+                        <h1 class="pm-title">Quantos leads pra fechar <span class="pm-accent" id="pmMetaTitle">R$ 200k</span> de MRR?</h1>
+                        <p class="pm-subtitle">Funil reverso por time usando as taxas de conversão reais do dashboard. Ajuste as premissas — Lead→MQL e MQL→SAL (que o marketing gera) — e veja quantos leads, reuniões e propostas cada time precisa gerar.</p>
+                    </div>
+                    <div class="pm-controls">
+                        <div class="pm-control">
+                            <label>Meta MRR mensal</label>
+                            <div class="pm-input-wrap">
+                                <span class="pm-currency">R$</span>
+                                <input type="number" id="pmMeta" value="200000" min="0" step="10000">
+                            </div>
+                        </div>
+                        <div class="pm-control">
+                            <label>Base de cálculo</label>
+                            <select id="pmPeriod">
+                                <option value="90">Últimos 90 dias</option>
+                                <option value="180" selected>Últimos 180 dias</option>
+                                <option value="365">Últimos 12 meses</option>
+                            </select>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="pm-teams-grid" id="pmTeamsGrid">
+                    <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px 20px;">Carregando dados do dashboard...</div>
+                </div>
+
+                <section class="pm-totals" id="pmTotals" style="display:none;"></section>
+
+                <div class="pm-note">
+                    <strong>Como as taxas foram calculadas:</strong>
+                    <ul>
+                        <li><span class="pm-badge pm-badge-real">REAL</span> <strong>SAL → SQL</strong>: reuniões realizadas ÷ agendadas por time (sec7 · Reuniões por Time)</li>
+                        <li><span class="pm-badge pm-badge-real">REAL</span> <strong>SQL → OPO</strong>: deals em Consideração+ ÷ deals em Reconhecimento+ por pipeline (sec9 · Análise de Funil)</li>
+                        <li><span class="pm-badge pm-badge-real">REAL</span> <strong>OPO → GO</strong>: deals ganhos ÷ deals em Consideração+ (sec9)</li>
+                        <li><span class="pm-badge pm-badge-real">REAL</span> <strong>Ticket médio</strong>: MRR médio dos deals ganhos no período</li>
+                        <li><span class="pm-badge pm-badge-manual">MANUAL</span> <strong>Lead → MQL / MQL → SAL</strong>: taxas do marketing (não estão no Ploomes). Ajuste com os números da Fernanda ou benchmarks.</li>
+                    </ul>
+                    Todas as taxas ficam editáveis — se quiser sobrescrever com projeção mais otimista/conservadora, é só clicar no input. Seus valores salvam automaticamente.
+                </div>
+            </div>
+        </div>
+
         <!-- ==================== VIEW: MARKETING (com tabs Performance + MQLs) ==================== -->
         <div id="view-marketing" style="display:none;">
             <div class="op-header" style="padding-bottom:8px;justify-content:center;text-align:center;">
@@ -7600,6 +7734,8 @@ function showView(viewName) {
     if (hpEl) hpEl.style.display = 'none';
     const cpEl = document.getElementById('view-cockpit');
     if (cpEl) cpEl.style.display = 'none';
+    const pmEl = document.getElementById('view-planejamento-metas');
+    if (pmEl) pmEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
@@ -7620,6 +7756,12 @@ function showView(viewName) {
         if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
         if (typeof renderHallPreVendas === 'function') {
             setTimeout(() => renderHallPreVendas(), (wonDeals && wonDeals.length && dashMeetings && dashMeetings.length) ? 50 : 1200);
+        }
+    }
+    if (viewName === 'planejamento-metas') {
+        if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
+        if (typeof renderPlanejamentoMetas === 'function') {
+            setTimeout(() => renderPlanejamentoMetas(), (wonDeals && wonDeals.length) ? 50 : 1200);
         }
     }
     if (viewName === 'cockpit') {
@@ -16399,6 +16541,310 @@ function exportSecMetrics() {
     const a = document.createElement('a');
     a.href = url; a.download = 'metricas_funil_vendedor.csv'; a.click();
     URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// VIEW: PLANEJAMENTO DE METAS (funil reverso com taxas reais dos pipelines)
+// ============================================================================
+const PM_TEAMS = [
+    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'],       defaults: { mix: 50, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
+    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer', 'Farmer IPCA'], defaults: { mix: 30, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
+    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],               defaults: { mix: 20, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
+];
+const PM_STAGES = [
+    { key: 'lead', label: 'Lead', desc: 'Captação de marketing' },
+    { key: 'mql',  label: 'MQL',  desc: 'Qualificados pelo marketing' },
+    { key: 'sal',  label: 'SAL',  desc: 'Reunião agendada pelo SDR' },
+    { key: 'sql',  label: 'SQL',  desc: 'Realizada · Reconhecimento' },
+    { key: 'opo',  label: 'OPO',  desc: 'Proposta · Consideração' },
+    { key: 'go',   label: 'GO',   desc: 'Negócio ganho' }
+];
+
+function pmFmtMoney(v) { return 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR'); }
+function pmFmtMoneyShort(v) {
+    v = v || 0;
+    if (v >= 1000000) return 'R$ ' + (v/1000000).toFixed(1).replace('.', ',') + 'M';
+    if (v >= 1000) return 'R$ ' + Math.round(v/1000) + 'k';
+    return 'R$ ' + Math.round(v);
+}
+function pmFmtInt(v) { return Math.ceil(v || 0).toLocaleString('pt-BR'); }
+function pmLsGet(key, def) { try { const v = localStorage.getItem('pm_' + key); return v === null ? def : v; } catch { return def; } }
+function pmLsSet(key, val) { try { localStorage.setItem('pm_' + key, val); } catch {} }
+
+// Calcula ticket médio + taxas reais SQL→OPO / OPO→GO / SAL→SQL para um time
+function pmComputeRealRates(team, periodDays) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - periodDays);
+    const endPeriod = new Date();
+    const pMatch = d => team.pipelines.includes(getPipelineName(d));
+    const won  = (wonDeals || []).filter(d => pMatch(d) && d.FinishDate && new Date(d.FinishDate) >= cutoff);
+    const lost = (lostDeals || []).filter(d => pMatch(d) && d.FinishDate && new Date(d.FinishDate) >= cutoff);
+    const open = (dashOpenDeals || []).filter(d => pMatch(d));
+
+    // Ticket médio (MRR) dos won com valor
+    const wonMrrs = won.map(d => typeof getMRR === 'function' ? getMRR(d) : 0).filter(v => v > 0);
+    const ticket = wonMrrs.length ? wonMrrs.reduce((s,v) => s+v, 0) / wonMrrs.length : 0;
+
+    // Etapas por Ordination
+    const stageOrdMap = {};
+    [...won, ...lost, ...open].forEach(d => {
+        if (d.Stage?.Name && d.Stage.Ordination !== undefined) stageOrdMap[d.Stage.Name] = d.Stage.Ordination;
+    });
+    const stages = Object.entries(stageOrdMap).sort((a,b)=>a[1]-b[1]);
+    const reconhec = stages.find(([n]) => /reconhec/i.test(n));
+    const consid   = stages.find(([n]) => /considera/i.test(n));
+
+    // Contagem cumulativa (mesma lógica sec9): opens em/após + wonCount + losts em/após
+    const wonCount = won.length;
+    const countAtOrAfter = ord => {
+        const o = open.filter(d => (d.Stage?.Ordination || 0) >= ord).length;
+        const l = lost.filter(d => (d.Stage?.Ordination || 0) >= ord).length;
+        return o + wonCount + l;
+    };
+    let sqlToOpo = null, opoToGo = null;
+    if (reconhec && consid) {
+        const cR = countAtOrAfter(reconhec[1]);
+        const cC = countAtOrAfter(consid[1]);
+        if (cR > 0) sqlToOpo = (cC / cR) * 100;
+        if (cC > 0) opoToGo = (wonCount / cC) * 100;
+    }
+
+    // SAL → SQL: agendadas vs realizadas do time no período (mesma lógica sec7Times)
+    let agend = 0, realizadas = 0;
+    if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const agendCounted = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId || agendCounted.has(t.DealId)) return;
+        const tn = norm(t.Title || '');
+        if (!tn.includes('reuniao agendada')) return;
+        const dt = t.CreateDate ? new Date(t.CreateDate) : null;
+        if (!dt || dt < cutoff || dt > endPeriod) return;
+        const creator = dashUsersById?.[t.CreatorId] || '';
+        if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const tName = typeof getTeamFromPipeline === 'function' ? getTeamFromPipeline(getPipelineName(deal)) : null;
+        if (tName !== team.name) return;
+        agend++; agendCounted.add(t.DealId);
+    });
+    const realCounted = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        const tn = norm(t.Title || '');
+        if (!tn.includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
+        const refDate = t.FinishDate || t.DateTime;
+        const dt = refDate ? new Date(refDate) : null;
+        if (!dt || dt < cutoff || dt > endPeriod) return;
+        if (realCounted.has(t.DealId)) return;
+        const creator = dashUsersById?.[t.CreatorId] || '';
+        if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
+        const deal = window._dashOpenDealsById?.[t.DealId];
+        if (!deal) return;
+        const tName = typeof getTeamFromPipeline === 'function' ? getTeamFromPipeline(getPipelineName(deal)) : null;
+        if (tName !== team.name) return;
+        realizadas++; realCounted.add(t.DealId);
+    });
+    const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
+
+    return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
+}
+
+function pmBuildTeamCard(team, real, saved) {
+    const mix = Number(saved.mix ?? team.defaults.mix);
+    const ticket = Number(saved.ticket ?? (real.ticket > 0 ? Math.round(real.ticket) : 2000));
+    const r1 = Number(saved.r1 ?? team.defaults.r1);
+    const r2 = Number(saved.r2 ?? team.defaults.r2);
+    const r3 = Number(saved.r3 ?? (real.salToSql !== null ? Math.round(real.salToSql) : 70));
+    const r4 = Number(saved.r4 ?? (real.sqlToOpo !== null ? Math.round(real.sqlToOpo) : 40));
+    const r5 = Number(saved.r5 ?? (real.opoToGo !== null ? Math.round(real.opoToGo) : 25));
+
+    const mkInput = (field, val, sfx, opts = {}) => `
+        <div class="pm-input-inline">${opts.prefix ? '<span class="pm-prefix">'+opts.prefix+'</span>' : ''}<input type="number" data-team="${team.id}" data-field="${field}" value="${val}" min="0"${opts.max ? ' max="'+opts.max+'"' : ''} step="${opts.step || 1}">${sfx ? '<span class="pm-suffix">'+sfx+'</span>' : ''}</div>`;
+
+    const badge = (kind, txt) => `<span class="pm-badge pm-badge-${kind}" title="${kind === 'real' ? 'Puxado do dashboard' : kind === 'manual' ? 'Estimativa manual' : 'Sem dados no período — usando estimativa'}">${txt}</span>`;
+
+    const realBadgeR3 = real.salToSql !== null ? badge('real', 'REAL ' + Math.round(real.salToSql) + '%') : badge('nodata', 'SEM DADOS');
+    const realBadgeR4 = real.sqlToOpo !== null ? badge('real', 'REAL ' + Math.round(real.sqlToOpo) + '%') : badge('nodata', 'SEM DADOS');
+    const realBadgeR5 = real.opoToGo !== null ? badge('real', 'REAL ' + Math.round(real.opoToGo) + '%') : badge('nodata', 'SEM DADOS');
+    const ticketBadge = real.ticket > 0 ? badge('real', 'REAL ' + pmFmtMoneyShort(real.ticket)) : badge('nodata', 'SEM AMOSTRA');
+
+    const paramsHtml = `
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">% da meta</div>
+            ${mkInput('mix', mix, '%', { max: 100, step: 5 })}
+        </div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">Ticket médio ${ticketBadge}</div>
+            ${mkInput('ticket', ticket, '', { step: 100, prefix: 'R$' })}
+        </div>
+        <div class="pm-params-divider"></div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">Lead → MQL ${badge('manual', 'MKT')}</div>
+            ${mkInput('r1', r1, '%', { max: 100 })}
+        </div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">MQL → SAL ${badge('manual', 'MKT')}</div>
+            ${mkInput('r2', r2, '%', { max: 100 })}
+        </div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">SAL → SQL ${realBadgeR3}</div>
+            ${mkInput('r3', r3, '%', { max: 100 })}
+        </div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">SQL → OPO ${realBadgeR4}</div>
+            ${mkInput('r4', r4, '%', { max: 100 })}
+        </div>
+        <div class="pm-param-row">
+            <div class="pm-label-wrap">OPO → GO ${realBadgeR5}</div>
+            ${mkInput('r5', r5, '%', { max: 100 })}
+        </div>
+    `;
+
+    const funnelHtml = PM_STAGES.map(s => `
+        <div class="pm-funnel-row ${s.key === 'go' ? 'go' : ''}" data-stage="${s.key}">
+            <div class="pm-bar" id="pmBar-${team.id}-${s.key}" style="width:0%"></div>
+            <div class="pm-stage">${s.label}</div>
+            <div class="pm-stage-desc">${s.desc}</div>
+            <div class="pm-count" id="pmCount-${team.id}-${s.key}">0</div>
+        </div>
+    `).join('');
+
+    const sampleSuffix = [];
+    if (real.wonCount > 0) sampleSuffix.push(`${real.wonCount} ganhos`);
+    if (real.agend > 0) sampleSuffix.push(`${real.realizadas}/${real.agend} reuniões`);
+    const sampleTxt = sampleSuffix.length ? '· amostra: ' + sampleSuffix.join(' · ') : '· sem amostra no período';
+
+    return `
+        <div class="pm-team" data-team="${team.id}">
+            <div class="pm-team-head">
+                <h2>${team.name}</h2>
+                <div class="pm-team-goal" id="pmGoal-${team.id}">R$ 0<span class="pct" id="pmPct-${team.id}"></span></div>
+            </div>
+            <div class="pm-team-desc">${team.desc} ${sampleTxt}</div>
+            <div class="pm-params">${paramsHtml}</div>
+            <div>
+                <div class="pm-section-label" style="margin-bottom:8px">Funil reverso</div>
+                <div class="pm-funnel">${funnelHtml}</div>
+            </div>
+        </div>
+    `;
+}
+
+function pmReadInputs(teamId) {
+    const get = f => Number(document.querySelector(`#view-planejamento-metas input[data-team="${teamId}"][data-field="${f}"]`)?.value) || 0;
+    return { mix: get('mix'), ticket: get('ticket'), r1: get('r1'), r2: get('r2'), r3: get('r3'), r4: get('r4'), r5: get('r5') };
+}
+
+function pmComputeFunnel(inputs, metaMrr) {
+    const teamMrr = metaMrr * (inputs.mix / 100);
+    const go  = inputs.ticket > 0 ? Math.ceil(teamMrr / inputs.ticket) : 0;
+    const opo = inputs.r5 > 0 ? Math.ceil(go  / (inputs.r5 / 100)) : 0;
+    const sql = inputs.r4 > 0 ? Math.ceil(opo / (inputs.r4 / 100)) : 0;
+    const sal = inputs.r3 > 0 ? Math.ceil(sql / (inputs.r3 / 100)) : 0;
+    const mql = inputs.r2 > 0 ? Math.ceil(sal / (inputs.r2 / 100)) : 0;
+    const lead= inputs.r1 > 0 ? Math.ceil(mql / (inputs.r1 / 100)) : 0;
+    return { teamMrr, mix: inputs.mix, stages: { lead, mql, sal, sql, opo, go } };
+}
+
+function pmUpdateCalculations() {
+    const meta = Number(document.getElementById('pmMeta')?.value) || 0;
+    pmLsSet('meta', meta);
+    document.getElementById('pmMetaTitle').textContent = pmFmtMoneyShort(meta);
+
+    const results = PM_TEAMS.map(t => {
+        const inputs = pmReadInputs(t.id);
+        // Salva overrides
+        ['mix','ticket','r1','r2','r3','r4','r5'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
+        return { team: t, ...pmComputeFunnel(inputs, meta) };
+    });
+
+    results.forEach(({ team, teamMrr, mix, stages }) => {
+        const g = document.getElementById(`pmGoal-${team.id}`);
+        if (g) g.innerHTML = `${pmFmtMoneyShort(teamMrr)}<span class="pct">· ${mix}%</span>`;
+        const maxCount = stages.lead || 1;
+        PM_STAGES.forEach(s => {
+            const c = document.getElementById(`pmCount-${team.id}-${s.key}`);
+            if (c) c.textContent = pmFmtInt(stages[s.key]);
+            const b = document.getElementById(`pmBar-${team.id}-${s.key}`);
+            if (b) b.style.width = (maxCount > 0 ? (stages[s.key] / maxCount) * 100 : 0) + '%';
+        });
+    });
+
+    const totals = { lead:0, mql:0, sal:0, sql:0, opo:0, go:0 };
+    const byTeam = { nn: {...totals}, fm: {...totals}, sk: {...totals} };
+    results.forEach(({ team, stages }) => {
+        PM_STAGES.forEach(s => { totals[s.key] += stages[s.key]; byTeam[team.id][s.key] = stages[s.key]; });
+    });
+    const totalMrrValue = results.reduce((sum, r) => sum + r.teamMrr, 0);
+    const totalsEl = document.getElementById('pmTotals');
+    if (totalsEl) {
+        totalsEl.style.display = 'block';
+        totalsEl.innerHTML = `
+            <div class="pm-totals-head">
+                <h3>Consolidado — os 3 times somados</h3>
+                <div class="pm-totals-mrr">${pmFmtMoney(totalMrrValue)}</div>
+            </div>
+            <div class="pm-totals-grid">
+                ${PM_STAGES.map(s => `
+                    <div class="pm-total-cell ${s.key === 'go' ? 'go' : ''}">
+                        <div class="pm-stage">${s.label}</div>
+                        <div class="pm-value">${pmFmtInt(totals[s.key])}</div>
+                        <div class="pm-breakdown">
+                            <span data-t="nn">${pmFmtInt(byTeam.nn[s.key])}</span>·<span data-t="fm">${pmFmtInt(byTeam.fm[s.key])}</span>·<span data-t="sk">${pmFmtInt(byTeam.sk[s.key])}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+function renderPlanejamentoMetas() {
+    // Restaura meta e período salvos
+    const savedMeta = pmLsGet('meta', '200000');
+    const savedPeriod = pmLsGet('period', '180');
+    const metaInput = document.getElementById('pmMeta');
+    const periodSel = document.getElementById('pmPeriod');
+    if (metaInput && !metaInput.dataset.wired) { metaInput.value = savedMeta; metaInput.dataset.wired = '1'; }
+    if (periodSel && !periodSel.dataset.wired) { periodSel.value = savedPeriod; periodSel.dataset.wired = '1'; }
+
+    const periodDays = Number(periodSel?.value || 180);
+
+    // Se dashboard ainda não carregou, mostra loader
+    if (!wonDeals || !dashMeetings) {
+        document.getElementById('pmTeamsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px 20px;">Carregando dados do dashboard...</div>';
+        return;
+    }
+
+    const grid = document.getElementById('pmTeamsGrid');
+    grid.innerHTML = PM_TEAMS.map(team => {
+        const real = pmComputeRealRates(team, periodDays);
+        const saved = {
+            mix: pmLsGet(`${team.id}_mix`, null),
+            ticket: pmLsGet(`${team.id}_ticket`, null),
+            r1: pmLsGet(`${team.id}_r1`, null),
+            r2: pmLsGet(`${team.id}_r2`, null),
+            r3: pmLsGet(`${team.id}_r3`, null),
+            r4: pmLsGet(`${team.id}_r4`, null),
+            r5: pmLsGet(`${team.id}_r5`, null)
+        };
+        return pmBuildTeamCard(team, real, saved);
+    }).join('');
+
+    // Wire inputs (idempotente)
+    document.querySelectorAll('#view-planejamento-metas input[type="number"]').forEach(inp => {
+        inp.oninput = pmUpdateCalculations;
+    });
+    if (metaInput) metaInput.oninput = pmUpdateCalculations;
+    if (periodSel) periodSel.onchange = () => {
+        pmLsSet('period', periodSel.value);
+        // Ao mudar período, recalcula taxas reais e re-renderiza — mas mantém overrides salvos
+        renderPlanejamentoMetas();
+    };
+
+    pmUpdateCalculations();
 }
 
 // Abre drilldown de um mini-insight da Analise de Funil
