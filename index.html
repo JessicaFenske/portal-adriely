@@ -16669,6 +16669,38 @@ function pmComputeRealRates(team, periodDays) {
         });
     }
 
+    // Proxy Sankhya: Maja não cria tasks/interactions no Ploomes (compliance baixo).
+    // Sinais de movimentação do deal fazem o papel:
+    //   Agendada: deal pipeline Sankhya com Owner != Maja (passou pro executivo)
+    //   Realizada: !descarte E (stageOrd=0 com valor OU stageOrd>=1)
+    // Janela permissiva: CreateDate OU LastUpdateDate no período (leadtime Sankhya é longo).
+    // Só aplicar para o time Sankhya.
+    if (team.id === 'sk') {
+        const isDescarte = n => /descart/i.test(n || '');
+        const isMajaName = n => (n || '').toLowerCase().includes('maja');
+        const proxyDeals = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+        const proxyAgendCounted = new Set();
+        const proxyRealCounted = new Set();
+        proxyDeals.forEach(d => {
+            if (getPipelineName(d) !== 'Sankhya') return;
+            if (!inPeriod(d.CreateDate) && !inPeriod(d.LastUpdateDate)) return;
+            const stageOrd = d.Stage?.Ordination ?? -1;
+            const stageName = d.Stage?.Name || '';
+            const mrr = typeof getMRR === 'function' ? getMRR(d) : 0;
+            const setup = typeof getSetup === 'function' ? getSetup(d) : 0;
+            if (!isMajaName(d.Owner?.Name || '') && !agendCounted.has(d.Id) && !proxyAgendCounted.has(d.Id)) {
+                agend++; proxyAgendCounted.add(d.Id);
+            }
+            if (!isDescarte(stageName) && !realCounted.has(d.Id) && !proxyRealCounted.has(d.Id)) {
+                const primeiraComValor = stageOrd === 0 && (mrr > 0 || setup > 0);
+                const segundaOuMais = stageOrd >= 1;
+                if (primeiraComValor || segundaOuMais) {
+                    realizadas++; proxyRealCounted.add(d.Id);
+                }
+            }
+        });
+    }
+
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
 
     return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
