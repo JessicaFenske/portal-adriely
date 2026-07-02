@@ -1383,6 +1383,10 @@
         #view-planejamento-metas .pm-team[data-team="fm"] .pm-team-head h2 { color: #06b6d4; }
         #view-planejamento-metas .pm-team[data-team="sk"] .pm-team-head h2 { color: #f59e0b; }
         #view-planejamento-metas .pm-team-goal { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 16px; font-weight: 700; color: #4ade80; }
+        #view-planejamento-metas .pm-reset-btn { background: transparent; border: 1px solid #2a2e3f; color: #94a3b8; font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em; }
+        #view-planejamento-metas .pm-reset-btn:hover { border-color: #8b5cf6; color: #a78bfa; }
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-reset-btn:hover { border-color: #06b6d4; color: #22d3ee; }
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-reset-btn:hover { border-color: #f59e0b; color: #fbbf24; }
         #view-planejamento-metas .pm-team-goal .pct { color: #6b7280; font-weight: 500; font-size: 11px; margin-left: 4px; }
         #view-planejamento-metas .pm-section-label { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: #6b7280; font-weight: 700; }
         #view-planejamento-metas .pm-team-desc { color: #94a3b8; font-size: 11px; }
@@ -16720,7 +16724,10 @@ function pmBuildTeamCard(team, real, saved) {
         <div class="pm-team" data-team="${team.id}">
             <div class="pm-team-head">
                 <h2>${team.name}</h2>
-                <div class="pm-team-goal" id="pmGoal-${team.id}">R$ 0<span class="pct" id="pmPct-${team.id}"></span></div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button class="pm-reset-btn" onclick="pmResetTeam('${team.id}')" title="Recarregar taxas reais + defaults deste time">↻ Resetar</button>
+                    <div class="pm-team-goal" id="pmGoal-${team.id}">R$ 0<span class="pct" id="pmPct-${team.id}"></span></div>
+                </div>
             </div>
             <div class="pm-team-desc">${team.desc} ${sampleTxt}</div>
             <div class="pm-params">${paramsHtml}</div>
@@ -16730,6 +16737,12 @@ function pmBuildTeamCard(team, real, saved) {
             </div>
         </div>
     `;
+}
+
+function pmResetTeam(teamId) {
+    // Limpa todos os overrides do time do localStorage e re-renderiza com os reais
+    Object.keys(localStorage).filter(k => k.startsWith(`pm_${teamId}_`)).forEach(k => localStorage.removeItem(k));
+    renderPlanejamentoMetas();
 }
 
 function pmReadInputs(teamId) {
