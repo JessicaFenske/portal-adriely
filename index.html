@@ -16547,10 +16547,11 @@ function exportSecMetrics() {
 // VIEW: PLANEJAMENTO DE METAS (funil reverso com taxas reais dos pipelines)
 // ============================================================================
 // Mix por time: plano real Lincros 2026 (Novos 64k / Sankhya 106k / Farmer 30k = 200k MRR)
+// Farmer IPCA é excluído: reajuste automático de contrato existente, não é MRR novo comercial
 const PM_TEAMS = [
-    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'],       defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
-    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer', 'Farmer IPCA'], defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
-    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],               defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
+    { id: 'nn', name: 'Novos Negócios', pipelines: ['Funil de Vendas'], defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
+    { id: 'fm', name: 'Farmer',         pipelines: ['Farmer'],          defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
+    { id: 'sk', name: 'Sankhya',        pipelines: ['Sankhya'],         defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
 ];
 const PM_STAGES = [
     { key: 'lead', label: 'Lead', desc: 'Captação de marketing' },
@@ -16625,8 +16626,7 @@ function pmComputeRealRates(team, periodDays) {
         if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
         const deal = window._dashOpenDealsById?.[t.DealId];
         if (!deal) return;
-        const tName = typeof getTeamFromPipeline === 'function' ? getTeamFromPipeline(getPipelineName(deal)) : null;
-        if (tName !== team.name) return;
+        if (!team.pipelines.includes(getPipelineName(deal))) return;
         agend++; agendCounted.add(t.DealId);
     });
     const realCounted = new Set();
@@ -16643,8 +16643,7 @@ function pmComputeRealRates(team, periodDays) {
         if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
         const deal = window._dashOpenDealsById?.[t.DealId];
         if (!deal) return;
-        const tName = typeof getTeamFromPipeline === 'function' ? getTeamFromPipeline(getPipelineName(deal)) : null;
-        if (tName !== team.name) return;
+        if (!team.pipelines.includes(getPipelineName(deal))) return;
         realizadas++; realCounted.add(t.DealId);
     });
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
