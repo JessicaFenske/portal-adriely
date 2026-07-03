@@ -1265,6 +1265,12 @@
         .scenario-otimista-title { color: #10b981; }
         .scenario-realista-title { color: #f59e0b; }
         .scenario-pessimista-title { color: #ef4444; }
+        /* Titles das semanas */
+        .scenario-semana-1-title { color: #22c55e; }
+        .scenario-semana-2-title { color: #84cc16; }
+        .scenario-semana-3-title { color: #f59e0b; }
+        .scenario-semana-4-title { color: #8b5cf6; }
+        .fc-scenario-sub { font-weight: 400; color: #94a3b8; font-size: 11px; }
         .fc-scenario-pair {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1745,13 +1751,14 @@
             background: #f59e0b;
         }
 
-        /* Cenários (Otimista / Realista / Pessimista) */
+        /* Cenários (agora Semanas 1-4 do mês; classes legadas mantidas) */
         #view-analise-funil .af-scenarios-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
         }
-        @media (max-width: 900px) { #view-analise-funil .af-scenarios-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { #view-analise-funil .af-scenarios-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { #view-analise-funil .af-scenarios-grid { grid-template-columns: 1fr; } }
         #view-analise-funil .af-scenario-card {
             background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.06);
@@ -1775,6 +1782,15 @@
         #view-analise-funil .af-scenario-card.realista .stripe { background: #f59e0b; }
         #view-analise-funil .af-scenario-card.pessimista { border-left: 5px solid #ef4444; }
         #view-analise-funil .af-scenario-card.pessimista .stripe { background: #ef4444; }
+        /* Semanas — S1 (base) → S4 (upside) */
+        #view-analise-funil .af-scenario-card.s1 { border-left: 5px solid #22c55e; }
+        #view-analise-funil .af-scenario-card.s1 .stripe { background: #22c55e; }
+        #view-analise-funil .af-scenario-card.s2 { border-left: 5px solid #84cc16; }
+        #view-analise-funil .af-scenario-card.s2 .stripe { background: #84cc16; }
+        #view-analise-funil .af-scenario-card.s3 { border-left: 5px solid #f59e0b; }
+        #view-analise-funil .af-scenario-card.s3 .stripe { background: #f59e0b; }
+        #view-analise-funil .af-scenario-card.s4 { border-left: 5px solid #8b5cf6; }
+        #view-analise-funil .af-scenario-card.s4 .stripe { background: #8b5cf6; }
         #view-analise-funil .af-scenario-card .sc-label {
             font-size: 11px;
             font-weight: 700;
@@ -1785,6 +1801,10 @@
         #view-analise-funil .af-scenario-card.otimista .sc-label { color: #10b981; }
         #view-analise-funil .af-scenario-card.realista .sc-label { color: #f59e0b; }
         #view-analise-funil .af-scenario-card.pessimista .sc-label { color: #ef4444; }
+        #view-analise-funil .af-scenario-card.s1 .sc-label { color: #22c55e; }
+        #view-analise-funil .af-scenario-card.s2 .sc-label { color: #84cc16; }
+        #view-analise-funil .af-scenario-card.s3 .sc-label { color: #f59e0b; }
+        #view-analise-funil .af-scenario-card.s4 .sc-label { color: #8b5cf6; }
         #view-analise-funil .af-scenario-card .sc-desc {
             font-size: 11.5px;
             color: #94a3b8;
@@ -1830,6 +1850,10 @@
         #view-analise-funil .af-scenario-card.otimista .sc-progress-fill { background: #10b981; }
         #view-analise-funil .af-scenario-card.realista .sc-progress-fill { background: #f59e0b; }
         #view-analise-funil .af-scenario-card.pessimista .sc-progress-fill { background: #ef4444; }
+        #view-analise-funil .af-scenario-card.s1 .sc-progress-fill { background: #22c55e; }
+        #view-analise-funil .af-scenario-card.s2 .sc-progress-fill { background: #84cc16; }
+        #view-analise-funil .af-scenario-card.s3 .sc-progress-fill { background: #f59e0b; }
+        #view-analise-funil .af-scenario-card.s4 .sc-progress-fill { background: #8b5cf6; }
         #view-analise-funil .af-scenario-card .sc-vs-meta {
             font-size: 11.5px;
             font-weight: 600;
@@ -3098,6 +3122,15 @@
         .fc-kpi-card.scenario-realista .fc-kpi-value { color: #f59e0b; }
         .fc-kpi-card.scenario-pessimista { border-color: rgba(239,68,68,0.3); }
         .fc-kpi-card.scenario-pessimista .fc-kpi-value { color: #ef4444; }
+        /* KPI cards das semanas */
+        .fc-kpi-card.scenario-semana-1 { border-color: rgba(34,197,94,0.3); }
+        .fc-kpi-card.scenario-semana-1 .fc-kpi-value { color: #22c55e; }
+        .fc-kpi-card.scenario-semana-2 { border-color: rgba(132,204,22,0.3); }
+        .fc-kpi-card.scenario-semana-2 .fc-kpi-value { color: #84cc16; }
+        .fc-kpi-card.scenario-semana-3 { border-color: rgba(245,158,11,0.3); }
+        .fc-kpi-card.scenario-semana-3 .fc-kpi-value { color: #f59e0b; }
+        .fc-kpi-card.scenario-semana-4 { border-color: rgba(139,92,246,0.3); }
+        .fc-kpi-card.scenario-semana-4 .fc-kpi-value { color: #8b5cf6; }
 
         .fc-section { padding: 20px 30px; }
         .fc-filters-bar {
@@ -3183,6 +3216,11 @@
         .badge-otimista { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
         .badge-realista { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
         .badge-pessimista { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        /* Novos badges das semanas: S1 (verde firme, chão) → S4 (violeta, upside) */
+        .badge-semana-1 { background: rgba(34,197,94,0.15);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+        .badge-semana-2 { background: rgba(132,204,22,0.15); color: #84cc16; border: 1px solid rgba(132,204,22,0.3); }
+        .badge-semana-3 { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge-semana-4 { background: rgba(139,92,246,0.15); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.3); }
 
         /* Dash card (alias do section-card, usado em MQLs) */
         .dash-card {
@@ -6415,10 +6453,11 @@
                             <option value="">Todas as etapas</option>
                         </select>
                         <select id="fcFilterScenario" class="fc-filter-select" onchange="renderForecast()">
-                            <option value="">Todos os cenarios</option>
-                            <option value="Otimista">Otimista</option>
-                            <option value="Realista">Realista</option>
-                            <option value="Pessimista">Pessimista</option>
+                            <option value="">Todas as semanas</option>
+                            <option value="Semana 1">Semana 1</option>
+                            <option value="Semana 2">Semana 2</option>
+                            <option value="Semana 3">Semana 3</option>
+                            <option value="Semana 4">Semana 4</option>
                         </select>
                         <select id="fcFilterMrr" class="fc-filter-select" onchange="renderForecast()">
                             <option value="">Qualquer MRR</option>
@@ -16716,28 +16755,6 @@ function pmComputeRealRates(team, periodDays) {
 
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
 
-    // Debug: quais pipelines aparecem nos deals que meu filtro tá considerando
-    const pipelinesInOpen = {};
-    (dashOpenDeals || []).forEach(d => {
-        const p = getPipelineName(d);
-        pipelinesInOpen[p] = (pipelinesInOpen[p] || 0) + 1;
-    });
-    console.log(`[PM ${team.name}]`, {
-        commercialPipelines: team.commercialPipelines,
-        meetingPipelines: team.meetingPipelines,
-        wonInTeam: won.length,
-        openInTeam: open.length,
-        ticket: Math.round(ticket),
-        agend,
-        realizadas,
-        salToSql: salToSql !== null ? Math.round(salToSql) + '%' : 'null',
-        sqlToOpo: sqlToOpo !== null ? Math.round(sqlToOpo) + '%' : 'null',
-        opoToGo: opoToGo !== null ? Math.round(opoToGo) + '%' : 'null',
-        pipelinesInDashOpenDeals: pipelinesInOpen,
-        totalDashMeetings: (dashMeetings || []).length,
-        totalDashInteractions: (dashInteractions || []).length
-    });
-
     return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
 }
 
@@ -17925,28 +17942,36 @@ function resetFcOverride(dealId) {
     renderForecast();
 }
 
+// Cenários agora representam SEMANAS do mês (S1=base garantida, S4=teto/upside).
+// Aceita labels legados no Ploomes durante a transição:
+//   Pessimista → Semana 1  ·  Realista → Semana 2  ·  Otimista → Semana 3
+//   (Semana 4 é um valor novo que precisa ser criado no dropdown do Ploomes)
 function getScenarioBadge(scenario) {
     if (!scenario) return '<span class="badge badge-pipeline-default">-</span>';
     const s = scenario.toLowerCase();
-    if (s.includes('otimista')) return '<span class="badge badge-otimista">Otimista</span>';
-    if (s.includes('realista')) return '<span class="badge badge-realista">Realista</span>';
-    if (s.includes('pessimista')) return '<span class="badge badge-pessimista">Pessimista</span>';
+    if (s.includes('semana 1') || s.includes('pessimista')) return '<span class="badge badge-semana-1">Semana 1</span>';
+    if (s.includes('semana 2') || s.includes('realista'))   return '<span class="badge badge-semana-2">Semana 2</span>';
+    if (s.includes('semana 3') || s.includes('otimista'))   return '<span class="badge badge-semana-3">Semana 3</span>';
+    if (s.includes('semana 4'))                              return '<span class="badge badge-semana-4">Semana 4</span>';
     return `<span class="badge badge-pipeline-default">${scenario}</span>`;
 }
 
 function normalizeScenario(raw) {
     if (!raw) return '';
-    if (raw.toLowerCase().includes('pessimista')) return 'Pessimista';
-    if (raw.toLowerCase().includes('realista')) return 'Realista';
-    if (raw.toLowerCase().includes('otimista')) return 'Otimista';
+    const s = raw.toLowerCase();
+    if (s.includes('semana 4')) return 'Semana 4';
+    if (s.includes('semana 3') || s.includes('otimista'))   return 'Semana 3';
+    if (s.includes('semana 2') || s.includes('realista'))   return 'Semana 2';
+    if (s.includes('semana 1') || s.includes('pessimista')) return 'Semana 1';
     return raw;
 }
 
 function scenarioOrder(s) {
-    if (s === 'Otimista') return 0;
-    if (s === 'Realista') return 1;
-    if (s === 'Pessimista') return 2;
-    return 3;
+    if (s === 'Semana 1') return 0;
+    if (s === 'Semana 2') return 1;
+    if (s === 'Semana 3') return 2;
+    if (s === 'Semana 4') return 3;
+    return 4;
 }
 
 function renderForecast() {
@@ -17960,8 +17985,15 @@ function renderForecast() {
         return new Date(a.closeDate || 0) - new Date(b.closeDate || 0);
     });
 
-    // Calculate KPIs
-    const kpis = { Otimista: { mrr: 0, setup: 0 }, Realista: { mrr: 0, setup: 0 }, Pessimista: { mrr: 0, setup: 0 } };
+    // KPIs por semana (S1 = base garantida do início do mês, S4 = upside/teto)
+    const WEEKS = [
+        { key: 'Semana 1', cls: 'scenario-semana-1', title: 'Semana 1', sub: 'Base — 1ª semana do mês' },
+        { key: 'Semana 2', cls: 'scenario-semana-2', title: 'Semana 2', sub: 'Provável — 2ª semana' },
+        { key: 'Semana 3', cls: 'scenario-semana-3', title: 'Semana 3', sub: 'Esperado — 3ª semana' },
+        { key: 'Semana 4', cls: 'scenario-semana-4', title: 'Semana 4', sub: 'Teto — 4ª semana' }
+    ];
+    const kpis = {};
+    WEEKS.forEach(w => { kpis[w.key] = { mrr: 0, setup: 0 }; });
     filtered.forEach(d => {
         const s = d.forecast;
         if (kpis[s]) {
@@ -17970,57 +18002,31 @@ function renderForecast() {
         }
     });
 
-    document.getElementById('fcKpiGrid').innerHTML = `
+    document.getElementById('fcKpiGrid').innerHTML = WEEKS.map(w => `
         <div class="fc-scenario-group">
-            <div class="fc-scenario-title scenario-otimista-title">&#128293; Otimista</div>
+            <div class="fc-scenario-title ${w.cls}-title">${w.title}<span class="fc-scenario-sub"> · ${w.sub}</span></div>
             <div class="fc-scenario-pair">
-                <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.mrr)}</div>
+                <div class="fc-kpi-card ${w.cls}" onclick="showFcDrilldown('${w.key}')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis[w.key].mrr)}</div>
                     <div class="fc-kpi-label">MRR</div>
                 </div>
-                <div class="fc-kpi-card scenario-otimista" onclick="showFcDrilldown('Otimista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Otimista.setup)}</div>
+                <div class="fc-kpi-card ${w.cls}" onclick="showFcDrilldown('${w.key}')">
+                    <div class="fc-kpi-value">R$ ${formatMoney(kpis[w.key].setup)}</div>
                     <div class="fc-kpi-label">Setup</div>
                 </div>
             </div>
         </div>
-        <div class="fc-scenario-group">
-            <div class="fc-scenario-title scenario-realista-title">&#9989; Realista</div>
-            <div class="fc-scenario-pair">
-                <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.mrr)}</div>
-                    <div class="fc-kpi-label">MRR</div>
-                </div>
-                <div class="fc-kpi-card scenario-realista" onclick="showFcDrilldown('Realista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Realista.setup)}</div>
-                    <div class="fc-kpi-label">Setup</div>
-                </div>
-            </div>
-        </div>
-        <div class="fc-scenario-group">
-            <div class="fc-scenario-title scenario-pessimista-title">&#9888;&#65039; Pessimista</div>
-            <div class="fc-scenario-pair">
-                <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.mrr)}</div>
-                    <div class="fc-kpi-label">MRR</div>
-                </div>
-                <div class="fc-kpi-card scenario-pessimista" onclick="showFcDrilldown('Pessimista')">
-                    <div class="fc-kpi-value">R$ ${formatMoney(kpis.Pessimista.setup)}</div>
-                    <div class="fc-kpi-label">Setup</div>
-                </div>
-            </div>
-        </div>
-    `;
+    `).join('');
 
-    // Totais consolidados
-    const totalGeralMrr = kpis.Otimista.mrr + kpis.Realista.mrr + kpis.Pessimista.mrr;
-    const totalGeralSetup = kpis.Otimista.setup + kpis.Realista.setup + kpis.Pessimista.setup;
-    const totalRealPesMrr = kpis.Realista.mrr + kpis.Pessimista.mrr;
-    const totalRealPesSetup = kpis.Realista.setup + kpis.Pessimista.setup;
+    // Totais consolidados (chão do mês = S1+S2; total = todas as 4 semanas)
+    const totalGeralMrr   = WEEKS.reduce((s, w) => s + kpis[w.key].mrr, 0);
+    const totalGeralSetup = WEEKS.reduce((s, w) => s + kpis[w.key].setup, 0);
+    const chaoMrr   = kpis['Semana 1'].mrr   + kpis['Semana 2'].mrr;
+    const chaoSetup = kpis['Semana 1'].setup + kpis['Semana 2'].setup;
 
     document.getElementById('fcTotalsGrid').innerHTML = `
         <div class="fc-total-group">
-            <div class="fc-total-title">&#128202; Total Geral (todos os cenarios)</div>
+            <div class="fc-total-title">Total do mês (S1 + S2 + S3 + S4)</div>
             <div class="fc-total-pair">
                 <div class="fc-total-card">
                     <div class="fc-total-value">R$ ${formatMoney(totalGeralMrr)}</div>
@@ -18031,35 +18037,43 @@ function renderForecast() {
                     <div class="fc-total-label">Setup Total</div>
                 </div>
             </div>
-            <div class="fc-total-subtitle">Otimista + Realista + Pessimista</div>
+            <div class="fc-total-subtitle">Todas as semanas somadas</div>
         </div>
         <div class="fc-total-group">
-            <div class="fc-total-title">&#127919; Forecast Conservador</div>
+            <div class="fc-total-title">Chão do mês (S1 + S2)</div>
             <div class="fc-total-pair">
                 <div class="fc-total-card">
-                    <div class="fc-total-value">R$ ${formatMoney(totalRealPesMrr)}</div>
-                    <div class="fc-total-label">MRR (Realista + Pessimista)</div>
+                    <div class="fc-total-value">R$ ${formatMoney(chaoMrr)}</div>
+                    <div class="fc-total-label">MRR (S1 + S2)</div>
                 </div>
                 <div class="fc-total-card">
-                    <div class="fc-total-value">R$ ${formatMoney(totalRealPesSetup)}</div>
-                    <div class="fc-total-label">Setup (Realista + Pessimista)</div>
+                    <div class="fc-total-value">R$ ${formatMoney(chaoSetup)}</div>
+                    <div class="fc-total-label">Setup (S1 + S2)</div>
                 </div>
             </div>
-            <div class="fc-total-subtitle">Sem o cenario otimista</div>
+            <div class="fc-total-subtitle">Sem contar S3 e S4 — só o que a 1ª metade do mês entrega</div>
         </div>
     `;
 
-    // Main Chart
+    // Main Chart — 4 datasets, um por semana
+    const WEEK_COLORS = {
+        'Semana 1': { bg: 'rgba(34,197,94,0.7)',  border: '#22c55e' },
+        'Semana 2': { bg: 'rgba(132,204,22,0.7)', border: '#84cc16' },
+        'Semana 3': { bg: 'rgba(245,158,11,0.7)', border: '#f59e0b' },
+        'Semana 4': { bg: 'rgba(139,92,246,0.7)', border: '#8b5cf6' }
+    };
     if (fcCharts.main) { fcCharts.main.destroy(); fcCharts.main = null; }
     fcCharts.main = new Chart(document.getElementById('chartForecast'), {
         type: 'bar',
         data: {
             labels: ['MRR', 'Setup'],
-            datasets: [
-                { label: 'Otimista', data: [kpis.Otimista.mrr, kpis.Otimista.setup], backgroundColor: 'rgba(16,185,129,0.7)', borderColor: '#10b981', borderWidth: 1 },
-                { label: 'Realista', data: [kpis.Realista.mrr, kpis.Realista.setup], backgroundColor: 'rgba(245,158,11,0.7)', borderColor: '#f59e0b', borderWidth: 1 },
-                { label: 'Pessimista', data: [kpis.Pessimista.mrr, kpis.Pessimista.setup], backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444', borderWidth: 1 }
-            ]
+            datasets: WEEKS.map(w => ({
+                label: w.title,
+                data: [kpis[w.key].mrr, kpis[w.key].setup],
+                backgroundColor: WEEK_COLORS[w.key].bg,
+                borderColor: WEEK_COLORS[w.key].border,
+                borderWidth: 1
+            }))
         },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -18067,8 +18081,7 @@ function renderForecast() {
             onClick: (event, elements, chart) => {
                 if (elements.length > 0) {
                     const dsIdx = elements[0].datasetIndex;
-                    const scenarios = ['Otimista', 'Realista', 'Pessimista'];
-                    showFcDrilldown(scenarios[dsIdx]);
+                    showFcDrilldown(WEEKS[dsIdx].key);
                 }
             },
             scales: {
@@ -20197,18 +20210,20 @@ function renderAfSankhya() {
 
 function afGetScenario(d) {
     // Campo customizado "Forecast" no Ploomes: deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC
+    // Aceita labels novos (Semana 1/2/3/4) e legados (Pessimista/Realista/Otimista) durante transição.
     const p = (d.OtherProperties || []).find(x => x.FieldKey === 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC');
     const raw = (p?.ObjectValueName || '').toLowerCase();
-    if (raw.includes('otim')) return 'otimista';
-    if (raw.includes('real')) return 'realista';
-    if (raw.includes('pess')) return 'pessimista';
+    if (raw.includes('semana 4')) return 's4';
+    if (raw.includes('semana 3') || raw.includes('otim')) return 's3';
+    if (raw.includes('semana 2') || raw.includes('real')) return 's2';
+    if (raw.includes('semana 1') || raw.includes('pess')) return 's1';
     return null;
 }
 
 function renderAfScenarios(openDeals, meta) {
     const grid = document.getElementById('afScenariosGrid');
     if (!grid) return;
-    const buckets = { otimista: [], realista: [], pessimista: [], semCenario: [] };
+    const buckets = { s1: [], s2: [], s3: [], s4: [], semCenario: [] };
     openDeals.forEach(d => {
         const sc = afGetScenario(d);
         if (sc) buckets[sc].push(d);
@@ -20218,11 +20233,12 @@ function renderAfScenarios(openDeals, meta) {
     const sumMrr = (arr) => arr.reduce((s, d) => s + afGetMRR(d), 0);
     const sumSetup = (arr) => arr.reduce((s, d) => s + afGetSetup(d), 0);
 
-    // Ordem visual: Pessimista (mínimo) → Realista (provável) → Otimista (teto)
+    // Semanas do mês: S1 (base) → S4 (teto). Fatiar o mês pra não fechar tudo nos últimos dias.
     const data = [
-        { key: 'pessimista', label: 'PESSIMISTA', desc: 'Mínimo se nada der certo — chão garantido do mês', cls: 'pessimista', deals: buckets.pessimista },
-        { key: 'realista', label: 'REALISTA', desc: 'Tudo indica fechamento, mas com risco residual', cls: 'realista', deals: buckets.realista },
-        { key: 'otimista', label: 'OTIMISTA', desc: 'Se tudo der certo — teto e desejo do vendedor', cls: 'otimista', deals: buckets.otimista }
+        { key: 's1', label: 'SEMANA 1', desc: 'Base garantida — entrega da 1ª semana do mês', cls: 's1', deals: buckets.s1 },
+        { key: 's2', label: 'SEMANA 2', desc: 'Provável — entrega da 2ª semana', cls: 's2', deals: buckets.s2 },
+        { key: 's3', label: 'SEMANA 3', desc: 'Esperado — entrega da 3ª semana', cls: 's3', deals: buckets.s3 },
+        { key: 's4', label: 'SEMANA 4', desc: 'Teto — upside da 4ª semana', cls: 's4', deals: buckets.s4 }
     ];
 
     grid.innerHTML = data.map(s => {
