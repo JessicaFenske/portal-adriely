@@ -16758,8 +16758,16 @@ function pmComputeRealRates(team, periodDays) {
     return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
 }
 
-function pmBuildTeamCard(team, real, saved) {
-    const mix = Number(saved.mix ?? team.defaults.mix);
+function pmBuildTeamCard(team, real, saved, metaTotal) {
+    // Meta absoluta do time: prioridade goalAbs (novo, editável) > mix legado > default
+    let teamMrr;
+    if (saved.goalAbs !== null && saved.goalAbs !== undefined && saved.goalAbs !== '') {
+        teamMrr = Number(saved.goalAbs);
+    } else if (saved.mix !== null && saved.mix !== undefined && saved.mix !== '') {
+        teamMrr = (Number(saved.mix) / 100) * metaTotal;
+    } else {
+        teamMrr = (team.defaults.mix / 100) * metaTotal;
+    }
     const ticket = Number(saved.ticket ?? (real.ticket > 0 ? Math.round(real.ticket) : 2000));
     const r1 = Number(saved.r1 ?? team.defaults.r1);
     const r2 = Number(saved.r2 ?? team.defaults.r2);
@@ -16779,8 +16787,8 @@ function pmBuildTeamCard(team, real, saved) {
 
     const paramsHtml = `
         <div class="pm-param-row">
-            <div class="pm-label-wrap">% da meta</div>
-            ${mkInput('mix', mix, '%', { max: 100, step: 5 })}
+            <div class="pm-label-wrap">Meta MRR do time</div>
+            ${mkInput('goalAbs', Math.round(teamMrr), '', { step: 1000, prefix: 'R$' })}
         </div>
         <div class="pm-param-row">
             <div class="pm-label-wrap">Ticket médio ${ticketBadge}</div>
@@ -16850,18 +16858,20 @@ function pmResetTeam(teamId) {
 
 function pmReadInputs(teamId) {
     const get = f => Number(document.querySelector(`#view-planejamento-metas input[data-team="${teamId}"][data-field="${f}"]`)?.value) || 0;
-    return { mix: get('mix'), ticket: get('ticket'), r1: get('r1'), r2: get('r2'), r3: get('r3'), r4: get('r4'), r5: get('r5') };
+    return { goalAbs: get('goalAbs'), ticket: get('ticket'), r1: get('r1'), r2: get('r2'), r3: get('r3'), r4: get('r4'), r5: get('r5') };
 }
 
-function pmComputeFunnel(inputs, metaMrr) {
-    const teamMrr = metaMrr * (inputs.mix / 100);
+function pmComputeFunnel(inputs, metaTotal) {
+    // Meta do time é editada diretamente em R$ (goalAbs). Mix % vira label calculado.
+    const teamMrr = inputs.goalAbs;
+    const mix = metaTotal > 0 ? (teamMrr / metaTotal) * 100 : 0;
     const go  = inputs.ticket > 0 ? Math.ceil(teamMrr / inputs.ticket) : 0;
     const opo = inputs.r5 > 0 ? Math.ceil(go  / (inputs.r5 / 100)) : 0;
     const sql = inputs.r4 > 0 ? Math.ceil(opo / (inputs.r4 / 100)) : 0;
     const sal = inputs.r3 > 0 ? Math.ceil(sql / (inputs.r3 / 100)) : 0;
     const mql = inputs.r2 > 0 ? Math.ceil(sal / (inputs.r2 / 100)) : 0;
     const lead= inputs.r1 > 0 ? Math.ceil(mql / (inputs.r1 / 100)) : 0;
-    return { teamMrr, mix: inputs.mix, stages: { lead, mql, sal, sql, opo, go } };
+    return { teamMrr, mix, stages: { lead, mql, sal, sql, opo, go } };
 }
 
 function pmUpdateCalculations() {
@@ -16871,14 +16881,14 @@ function pmUpdateCalculations() {
 
     const results = PM_TEAMS.map(t => {
         const inputs = pmReadInputs(t.id);
-        // Salva overrides
-        ['mix','ticket','r1','r2','r3','r4','r5'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
+        // Salva overrides — goalAbs substitui mix como fonte da verdade da meta do time
+        ['goalAbs','ticket','r1','r2','r3','r4','r5'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
         return { team: t, ...pmComputeFunnel(inputs, meta) };
     });
 
     results.forEach(({ team, teamMrr, mix, stages }) => {
         const g = document.getElementById(`pmGoal-${team.id}`);
-        if (g) g.innerHTML = `${pmFmtMoneyShort(teamMrr)}<span class="pct">· ${mix}%</span>`;
+        if (g) g.innerHTML = `${pmFmtMoneyShort(teamMrr)}<span class="pct">· ${Math.round(mix)}%</span>`;
         const maxCount = stages.lead || 1;
         PM_STAGES.forEach(s => {
             const c = document.getElementById(`pmCount-${team.id}-${s.key}`);
@@ -16894,13 +16904,27 @@ function pmUpdateCalculations() {
         PM_STAGES.forEach(s => { totals[s.key] += stages[s.key]; byTeam[team.id][s.key] = stages[s.key]; });
     });
     const totalMrrValue = results.reduce((sum, r) => sum + r.teamMrr, 0);
+    const gap = totalMrrValue - meta;
+    const gapPct = meta > 0 ? (gap / meta) * 100 : 0;
+    let gapBadge = '';
+    if (Math.abs(gap) >= 1000) {
+        const color = gap > 0 ? '#4ade80' : '#f87171';
+        const icon = gap > 0 ? '▲' : '▼';
+        const txt = gap > 0
+            ? `${icon} ${pmFmtMoneyShort(Math.abs(gap))} acima da meta (${gapPct.toFixed(1)}%)`
+            : `${icon} ${pmFmtMoneyShort(Math.abs(gap))} abaixo da meta (${gapPct.toFixed(1)}%)`;
+        gapBadge = `<div style="font-size:11px;color:${color};font-weight:600;margin-top:2px;">${txt}</div>`;
+    }
     const totalsEl = document.getElementById('pmTotals');
     if (totalsEl) {
         totalsEl.style.display = 'block';
         totalsEl.innerHTML = `
             <div class="pm-totals-head">
                 <h3>Consolidado — os 3 times somados</h3>
-                <div class="pm-totals-mrr">${pmFmtMoney(totalMrrValue)}</div>
+                <div style="text-align:right;">
+                    <div class="pm-totals-mrr">${pmFmtMoney(totalMrrValue)}</div>
+                    ${gapBadge}
+                </div>
             </div>
             <div class="pm-totals-grid">
                 ${PM_STAGES.map(s => `
@@ -16934,10 +16958,12 @@ function renderPlanejamentoMetas() {
         return;
     }
 
+    const metaTotal = Number(savedMeta) || 0;
     const grid = document.getElementById('pmTeamsGrid');
     grid.innerHTML = PM_TEAMS.map(team => {
         const real = pmComputeRealRates(team, periodDays);
         const saved = {
+            goalAbs: pmLsGet(`${team.id}_goalAbs`, null),
             mix: pmLsGet(`${team.id}_mix`, null),
             ticket: pmLsGet(`${team.id}_ticket`, null),
             r1: pmLsGet(`${team.id}_r1`, null),
@@ -16946,7 +16972,7 @@ function renderPlanejamentoMetas() {
             r4: pmLsGet(`${team.id}_r4`, null),
             r5: pmLsGet(`${team.id}_r5`, null)
         };
-        return pmBuildTeamCard(team, real, saved);
+        return pmBuildTeamCard(team, real, saved, metaTotal);
     }).join('');
 
     // Wire inputs (idempotente)
