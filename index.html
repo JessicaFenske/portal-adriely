@@ -17244,6 +17244,19 @@ function renderPlanejamentoMetas() {
         return;
     }
 
+    // Carrega MQLs se ainda não foram carregados (r1/r2 do Novos Negócios depende disso).
+    // Sem esses dados, real.leadToMql/mqlToSal = null → cai pra ESTIMATIVA.
+    // Guard flag pra evitar loop se o load falhar (mqlAllPeople continua vazio).
+    if ((!mqlAllPeople || mqlAllPeople.length === 0) && typeof loadMqls === 'function' && !window._pmMqlLoadAttempted) {
+        window._pmMqlLoadAttempted = true;
+        document.getElementById('pmTeamsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px 20px;">Carregando MQLs pra calcular Lead→MQL e MQL→SAL...</div>';
+        loadMqls().then(() => renderPlanejamentoMetas()).catch(err => {
+            console.warn('[pm] loadMqls falhou:', err.message);
+            renderPlanejamentoMetas(); // segue mesmo assim — vai ficar em ESTIMATIVA
+        });
+        return;
+    }
+
     const metaTotal = Number(savedMeta) || 0;
     const grid = document.getElementById('pmTeamsGrid');
     grid.innerHTML = PM_TEAMS.map(team => {
