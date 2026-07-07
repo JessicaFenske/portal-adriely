@@ -21036,49 +21036,131 @@ function computeFlowWinsForMkt(range) {
 }
 
 // ============================================================================
-// HERO META vs GERAÇÃO DE DEMANDA — mostra pra Fernanda o gap de topo do funil
+// HERO META vs GERAÇÃO DE DEMANDA — foco em NOVOS NEGÓCIOS (máquina de MKT + PV
+// + Vendas novos). Farmer e Sankhya não contam aqui — MKT não é fonte deles.
 // ============================================================================
-// Meta base + funil reverso vem do Planejamento de Metas (localStorage). Fallback:
-// defaults do PM_TEAMS + meta padrão 200k. Assim funciona mesmo sem a Jessica ter
-// salvo os overrides no browser da Fê.
-function mktComputeMetaAggregate() {
-    const metaTotal = Number(pmLsGet('meta', '200000')) || 200000;
-    const totals = { leads: 0, mqls: 0, sals: 0, opos: 0, gos: 0, mrr: 0 };
-    const byTeam = {};
-    (typeof PM_TEAMS !== 'undefined' ? PM_TEAMS : []).forEach(team => {
-        const goalAbs = Number(pmLsGet(`${team.id}_goalAbs`, null));
-        const teamMrr = (goalAbs && goalAbs > 0) ? goalAbs : (team.defaults.mix / 100) * metaTotal;
-        const ticket = Number(pmLsGet(`${team.id}_ticket`, null)) || 3000;
-        const r1 = Number(pmLsGet(`${team.id}_r1`, null)) || team.defaults.r1;
-        const r2 = Number(pmLsGet(`${team.id}_r2`, null)) || team.defaults.r2;
-        const r3 = Number(pmLsGet(`${team.id}_r3`, null)) || 70;
-        const r4 = Number(pmLsGet(`${team.id}_r4`, null)) || 40;
-        const r5 = Number(pmLsGet(`${team.id}_r5`, null)) || 25;
-        const go  = ticket > 0 ? Math.ceil(teamMrr / ticket) : 0;
-        const opo = r5 > 0 ? Math.ceil(go  / (r5 / 100)) : 0;
-        const sql = r4 > 0 ? Math.ceil(opo / (r4 / 100)) : 0;
-        const sal = r3 > 0 ? Math.ceil(sql / (r3 / 100)) : 0;
-        const mql = r2 > 0 ? Math.ceil(sal / (r2 / 100)) : 0;
-        const lead= r1 > 0 ? Math.ceil(mql / (r1 / 100)) : 0;
-        byTeam[team.id] = { name: team.name, teamMrr, lead, mql, sal, opo, go };
-        totals.leads += lead;
-        totals.mqls  += mql;
-        totals.sals  += sal;
-        totals.opos  += opo;
-        totals.gos   += go;
-        totals.mrr   += teamMrr;
-    });
-    return { metaTotal, totals, byTeam };
+// Pipelines considerados "Novos Negócios" (pré-vendas + vendas novos)
+const NN_MEETING_PIPELINES = ['Funil de Vendas', 'SDR Inbound', 'SDR Outbound'];
+const NN_COMMERCIAL_PIPELINE = 'Funil de Vendas';
+
+// Contato é candidato a lead de Novos Negócios se:
+// - passa isMqlPerson (email corporativo + telefone)
+// - não é cliente conhecido / Farmer / sistema / empresa cliente
+// - se tem deals abertos, pelo menos um está em pipeline NN (evita contar lead
+//   da Agnes/Maja que também gera contato)
+function mktIsNnLead(p) {
+    if (typeof isClientEmail === 'function' && isClientEmail(p.Email)) return false;
+    if (typeof mqlClientesLincrosIds !== 'undefined' && mqlClientesLincrosIds.has(p.CompanyId)) return false;
+    if (typeof isCreatedByFarmer === 'function' && isCreatedByFarmer(p)) return false;
+    if (typeof isCreatedBySystem === 'function' && isCreatedBySystem(p)) return false;
+    const allDeals = [...((mqlAllDealsLookup || {})[p.Id] || []), ...((mqlAllDealsLookup || {})[p.CompanyId] || [])];
+    if (allDeals.some(d => d.StatusId === 2)) return false; // já é cliente
+    if (allDeals.length === 0) return true; // sem deals — lead frio, é NN
+    return allDeals.some(d => NN_MEETING_PIPELINES.includes(d.Pipeline?.Name));
 }
 
-// Ganhos com FinishDate no range, em pipelines de venda — MRR realizado do mês
+// Meta puxa APENAS o time 'nn' do Planejamento de Metas.
+function mktComputeMetaAggregate() {
+    const nnTeam = (typeof PM_TEAMS !== 'undefined' ? PM_TEAMS : []).find(t => t.id === 'nn');
+    if (!nnTeam) return { metaTotal: 0, totals: { leads: 0, mqls: 0, sals: 0, opos: 0, gos: 0, mrr: 0 }, byTeam: {} };
+    const metaTotal = Number(pmLsGet('meta', '200000')) || 200000;
+    const goalAbs = Number(pmLsGet(`nn_goalAbs`, null));
+    const teamMrr = (goalAbs && goalAbs > 0) ? goalAbs : (nnTeam.defaults.mix / 100) * metaTotal;
+    const ticket = Number(pmLsGet(`nn_ticket`, null)) || 3000;
+    const r1 = Number(pmLsGet(`nn_r1`, null)) || nnTeam.defaults.r1;
+    const r2 = Number(pmLsGet(`nn_r2`, null)) || nnTeam.defaults.r2;
+    const r3 = Number(pmLsGet(`nn_r3`, null)) || 70;
+    const r4 = Number(pmLsGet(`nn_r4`, null)) || 40;
+    const r5 = Number(pmLsGet(`nn_r5`, null)) || 25;
+    const go  = ticket > 0 ? Math.ceil(teamMrr / ticket) : 0;
+    const opo = r5 > 0 ? Math.ceil(go  / (r5 / 100)) : 0;
+    const sql = r4 > 0 ? Math.ceil(opo / (r4 / 100)) : 0;
+    const sal = r3 > 0 ? Math.ceil(sql / (r3 / 100)) : 0;
+    const mql = r2 > 0 ? Math.ceil(sal / (r2 / 100)) : 0;
+    const lead= r1 > 0 ? Math.ceil(mql / (r1 / 100)) : 0;
+    return {
+        metaTotal: teamMrr,
+        totals: { leads: lead, mqls: mql, sals: sal, opos: opo, gos: go, mrr: teamMrr },
+        byTeam: { nn: { name: nnTeam.name, teamMrr, lead, mql, sal, opo, go } }
+    };
+}
+
+// Ganhos NN: FinishDate no range + pipeline Novos Negócios ('Funil de Vendas')
 function mktComputeFlowMrr(range) {
-    const salesP = typeof SALES_PIPELINES !== 'undefined' ? SALES_PIPELINES : [];
     return (wonDeals || []).reduce((sum, d) => {
         if (!inMktRange(d.FinishDate, range)) return sum;
-        if (salesP.length && !salesP.includes(getPipelineName(d))) return sum;
+        if (getPipelineName(d) !== NN_COMMERCIAL_PIPELINE) return sum;
         return sum + (typeof getMRR === 'function' ? getMRR(d) : 0);
     }, 0);
+}
+
+// Reuniões AGENDADAS em deals de pipeline NN no range (task ou interaction).
+function mktNnMeetings(range) {
+    if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
+    const dealMatches = dealId => {
+        const d = window._dashOpenDealsById?.[dealId];
+        return d && NN_MEETING_PIPELINES.includes(getPipelineName(d));
+    };
+    const seen = new Set();
+    const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    (window.dashMeetings || []).forEach(t => {
+        if (!t.DealId || seen.has(t.DealId)) return;
+        if (!norm(t.Title || '').includes('reuniao agendada')) return;
+        const dtIn = inMktRange(t.DateTime, range);
+        const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
+        const cdIn = t.CreateDate && inMktRange(t.CreateDate, range);
+        if (!dtIn && !fdIn && !cdIn) return;
+        if (!dealMatches(t.DealId)) return;
+        seen.add(t.DealId);
+    });
+    (window.dashInteractions || []).forEach(it => {
+        if (!it.DealId || seen.has(it.DealId)) return;
+        if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
+        if (!inMktRange(it.Date, range)) return;
+        if (!dealMatches(it.DealId)) return;
+        seen.add(it.DealId);
+    });
+    return seen.size;
+}
+
+// Propostas NN: deal com Data Proposta no range + pipeline NN
+function mktNnProposals(range) {
+    const all = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
+    const seen = new Set();
+    all.forEach(d => {
+        if (seen.has(d.Id)) return;
+        if (getPipelineName(d) !== NN_COMMERCIAL_PIPELINE) return;
+        const propDate = (d.OtherProperties || []).find(op => op.FieldKey === PROP_DATE_FIELD_KEY)?.DateTimeValue;
+        if (!propDate || !inMktRange(propDate, range)) return;
+        seen.add(d.Id);
+    });
+    return seen.size;
+}
+
+// Ganhos NN: FinishDate no range + pipeline NN
+function mktNnWins(range) {
+    return (window.wonDeals || []).filter(d =>
+        d.FinishDate && inMktRange(d.FinishDate, range) && getPipelineName(d) === NN_COMMERCIAL_PIPELINE
+    ).length;
+}
+
+// Leads NN: contatos criados no range que passam mktIsNnLead
+function mktNnLeadsInRange(range) {
+    return (mqlAllPeople || []).filter(p => inMktRange(p.CreateDate, range) && mktIsNnLead(p)).length;
+}
+
+// MQLs NN: contatos criados no range que passam mktIsNnLead + companyHasActiveDeal
+// exclusion (mesmo critério da aba MQLs — evita duplicação de empresa)
+function mktNnMqlsInRange(range) {
+    return (mqlAllPeople || []).filter(p => {
+        if (!inMktRange(p.CreateDate, range)) return false;
+        if (!mktIsNnLead(p)) return false;
+        const companyDeals = (mqlAllDealsLookup || {})[p.CompanyId] || [];
+        const companyHasActiveDeal = companyDeals.some(d =>
+            d.StatusId === 1 && (typeof isSankhyaPipeline === 'function' ? !isSankhyaPipeline(d.Pipeline?.Name) : true)
+        );
+        return !companyHasActiveDeal;
+    }).length;
 }
 
 // Pace do mês corrente: dia atual / total dias do mês (linear).
@@ -21148,38 +21230,36 @@ function renderMktMetaGap(range, realized) {
         `;
     }).join('');
 
-    // Foco no time com maior gap (por MQLs proporcional)
+    // Contexto pra ação — o que fazer com o gap identificado
+    const worstCell = cellsData.filter(c => c.needed > 0)
+        .map(c => ({ ...c, gapPct: c.needed > 0 ? 1 - (c.current / Math.max(1, c.needed * pace)) : 0 }))
+        .sort((a, b) => b.gapPct - a.gapPct)[0];
     let focusHtml = '';
-    const teamsArr = Object.values(agg.byTeam || {});
-    if (teamsArr.length && isThisMonth) {
-        // O único que sabemos "por time" é o alvo de MQL. Realizados por time no marketing
-        // não são atribuíveis (MQL não tem pipeline). Então mostra a intensidade relativa:
-        const worst = teamsArr.slice().sort((a, b) => b.mql - a.mql)[0];
-        if (worst && worst.mql > 0) {
-            focusHtml = `
-                <div class="mgap-team-focus">
-                    <div>
-                        <div class="title">⚠️ ${worst.name} concentra ${((worst.mql / agg.totals.mqls) * 100).toFixed(0)}% da geração de MQLs necessária</div>
-                        <div class="body">
-                            Pra bater a meta de <strong>${fmtRk(worst.teamMrr)}</strong> desse time, o mês precisa gerar
-                            <strong>${worst.mql.toLocaleString('pt-BR')} MQLs</strong>,
-                            <strong>${worst.sal.toLocaleString('pt-BR')} reuniões</strong> e
-                            <strong>${worst.opo.toLocaleString('pt-BR')} propostas</strong>.
-                            Priorize campanhas de origem com maior conversão MQL→OPO desse time (veja "Origens vencedoras" abaixo).
-                        </div>
-                    </div>
+    if (worstCell && worstCell.gapPct > 0.25 && isThisMonth) {
+        const focusMsg = worstCell.key === 'lead' || worstCell.key === 'mql'
+            ? 'Gap está no TOPO do funil — marketing precisa acelerar geração de leads/MQLs. Priorize campanhas de origem com melhor conversão MQL→OPO.'
+            : worstCell.key === 'sal'
+            ? 'Gap está em REUNIÕES — pré-vendas com dificuldade de agendar. Revisar cadência e volume de contato dos SDRs.'
+            : worstCell.key === 'opo'
+            ? 'Gap está em PROPOSTAS — reuniões estão acontecendo mas não convertem. Revisar qualificação e follow-up pós-reunião.'
+            : 'Gap está em GANHOS — propostas enviadas mas não fechando. Revisar objeções, precificação e proposta comercial.';
+        focusHtml = `
+            <div class="mgap-team-focus">
+                <div>
+                    <div class="title">⚠️ Etapa crítica: ${worstCell.label} · ${(worstCell.gapPct * 100).toFixed(0)}% atrás do pace</div>
+                    <div class="body">${focusMsg}</div>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
 
     block.style.display = '';
     block.innerHTML = `
         <div class="mgap-hero">
             <div>
-                <div class="mgap-eyebrow">Meta do mês · geração de demanda</div>
-                <h2>Bater ${fmtR(agg.metaTotal)} MRR</h2>
-                <div class="mgap-sub">Distribuído entre os 3 times · Marketing = fonte de MQLs no topo do funil</div>
+                <div class="mgap-eyebrow">Meta Novos Negócios · geração de demanda</div>
+                <h2>Bater ${fmtR(agg.metaTotal)} MRR em Novos Negócios</h2>
+                <div class="mgap-sub">Só a máquina de NN (pré-vendas + vendas novos) · Farmer e Sankhya não contam aqui</div>
             </div>
             <div class="mgap-progress-wrap">
                 <div class="mgap-progress-labels">
@@ -21216,20 +21296,15 @@ function renderMarketing(range, rd) {
     const totalPerd = enriched.filter(e => e.lost).length;
     const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
 
-    // Hero Meta do mês — geração de demanda vs meta MRR (do Planejamento de Metas)
-    // Usa FLOW pra reuniões/propostas/ganhos (qualquer safra) e MRR realmente fechado no período.
-    const mrrRealized = mktComputeFlowMrr(range);
-    // Chama já com os totais provisórios, será re-chamado abaixo com flow correto
-    const _flowReunPrelim = typeof computeFlowMeetingsForMkt === 'function' ? computeFlowMeetingsForMkt(range) : totalReun;
-    const _flowPropPrelim = typeof computeFlowProposalsForMkt === 'function' ? computeFlowProposalsForMkt(range) : totalProp;
-    const _flowGanhoPrelim = typeof computeFlowWinsForMkt === 'function' ? computeFlowWinsForMkt(range) : totalGanho;
+    // Hero Meta do mês — foco em NOVOS NEGÓCIOS (máquina crítica de MKT + PV + Vendas).
+    // Todos os números filtrados pra pipeline 'Funil de Vendas' + SDR Inbound/Outbound.
     renderMktMetaGap(range, {
-        leads: totalLeads,
-        mqls: totalMql,
-        sals: _flowReunPrelim,
-        opos: _flowPropPrelim,
-        gos: _flowGanhoPrelim,
-        mrr: mrrRealized
+        leads: mktNnLeadsInRange(range),
+        mqls:  mktNnMqlsInRange(range),
+        sals:  mktNnMeetings(range),
+        opos:  mktNnProposals(range),
+        gos:   mktNnWins(range),
+        mrr:   mktComputeFlowMrr(range)
     });
 
     // === FLOW: reuniões REALIZADAS no período (qualquer safra de lead) ===
