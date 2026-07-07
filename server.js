@@ -1045,7 +1045,9 @@ async function linkedinAdsFetchMonth(monthOffset) {
     return normalizeLinkedinAds(insights, campaignNames);
 }
 
-// Busca nomes das campanhas usadas — mesmo formato Rest.li 2.0 do adAnalytics
+// Busca nomes das campanhas usadas — get by ID individual (mesmo padrão do AdAccount
+// que testamos no diagnóstico e funcionou). Batch (?ids=List(...)) foi trocado por
+// requests individuais em paralelo — mais confiável no LinkedIn Rest.li 2.0.
 async function linkedinFetchCampaignNames(accessToken, insights) {
     const urns = new Set();
     for (const r of (insights.elements || [])) {
@@ -1053,25 +1055,25 @@ async function linkedinFetchCampaignNames(accessToken, insights) {
         if (pv && pv.startsWith('urn:li:sponsoredCampaign:')) urns.add(pv);
     }
     if (!urns.size) return {};
-    const ids = Array.from(urns).map(u => u.replace('urn:li:sponsoredCampaign:', ''));
     const headers = {
         'Authorization': 'Bearer ' + accessToken,
         'LinkedIn-Version': LINKEDIN_API_VERSION,
         'X-Restli-Protocol-Version': '2.0.0'
     };
     const map = {};
-    for (let i = 0; i < ids.length; i += 20) {
-        const batch = ids.slice(i, i + 20);
-        // Rest.li 2.0 batch: ids=List(urn1,urn2,urn3) — UM List com todos os URNs separados por vírgula
-        const urnList = batch.map(id => `urn%3Ali%3AsponsoredCampaign%3A${id}`).join(',');
-        const path = `/rest/adCampaigns?ids=List(${urnList})`;
-        try {
-            const j = await httpsJsonRequest({ hostname: 'api.linkedin.com', path, method: 'GET', headers });
-            for (const k of Object.keys(j.results || {})) {
-                map[k] = j.results[k]?.name || k;
-            }
-        } catch { /* não-fatal: nome fica como URN */ }
-    }
+    await Promise.all(Array.from(urns).map(urn => {
+        const id = urn.replace('urn:li:sponsoredCampaign:', '');
+        return httpsJsonRequest({
+            hostname: 'api.linkedin.com',
+            path: `/rest/adCampaigns/${id}`,
+            method: 'GET',
+            headers
+        }).then(j => {
+            if (j?.name) map[urn] = j.name;
+        }).catch(err => {
+            console.warn(`[linkedinNames] failed for ${urn}: ${err.message}`);
+        });
+    }));
     return map;
 }
 
