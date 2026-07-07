@@ -1936,6 +1936,132 @@ const server = http.createServer(async (req, res) => {
         return jsonReply(res, 200, { ok: true, message: `Lembrete enviado para ${target.email}` });
     }
 
+    // ==================== OAuth flow Google Ads (só admin) ====================
+    // Uso: 1) admin autentica no dashboard  2) abre /auth/google/start  3) autoriza no
+    // Google  4) callback exibe refresh_token pra copiar e colar no Render como env var.
+    // Redirect URI que a Sankhya precisa autorizar no Cloud Console:
+    //   https://portal-de-oportunidades.onrender.com/auth/google/callback
+    if (urlPath === '/auth/google/start' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) {
+            res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent('/auth/google/start') });
+            return res.end();
+        }
+        if (!user.isAdmin) {
+            res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h1>403 — apenas admin pode iniciar o fluxo OAuth</h1>');
+        }
+        if (!GOOGLE_ADS_CLIENT_ID) {
+            res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h1>Falta GOOGLE_ADS_CLIENT_ID</h1><p>Configure a env var no Render antes de iniciar o flow OAuth.</p>');
+        }
+        const host = req.headers.host;
+        const proto = req.headers['x-forwarded-proto'] || 'https';
+        const redirectUri = `${proto}://${host}/auth/google/callback`;
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + [
+            'client_id=' + encodeURIComponent(GOOGLE_ADS_CLIENT_ID),
+            'redirect_uri=' + encodeURIComponent(redirectUri),
+            'response_type=code',
+            'scope=' + encodeURIComponent('https://www.googleapis.com/auth/adwords'),
+            'access_type=offline',
+            'prompt=consent',
+            'include_granted_scopes=true'
+        ].join('&');
+        res.writeHead(302, { Location: authUrl });
+        return res.end();
+    }
+
+    if (urlPath === '/auth/google/callback' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) {
+            res.writeHead(302, { Location: '/login.html' });
+            return res.end();
+        }
+        if (!user.isAdmin) {
+            res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h1>403 — apenas admin</h1>');
+        }
+        const q = new URL(req.url, `https://${req.headers.host}`).searchParams;
+        const code = q.get('code');
+        const oauthErr = q.get('error');
+        if (oauthErr) {
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end(`<h1>Erro do Google OAuth</h1><p>${String(oauthErr).replace(/[<>]/g, '')}</p><p><a href="/auth/google/start">Tentar novamente</a></p>`);
+        }
+        if (!code) {
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h1>Sem code no callback</h1>');
+        }
+        const host = req.headers.host;
+        const proto = req.headers['x-forwarded-proto'] || 'https';
+        const redirectUri = `${proto}://${host}/auth/google/callback`;
+        try {
+            const body = `code=${encodeURIComponent(code)}`
+                       + `&client_id=${encodeURIComponent(GOOGLE_ADS_CLIENT_ID)}`
+                       + `&client_secret=${encodeURIComponent(GOOGLE_ADS_CLIENT_SECRET)}`
+                       + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+                       + `&grant_type=authorization_code`;
+            const json = await httpsJsonRequest({
+                hostname: 'oauth2.googleapis.com',
+                path: '/token',
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
+            });
+            const safe = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            if (!json.refresh_token) {
+                res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+                return res.end(`<h1>Sem refresh_token na resposta</h1>
+<p>Provável causa: essa conta Google já foi autorizada antes com esse client_id.
+Vai em <a href="https://myaccount.google.com/permissions" target="_blank">Google Account Permissions</a>, revoga o app, e refaça <a href="/auth/google/start">/auth/google/start</a>.</p>
+<pre style="background:#111;color:#eee;padding:16px;overflow:auto;">${safe(JSON.stringify(json, null, 2))}</pre>`);
+            }
+            const html = `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Refresh Token Google Ads</title>
+<style>
+body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #0f1117; color: #e5e7eb; padding: 40px 20px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 720px; margin: 0 auto; }
+h1 { color: #4ade80; margin: 0 0 12px; font-size: 24px; }
+.token-box { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px; padding: 16px 18px; margin: 18px 0; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 13px; word-break: break-all; user-select: all; }
+.token-box strong { color: #a78bfa; display: block; margin-bottom: 8px; font-family: -apple-system, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+.warning { background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; padding: 14px 18px; border-radius: 6px; margin: 22px 0; font-size: 13.5px; color: #d1d5db; }
+.warning strong { color: #fbbf24; }
+h2 { font-size: 15px; color: #94a3b8; margin-top: 32px; margin-bottom: 12px; }
+ol li { margin-bottom: 10px; font-size: 14px; }
+code { background: #252838; padding: 2px 7px; border-radius: 4px; font-size: 13px; color: #e5e7eb; font-family: ui-monospace, "SF Mono", monospace; }
+a { color: #a78bfa; }
+</style></head><body><div class="wrap">
+<h1>✅ Refresh token gerado com sucesso</h1>
+<p>Guarde este valor no Render como env var <code>GOOGLE_ADS_REFRESH_TOKEN</code>:</p>
+<div class="token-box">
+<strong>refresh_token</strong>
+${safe(json.refresh_token)}
+</div>
+<div class="warning">
+<strong>⚠️ Não compartilhe este token por chat, e-mail ou Slack público.</strong><br>
+Cole direto no painel do Render (Environment tab) e feche esta janela.
+</div>
+<h2>Próximos passos:</h2>
+<ol>
+    <li>Abre o <a href="https://dashboard.render.com/" target="_blank">Render dashboard</a></li>
+    <li>Vai no serviço, aba <code>Environment</code></li>
+    <li>Adiciona/atualiza as env vars:<br>
+        <code>GOOGLE_ADS_REFRESH_TOKEN</code> = valor acima<br>
+        <code>GOOGLE_ADS_CUSTOMER_ID</code> = ID da conta Google Ads da Lincros (só dígitos)<br>
+        <code>GOOGLE_ADS_LOGIN_CUSTOMER_ID</code> = MCC (se aplicável)<br>
+        <code>GOOGLE_ADS_DEVELOPER_TOKEN</code> = token da Sankhya (Basic Access aprovado)
+    </li>
+    <li>Após o redeploy, testa em <a href="/api/marketing/google-ads?refresh=1">/api/marketing/google-ads?refresh=1</a></li>
+</ol>
+</div></body></html>`;
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end(html);
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end(`<h1>Falha no token exchange</h1><pre>${String(e.message).replace(/[<>]/g, '')}</pre><p><a href="/auth/google/start">Tentar novamente</a></p>`);
+        }
+    }
+
     // ==================== Chat IA "Lia" (somente Claude Haiku 4.5 / Anthropic) ====================
     // Provider Gemini foi descontinuado por razões de privacidade — só Claude (Anthropic, no-training).
     // ==================== Marketing Ads endpoints ====================
