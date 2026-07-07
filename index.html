@@ -20656,6 +20656,14 @@ function buildEnrichedMqls(range) {
         if (isCreatedBySystem(p)) return false;
         const allDeals = [...(mqlAllDealsLookup[p.Id] || []), ...(mqlAllDealsLookup[p.CompanyId] || [])];
         if (allDeals.some(d => d.StatusId === 2)) return false;
+        // Alinhamento com getMqlClassified (aba MQLs): se a empresa já tem qualquer
+        // deal ATIVO em pipeline não-Sankhya, não conta como MQL novo — evita duplicação
+        // por outro contato da mesma empresa já em atendimento.
+        const companyDeals = mqlAllDealsLookup[p.CompanyId] || [];
+        const companyHasActiveDeal = companyDeals.some(d =>
+            d.StatusId === 1 && !isSankhyaPipeline(d.Pipeline?.Name)
+        );
+        if (companyHasActiveDeal) return false;
         return true;
     });
     return mqlsClean.map(p => {
