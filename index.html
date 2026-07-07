@@ -16867,16 +16867,65 @@ function pmComputeRealRates(team, periodDays) {
 
     // ============================================================
     // r1 (Lead → MQL) e r2 (MQL → SAL) usando dados reais do time.
-    // Lead = contato criado no período (proxy).
-    // MQL = passa nos filtros de qualificação (mesmo critério da aba MQLs).
-    // MQL → SAL = MQL cujo contato/deal teve reunião agendada por um SDR do time.
+    // A definição de MQL DIFERE por time:
+    //   - Novos Negócios: MQL = contato NOVO captado (topo do funil clássico).
+    //     Lead=contato criado, MQL=passa filtros de qualificação, SAL=MQL agendado
+    //     por Adriely/Gui/Samira.
+    //   - Farmer: MQL = deal criado no pipeline Farmer (Agnes seleciona da base).
+    //     Lead→MQL fica manual (não temos rastreio de "quantos contatos ela tocou"),
+    //     MQL→SAL = deals Farmer criados no período que a Agnes agendou reunião.
+    //   - Sankhya: MQL = deal criado no pipeline Sankhya (Maja qualificou).
+    //     MQL→SAL = deals Sankhya criados no período com reunião agendada pela Maja
+    //     OU passados pro executivo (proxy Sankhya: Owner != Maja).
     // ============================================================
     const SDRS_BY_TEAM = { nn: ['Guilherme Tomio', 'Samira Cristina', 'Adriely'], fm: ['Agnes Roberta'], sk: ['Maja Siqueira'] };
     const teamSdrs = SDRS_BY_TEAM[team.id] || [];
     let leadToMql = null, mqlToSal = null;
     let leadsCount = 0, mqlsCount = 0, mqlsWithSalCount = 0;
 
-    if ((mqlAllPeople || []).length > 0) {
+    // Farmer e Sankhya: MQL = deal criado no pipeline comercial no período
+    if (team.id === 'fm' || team.id === 'sk') {
+        const allDealsCombined = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+        const teamDealsInPeriod = allDealsCombined.filter(d => {
+            if (!team.commercialPipelines.includes(getPipelineName(d))) return false;
+            const dt = d.CreateDate ? new Date(d.CreateDate) : null;
+            return dt && dt >= cutoff && dt <= endPeriod;
+        });
+        mqlsCount = teamDealsInPeriod.length;
+        const teamDealIds = new Set(teamDealsInPeriod.map(d => d.Id));
+
+        const normLocal = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const salDeals = new Set();
+
+        // Reuniões agendadas por SDR do time nesses deals (tasks + interactions)
+        (dashMeetings || []).forEach(t => {
+            if (!t.DealId || !teamDealIds.has(t.DealId)) return;
+            if (!normLocal(t.Title || '').includes('reuniao agendada')) return;
+            const creator = typeof getCanonicalSdrName === 'function'
+                ? getCanonicalSdrName(dashUsersById?.[t.CreatorId] || '') : null;
+            if (creator && teamSdrs.includes(creator)) salDeals.add(t.DealId);
+        });
+        (dashInteractions || []).forEach(it => {
+            if (!it.DealId || !teamDealIds.has(it.DealId)) return;
+            if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
+            const creator = typeof getCanonicalSdrName === 'function'
+                ? getCanonicalSdrName(dashUsersById?.[it.CreatorId] || '') : null;
+            if (creator && teamSdrs.includes(creator)) salDeals.add(it.DealId);
+        });
+
+        // Proxy Sankhya: Maja não cria tasks — deal Sankhya com Owner != Maja = passou pro executivo
+        if (team.id === 'sk') {
+            teamDealsInPeriod.forEach(d => {
+                const ownerIsMaja = (d.Owner?.Name || '').toLowerCase().includes('maja');
+                if (!ownerIsMaja) salDeals.add(d.Id);
+            });
+        }
+        mqlsWithSalCount = salDeals.size;
+        mqlToSal = mqlsCount > 0 ? (mqlsWithSalCount / mqlsCount) * 100 : null;
+        // Lead → MQL fica manual (base cliente não tem "topo do funil" mensurável)
+        leadToMql = null;
+    }
+    else if ((mqlAllPeople || []).length > 0) {
         // Contatos criados no período (aproximação de "leads")
         const contactsInPeriod = mqlAllPeople.filter(p => {
             const dt = p.CreateDate ? new Date(p.CreateDate) : null;
