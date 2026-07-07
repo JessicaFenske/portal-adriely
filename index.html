@@ -6704,11 +6704,6 @@
             <!-- Hero: Meta MRR do mês vs geração de demanda (funil operativo) -->
             <div id="mktMetaGapBlock" style="display:none;"></div>
 
-            <!-- KPI bar dedicada -->
-            <div style="padding:0 30px 6px;">
-                <div id="mktKpiBar" class="mkt-kpi-bar"></div>
-            </div>
-
             <div class="mql-filters-bar">
                 <select id="mktFilterPeriod" class="mql-filter">
                     <option value="today">Hoje</option>
@@ -6723,7 +6718,6 @@
                 <input type="date" id="mktFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <input type="date" id="mktFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
                 <button class="mql-refresh-btn" onclick="loadMarketing()">&#128260; Atualizar</button>
-                <button class="mql-refresh-btn" onclick="openMktSpendModal()" style="background:linear-gradient(135deg,#16a34a,#22c55e);">&#128184; Investimento em mídia</button>
             </div>
 
             <div id="mktLoadingArea" class="dash-loading">
@@ -6734,8 +6728,35 @@
             <div id="mktContentArea" style="display:none;">
                 <div class="mkt-grid" style="padding:16px 30px 30px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:minmax(0,auto);gap:18px;align-items:stretch;">
 
-                    <!-- LINHA 1: 2 Funis lado-a-lado (Cohort + Flow) em 8 cols | Insights (4) -->
-                    <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
+                    <!-- LINHA 1: Mídia Paga AO VIVO (full width, destaque) -->
+                    <div class="dash-card" style="padding:22px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
+                            <div>
+                                <h2 style="color:#fff;font-size:16px;margin:0 0 4px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                    <span class="section-num" data-svg-icon="dollar"></span>
+                                    Mídia Paga — Ao Vivo
+                                </h2>
+                                <div style="color:#94a3b8;font-size:12px;">Onde tá o dinheiro · o que tá funcionando · comparação com mês anterior</div>
+                            </div>
+                            <button class="mql-refresh-btn" onclick="openMktSpendModal()" style="background:linear-gradient(135deg,#0891b2,#06b6d4);font-size:12px;padding:8px 14px;" title="Ajustar investimento manual pros canais sem API">&#9881;&#65039; Ajustar investimento manual</button>
+                        </div>
+                        <div id="mktAdsLive" style="min-height:220px;"></div>
+                    </div>
+
+                    <!-- LINHA 2: Insights (grande, full width, com evidência) -->
+                    <div class="dash-card" style="padding:22px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <h2 style="color:#fff;font-size:16px;margin:0;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                <span class="section-num" data-svg-icon="lightbulb"></span>
+                                Insights e ações
+                            </h2>
+                            <div style="color:#6b7280;font-size:11px;">Prioridades da semana · ordem: crítico → oportunidade → otimização</div>
+                        </div>
+                        <div id="mktInsights"></div>
+                    </div>
+
+                    <!-- LINHA 3: 2 Funis lado-a-lado (Cohort + Flow) full width -->
+                    <div class="dash-card" style="padding:20px;grid-column:span 12;display:flex;flex-direction:column;">
                         <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
                             <span class="section-num" data-svg-icon="bar"></span>
                             Funis de conversão — Safra vs Mês
@@ -6758,15 +6779,7 @@
                         </div>
                     </div>
 
-                    <div class="dash-card" style="padding:20px;grid-column:span 4;display:flex;flex-direction:column;">
-                        <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
-                            <span class="section-num" data-svg-icon="lightbulb"></span>
-                            Insights e ações
-                        </h2>
-                        <div id="mktInsights" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;max-height:480px;"></div>
-                    </div>
-
-                    <!-- LINHA 2: Evolucao (8) | Motivos (4) -->
+                    <!-- LINHA 4: Evolucao (8) | Motivos (4) -->
                     <div class="dash-card" style="padding:20px;grid-column:span 8;display:flex;flex-direction:column;">
                         <h2 style="color:#fff;font-size:15px;margin:0 0 14px;font-weight:600;display:flex;align-items:center;">
                             <span class="section-num" data-svg-icon="trendUp"></span>
@@ -10124,8 +10137,8 @@ function _cpGetChannelInvest(channelName, monthKey) {
     return { value: apiSpend, source: platData.mock ? 'mock' : 'api' };
 }
 
-function _cpRenderAdsLive(data) {
-    const container = document.getElementById('cpMktAdsLive');
+function _cpRenderAdsLive(data, containerId) {
+    const container = document.getElementById(containerId || 'cpMktAdsLive');
     if (!container) return;
     if (!data) {
         container.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">Falha ao buscar dados de mídia paga. Servidor pode estar reiniciando — recarrega a página.</div>';
@@ -20904,12 +20917,14 @@ async function loadMarketing() {
     document.getElementById('mktLastUpdate').textContent =
         `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
 
-    // Dispara fetch dos ads (Meta/Google/LinkedIn) em background
-    // pra adicionar alertas de mídia paga aos Insights quando chegar
+    // Dispara fetch dos ads (Meta/Google/LinkedIn) em background —
+    // renderiza bloco Mídia Paga + integra alertas nos Insights
     if (typeof _cpFetchAdsSummary === 'function') {
         _cpFetchAdsSummary(false).then(adsData => {
             if (!adsData) return;
-            // Re-renderiza só os Insights pra integrar os alertas de ads
+            // Bloco Mídia Paga na view Marketing
+            try { _cpRenderAdsLive(adsData, 'mktAdsLive'); } catch (e) { console.warn('[mkt] ads render:', e); }
+            // Re-renderiza Insights pra integrar alertas de ads
             if (window._lastMktInsightsArgs) {
                 renderMktInsights(window._lastMktInsightsArgs);
             }
@@ -21344,21 +21359,17 @@ function renderMarketing(range, rd) {
         </div>`;
     };
     const noSpend = totalSpend === 0;
-    const emptyHint = 'Defina o investimento';
     const cpmFlow = totalSpend > 0 && flowReun > 0 ? totalSpend / flowReun : NaN; // Custo por reunião (FLOW)
-    document.getElementById('mktKpiBar').innerHTML =
-        kpi('Total leads', totalLeads.toLocaleString('pt-BR'), '#60a5fa') +
-        kpi('MQLs', totalMql.toLocaleString('pt-BR'), '#b794f4', { trend: totalLeads ? `${pct(mqlRate, 1)} dos leads` : '' }) +
-        kpi('Reuniões do mês', flowReun.toLocaleString('pt-BR'), '#fbbf24', { trend: reunFromPriorSafras > 0 ? `${reunFromPriorSafras} de safras anteriores (${pct(pctPriorSafras, 0)})` : (flowReun > 0 ? 'todas da safra do mês' : 'sem reuniões agendadas') }) +
-        kpi('CPL', isFinite(cpl) ? brl(cpl) : '', '#a78bfa', noSpend ? { empty: emptyHint } : {}) +
-        kpi('Custo/Reunião', isFinite(cpmFlow) ? brl(cpmFlow) : '', '#f59e0b', noSpend ? { empty: emptyHint } : (flowReun === 0 ? { empty: 'Sem reuniões' } : { trend: 'Inv. do mês / Reuniões do mês' })) +
-        kpi('CAC', isFinite(cac) ? brl(cac) : '', '#f97316',
-            noSpend ? { empty: emptyHint } :
-            (totalGanho === 0 ? { empty: cohortStillPending >= 20 ? 'Em maturação' : 'Sem ganhos no período' } : {})) +
-        kpi('ROI', isFinite(roi) ? pct(roi, 0) : '',
-            roi >= 0 ? '#22c55e' : (cohortStillPending >= 20 && revenueWon === 0 ? '#94a3b8' : '#ef4444'),
-            noSpend ? { empty: emptyHint } :
-            (cohortStillPending >= 20 && revenueWon === 0 ? { empty: 'Em maturação' } : {}));
+    // KPI bar removida — números principais já estão no Hero + Mídia Paga.
+    // CPL / CAC / ROI aparecem no bloco de Mídia Paga (contexto correto).
+
+    // Bloco Mídia Paga — renderiza com cache atual se houver (o fetch async atualiza depois)
+    if (window._adsCachedSummary) {
+        try { _cpRenderAdsLive(window._adsCachedSummary, 'mktAdsLive'); } catch (e) { console.warn('[mkt] ads render:', e); }
+    } else {
+        const el = document.getElementById('mktAdsLive');
+        if (el) el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px;">Carregando dados de mídia paga (Meta · LinkedIn · Google)...</div>';
+    }
 
     // === Funil COHORT (safra) === leads/MQLs/Reuniões/Propostas/Ganhos da SAFRA do mês
     const funnelStages = [
@@ -21786,37 +21797,41 @@ function _computeMktInsights(m) {
 
 function renderMktInsights(m) {
     const insights = _computeMktInsights(m);
-    const grouped = { critical: [], opportunity: [], optimization: [], info: [] };
-    insights.forEach(i => { if (grouped[i.category]) grouped[i.category].push(i); });
+    // Ordem estratégica: crítico primeiro, depois oportunidade (acionável), depois otimização, info por último
+    const priorityMap = { critical: 0, opportunity: 1, optimization: 2, info: 3 };
+    const sorted = insights.slice().sort((a, b) => (priorityMap[a.category] ?? 9) - (priorityMap[b.category] ?? 9));
 
-    const sections = [
-        { key: 'critical',     emoji: '🚨', title: 'Críticos',      color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-        { key: 'opportunity',  emoji: '🚀', title: 'Oportunidades', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-        { key: 'optimization', emoji: '⚡', title: 'Otimizações',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-        { key: 'info',         emoji: 'ℹ️', title: 'Contexto',      color: '#60a5fa', bg: 'rgba(96,165,250,0.10)' }
-    ];
-
-    let html = '';
-    for (const s of sections) {
-        const items = grouped[s.key];
-        if (items.length === 0) continue;
-        html += `<div style="margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${s.bg};border-radius:6px;margin-bottom:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700;color:${s.color};">
-                <span style="font-size:13px;line-height:1;">${s.emoji}</span>
-                <span>${s.title}</span>
-                <span style="margin-left:auto;background:${s.color};color:#fff;min-width:18px;height:18px;padding:0 6px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">${items.length}</span>
-            </div>
-            ${items.map(i => `
-                <div style="border-left:3px solid ${s.color};background:rgba(255,255,255,0.025);border-radius:5px;padding:9px 12px;margin-bottom:5px;">
-                    <div style="color:#fff;font-size:12.5px;font-weight:600;margin-bottom:3px;line-height:1.3;">${i.title}</div>
-                    <div style="color:#cbd5e1;font-size:11.5px;line-height:1.45;">${i.body}</div>
-                </div>`).join('')}
-        </div>`;
-    }
+    const meta = {
+        critical:     { label: 'CRÍTICO',      color: '#ef4444', bg: 'rgba(239,68,68,0.06)',  border: 'rgba(239,68,68,0.35)',  icon: '🚨' },
+        opportunity:  { label: 'OPORTUNIDADE', color: '#22c55e', bg: 'rgba(34,197,94,0.06)',  border: 'rgba(34,197,94,0.35)',  icon: '🚀' },
+        optimization: { label: 'OTIMIZAÇÃO',   color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.35)', icon: '⚡' },
+        info:         { label: 'CONTEXTO',     color: '#60a5fa', bg: 'rgba(96,165,250,0.06)', border: 'rgba(96,165,250,0.30)', icon: 'ℹ️' }
+    };
 
     const el = document.getElementById('mktInsights');
     if (!el) return;
-    el.innerHTML = html || '<div style="color:#888;text-align:center;padding:20px;font-size:13px;">Sem insights — ajuste o período ou carregue mais dados.</div>';
+
+    if (sorted.length === 0) {
+        el.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:40px 20px;font-size:13px;background:rgba(255,255,255,0.02);border-radius:10px;">Sem insights no período · ajuste o filtro ou aguarde mais dados chegarem</div>';
+        return;
+    }
+
+    // Grid responsivo: 2 col em telas médias, 3 em telas grandes
+    const cardsHtml = sorted.map(i => {
+        const M = meta[i.category] || meta.info;
+        return `
+            <div style="background:${M.bg};border:1px solid ${M.border};border-left:4px solid ${M.color};border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:16px;line-height:1;">${M.icon}</span>
+                    <span style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:${M.color};text-transform:uppercase;">${M.label}</span>
+                </div>
+                <div style="color:#fff;font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-0.01em;">${i.title}</div>
+                <div style="color:#cbd5e1;font-size:12.5px;line-height:1.55;">${i.body}</div>
+            </div>
+        `;
+    }).join('');
+
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">${cardsHtml}</div>`;
 }
 
 let mktTimelineChart = null;
