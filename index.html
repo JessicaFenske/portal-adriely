@@ -16811,6 +16811,17 @@ function pmComputeRealRates(team, periodDays) {
         });
     }
 
+    // Índice global de agendadas (sem filtro de período) — usado como fallback
+    // pra resolver o creator da Realizada quando ela foi criada pela Automação.
+    // Mesma lógica do sec7Times: se realizada.CreatorId não é SDR canônico,
+    // busca creator da agendada global do mesmo deal.
+    const agendadaByDealGlobalPM = new Map();
+    (dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!norm(t.Title || '').includes('reuniao agendada')) return;
+        if (!agendadaByDealGlobalPM.has(t.DealId)) agendadaByDealGlobalPM.set(t.DealId, t);
+    });
+
     // Realizadas (tasks Finished=true + interactions), dedupe por DealId
     const realCounted = new Set();
     (dashMeetings || []).forEach(t => {
@@ -16819,8 +16830,14 @@ function pmComputeRealRates(team, periodDays) {
         if (!tn.includes('reuniao realizada')) return;
         if (t.Finished !== true) return;
         if (!inPeriod(t.FinishDate || t.DateTime)) return;
-        const creator = dashUsersById?.[t.CreatorId] || '';
-        if (typeof getCanonicalSdrName !== 'function' || !getCanonicalSdrName(creator)) return;
+        if (typeof getCanonicalSdrName !== 'function') return;
+        // Creator direto OU fallback via creator da agendada global (Automação workaround)
+        let canonical = getCanonicalSdrName(dashUsersById?.[t.CreatorId] || '');
+        if (!canonical) {
+            const ag = agendadaByDealGlobalPM.get(t.DealId);
+            if (ag) canonical = getCanonicalSdrName(dashUsersById?.[ag.CreatorId] || '');
+        }
+        if (!canonical) return;
         if (!dealMatchesTeam(t.DealId)) return;
         realizadas++; realCounted.add(t.DealId);
     });
