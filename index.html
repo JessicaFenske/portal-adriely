@@ -17013,7 +17013,9 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
     } else {
         teamMrr = (team.defaults.mix / 100) * metaTotal;
     }
-    const ticket = Number(saved.ticket ?? (real.ticket > 0 ? Math.round(real.ticket) : 2000));
+    // Ticket sempre pré-preenchido com o real do dashboard (ignora saved.ticket antigo).
+    // Continua editável, mas ao recarregar a view volta pro real. Fallback 2000 se sem amostra.
+    const ticket = real.ticket > 0 ? Math.round(real.ticket) : 2000;
     // Taxas de conversão NÃO são editáveis — evita erro humano. Usa REAL do dashboard
     // quando disponível, senão fallback pros defaults do time (chutes calibrados).
     // Se real for 0 (ex: Farmer SAL→SQL sem compliance), também usa default pra evitar
@@ -17148,9 +17150,8 @@ function pmUpdateCalculations() {
 
     const results = PM_TEAMS.map(t => {
         const inputs = pmReadInputs(t.id);
-        // Só goalAbs e ticket são editáveis — salva overrides desses dois.
-        // r1..r5 são read-only (vêm dos data-attributes com o real do dashboard).
-        ['goalAbs','ticket'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
+        // Só goalAbs é persistido — ticket volta pro real a cada render, r1..r5 são read-only.
+        pmLsSet(`${t.id}_goalAbs`, inputs.goalAbs);
         return { team: t, ...pmComputeFunnel(inputs, meta) };
     });
 
