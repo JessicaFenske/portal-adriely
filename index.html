@@ -1360,6 +1360,113 @@
         @media (max-width: 1100px) { .mkt-kpi-bar { grid-template-columns: repeat(3, 1fr); } .meetings-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 600px) { .mkt-kpi-bar { grid-template-columns: repeat(2, 1fr); } .mkt-kpi-value { font-size: 20px; } }
 
+        /* ==================== HERO: META DO MES vs GERACAO DE DEMANDA ==================== */
+        /* Mostra pra Fernanda quanto MRR ja fechou vs meta + gap por etapa do funil, alertando */
+        /* onde a geracao de demanda esta atras do necessario. */
+        #mktMetaGapBlock {
+            padding: 0 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        #mktMetaGapBlock .mgap-hero {
+            background: linear-gradient(135deg, #1a1d29, #252838);
+            border: 1px solid #2a2e3f;
+            border-left: 4px solid #8b5cf6;
+            border-radius: 14px;
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        @media (max-width: 900px) { #mktMetaGapBlock .mgap-hero { grid-template-columns: 1fr; gap: 14px; } }
+        #mktMetaGapBlock .mgap-hero .mgap-eyebrow {
+            font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+            color: #94a3b8; font-weight: 700; margin-bottom: 4px;
+        }
+        #mktMetaGapBlock .mgap-hero h2 {
+            margin: 0 0 4px; font-size: 18px; font-weight: 700; color: #e5e7eb;
+            letter-spacing: -0.01em;
+        }
+        #mktMetaGapBlock .mgap-hero .mgap-sub { color: #94a3b8; font-size: 12.5px; }
+        #mktMetaGapBlock .mgap-progress-wrap {
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        #mktMetaGapBlock .mgap-progress-labels {
+            display: flex; justify-content: space-between; align-items: baseline;
+            font-family: ui-monospace, "SF Mono", Consolas, monospace;
+        }
+        #mktMetaGapBlock .mgap-progress-labels .now { font-size: 22px; font-weight: 700; color: #4ade80; }
+        #mktMetaGapBlock .mgap-progress-labels .total { font-size: 12px; color: #6b7280; }
+        #mktMetaGapBlock .mgap-progress-bar {
+            position: relative; height: 10px; background: #252838; border-radius: 5px; overflow: hidden;
+        }
+        #mktMetaGapBlock .mgap-progress-fill { height: 100%; border-radius: 5px; transition: width 0.4s; }
+        #mktMetaGapBlock .mgap-progress-marker {
+            position: absolute; top: -3px; bottom: -3px; width: 2px; background: rgba(255,255,255,0.6);
+        }
+        #mktMetaGapBlock .mgap-progress-caption {
+            font-size: 11.5px; color: #94a3b8; font-family: ui-monospace, monospace;
+        }
+        #mktMetaGapBlock .mgap-progress-caption .warn { color: #f87171; font-weight: 700; }
+        #mktMetaGapBlock .mgap-progress-caption .ok   { color: #4ade80; font-weight: 700; }
+        #mktMetaGapBlock .mgap-progress-caption .mid  { color: #fbbf24; font-weight: 700; }
+        #mktMetaGapBlock .mgap-funnel-title {
+            font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+            color: #94a3b8; font-weight: 700; margin: 4px 4px 0;
+        }
+        #mktMetaGapBlock .mgap-funnel-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+        }
+        @media (max-width: 900px) { #mktMetaGapBlock .mgap-funnel-grid { grid-template-columns: repeat(2, 1fr); } }
+        #mktMetaGapBlock .mgap-cell {
+            background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px;
+            padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 3px;
+            position: relative; overflow: hidden;
+        }
+        #mktMetaGapBlock .mgap-cell.crit { border-left: 3px solid #ef4444; }
+        #mktMetaGapBlock .mgap-cell.warn { border-left: 3px solid #f59e0b; }
+        #mktMetaGapBlock .mgap-cell.ok   { border-left: 3px solid #22c55e; }
+        #mktMetaGapBlock .mgap-cell .mgap-stage {
+            font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: #94a3b8;
+        }
+        #mktMetaGapBlock .mgap-cell .mgap-needed {
+            font-family: ui-monospace, "SF Mono", monospace;
+            font-size: 22px; font-weight: 700; color: #e5e7eb; line-height: 1.1;
+            font-variant-numeric: tabular-nums; margin-top: 2px;
+        }
+        #mktMetaGapBlock .mgap-cell .mgap-needed-label {
+            font-size: 10px; color: #6b7280; margin-top: -2px;
+        }
+        #mktMetaGapBlock .mgap-cell .mgap-current {
+            font-size: 12px; color: #cbd5e1; font-family: ui-monospace, monospace;
+            margin-top: 6px; font-variant-numeric: tabular-nums;
+        }
+        #mktMetaGapBlock .mgap-cell .mgap-current strong { color: #e5e7eb; }
+        #mktMetaGapBlock .mgap-cell .mgap-status {
+            font-size: 11px; font-weight: 700; margin-top: 4px;
+        }
+        #mktMetaGapBlock .mgap-cell.crit .mgap-status { color: #f87171; }
+        #mktMetaGapBlock .mgap-cell.warn .mgap-status { color: #fbbf24; }
+        #mktMetaGapBlock .mgap-cell.ok   .mgap-status { color: #4ade80; }
+        #mktMetaGapBlock .mgap-team-focus {
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-left: 3px solid #ef4444;
+            border-radius: 10px; padding: 14px 18px;
+            display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+        }
+        @media (max-width: 700px) { #mktMetaGapBlock .mgap-team-focus { grid-template-columns: 1fr; } }
+        #mktMetaGapBlock .mgap-team-focus .title {
+            font-size: 13px; font-weight: 700; color: #f87171; margin-bottom: 4px;
+        }
+        #mktMetaGapBlock .mgap-team-focus .body {
+            font-size: 12.5px; color: #d1d5db; line-height: 1.5;
+        }
+        #mktMetaGapBlock .mgap-team-focus .body strong { color: #fff; }
+
         /* ==================== VIEW: PLANEJAMENTO DE METAS ==================== */
         #view-planejamento-metas { font-variant-numeric: tabular-nums; }
         #view-planejamento-metas .pm-container { max-width: 1240px; margin: 0 auto; padding: 8px 4px 60px; }
@@ -6592,6 +6699,9 @@
 
             <!-- Tab content: Performance -->
             <div id="mktTabPerf">
+
+            <!-- Hero: Meta MRR do mês vs geração de demanda (funil operativo) -->
+            <div id="mktMetaGapBlock" style="display:none;"></div>
 
             <!-- KPI bar dedicada -->
             <div style="padding:0 30px 6px;">
@@ -20736,6 +20846,177 @@ function computeFlowWinsForMkt(range) {
     return (window.wonDeals||[]).filter(d => d.FinishDate && inMktRange(d.FinishDate, range)).length;
 }
 
+// ============================================================================
+// HERO META vs GERAÇÃO DE DEMANDA — mostra pra Fernanda o gap de topo do funil
+// ============================================================================
+// Meta base + funil reverso vem do Planejamento de Metas (localStorage). Fallback:
+// defaults do PM_TEAMS + meta padrão 200k. Assim funciona mesmo sem a Jessica ter
+// salvo os overrides no browser da Fê.
+function mktComputeMetaAggregate() {
+    const metaTotal = Number(pmLsGet('meta', '200000')) || 200000;
+    const totals = { leads: 0, mqls: 0, sals: 0, opos: 0, gos: 0, mrr: 0 };
+    const byTeam = {};
+    (typeof PM_TEAMS !== 'undefined' ? PM_TEAMS : []).forEach(team => {
+        const goalAbs = Number(pmLsGet(`${team.id}_goalAbs`, null));
+        const teamMrr = (goalAbs && goalAbs > 0) ? goalAbs : (team.defaults.mix / 100) * metaTotal;
+        const ticket = Number(pmLsGet(`${team.id}_ticket`, null)) || 3000;
+        const r1 = Number(pmLsGet(`${team.id}_r1`, null)) || team.defaults.r1;
+        const r2 = Number(pmLsGet(`${team.id}_r2`, null)) || team.defaults.r2;
+        const r3 = Number(pmLsGet(`${team.id}_r3`, null)) || 70;
+        const r4 = Number(pmLsGet(`${team.id}_r4`, null)) || 40;
+        const r5 = Number(pmLsGet(`${team.id}_r5`, null)) || 25;
+        const go  = ticket > 0 ? Math.ceil(teamMrr / ticket) : 0;
+        const opo = r5 > 0 ? Math.ceil(go  / (r5 / 100)) : 0;
+        const sql = r4 > 0 ? Math.ceil(opo / (r4 / 100)) : 0;
+        const sal = r3 > 0 ? Math.ceil(sql / (r3 / 100)) : 0;
+        const mql = r2 > 0 ? Math.ceil(sal / (r2 / 100)) : 0;
+        const lead= r1 > 0 ? Math.ceil(mql / (r1 / 100)) : 0;
+        byTeam[team.id] = { name: team.name, teamMrr, lead, mql, sal, opo, go };
+        totals.leads += lead;
+        totals.mqls  += mql;
+        totals.sals  += sal;
+        totals.opos  += opo;
+        totals.gos   += go;
+        totals.mrr   += teamMrr;
+    });
+    return { metaTotal, totals, byTeam };
+}
+
+// Ganhos com FinishDate no range, em pipelines de venda — MRR realizado do mês
+function mktComputeFlowMrr(range) {
+    const salesP = typeof SALES_PIPELINES !== 'undefined' ? SALES_PIPELINES : [];
+    return (wonDeals || []).reduce((sum, d) => {
+        if (!inMktRange(d.FinishDate, range)) return sum;
+        if (salesP.length && !salesP.includes(getPipelineName(d))) return sum;
+        return sum + (typeof getMRR === 'function' ? getMRR(d) : 0);
+    }, 0);
+}
+
+// Pace do mês corrente: dia atual / total dias do mês (linear).
+// Retorna 1 quando o range selecionado NÃO é o mês corrente (comparação sem pace).
+function mktMonthPace(range) {
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
+    if (range?.start !== firstOfMonth || (range?.end && Math.abs(range.end - lastOfMonth) > 3600 * 1000)) {
+        return 1;
+    }
+    const day = now.getDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return day / lastDay;
+}
+
+function renderMktMetaGap(range, realized) {
+    const block = document.getElementById('mktMetaGapBlock');
+    if (!block) return;
+    const agg = mktComputeMetaAggregate();
+    const pace = mktMonthPace(range);
+    const isThisMonth = pace < 1;
+
+    // Progresso da meta MRR
+    const currentMrr = realized.mrr;
+    const pctMrr = agg.metaTotal > 0 ? (currentMrr / agg.metaTotal) * 100 : 0;
+    const pacePct = pace * 100;
+    const paceDelta = pctMrr - pacePct;
+    const heroColor = pctMrr >= pacePct * 0.95 ? '#4ade80' : pctMrr >= pacePct * 0.75 ? '#fbbf24' : '#f87171';
+    const paceCaptionClass = pctMrr >= pacePct * 0.95 ? 'ok' : pctMrr >= pacePct * 0.75 ? 'mid' : 'warn';
+    const paceCaptionTxt = isThisMonth
+        ? (paceDelta >= 0
+            ? `<span class="ok">✓ ${paceDelta.toFixed(1)}pp acima do pace</span> · dia ${new Date().getDate()} de ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`
+            : `<span class="${paceCaptionClass}">▼ ${Math.abs(paceDelta).toFixed(1)}pp atrás do pace</span> · dia ${new Date().getDate()} de ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`)
+        : `<span class="mid">Comparação sem pace</span> · período customizado`;
+
+    const fmtR = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    const fmtRk = (v) => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
+
+    // Funil operativo — cell por etapa
+    const cellsData = [
+        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR') },
+        { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR') },
+        { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'SAL — agendadas' },
+        { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'propostas enviadas' },
+        { key: 'go',   label: 'GANHOS',   needed: agg.totals.gos,   current: realized.gos,    fmt: (v) => Math.round(v).toLocaleString('pt-BR') }
+    ];
+
+    const cellsHtml = cellsData.map(c => {
+        const expected = c.needed * pace;
+        const ratio = expected > 0 ? c.current / expected : (c.current > 0 ? 1 : 0);
+        const cls = ratio >= 0.95 ? 'ok' : ratio >= 0.75 ? 'warn' : 'crit';
+        const statusTxt = expected === 0
+            ? '—'
+            : ratio >= 1
+                ? `✓ ${((ratio - 1) * 100).toFixed(0)}% acima do pace`
+                : `▼ ${((1 - ratio) * 100).toFixed(0)}% atrás do pace`;
+        const gap = Math.max(0, Math.round(c.needed - c.current));
+        return `
+            <div class="mgap-cell ${cls}">
+                <div class="mgap-stage">${c.label}</div>
+                <div class="mgap-needed">${c.fmt(c.needed)}</div>
+                <div class="mgap-needed-label">meta do mês${c.sub ? ' · '+c.sub : ''}</div>
+                <div class="mgap-current"><strong>${c.fmt(c.current)}</strong> gerado ${gap > 0 ? '· faltam <strong>'+c.fmt(gap)+'</strong>' : ''}</div>
+                <div class="mgap-status">${isThisMonth ? statusTxt : (gap > 0 ? '▼ falta ' + c.fmt(gap) : '✓ atingido')}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Foco no time com maior gap (por MQLs proporcional)
+    let focusHtml = '';
+    const teamsArr = Object.values(agg.byTeam || {});
+    if (teamsArr.length && isThisMonth) {
+        // O único que sabemos "por time" é o alvo de MQL. Realizados por time no marketing
+        // não são atribuíveis (MQL não tem pipeline). Então mostra a intensidade relativa:
+        const worst = teamsArr.slice().sort((a, b) => b.mql - a.mql)[0];
+        if (worst && worst.mql > 0) {
+            focusHtml = `
+                <div class="mgap-team-focus">
+                    <div>
+                        <div class="title">⚠️ ${worst.name} concentra ${((worst.mql / agg.totals.mqls) * 100).toFixed(0)}% da geração de MQLs necessária</div>
+                        <div class="body">
+                            Pra bater a meta de <strong>${fmtRk(worst.teamMrr)}</strong> desse time, o mês precisa gerar
+                            <strong>${worst.mql.toLocaleString('pt-BR')} MQLs</strong>,
+                            <strong>${worst.sal.toLocaleString('pt-BR')} reuniões</strong> e
+                            <strong>${worst.opo.toLocaleString('pt-BR')} propostas</strong>.
+                            Priorize campanhas de origem com maior conversão MQL→OPO desse time (veja "Origens vencedoras" abaixo).
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    block.style.display = '';
+    block.innerHTML = `
+        <div class="mgap-hero">
+            <div>
+                <div class="mgap-eyebrow">Meta do mês · geração de demanda</div>
+                <h2>Bater ${fmtR(agg.metaTotal)} MRR</h2>
+                <div class="mgap-sub">Distribuído entre os 3 times · Marketing = fonte de MQLs no topo do funil</div>
+            </div>
+            <div class="mgap-progress-wrap">
+                <div class="mgap-progress-labels">
+                    <span class="now" style="color:${heroColor};">${fmtR(currentMrr)}</span>
+                    <span class="total">de ${fmtR(agg.metaTotal)} (${pctMrr.toFixed(1)}%)</span>
+                </div>
+                <div class="mgap-progress-bar">
+                    <div class="mgap-progress-fill" style="width:${Math.min(pctMrr, 100)}%;background:${heroColor};"></div>
+                    ${isThisMonth ? `<div class="mgap-progress-marker" title="Pace ${pacePct.toFixed(0)}%" style="left:${Math.min(pacePct, 100)}%;"></div>` : ''}
+                </div>
+                <div class="mgap-progress-caption">${paceCaptionTxt}</div>
+            </div>
+            <div>
+                <div class="mgap-eyebrow">Gap restante</div>
+                <div style="font-family:ui-monospace,monospace;font-size:26px;font-weight:700;color:${heroColor};line-height:1.1;">${fmtR(Math.max(0, agg.metaTotal - currentMrr))}</div>
+                <div class="mgap-sub" style="margin-top:4px;">pra fechar até o fim do mês</div>
+            </div>
+        </div>
+
+        <div class="mgap-funnel-title">Funil operativo do mês — necessidade vs realizado por etapa</div>
+        <div class="mgap-funnel-grid">${cellsHtml}</div>
+
+        ${focusHtml}
+    `;
+}
+
 function renderMarketing(range, rd) {
     const enriched = buildEnrichedMqls(range);
     const totalLeads = rd.count;
@@ -20745,6 +21026,22 @@ function renderMarketing(range, rd) {
     const totalGanho = enriched.filter(e => e.won).length;
     const totalPerd = enriched.filter(e => e.lost).length;
     const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
+
+    // Hero Meta do mês — geração de demanda vs meta MRR (do Planejamento de Metas)
+    // Usa FLOW pra reuniões/propostas/ganhos (qualquer safra) e MRR realmente fechado no período.
+    const mrrRealized = mktComputeFlowMrr(range);
+    // Chama já com os totais provisórios, será re-chamado abaixo com flow correto
+    const _flowReunPrelim = typeof computeFlowMeetingsForMkt === 'function' ? computeFlowMeetingsForMkt(range) : totalReun;
+    const _flowPropPrelim = typeof computeFlowProposalsForMkt === 'function' ? computeFlowProposalsForMkt(range) : totalProp;
+    const _flowGanhoPrelim = typeof computeFlowWinsForMkt === 'function' ? computeFlowWinsForMkt(range) : totalGanho;
+    renderMktMetaGap(range, {
+        leads: totalLeads,
+        mqls: totalMql,
+        sals: _flowReunPrelim,
+        opos: _flowPropPrelim,
+        gos: _flowGanhoPrelim,
+        mrr: mrrRealized
+    });
 
     // === FLOW: reuniões REALIZADAS no período (qualquer safra de lead) ===
     // Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate caiu no período E houve
