@@ -1510,6 +1510,7 @@
         #view-planejamento-metas .pm-badge-real { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
         #view-planejamento-metas .pm-badge-manual { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
         #view-planejamento-metas .pm-badge-nodata { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+        #view-planejamento-metas .pm-value-display { display: inline-flex; align-items: center; justify-content: flex-end; padding: 4px 8px; font-size: 13px; min-width: 60px; }
         #view-planejamento-metas .pm-input-inline { display: inline-flex; align-items: center; background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 6px; padding: 4px 8px; transition: border-color 0.15s; }
         #view-planejamento-metas .pm-input-inline:focus-within { border-color: #8b5cf6; }
         #view-planejamento-metas .pm-team[data-team="fm"] .pm-input-inline:focus-within { border-color: #06b6d4; }
@@ -17013,22 +17014,34 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
         teamMrr = (team.defaults.mix / 100) * metaTotal;
     }
     const ticket = Number(saved.ticket ?? (real.ticket > 0 ? Math.round(real.ticket) : 2000));
-    const r1 = Number(saved.r1 ?? (real.leadToMql !== null ? Math.round(real.leadToMql) : team.defaults.r1));
-    const r2 = Number(saved.r2 ?? (real.mqlToSal !== null ? Math.round(real.mqlToSal) : team.defaults.r2));
-    const r3 = Number(saved.r3 ?? (real.salToSql !== null ? Math.round(real.salToSql) : 70));
-    const r4 = Number(saved.r4 ?? (real.sqlToOpo !== null ? Math.round(real.sqlToOpo) : 40));
-    const r5 = Number(saved.r5 ?? (real.opoToGo !== null ? Math.round(real.opoToGo) : 25));
+    // Taxas de conversão NÃO são editáveis — evita erro humano. Usa REAL do dashboard
+    // quando disponível, senão fallback pros defaults do time (chutes calibrados).
+    // Se real for 0 (ex: Farmer SAL→SQL sem compliance), também usa default pra evitar
+    // que o funil quebre com denominador zero.
+    const rate = (realVal, fallback) => (realVal !== null && realVal > 0) ? Math.round(realVal) : fallback;
+    const r1 = rate(real.leadToMql, team.defaults.r1);
+    const r2 = rate(real.mqlToSal,  team.defaults.r2);
+    const r3 = rate(real.salToSql,  70);
+    const r4 = rate(real.sqlToOpo,  40);
+    const r5 = rate(real.opoToGo,   25);
 
     const mkInput = (field, val, sfx, opts = {}) => `
         <div class="pm-input-inline">${opts.prefix ? '<span class="pm-prefix">'+opts.prefix+'</span>' : ''}<input type="number" data-team="${team.id}" data-field="${field}" value="${val}" min="0"${opts.max ? ' max="'+opts.max+'"' : ''} step="${opts.step || 1}">${sfx ? '<span class="pm-suffix">'+sfx+'</span>' : ''}</div>`;
 
+    // Display-only (read-only) pra taxas — não é input, é span. Cor conforme fonte.
+    const mkReadOnly = (val, sfx, kind) => {
+        const color = kind === 'real' ? '#4ade80' : '#94a3b8';
+        return `<div class="pm-value-display"><span style="color:${color};font-family:ui-monospace,monospace;font-weight:700;">${val}${sfx}</span></div>`;
+    };
+
     const badge = (kind, txt) => `<span class="pm-badge pm-badge-${kind}" title="${kind === 'real' ? 'Puxado do dashboard' : kind === 'manual' ? 'Estimativa manual' : 'Sem dados no período — usando estimativa'}">${txt}</span>`;
 
-    const realBadgeR1 = real.leadToMql !== null ? badge('real', 'REAL ' + Math.round(real.leadToMql) + '%') : badge('manual', 'MKT');
-    const realBadgeR2 = real.mqlToSal !== null ? badge('real', 'REAL ' + Math.round(real.mqlToSal) + '%') : badge('manual', 'MKT');
-    const realBadgeR3 = real.salToSql !== null ? badge('real', 'REAL ' + Math.round(real.salToSql) + '%') : badge('nodata', 'SEM DADOS');
-    const realBadgeR4 = real.sqlToOpo !== null ? badge('real', 'REAL ' + Math.round(real.sqlToOpo) + '%') : badge('nodata', 'SEM DADOS');
-    const realBadgeR5 = real.opoToGo !== null ? badge('real', 'REAL ' + Math.round(real.opoToGo) + '%') : badge('nodata', 'SEM DADOS');
+    const kindR1 = real.leadToMql !== null && real.leadToMql > 0 ? 'real' : 'nodata';
+    const kindR2 = real.mqlToSal  !== null && real.mqlToSal  > 0 ? 'real' : 'nodata';
+    const kindR3 = real.salToSql  !== null && real.salToSql  > 0 ? 'real' : 'nodata';
+    const kindR4 = real.sqlToOpo  !== null && real.sqlToOpo  > 0 ? 'real' : 'nodata';
+    const kindR5 = real.opoToGo   !== null && real.opoToGo   > 0 ? 'real' : 'nodata';
+    const label = (kind) => kind === 'real' ? badge('real', 'REAL') : badge('nodata', 'ESTIMATIVA');
     const ticketBadge = real.ticket > 0 ? badge('real', 'REAL ' + pmFmtMoneyShort(real.ticket)) : badge('nodata', 'SEM AMOSTRA');
 
     const paramsHtml = `
@@ -17042,24 +17055,24 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
         </div>
         <div class="pm-params-divider"></div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">Lead → MQL ${realBadgeR1}</div>
-            ${mkInput('r1', r1, '%', { max: 100 })}
+            <div class="pm-label-wrap">Lead → MQL ${label(kindR1)}</div>
+            ${mkReadOnly(r1, '%', kindR1)}
         </div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">MQL → SAL ${realBadgeR2}</div>
-            ${mkInput('r2', r2, '%', { max: 100 })}
+            <div class="pm-label-wrap">MQL → SAL ${label(kindR2)}</div>
+            ${mkReadOnly(r2, '%', kindR2)}
         </div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">SAL → SQL ${realBadgeR3}</div>
-            ${mkInput('r3', r3, '%', { max: 100 })}
+            <div class="pm-label-wrap">SAL → SQL ${label(kindR3)}</div>
+            ${mkReadOnly(r3, '%', kindR3)}
         </div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">SQL → OPO ${realBadgeR4}</div>
-            ${mkInput('r4', r4, '%', { max: 100 })}
+            <div class="pm-label-wrap">SQL → OPO ${label(kindR4)}</div>
+            ${mkReadOnly(r4, '%', kindR4)}
         </div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">OPO → GO ${realBadgeR5}</div>
-            ${mkInput('r5', r5, '%', { max: 100 })}
+            <div class="pm-label-wrap">OPO → GO ${label(kindR5)}</div>
+            ${mkReadOnly(r5, '%', kindR5)}
         </div>
     `;
 
@@ -17078,7 +17091,7 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
     const sampleTxt = sampleSuffix.length ? '· amostra: ' + sampleSuffix.join(' · ') : '· sem amostra no período';
 
     return `
-        <div class="pm-team" data-team="${team.id}">
+        <div class="pm-team" data-team="${team.id}" data-r1="${r1}" data-r2="${r2}" data-r3="${r3}" data-r4="${r4}" data-r5="${r5}">
             <div class="pm-team-head">
                 <h2>${team.name}</h2>
                 <div style="display:flex;align-items:center;gap:10px;">
@@ -17104,7 +17117,15 @@ function pmResetTeam(teamId) {
 
 function pmReadInputs(teamId) {
     const get = f => Number(document.querySelector(`#view-planejamento-metas input[data-team="${teamId}"][data-field="${f}"]`)?.value) || 0;
-    return { goalAbs: get('goalAbs'), ticket: get('ticket'), r1: get('r1'), r2: get('r2'), r3: get('r3'), r4: get('r4'), r5: get('r5') };
+    // Taxas (r1..r5) são read-only agora — vêm dos data-attributes do card (resolvidas
+    // no pmBuildTeamCard a partir do real ou defaults). Só goalAbs e ticket são editáveis.
+    const card = document.querySelector(`#view-planejamento-metas .pm-team[data-team="${teamId}"]`);
+    const rate = f => Number(card?.dataset?.[f]) || 0;
+    return {
+        goalAbs: get('goalAbs'),
+        ticket: get('ticket'),
+        r1: rate('r1'), r2: rate('r2'), r3: rate('r3'), r4: rate('r4'), r5: rate('r5')
+    };
 }
 
 function pmComputeFunnel(inputs, metaTotal) {
@@ -17127,8 +17148,9 @@ function pmUpdateCalculations() {
 
     const results = PM_TEAMS.map(t => {
         const inputs = pmReadInputs(t.id);
-        // Salva overrides — goalAbs substitui mix como fonte da verdade da meta do time
-        ['goalAbs','ticket','r1','r2','r3','r4','r5'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
+        // Só goalAbs e ticket são editáveis — salva overrides desses dois.
+        // r1..r5 são read-only (vêm dos data-attributes com o real do dashboard).
+        ['goalAbs','ticket'].forEach(f => pmLsSet(`${t.id}_${f}`, inputs[f]));
         return { team: t, ...pmComputeFunnel(inputs, meta) };
     });
 
