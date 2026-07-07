@@ -16865,7 +16865,92 @@ function pmComputeRealRates(team, periodDays) {
 
     const salToSql = agend > 0 ? (realizadas / agend) * 100 : null;
 
-    return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas };
+    // ============================================================
+    // r1 (Lead → MQL) e r2 (MQL → SAL) usando dados reais do time.
+    // Lead = contato criado no período (proxy).
+    // MQL = passa nos filtros de qualificação (mesmo critério da aba MQLs).
+    // MQL → SAL = MQL cujo contato/deal teve reunião agendada por um SDR do time.
+    // ============================================================
+    const SDRS_BY_TEAM = { nn: ['Guilherme Tomio', 'Samira Cristina', 'Adriely'], fm: ['Agnes Roberta'], sk: ['Maja Siqueira'] };
+    const teamSdrs = SDRS_BY_TEAM[team.id] || [];
+    let leadToMql = null, mqlToSal = null;
+    let leadsCount = 0, mqlsCount = 0, mqlsWithSalCount = 0;
+
+    if ((mqlAllPeople || []).length > 0) {
+        // Contatos criados no período (aproximação de "leads")
+        const contactsInPeriod = mqlAllPeople.filter(p => {
+            const dt = p.CreateDate ? new Date(p.CreateDate) : null;
+            return dt && dt >= cutoff && dt <= endPeriod;
+        });
+        leadsCount = contactsInPeriod.length;
+
+        // MQLs no período (mesma regra da aba MQLs)
+        const mqlsInPeriod = contactsInPeriod.filter(p => {
+            if (typeof isClientEmail === 'function' && isClientEmail(p.Email)) return false;
+            if (typeof mqlClientesLincrosIds !== 'undefined' && mqlClientesLincrosIds.has(p.CompanyId)) return false;
+            if (typeof isCreatedByFarmer === 'function' && isCreatedByFarmer(p)) return false;
+            if (typeof isCreatedBySystem === 'function' && isCreatedBySystem(p)) return false;
+            const allDeals = [...((mqlAllDealsLookup || {})[p.Id] || []), ...((mqlAllDealsLookup || {})[p.CompanyId] || [])];
+            if (allDeals.some(d => d.StatusId === 2)) return false;
+            const companyDeals = (mqlAllDealsLookup || {})[p.CompanyId] || [];
+            const companyHasActiveDeal = companyDeals.some(d =>
+                d.StatusId === 1 && (typeof isSankhyaPipeline === 'function' ? !isSankhyaPipeline(d.Pipeline?.Name) : true)
+            );
+            if (companyHasActiveDeal) return false;
+            return true;
+        });
+        mqlsCount = mqlsInPeriod.length;
+        leadToMql = leadsCount > 0 ? (mqlsCount / leadsCount) * 100 : null;
+
+        // MQLs que viraram SAL via SDR do time (tasks + interactions + proxy Sankhya)
+        const mqlIds = new Set(mqlsInPeriod.map(m => m.Id));
+        const mqlsWithSal = new Set();
+        const normLocal = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const creatorMatchesTeam = (creatorName) => {
+            if (typeof getCanonicalSdrName !== 'function') return false;
+            const canon = getCanonicalSdrName(creatorName);
+            return canon && teamSdrs.includes(canon);
+        };
+        const contactIdFromTask = (t) => {
+            if (t.ContactId) return t.ContactId;
+            if (t.DealId) {
+                const d = window._dashOpenDealsById?.[t.DealId];
+                return d?.Contact?.Id || d?.ContactId || null;
+            }
+            return null;
+        };
+
+        (dashMeetings || []).forEach(t => {
+            const tn = normLocal(t.Title || '');
+            if (!tn.includes('reuniao agendada')) return;
+            if (!creatorMatchesTeam(dashUsersById?.[t.CreatorId] || '')) return;
+            const cid = contactIdFromTask(t);
+            if (cid && mqlIds.has(cid)) mqlsWithSal.add(cid);
+        });
+        (dashInteractions || []).forEach(it => {
+            if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
+            if (!creatorMatchesTeam(dashUsersById?.[it.CreatorId] || '')) return;
+            const cid = it.ContactId || (it.DealId && (window._dashOpenDealsById?.[it.DealId]?.Contact?.Id || window._dashOpenDealsById?.[it.DealId]?.ContactId)) || null;
+            if (cid && mqlIds.has(cid)) mqlsWithSal.add(cid);
+        });
+        // Proxy Sankhya: MQL cujo contato/empresa tem deal em pipeline Sankhya com Owner != Maja
+        if (team.id === 'sk') {
+            mqlsInPeriod.forEach(m => {
+                const deals = [
+                    ...((mqlAllDealsLookup || {})[m.Id] || []),
+                    ...((mqlAllDealsLookup || {})[m.CompanyId] || [])
+                ];
+                const hasProxy = deals.some(d =>
+                    d.Pipeline?.Name === 'Sankhya' && !((d.Owner?.Name || '').toLowerCase().includes('maja'))
+                );
+                if (hasProxy) mqlsWithSal.add(m.Id);
+            });
+        }
+        mqlsWithSalCount = mqlsWithSal.size;
+        mqlToSal = mqlsCount > 0 ? (mqlsWithSalCount / mqlsCount) * 100 : null;
+    }
+
+    return { ticket, wonCount, sqlToOpo, opoToGo, salToSql, agend, realizadas, leadToMql, mqlToSal, leadsCount, mqlsCount, mqlsWithSalCount };
 }
 
 function pmBuildTeamCard(team, real, saved, metaTotal) {
@@ -16879,8 +16964,8 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
         teamMrr = (team.defaults.mix / 100) * metaTotal;
     }
     const ticket = Number(saved.ticket ?? (real.ticket > 0 ? Math.round(real.ticket) : 2000));
-    const r1 = Number(saved.r1 ?? team.defaults.r1);
-    const r2 = Number(saved.r2 ?? team.defaults.r2);
+    const r1 = Number(saved.r1 ?? (real.leadToMql !== null ? Math.round(real.leadToMql) : team.defaults.r1));
+    const r2 = Number(saved.r2 ?? (real.mqlToSal !== null ? Math.round(real.mqlToSal) : team.defaults.r2));
     const r3 = Number(saved.r3 ?? (real.salToSql !== null ? Math.round(real.salToSql) : 70));
     const r4 = Number(saved.r4 ?? (real.sqlToOpo !== null ? Math.round(real.sqlToOpo) : 40));
     const r5 = Number(saved.r5 ?? (real.opoToGo !== null ? Math.round(real.opoToGo) : 25));
@@ -16890,6 +16975,8 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
 
     const badge = (kind, txt) => `<span class="pm-badge pm-badge-${kind}" title="${kind === 'real' ? 'Puxado do dashboard' : kind === 'manual' ? 'Estimativa manual' : 'Sem dados no período — usando estimativa'}">${txt}</span>`;
 
+    const realBadgeR1 = real.leadToMql !== null ? badge('real', 'REAL ' + Math.round(real.leadToMql) + '%') : badge('manual', 'MKT');
+    const realBadgeR2 = real.mqlToSal !== null ? badge('real', 'REAL ' + Math.round(real.mqlToSal) + '%') : badge('manual', 'MKT');
     const realBadgeR3 = real.salToSql !== null ? badge('real', 'REAL ' + Math.round(real.salToSql) + '%') : badge('nodata', 'SEM DADOS');
     const realBadgeR4 = real.sqlToOpo !== null ? badge('real', 'REAL ' + Math.round(real.sqlToOpo) + '%') : badge('nodata', 'SEM DADOS');
     const realBadgeR5 = real.opoToGo !== null ? badge('real', 'REAL ' + Math.round(real.opoToGo) + '%') : badge('nodata', 'SEM DADOS');
@@ -16906,11 +16993,11 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
         </div>
         <div class="pm-params-divider"></div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">Lead → MQL ${badge('manual', 'MKT')}</div>
+            <div class="pm-label-wrap">Lead → MQL ${realBadgeR1}</div>
             ${mkInput('r1', r1, '%', { max: 100 })}
         </div>
         <div class="pm-param-row">
-            <div class="pm-label-wrap">MQL → SAL ${badge('manual', 'MKT')}</div>
+            <div class="pm-label-wrap">MQL → SAL ${realBadgeR2}</div>
             ${mkInput('r2', r2, '%', { max: 100 })}
         </div>
         <div class="pm-param-row">
