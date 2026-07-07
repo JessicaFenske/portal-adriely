@@ -1410,6 +1410,63 @@ function linkedinAdsMock() {
     };
 }
 
+// Diagnóstico dos formatos de URL pra buscar metadata de campanha.
+// Meu código atual usa GET /rest/adCampaigns/{numericId} mas isso pode estar caindo
+// em fallback. Este endpoint testa 5 variantes de URL e retorna status+body de cada.
+async function linkedinCampaignDiag(campaignId) {
+    const cleanId = String(campaignId || '').replace(/\D/g, '');
+    if (!cleanId) return { error: 'campaignId inválido (só dígitos aceitos)' };
+
+    const report = { fetchedAt: new Date().toISOString(), campaignId: cleanId, tests: [] };
+
+    // 1) OAuth
+    const body = `grant_type=refresh_token`
+               + `&refresh_token=${encodeURIComponent(LINKEDIN_REFRESH_TOKEN)}`
+               + `&client_id=${encodeURIComponent(LINKEDIN_CLIENT_ID)}`
+               + `&client_secret=${encodeURIComponent(LINKEDIN_CLIENT_SECRET)}`;
+    const oauth = await httpsRawProbe({
+        hostname: 'www.linkedin.com', path: '/oauth/v2/accessToken', method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+    });
+    const accessToken = oauth.json?.access_token;
+    if (!accessToken) {
+        report.error = 'OAuth falhou'; report.tests.push({ name: 'OAuth', status: oauth.status, body: oauth.bodySnippet.slice(0, 400) });
+        return report;
+    }
+
+    const headers = {
+        'Authorization': 'Bearer ' + accessToken,
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
+        'X-Restli-Protocol-Version': '2.0.0'
+    };
+    const account = LINKEDIN_AD_ACCOUNT_ID;
+
+    const variants = [
+        { name: 'V1 - /rest/adCampaigns/{numericId}',                             path: `/rest/adCampaigns/${cleanId}` },
+        { name: 'V2 - /rest/adCampaigns/urn:li:sponsoredCampaign:{id} (raw)',     path: `/rest/adCampaigns/urn:li:sponsoredCampaign:${cleanId}` },
+        { name: 'V3 - /rest/adCampaigns/{URN encoded}',                           path: `/rest/adCampaigns/urn%3Ali%3AsponsoredCampaign%3A${cleanId}` },
+        { name: 'V4 - /rest/adAccounts/{account}/adCampaigns/{id}',               path: `/rest/adAccounts/${account}/adCampaigns/${cleanId}` },
+        { name: 'V5 - /rest/adAccounts/{account}/adCampaigns?q=search (with id)', path: `/rest/adAccounts/${account}/adCampaigns?q=search&search=(id:(values:List(${cleanId})))` }
+    ];
+    for (const v of variants) {
+        const r = await httpsRawProbe({ hostname: 'api.linkedin.com', path: v.path, method: 'GET', headers });
+        report.tests.push({
+            name: v.name,
+            path: 'GET ' + v.path,
+            status: r.status,
+            ok: r.ok,
+            campaignName: r.json?.name || r.json?.elements?.[0]?.name || r.json?.results?.[Object.keys(r.json?.results || {})[0]]?.name || null,
+            bodySnippet: r.bodySnippet.slice(0, 500),
+            error: r.error
+        });
+    }
+    const winner = report.tests.find(t => t.ok && t.campaignName);
+    report.diagnosis = winner
+        ? `🟢 FUNCIONA: ${winner.name} → nome retornado: "${winner.campaignName}"`
+        : '🔴 Nenhuma variante retornou o nome. Talvez token não tenha escopo r_ads_reporting adicional pra metadata.';
+    return report;
+}
+
 async function linkedinAdsGetCached(force) {
     const c = adsCache.linkedin;
     if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
@@ -2108,6 +2165,22 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
         }
         try {
             const report = await linkedinAdsDiag();
+            return jsonReply(res, 200, report);
+        } catch (e) {
+            return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
+        }
+    }
+    // Diagnóstico especifico pra descobrir o formato correto de GET adCampaign pra pegar nome
+    if (urlPath === '/api/marketing/linkedin-campaign-diag' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
+        if (!isLinkedinAdsConfigured()) {
+            return jsonReply(res, 200, { error: 'LinkedIn não configurado', configured: false });
+        }
+        const campaignId = new URL(req.url, `https://${req.headers.host}`).searchParams.get('id') || '483024703';
+        try {
+            const report = await linkedinCampaignDiag(campaignId);
             return jsonReply(res, 200, report);
         } catch (e) {
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
