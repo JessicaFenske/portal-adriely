@@ -9642,21 +9642,21 @@ function _cpRenderImpersonateBanner() {
     const current = _cpImpersonateOwner || '';
     // SDRs canonicalizadas (Gui, Samira, Adriely, Maja, Agnes)
     const sdrs = (typeof SDR_CANONICAL === 'object' && SDR_CANONICAL) ? Object.values(SDR_CANONICAL) : [];
+    // Options texto puro — sem emojis coloridos. O optgroup label já contextualiza o grupo.
     const sellersOptions = sellers.map(s => `<option value="${s.replace(/"/g,'&quot;')}" ${s === current ? 'selected' : ''}>${s}</option>`).join('');
-    const sdrsOptions = sdrs.map(s => `<option value="SDR::${s.replace(/"/g,'&quot;')}" ${('SDR::'+s) === current ? 'selected' : ''}>📞 ${s} (SDR)</option>`).join('');
-    // Marketing: emails registrados em MARKETING_LEADERS
+    const sdrsOptions = sdrs.map(s => `<option value="SDR::${s.replace(/"/g,'&quot;')}" ${('SDR::'+s) === current ? 'selected' : ''}>${s}</option>`).join('');
     const mktLeaders = (typeof MARKETING_LEADERS !== 'undefined') ? [...MARKETING_LEADERS] : [];
     const mktOptions = mktLeaders.map(email => {
         const display = email.split('@')[0].split('.').map(s => s[0]?.toUpperCase() + s.slice(1)).join(' ');
-        return `<option value="MKT::${email}" ${('MKT::'+email) === current ? 'selected' : ''}>📡 ${display} (Marketing)</option>`;
+        return `<option value="MKT::${email}" ${('MKT::'+email) === current ? 'selected' : ''}>${display}</option>`;
     }).join('');
     const options = `<option value="">Minha visão (padrão)</option>` +
         (mktOptions ? `<optgroup label="Marketing">${mktOptions}</optgroup>` : '') +
-        (sdrsOptions ? `<optgroup label="Pré-Vendas (SDR)">${sdrsOptions}</optgroup>` : '') +
+        (sdrsOptions ? `<optgroup label="Pré-Vendas">${sdrsOptions}</optgroup>` : '') +
         (sellersOptions ? `<optgroup label="Vendedores">${sellersOptions}</optgroup>` : '');
     banner.innerHTML = `
         <div class="cp-imp-row">
-            <span class="cp-imp-label">👁️ <strong>Admin</strong> · Visualizar como:</span>
+            <span class="cp-imp-label"><strong>Admin</strong> · Visualizar como:</span>
             <select id="cpImpSelect">${options}</select>
             ${current ? `<button class="cp-imp-reset" onclick="_cpImpersonateReset()">↩ Voltar pra minha visão</button>` : ''}
         </div>
