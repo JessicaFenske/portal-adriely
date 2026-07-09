@@ -5951,6 +5951,9 @@
                     <div class="section-header">
                         <h2><span class="section-num" data-svg-icon="user"></span> Perdidos por Vendedor</h2>
                         <div class="sub-filter">
+                            <select class="section-period-select" id="pipelineSec6" onchange="renderSection6()">
+                                <option value="all">Todos os funis</option>
+                            </select>
                             <select class="section-period-select" id="sellerSec6" onchange="renderSection6()">
                                 <option value="all">Todos os vendedores</option>
                             </select>
@@ -13469,18 +13472,71 @@ function renderSection5() {
 }
 
 // --- Section 6: Perdidos por Vendedor ---
+// Filtros encadeados (cada dropdown mostra contagens do escopo já filtrado pelos anteriores):
+//   pipeline → vendedor → motivo
 function renderSection6() {
     const sp = getSectionPeriod('sec6');
-    const allDeals = filteredLost('', sp);
+    const allDealsInPeriod = filteredLost('', sp);
 
-    // Popula dropdown de motivos com TODOS os motivos existentes no período (antes do filtro)
-    // Preserva seleção atual se ainda estiver disponível.
+    // === 1) Popula dropdown de PIPELINE (baseado em todos os deals do período) ===
+    const pipelineSel = document.getElementById('pipelineSec6');
+    let selectedPipeline = 'all';
+    if (pipelineSel) {
+        const currentPipeline = pipelineSel.value;
+        const pipelineCount = {};
+        allDealsInPeriod.forEach(d => {
+            const p = getPipelineName(d) || '(sem funil)';
+            pipelineCount[p] = (pipelineCount[p] || 0) + 1;
+        });
+        const pipelines = Object.entries(pipelineCount).sort((a, b) => b[1] - a[1]);
+        pipelineSel.innerHTML = '<option value="all">Todos os funis</option>' +
+            pipelines.map(([p, c]) => `<option value="${p.replace(/"/g, '&quot;')}">${p} (${c})</option>`).join('');
+        if (currentPipeline && currentPipeline !== 'all' && pipelines.some(([p]) => p === currentPipeline)) {
+            pipelineSel.value = currentPipeline;
+            selectedPipeline = currentPipeline;
+        } else {
+            pipelineSel.value = 'all';
+        }
+    }
+    // Aplica filtro de pipeline
+    const dealsAfterPipeline = selectedPipeline === 'all'
+        ? allDealsInPeriod
+        : allDealsInPeriod.filter(d => (getPipelineName(d) || '(sem funil)') === selectedPipeline);
+
+    // === 2) Popula dropdown de VENDEDOR (contagem baseada no escopo pipeline-filtered) ===
+    const sellerSel = document.getElementById('sellerSec6');
+    let selectedSeller = 'all';
+    if (sellerSel) {
+        const currentSeller = sellerSel.value;
+        const sellerCount = {};
+        dealsAfterPipeline.forEach(d => {
+            const n = getOwnerName(d);
+            if (!n) return;
+            sellerCount[n] = (sellerCount[n] || 0) + 1;
+        });
+        const sellersAlpha = Object.entries(sellerCount).sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+        sellerSel.innerHTML = '<option value="all">Todos os vendedores</option>' +
+            sellersAlpha.map(([n, c]) => `<option value="${n.replace(/"/g, '&quot;')}">${n} (${c})</option>`).join('');
+        if (currentSeller && currentSeller !== 'all' && sellersAlpha.some(([n]) => n === currentSeller)) {
+            sellerSel.value = currentSeller;
+            selectedSeller = currentSeller;
+        } else {
+            sellerSel.value = 'all';
+        }
+    }
+    // Aplica filtro de vendedor
+    const dealsAfterSeller = selectedSeller === 'all'
+        ? dealsAfterPipeline
+        : dealsAfterPipeline.filter(d => getOwnerName(d) === selectedSeller);
+
+    // === 3) Popula dropdown de MOTIVO (contagem baseada no escopo pipeline+seller-filtered) ===
+    // Assim se seleciona Matheus, os motivos mostram só os deals dele.
     const reasonSel = document.getElementById('lossReasonSec6');
     let selectedReason = 'all';
     if (reasonSel) {
         const currentReason = reasonSel.value;
         const reasonCount = {};
-        allDeals.forEach(d => {
+        dealsAfterSeller.forEach(d => {
             const r = d.LossReason?.Name || '(sem motivo)';
             reasonCount[r] = (reasonCount[r] || 0) + 1;
         });
@@ -13494,22 +13550,14 @@ function renderSection6() {
             reasonSel.value = 'all';
         }
     }
-
     // Aplica filtro de motivo
     const deals = selectedReason === 'all'
-        ? allDeals
-        : allDeals.filter(d => (d.LossReason?.Name || '(sem motivo)') === selectedReason);
+        ? dealsAfterSeller
+        : dealsAfterSeller.filter(d => (d.LossReason?.Name || '(sem motivo)') === selectedReason);
 
     window._sec6_data = deals;
-    const sellerMap = {};
-    const sellerDealsMap6 = {};
-    deals.forEach(d => {
-        const name = getOwnerName(d);
-        if (!name) return;
-        sellerMap[name] = (sellerMap[name] || 0) + 1;
-        if (!sellerDealsMap6[name]) sellerDealsMap6[name] = [];
-        sellerDealsMap6[name].push(d);
-    });
+
+    // Agrega por vendedor pra o gráfico (usando deals já filtrados por pipeline+seller+motivo)
     const sellerAgg6 = {};
     deals.forEach(d => {
         const name = getOwnerName(d);
@@ -13520,26 +13568,7 @@ function renderSection6() {
         sellerAgg6[name].setup += getSetup(d);
         sellerAgg6[name].deals.push(d);
     });
-    const allSorted = Object.entries(sellerAgg6).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
-
-    // Popula dropdown com TODOS os vendedores (preserva seleção se ainda existir)
-    const sellerSel = document.getElementById('sellerSec6');
-    let selectedSeller = 'all';
-    if (sellerSel) {
-        const currentValue = sellerSel.value;
-        const alpha = [...allSorted].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-        sellerSel.innerHTML = '<option value="all">Todos os vendedores</option>' +
-            alpha.map(s => `<option value="${s.name.replace(/"/g, '&quot;')}">${s.name} (${s.count})</option>`).join('');
-        if (currentValue && currentValue !== 'all' && alpha.find(s => s.name === currentValue)) {
-            sellerSel.value = currentValue;
-            selectedSeller = currentValue;
-        } else {
-            sellerSel.value = 'all';
-        }
-    }
-
-    // Aplica filtro por vendedor selecionado
-    const sorted = selectedSeller === 'all' ? allSorted : allSorted.filter(s => s.name === selectedSeller);
+    const sorted = Object.entries(sellerAgg6).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
     window._sec6_sorted = sorted;
 
     destroyChart('lostSeller');
