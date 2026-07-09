@@ -5949,6 +5949,9 @@
                             <select class="section-period-select" id="sellerSec6" onchange="renderSection6()">
                                 <option value="all">Todos os vendedores</option>
                             </select>
+                            <select class="section-period-select" id="lossReasonSec6" onchange="renderSection6()">
+                                <option value="all">Todos os motivos</option>
+                            </select>
                             <select class="section-period-select" id="periodSec6" onchange="renderSection6()">
                                 <option value="global">Global</option>
                                 <option value="thisMonth" selected>Este mês</option>
@@ -13463,7 +13466,35 @@ function renderSection5() {
 // --- Section 6: Perdidos por Vendedor ---
 function renderSection6() {
     const sp = getSectionPeriod('sec6');
-    const deals = filteredLost('', sp);
+    const allDeals = filteredLost('', sp);
+
+    // Popula dropdown de motivos com TODOS os motivos existentes no período (antes do filtro)
+    // Preserva seleção atual se ainda estiver disponível.
+    const reasonSel = document.getElementById('lossReasonSec6');
+    let selectedReason = 'all';
+    if (reasonSel) {
+        const currentReason = reasonSel.value;
+        const reasonCount = {};
+        allDeals.forEach(d => {
+            const r = d.LossReason?.Name || '(sem motivo)';
+            reasonCount[r] = (reasonCount[r] || 0) + 1;
+        });
+        const reasons = Object.entries(reasonCount).sort((a, b) => b[1] - a[1]);
+        reasonSel.innerHTML = '<option value="all">Todos os motivos</option>' +
+            reasons.map(([r, c]) => `<option value="${r.replace(/"/g, '&quot;')}">${r} (${c})</option>`).join('');
+        if (currentReason && currentReason !== 'all' && reasons.some(([r]) => r === currentReason)) {
+            reasonSel.value = currentReason;
+            selectedReason = currentReason;
+        } else {
+            reasonSel.value = 'all';
+        }
+    }
+
+    // Aplica filtro de motivo
+    const deals = selectedReason === 'all'
+        ? allDeals
+        : allDeals.filter(d => (d.LossReason?.Name || '(sem motivo)') === selectedReason);
+
     window._sec6_data = deals;
     const sellerMap = {};
     const sellerDealsMap6 = {};
