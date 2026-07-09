@@ -13557,38 +13557,76 @@ function renderSection6() {
 
     window._sec6_data = deals;
 
-    // Agrega por vendedor pra o gráfico (usando deals já filtrados por pipeline+seller+motivo)
-    const sellerAgg6 = {};
+    // Modo de agrupamento: se vendedor selecionado (sem filtro de motivo), quebra por MOTIVO
+    // pra visualizar padrão de perda daquele vendedor. Senão, agrupa por vendedor (padrão).
+    const groupByReason = selectedSeller !== 'all' && selectedReason === 'all';
+    const groupKeyFn = groupByReason
+        ? (d => d.LossReason?.Name || '(sem motivo)')
+        : (d => getOwnerName(d));
+
+    const agg = {};
     deals.forEach(d => {
-        const name = getOwnerName(d);
-        if (!name) return;
-        if (!sellerAgg6[name]) sellerAgg6[name] = { count: 0, mrr: 0, setup: 0, deals: [] };
-        sellerAgg6[name].count++;
-        sellerAgg6[name].mrr += getMRR(d);
-        sellerAgg6[name].setup += getSetup(d);
-        sellerAgg6[name].deals.push(d);
+        const key = groupKeyFn(d);
+        if (!key) return;
+        if (!agg[key]) agg[key] = { name: key, count: 0, mrr: 0, setup: 0, deals: [] };
+        agg[key].count++;
+        agg[key].mrr += getMRR(d);
+        agg[key].setup += getSetup(d);
+        agg[key].deals.push(d);
     });
-    const sorted = Object.entries(sellerAgg6).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.count - a.count);
+    const sorted = Object.values(agg).sort((a, b) => b.count - a.count);
     window._sec6_sorted = sorted;
+
+    // Cor: se agrupado por motivo, degradê baseado na frequência (mais perdas → tom mais forte)
+    const barColor = (i, total) => {
+        if (!groupByReason) return { bg: 'rgba(248, 113, 113, 0.7)', border: '#f87171' };
+        // gradiente vermelho → laranja pra motivos: primeiro é o mais dor, últimos mais leves
+        const alpha = 0.85 - (i / Math.max(1, total - 1)) * 0.35;
+        return { bg: `rgba(248, 113, 113, ${alpha})`, border: '#f87171' };
+    };
 
     destroyChart('lostSeller');
     charts.lostSeller = new Chart(document.getElementById('chartLostSeller'), {
-        type: 'bar', data: { labels: sorted.map(s => shortName(s.name)), datasets: [
-            { label: 'Perdidos', data: sorted.map(s => s.count), backgroundColor: 'rgba(248, 113, 113, 0.7)', borderColor: '#f87171', borderWidth: 1 },
-        ] },
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } },
-            onClick: (event, elements, chart) => {
+        type: 'bar', data: {
+            labels: sorted.map(s => groupByReason ? s.name : shortName(s.name)),
+            datasets: [{
+                label: 'Perdidos',
+                data: sorted.map(s => s.count),
+                backgroundColor: sorted.map((_, i) => barColor(i, sorted.length).bg),
+                borderColor: '#f87171',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            onClick: (event, elements) => {
                 if (elements.length > 0) {
                     const idx = elements[0].index;
-                    const seller = sorted[idx];
-                    showDrilldown(`Perdidos - ${seller.name} (${seller.deals.length} negócios)`, seller.deals, null, 'lostSeller');
+                    const item = sorted[idx];
+                    const label = groupByReason
+                        ? `Perdidos - ${selectedSeller} · ${item.name} (${item.deals.length} negócios)`
+                        : `Perdidos - ${item.name} (${item.deals.length} negócios)`;
+                    showDrilldown(label, item.deals, null, 'lostSeller');
                 }
             },
-            scales: { x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid }, y: { ...darkScaleOptions } } }
+            scales: {
+                x: { beginAtZero: true, ticks: { ...darkScaleOptions.ticks, stepSize: 1 }, grid: darkScaleOptions.grid },
+                y: { ...darkScaleOptions }
+            }
+        }
     });
+
+    // Tabela — header dinâmico conforme agrupamento
+    const tblHead = document.querySelector('#tableLostSeller table thead tr');
+    if (tblHead) {
+        tblHead.innerHTML = groupByReason
+            ? `<th class="rank-num">#</th><th>Motivo</th><th>Perdidos</th><th>MRR</th><th>Setup</th>`
+            : `<th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th><th>MRR</th><th>Setup</th>`;
+    }
     document.getElementById('tbodyLostSeller').innerHTML = sorted.map((s, i) => `<tr class="${rankRowClass(i + 1)}">
         <td class="rank-num">${medalFor(i + 1)}${i + 1}</td>
-        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:nowrap;" title="${s.name}">${shortName(s.name)}</td>
+        <td style="font-weight:600;color:#e0e0e0;font-size:12px;white-space:normal;" title="${s.name}">${groupByReason ? s.name : shortName(s.name)}</td>
         <td style="text-align:center;font-weight:700;color:#f87171;">${s.count}</td>
         <td class="money" style="color:#4ade80;">${formatMoney(s.mrr)}</td>
         <td class="money">${formatMoney(s.setup)}</td></tr>`).join('');
