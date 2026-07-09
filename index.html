@@ -1174,19 +1174,29 @@
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
         }
 
-        /* Forecast: 4 semanas alinhadas em quadrantes fixos.
-           Desktop grande (≥1400): 4 colunas · Desktop médio (900-1399): 2×2 · Mobile: 1 coluna */
+        /* Forecast: 4 semanas SEMPRE alinhadas em 1 linha no desktop/tablet.
+           Só quebra pra 1 coluna em mobile pequeno. Cards se adaptam ao espaço. */
         .fc-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
             padding: 18px 24px;
         }
-        @media (max-width: 1399px) {
-            .fc-kpi-grid { grid-template-columns: repeat(2, 1fr); padding: 16px 18px; }
+        @media (max-width: 900px) {
+            .fc-kpi-grid { padding: 14px 16px; gap: 8px; }
         }
         @media (max-width: 640px) {
-            .fc-kpi-grid { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+            .fc-kpi-grid { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+        }
+        /* Aperta pair interno + valores em telas médias pra caber os 4 lado-a-lado */
+        @media (max-width: 1300px) {
+            .fc-scenario-pair { gap: 6px; }
+            .fc-kpi-card { padding: 10px 6px; }
+            .fc-kpi-card .fc-kpi-value { font-size: clamp(11px, 2.4vw, 16px); }
+            .fc-kpi-card .fc-kpi-label { font-size: 9.5px; }
+            .fc-scenario-group { padding: 10px; }
+            .fc-scenario-title { font-size: 11px; letter-spacing: 0.4px; }
+            .fc-scenario-sub { display: none; } /* esconde sub-legenda em telas apertadas */
         }
         .fc-totals-grid {
             display: grid;
