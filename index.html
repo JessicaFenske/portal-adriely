@@ -17833,12 +17833,55 @@ function exportSection5() {
     ], 'propostas_enviadas');
 }
 function exportSection6() {
-    const data = window._sec6_sorted || [];
-    exportToExcel(data, [
-        { header: '#', getValue: (d, i) => i + 1 },
-        { header: 'Vendedor', getValue: d => d.name },
-        { header: 'Perdidos', getValue: d => d.count }
-    ], 'perdidos_por_vendedor');
+    // Exporta cada DEAL PERDIDO individual (não o agregado por vendedor) com detalhamento completo.
+    // Fonte: window._sec6_data = deals já filtrados por pipeline + vendedor + motivo + período.
+    const deals = window._sec6_data || [];
+
+    // Index SDR que agendou a reunião do deal (task "Reuniao Agendada" mais antiga)
+    const normT = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const sdrByDeal = new Map();
+    (window.dashMeetings || []).forEach(t => {
+        if (!t.DealId) return;
+        if (!normT(t.Title || '').includes('reuniao agendada')) return;
+        const creator = (window.dashUsersById || {})[t.CreatorId] || '';
+        const canonical = typeof getCanonicalSdrName === 'function' ? getCanonicalSdrName(creator) : creator;
+        if (!canonical) return;
+        // Guarda a primeira encontrada (task original, não reagendamento)
+        if (!sdrByDeal.has(t.DealId)) sdrByDeal.set(t.DealId, canonical);
+    });
+    (window.dashInteractions || []).forEach(it => {
+        if (!it.DealId || sdrByDeal.has(it.DealId)) return;
+        if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
+        const creator = (window.dashUsersById || {})[it.CreatorId] || '';
+        const canonical = typeof getCanonicalSdrName === 'function' ? getCanonicalSdrName(creator) : creator;
+        if (canonical) sdrByDeal.set(it.DealId, canonical);
+    });
+
+    const contactPhone = (d) => {
+        const phones = d.Contact?.Phones || [];
+        return phones.map(p => p.PhoneNumber || '').filter(Boolean).join(' / ');
+    };
+    const contactEmail = (d) => d.Contact?.Email || '';
+    const fmtDate = (iso) => {
+        if (!iso) return '';
+        try { return new Date(iso).toLocaleDateString('pt-BR'); } catch { return ''; }
+    };
+
+    exportToExcel(deals, [
+        { header: 'Negócio',       getValue: d => d.Title || '' },
+        { header: 'Contato',       getValue: d => d.Contact?.Name || '' },
+        { header: 'Telefone',      getValue: d => contactPhone(d) },
+        { header: 'E-mail',        getValue: d => contactEmail(d) },
+        { header: 'Cargo',         getValue: d => typeof getContactCargo === 'function' ? getContactCargo(d) : '' },
+        { header: 'Etapa (na perda)', getValue: d => d.Stage?.Name || '' },
+        { header: 'Motivo',        getValue: d => d.LossReason?.Name || '' },
+        { header: 'MRR',           getValue: d => getMRR(d) || 0 },
+        { header: 'Setup',         getValue: d => getSetup(d) || 0 },
+        { header: 'Data de perda', getValue: d => fmtDate(d.FinishDate) },
+        { header: 'Executivo',     getValue: d => getOwnerName(d) || '' },
+        { header: 'SDR que agendou', getValue: d => sdrByDeal.get(d.Id) || '' },
+        { header: 'Link Ploomes',  getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
+    ], 'perdidos_detalhado');
 }
 // === Investigar deals (auditoria de Realizadas) ===
 function openInvestigateModal() {
