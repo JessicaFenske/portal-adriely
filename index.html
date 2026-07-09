@@ -18685,6 +18685,7 @@ function showFcDrilldown(scenario) {
         { header: 'Titulo', getValue: d => d.title },
         { header: 'Vendedor', getValue: d => d.owner },
         { header: 'Funil', getValue: d => d.pipeline },
+        { header: 'Etapa', getValue: d => d.stage || '-' },
         { header: 'MRR', getValue: d => getFcMrr(d) },
         { header: 'Setup', getValue: d => getFcSetup(d) },
         { header: 'Data Fechamento', getValue: d => d.closeDate ? new Date(d.closeDate).toLocaleDateString('pt-BR') : '-' }
