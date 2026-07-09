@@ -1174,17 +1174,19 @@
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
         }
 
+        /* Forecast: 4 semanas alinhadas em quadrantes fixos.
+           Desktop grande (≥1400): 4 colunas · Desktop médio (900-1399): 2×2 · Mobile: 1 coluna */
         .fc-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 14px;
             padding: 18px 24px;
         }
-        @media (max-width: 1300px) {
-            .fc-kpi-grid { padding: 16px 18px; }
+        @media (max-width: 1399px) {
+            .fc-kpi-grid { grid-template-columns: repeat(2, 1fr); padding: 16px 18px; }
         }
-        @media (max-width: 900px) {
-            .fc-kpi-grid { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+        @media (max-width: 640px) {
+            .fc-kpi-grid { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
         }
         .fc-totals-grid {
             display: grid;
@@ -1425,6 +1427,7 @@
             display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
         }
         @media (max-width: 900px) { #mktMetaGapBlock .mgap-funnel-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px) { #mktMetaGapBlock .mgap-funnel-grid { grid-template-columns: 1fr; } #mktMetaGapBlock { padding: 0 14px 16px; } }
         #mktMetaGapBlock .mgap-cell {
             background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px;
             padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 3px;
@@ -1490,7 +1493,9 @@
         #view-planejamento-metas #pmMeta { background: transparent; border: none; color: #4ade80; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 18px; font-weight: 700; width: 130px; padding: 0; outline: none; }
         #view-planejamento-metas #pmPeriod { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px; padding: 8px 12px; color: #e5e7eb; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; }
         #view-planejamento-metas .pm-teams-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
-        @media (max-width: 1050px) { #view-planejamento-metas .pm-teams-grid { grid-template-columns: 1fr; } #view-planejamento-metas .pm-header { grid-template-columns: 1fr; align-items: start; } #view-planejamento-metas .pm-controls { align-items: stretch; flex-direction: row; flex-wrap: wrap; } }
+        /* Desktop médio: 3 cols · Tablet: 2 cols (2×1 + 1 abaixo) · Mobile: 1 col */
+        @media (max-width: 1150px) { #view-planejamento-metas .pm-teams-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 720px) { #view-planejamento-metas .pm-teams-grid { grid-template-columns: 1fr; } #view-planejamento-metas .pm-header { grid-template-columns: 1fr; align-items: start; } #view-planejamento-metas .pm-controls { align-items: stretch; flex-direction: row; flex-wrap: wrap; } #view-planejamento-metas .pm-container { padding: 12px 12px 60px; } #view-planejamento-metas .pm-title { font-size: 22px; } }
         #view-planejamento-metas .pm-team { background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
         #view-planejamento-metas .pm-team[data-team="nn"] { border-top: 3px solid #8b5cf6; }
         #view-planejamento-metas .pm-team[data-team="fm"] { border-top: 3px solid #06b6d4; }
