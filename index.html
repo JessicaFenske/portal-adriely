@@ -792,7 +792,9 @@
         }
 
         /* Sub-filter */
-        .sub-filter { display: flex; gap: 8px; align-items: center; }
+        .sub-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        /* Limita largura de selects longos (ex: nomes de vendedores extensos) pra não empurrar os outros filtros */
+        .sub-filter select { max-width: 260px; }
         .sub-filter select {
             padding: 5px 10px;
             border: 1px solid rgba(108, 63, 181, 0.2);
