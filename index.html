@@ -8629,6 +8629,40 @@ function getDealOrigin(deal) {
     return '';
 }
 function getSDR(deal) { const p = getOtherProp_dash(deal.OtherProperties, FIELD_SDR); return p?.ObjectValueName || ''; }
+
+// Retorna o SDR "efetivo" de um deal, testando em cascata:
+//   1. Campo custom SDR (getSDR) — mais preciso, mas nem sempre preenchido
+//   2. Owner canonicalizado (se o Owner for um SDR conhecido)
+//   3. Creator canonicalizado (fallback pra deals recém-criados)
+// Assim capturamos casos onde:
+// - Deal do SDR em pipeline SDR: Owner = SDR → cascata 2 pega
+// - Deal passado pro vendedor: Owner = vendedor, mas campo SDR preenchido → 1 pega
+// - Deal descartado em pipeline SDR sem campo custom: Owner = SDR → 2 pega
+function getEffectiveSdr(deal) {
+    if (!deal) return '';
+    // 1) Campo custom SDR
+    const customSdr = getSDR(deal);
+    if (customSdr && typeof getCanonicalSdrName === 'function') {
+        const canon = getCanonicalSdrName(customSdr);
+        if (canon) return canon;
+    }
+    // 2) Owner canonicalizado
+    const ownerName = getOwnerName(deal);
+    if (ownerName && typeof getCanonicalSdrName === 'function') {
+        const canon = getCanonicalSdrName(ownerName);
+        if (canon) return canon;
+    }
+    // 3) Creator canonicalizado (fallback)
+    const creatorId = deal.CreatorId;
+    if (creatorId && typeof dashUsersById !== 'undefined') {
+        const creatorName = dashUsersById[creatorId];
+        if (creatorName && typeof getCanonicalSdrName === 'function') {
+            const canon = getCanonicalSdrName(creatorName);
+            if (canon) return canon;
+        }
+    }
+    return '';
+}
 function getProposalDate(deal) {
     // 1) Campo nativo de Data Proposta Enviada
     const p = getOtherProp_dash(deal.OtherProperties, FIELD_PROPOSAL_DATE);
@@ -16359,17 +16393,18 @@ function renderSection7c() {
         return inPeriodSection(d.FinishDate, sp.start, sp.end);
     });
 
-    // Popula dropdown de pre-vendedores (antes de aplicar filtro por pessoa)
+    // Popula dropdown com SDR EFETIVO (cascata: campo custom > Owner canon > Creator canon).
+    // Isso captura Adriely/Samira/Maja mesmo quando o Owner do deal descartado já virou vendedor.
     if (ownerSel) {
-        const owners = [...new Set(deals.map(d => getOwnerName(d)).filter(Boolean))].sort();
+        const sdrs = [...new Set(deals.map(d => getEffectiveSdr(d)).filter(Boolean))].sort();
         const current = ownerSel.value;
         ownerSel.innerHTML = '<option value="">Todos os pre-vendedores</option>' +
-            owners.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
+            sdrs.map(o => `<option value="${o}"${o === current ? ' selected' : ''}>${o}</option>`).join('');
     }
 
-    // Aplica filtro de pessoa selecionada
+    // Aplica filtro do SDR selecionado (comparação canonizada)
     if (selectedOwner) {
-        deals = deals.filter(d => getOwnerName(d) === selectedOwner);
+        deals = deals.filter(d => getEffectiveSdr(d) === selectedOwner);
     }
     window._sec7c_data = deals;
 
@@ -16451,16 +16486,16 @@ function renderSection7d() {
     // Inclui SDR pipelines também pra origens em qualificação (ex: Intermodal) aparecerem
     let deals = allDealsForMeetings(sp, { includeAllPipelines: true });
 
-    // Popula dropdown de pre-vendedores
+    // Popula dropdown com SDR EFETIVO (cascata: campo custom > Owner canon > Creator canon)
     if (sdrSel) {
-        const sdrs = [...new Set(deals.map(d => getSDR(d)).filter(Boolean))].sort();
+        const sdrs = [...new Set(deals.map(d => getEffectiveSdr(d)).filter(Boolean))].sort();
         const current = sdrSel.value;
         sdrSel.innerHTML = '<option value="">Todos os pre-vendedores</option>' +
             sdrs.map(s => `<option value="${s}"${s === current ? ' selected' : ''}>${s}</option>`).join('');
     }
 
     if (selectedSdr) {
-        deals = deals.filter(d => getSDR(d) === selectedSdr);
+        deals = deals.filter(d => getEffectiveSdr(d) === selectedSdr);
     }
     window._sec7d_data = deals;
 
