@@ -11516,18 +11516,13 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // Realizadas atribuídas ao SDR este mês (Tasks + Interactions, dedup por DealId)
     const myRealizadaDealSet = new Set();
     const myRealizadasMonth = [];
-    // (a) Tasks "Reunião Realizada" Finished=true
+    // (a) Tasks "Reunião Realizada" Finished=true — mesma cascata das agendadas (_taskSdrCanon)
     (dashMeetings || []).forEach(t => {
         if (!norm(t.Title).includes('reuniao realizada')) return;
         if (t.Finished !== true) return;
         const refDate = t.FinishDate || t.DateTime;
         if (!inThisMonth(refDate)) return;
-        let canonical = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
-        if (!canonical) {
-            const ag = agendadaByDealAll.get(t.DealId);
-            if (ag) canonical = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
-        }
-        if (canonical !== canonicalSdr) return;
+        if (_taskSdrCanon(t) !== canonicalSdr) return;
         if (t.DealId && myRealizadaDealSet.has(t.DealId)) return;
         if (t.DealId) myRealizadaDealSet.add(t.DealId);
         myRealizadasMonth.push(t);
