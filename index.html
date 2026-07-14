@@ -10205,10 +10205,14 @@ function _cpRenderAdsLive(data, containerId) {
         else if (stale) badge = '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">⚠️ CACHE ANTIGO</span>';
         else badge = '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">🟢 AO VIVO</span>';
 
-        // ROAS real: gasto da API ÷ receita ganha no Ploomes (canal correspondente)
+        // Cadeia completa: dados da API × dados do Ploomes (atribuição via Origin do lead/deal)
         const ch = channelDataAll[channelName];
-        const wonReceita = ch ? ch.won.reduce((s, d) => s + getMRR(d) + getSetup(d), 0) : 0;
+        const leadsPloomes = ch ? ch.leads.length : 0;
+        const oposPloomes = ch ? ch.opos.length : 0;
         const wonCount = ch ? ch.won.length : 0;
+        const wonReceita = ch ? ch.won.reduce((s, d) => s + getMRR(d) + getSetup(d), 0) : 0;
+        const cacReal = t.spend > 0 && wonCount > 0 ? t.spend / wonCount : 0;
+        const cplPloomes = t.spend > 0 && leadsPloomes > 0 ? t.spend / leadsPloomes : 0;
         const roasReal = t.spend > 0 ? wonReceita / t.spend : 0;
         const roasColor = roasReal >= 3 ? '#22c55e' : roasReal >= 1 ? '#facc15' : '#ef4444';
 
@@ -10224,40 +10228,43 @@ function _cpRenderAdsLive(data, containerId) {
                     </div>
                 </div>`).join('');
 
+        // Cell helper — 4 cols consistente pra ambas as linhas
+        const cell = (label, value, valColor, extra) => `
+            <div>
+                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">${label}</div>
+                <div style="font-size:15px;color:${valColor};font-weight:700;line-height:1.1;margin-top:4px;">${value}${extra || ''}</div>
+            </div>`;
+
         return `<div style="background:rgba(255,255,255,0.025);border:1px solid ${color}40;border-left:3px solid ${color};border-radius:10px;padding:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
                 <strong style="color:#fff;font-size:15px;">${icon} ${label}</strong>
                 ${badge}
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
-                <div>
-                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Gasto</div>
-                    <div style="font-size:15px;color:#fff;font-weight:700;line-height:1.1;margin-top:4px;">${fmtMoney(t.spend)}${delta(t.spend, p?.spend, { neutral: true })}</div>
-                </div>
-                <div>
-                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Cliques</div>
-                    <div style="font-size:15px;color:#fff;font-weight:700;line-height:1.1;margin-top:4px;">${Number(t.clicks||0).toLocaleString('pt-BR')}${delta(t.clicks, p?.clicks)}</div>
-                </div>
-                <div>
-                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Conv.</div>
-                    <div style="font-size:15px;color:#22c55e;font-weight:700;line-height:1.1;margin-top:4px;">${Math.round(t.conversions||0)}${delta(t.conversions, p?.conversions)}</div>
-                </div>
-                <div>
-                    <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">CPL</div>
-                    <div style="font-size:15px;color:${color};font-weight:700;line-height:1.1;margin-top:4px;">${t.cpl > 0 ? fmtMoney(t.cpl) : '—'}${delta(t.cpl, p?.cpl, { inverted: true })}</div>
-                </div>
+
+            <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">📊 Dados da plataforma</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+                ${cell('Gasto',    fmtMoney(t.spend),                                    '#fff',   delta(t.spend, p?.spend, { neutral: true }))}
+                ${cell('Cliques',  Number(t.clicks||0).toLocaleString('pt-BR'),          '#fff',   delta(t.clicks, p?.clicks))}
+                ${cell('Conv API', Math.round(t.conversions||0),                         '#22c55e',delta(t.conversions, p?.conversions))}
+                ${cell('CPL API',  t.cpl > 0 ? fmtMoney(t.cpl) : '—',                    color,    delta(t.cpl, p?.cpl, { inverted: true }))}
             </div>
+
             ${t.spend > 0 ? `
+                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">💼 Impacto no Ploomes ${leadsPloomes === 0 ? '· <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;">sem leads atribuídos — Origin vazio</span>' : ''}</div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+                    ${cell('Leads',      leadsPloomes.toLocaleString('pt-BR'),      '#fff')}
+                    ${cell('OPOs',       oposPloomes.toLocaleString('pt-BR'),       '#a78bfa')}
+                    ${cell('Ganhos',     wonCount.toLocaleString('pt-BR'),          '#22c55e')}
+                    ${cell('CAC',        cacReal > 0 ? fmtMoney(cacReal) : '—',     cacReal > 0 && cacReal < 3000 ? '#22c55e' : cacReal >= 3000 ? '#ef4444' : '#94a3b8')}
+                </div>
                 <div style="background:rgba(255,255,255,0.02);border-radius:8px;padding:9px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">
-                        💼 ROAS real (Ploomes)
+                    <div style="font-size:11px;color:#94a3b8;">
+                        <strong style="color:${roasColor};font-size:14px;">${wonCount > 0 ? roasReal.toFixed(1) + 'x' : '0x'} ROAS</strong> · ${_cpFmtMoneyShort(wonReceita)} receita gerada
                     </div>
-                    <div style="font-size:13px;font-weight:700;color:${roasColor};">
-                        ${wonCount > 0 ? `${roasReal.toFixed(1)}x` : '0x'}
-                        <span style="font-weight:400;font-size:10px;color:#94a3b8;margin-left:6px;">${wonCount} ganho${wonCount === 1 ? '' : 's'} · ${_cpFmtMoneyShort(wonReceita)} receita</span>
-                    </div>
+                    ${cplPloomes > 0 && t.cpl > 0 ? `<div style="font-size:10px;color:#94a3b8;">CPL Ploomes: <strong style="color:#e5e7eb;">${fmtMoney(cplPloomes)}</strong></div>` : ''}
                 </div>` : ''}
-            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:7px;">TOP 3 CAMPANHAS · GASTO</div>
+
+            <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">🏆 Top 3 campanhas · gasto</div>
             ${campaignsHtml}
             ${err ? `<div style="margin-top:10px;font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.08);padding:7px 10px;border-radius:5px;border-left:2px solid #ef4444;">⚠ ${String(err).slice(0,160)}</div>` : ''}
         </div>`;
