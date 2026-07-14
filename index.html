@@ -13098,9 +13098,14 @@ async function renderHallVendedores() {
         </div>`;
     }).join('');
 
-    // Sua posição
+    // Sua posição — esconde pra admin/lider (nao vende diretamente)
     const yourPosDiv = document.getElementById('hvYourPosition');
-    if (me) {
+    const _hvMyEmail = typeof _hvCurrentEmail === 'function' ? _hvCurrentEmail() : null;
+    const _hvIsAdminUser = typeof _hvIsAdmin === 'function' && _hvIsAdmin();
+    const _hvIsLeaderUser = _hvMyEmail && typeof PIPELINE_LEADERS !== 'undefined' && PIPELINE_LEADERS[_hvMyEmail.toLowerCase()];
+    if (_hvIsAdminUser || _hvIsLeaderUser) {
+        yourPosDiv.innerHTML = '';
+    } else if (me) {
         const myIdx = sortedAll.findIndex(s => s.name.toLowerCase().trim() === me.toLowerCase().trim());
         if (myIdx >= 0) {
             const myEntry = sortedAll[myIdx];
