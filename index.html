@@ -11462,14 +11462,42 @@ function _cpRenderSdrCockpit(canonicalSdr) {
         if (!agendadaByDealAll.has(t.DealId)) agendadaByDealAll.set(t.DealId, t);
     });
 
+    // Index: SDR canonical do deal (via Owner). Usado como ultimo fallback quando
+    // task tem Creator = "Automacao" e nao ha outra agendada no deal.
+    const _dealSdrByDealId = new Map();
+    [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])].forEach(d => {
+        if (!d.Id || _dealSdrByDealId.has(d.Id)) return;
+        const ownerCanon = getCanonicalSdrName(getOwnerName(d));
+        if (ownerCanon) _dealSdrByDealId.set(d.Id, ownerCanon);
+    });
+
+    // Helper: resolve SDR canonico de uma task "Reuniao Agendada" com cascata:
+    //   1) Creator direto (canonical)
+    //   2) Creator de outra agendada do mesmo deal (fallback pra Automacao)
+    //   3) Owner canonical do deal
+    // Ex: Adriely qualifica deal e Automacao cria "Reuniao Agendada". Creator = Automacao,
+    //     mas Owner do deal = Adriely. Antes: perdia no filtro. Agora: cai no fallback 3.
+    const _taskSdrCanon = (t) => {
+        const direct = getCanonicalSdrName(dashUsersById[t.CreatorId] || '');
+        if (direct) return direct;
+        if (t.DealId) {
+            const ag = agendadaByDealAll.get(t.DealId);
+            if (ag && ag !== t) {
+                const agCanon = getCanonicalSdrName(dashUsersById[ag.CreatorId] || '');
+                if (agCanon) return agCanon;
+            }
+            if (_dealSdrByDealId.has(t.DealId)) return _dealSdrByDealId.get(t.DealId);
+        }
+        return null;
+    };
+
     // Agendadas criadas pelo SDR este mês (Tasks + Interactions, dedup por DealId)
     const myAgendadaDealSet = new Set();
     const myAgendadasMonth = [];
-    // (a) Tasks "Reunião Agendada"
+    // (a) Tasks "Reunião Agendada" — usa cascata pra capturar tasks criadas por Automacao
     (dashMeetings || []).forEach(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return;
-        const creator = dashUsersById[t.CreatorId] || '';
-        if (getCanonicalSdrName(creator) !== canonicalSdr) return;
+        if (_taskSdrCanon(t) !== canonicalSdr) return;
         if (!inThisMonth(t.CreateDate)) return;
         if (t.DealId && myAgendadaDealSet.has(t.DealId)) return;
         if (t.DealId) myAgendadaDealSet.add(t.DealId);
@@ -11600,8 +11628,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     });
     const pendingCompliance = (dashMeetings || []).filter(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return false;
-        const creator = dashUsersById[t.CreatorId] || '';
-        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        if (_taskSdrCanon(t) !== canonicalSdr) return false;
         const dt = new Date(t.DateTime);
         if (dt > now) return false;
         if (t.Finished === true) return false;
@@ -11613,8 +11640,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     const in7d = new Date(now.getTime() + 7*86400000);
     const upcomingMeetings = (dashMeetings || []).filter(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return false;
-        const creator = dashUsersById[t.CreatorId] || '';
-        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        if (_taskSdrCanon(t) !== canonicalSdr) return false;
         if (t.Finished === true) return false;
         const dt = new Date(t.DateTime);
         return dt >= now && dt <= in7d;
@@ -11630,8 +11656,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // (monthStart/monthEnd ja declarados no topo da funcao)
     const noShowMonth = (dashMeetings || []).filter(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return false;
-        const creator = dashUsersById[t.CreatorId] || '';
-        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        if (_taskSdrCanon(t) !== canonicalSdr) return false;
         const dt = new Date(t.DateTime);
         if (dt < monthStart || dt > monthEnd) return false; // fora do mês
         if (dt > now) return false; // ainda vai acontecer
