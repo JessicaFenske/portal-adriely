@@ -11652,16 +11652,14 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // Taxa realização do mês
     const taxaReal = myAgendadasMonth.length > 0 ? Math.round((myRealizadasMonth.length / myAgendadasMonth.length) * 100) : 0;
 
-    // No-show do mês: agendadas do mês vencidas sem Realizada concluída (regra estrita)
-    // (monthStart/monthEnd ja declarados no topo da funcao)
-    const noShowMonth = (dashMeetings || []).filter(t => {
-        if (!norm(t.Title).includes('reuniao agendada')) return false;
-        if (_taskSdrCanon(t) !== canonicalSdr) return false;
+    // No-show do mês: usa myAgendadasMonth (mesmo denominador do KPI Taxa Realizacao,
+    // filtrado por CreateDate) e desconta as que ja realizaram ou ainda vao acontecer.
+    // Antes usava DateTime + Finished=true, que ficava divergente da matematica do
+    // card Taxa Realizacao (ex: 4 realiz / 5 agend => 1 no-show, mas o card mostrava 0).
+    const noShowMonth = myAgendadasMonth.filter(t => {
         const dt = new Date(t.DateTime);
-        if (dt < monthStart || dt > monthEnd) return false; // fora do mês
         if (dt > now) return false; // ainda vai acontecer
-        if (t.Finished === true) return false;
-        if (realizadaByDealConcluded.has(t.DealId)) return false;
+        if (realizadaByDealConcluded.has(t.DealId)) return false; // ja realizada
         return true;
     });
 
