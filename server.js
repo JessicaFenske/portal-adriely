@@ -55,6 +55,7 @@ const LINKEDIN_CLIENT_SECRET = cleanEnv(process.env.LINKEDIN_CLIENT_SECRET);
 const LINKEDIN_REFRESH_TOKEN = cleanEnv(process.env.LINKEDIN_REFRESH_TOKEN);
 const LINKEDIN_AD_ACCOUNT_ID = cleanEnv(process.env.LINKEDIN_AD_ACCOUNT_ID).replace(/\D/g, '');
 const LINKEDIN_API_VERSION = cleanEnv(process.env.LINKEDIN_API_VERSION) || '202405';
+const RD_STATION_TOKEN = cleanEnv(process.env.RD_STATION_TOKEN);
 let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
 // ==================== Upstash Redis helpers ====================
@@ -684,7 +685,8 @@ const ADS_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
 const adsCache = {
     google:   { data: null, ts: 0, error: null },
     meta:     { data: null, ts: 0, error: null },
-    linkedin: { data: null, ts: 0, error: null }
+    linkedin: { data: null, ts: 0, error: null },
+    rd:       { data: null, ts: 0, error: null }
 };
 
 function isGoogleAdsConfigured() {
@@ -696,6 +698,9 @@ function isMetaAdsConfigured() {
 }
 function isLinkedinAdsConfigured() {
     return !!(LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET && LINKEDIN_REFRESH_TOKEN && LINKEDIN_AD_ACCOUNT_ID);
+}
+function isRdStationConfigured() {
+    return !!RD_STATION_TOKEN;
 }
 
 // HTTP helper genérico (POST com body, retorna JSON parsed)
@@ -1492,6 +1497,149 @@ async function linkedinAdsGetCached(force) {
     }
 }
 
+// ==================== RD Station Marketing ====================
+// Puxa conversoes (leads que preencheram forms/LPs) via /platform/conversions.
+// Uma conversao == um lead novo. Cada conversao traz identifier (form/LP),
+// traffic_source, traffic_medium, traffic_campaign — permite bater com
+// Meta/LinkedIn/Google e resolver o gap do LinkedIn Lead Gen (sem UTM).
+
+// Retorna { start, end } no formato YYYY-MM-DD (UTC), mes atual (0) ou anterior (-1).
+function _rdMonthRange(monthOffset) {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth() + monthOffset;
+    const start = new Date(Date.UTC(y, m, 1));
+    const end = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59)); // ultimo dia do mes
+    const iso = d => d.toISOString().slice(0, 10);
+    return { start: iso(start), end: iso(end), startISO: start.toISOString(), endISO: end.toISOString() };
+}
+
+// Diagnostico simples: chama /platform/account/info (endpoint leve que apenas
+// valida o token). Retorna raw pra debug — usado antes de investir na integracao.
+async function rdStationDiag() {
+    const report = { checks: [], hasToken: !!RD_STATION_TOKEN, tokenPreview: RD_STATION_TOKEN ? `${RD_STATION_TOKEN.slice(0,6)}...${RD_STATION_TOKEN.slice(-4)}` : null };
+    if (!RD_STATION_TOKEN) {
+        report.diagnosis = 'RD_STATION_TOKEN nao configurado no env.';
+        return report;
+    }
+    // Endpoint 1: account info (mais leve)
+    const variants = [
+        { name: 'account_info', path: '/platform/account/info' },
+        { name: 'conversions_1d', path: `/platform/conversions?start_date=${_rdMonthRange(0).start}&end_date=${_rdMonthRange(0).end}&page=1&page_size=1` }
+    ];
+    for (const v of variants) {
+        try {
+            const r = await httpsJsonRequest({
+                hostname: 'api.rd.services',
+                path: v.path,
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+            });
+            report.checks.push({ name: v.name, ok: true, sample: JSON.stringify(r).slice(0, 400) });
+        } catch (e) {
+            report.checks.push({ name: v.name, ok: false, error: e.message.slice(0, 400) });
+        }
+    }
+    const anyOk = report.checks.find(c => c.ok);
+    report.diagnosis = anyOk
+        ? `Token valido — endpoint "${anyOk.name}" respondeu OK.`
+        : `Token nao autenticou em nenhum endpoint. Verifica se e Bearer Token (RD Station Marketing) e se tem escopo pra conversions.`;
+    return report;
+}
+
+// Puxa TODAS as conversoes de um mes, com paginacao.
+async function rdStationFetchConversions(monthOffset) {
+    const range = _rdMonthRange(monthOffset);
+    const PAGE_SIZE = 200;
+    const MAX_PAGES = 25; // safety: 25 * 200 = 5000 conversoes/mes
+    const all = [];
+    let page = 1;
+    let totalReported = null;
+    while (page <= MAX_PAGES) {
+        const path = `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=${page}&page_size=${PAGE_SIZE}`;
+        const r = await httpsJsonRequest({
+            hostname: 'api.rd.services',
+            path,
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+        });
+        // API pode retornar em varias formas: {conversions:[...]}, {items:[...]}, ou array direto
+        const items = Array.isArray(r) ? r
+                    : Array.isArray(r?.conversions) ? r.conversions
+                    : Array.isArray(r?.items) ? r.items
+                    : Array.isArray(r?.data) ? r.data
+                    : [];
+        all.push(...items);
+        // Detecta fim da paginacao
+        if (r?.paging?.total != null) totalReported = r.paging.total;
+        if (items.length < PAGE_SIZE) break;
+        if (totalReported != null && all.length >= totalReported) break;
+        page++;
+    }
+    if (page > MAX_PAGES) {
+        console.warn(`[rdStation] month=${monthOffset} atingiu MAX_PAGES (${MAX_PAGES}). Total capado em ${all.length}. Totalizador API: ${totalReported}`);
+    }
+    // Agregacoes
+    const byChannel = {};    // agrupa por traffic_source
+    const byForm = {};       // agrupa por identifier
+    all.forEach(c => {
+        const src = (c.traffic_source || c.source || 'direto').toString().toLowerCase().trim() || 'direto';
+        const form = (c.identifier || c.conversion_identifier || 'sem_identifier').toString();
+        byChannel[src] = (byChannel[src] || 0) + 1;
+        byForm[form] = (byForm[form] || 0) + 1;
+    });
+    // Top 15 formularios (o resto pouco importa)
+    const topForms = Object.entries(byForm)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([name, count]) => ({ name, count }));
+    const channels = Object.entries(byChannel)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count }));
+    return {
+        monthOffset,
+        range,
+        total: all.length,
+        totalReportedByApi: totalReported,
+        byChannel: channels,
+        byForm: topForms,
+        capped: page > MAX_PAGES
+    };
+}
+
+async function rdStationGetCached(force) {
+    const c = adsCache.rd;
+    if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
+    if (!isRdStationConfigured()) {
+        const empty = { source: 'rd-station', configured: false, total: 0, byChannel: [], byForm: [], previous: null };
+        c.data = empty; c.ts = Date.now(); c.error = null;
+        return empty;
+    }
+    try {
+        const [current, previous] = await Promise.all([
+            rdStationFetchConversions(0),
+            rdStationFetchConversions(-1).catch(e => { console.warn('[rdStation] previous month falhou:', e.message); return null; })
+        ]);
+        const combined = {
+            source: 'rd-station',
+            configured: true,
+            ...current,
+            previous: previous ? {
+                total: previous.total,
+                byChannel: previous.byChannel,
+                byForm: previous.byForm,
+                range: previous.range
+            } : null
+        };
+        c.data = combined; c.ts = Date.now(); c.error = null;
+        return combined;
+    } catch (e) {
+        c.error = e.message;
+        if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
+        return { source: 'rd-station', configured: true, error: e.message, total: 0, byChannel: [], byForm: [], previous: null };
+    }
+}
+
 
 // ==================== HTTP server ====================
 const server = http.createServer(async (req, res) => {
@@ -2186,26 +2334,53 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
         }
     }
+    // RD Station Marketing — conversoes (leads) do mes com paginacao
+    if (urlPath === '/api/marketing/rdstation' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const force = req.url.includes('refresh=1');
+        try {
+            const data = await rdStationGetCached(force);
+            return jsonReply(res, 200, data);
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message, source: 'rd-station' });
+        }
+    }
+    // Diagnostico RD Station — so admin
+    if (urlPath === '/api/marketing/rdstation-diag' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
+        try {
+            const report = await rdStationDiag();
+            return jsonReply(res, 200, report);
+        } catch (e) {
+            return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
+        }
+    }
     // Endpoint combinado — única chamada do frontend pra puxar tudo
     if (urlPath === '/api/marketing/ads-summary' && req.method === 'GET') {
         const user = getCurrentUser(req);
         if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
         const force = req.url.includes('refresh=1');
-        const [google, meta, linkedin] = await Promise.all([
+        const [google, meta, linkedin, rd] = await Promise.all([
             googleAdsGetCached(force).catch(e => ({ error: e.message, source: 'google-ads' })),
             metaAdsGetCached(force).catch(e => ({ error: e.message, source: 'meta-ads' })),
-            linkedinAdsGetCached(force).catch(e => ({ error: e.message, source: 'linkedin-ads' }))
+            linkedinAdsGetCached(force).catch(e => ({ error: e.message, source: 'linkedin-ads' })),
+            rdStationGetCached(force).catch(e => ({ error: e.message, source: 'rd-station' }))
         ]);
         return jsonReply(res, 200, {
             fetchedAt: new Date().toISOString(),
             config: {
                 googleAdsConfigured: isGoogleAdsConfigured(),
                 metaAdsConfigured: isMetaAdsConfigured(),
-                linkedinAdsConfigured: isLinkedinAdsConfigured()
+                linkedinAdsConfigured: isLinkedinAdsConfigured(),
+                rdStationConfigured: isRdStationConfigured()
             },
             google,
             meta,
-            linkedin
+            linkedin,
+            rd
         });
     }
 
