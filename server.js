@@ -1517,33 +1517,97 @@ function _rdMonthRange(monthOffset) {
 // Diagnostico simples: chama /platform/account/info (endpoint leve que apenas
 // valida o token). Retorna raw pra debug — usado antes de investir na integracao.
 async function rdStationDiag() {
-    const report = { checks: [], hasToken: !!RD_STATION_TOKEN, tokenPreview: RD_STATION_TOKEN ? `${RD_STATION_TOKEN.slice(0,6)}...${RD_STATION_TOKEN.slice(-4)}` : null };
+    const report = {
+        checks: [],
+        hasToken: !!RD_STATION_TOKEN,
+        tokenPreview: RD_STATION_TOKEN ? `${RD_STATION_TOKEN.slice(0,6)}...${RD_STATION_TOKEN.slice(-4)}` : null,
+        tokenLength: RD_STATION_TOKEN ? RD_STATION_TOKEN.length : 0
+    };
     if (!RD_STATION_TOKEN) {
         report.diagnosis = 'RD_STATION_TOKEN nao configurado no env.';
         return report;
     }
-    // Endpoint 1: account info (mais leve)
+    // 4 hipoteses testadas em paralelo:
+    // A. Marketing v2 (Bearer) - api.rd.services/platform/*
+    // B. Marketing legacy (Bearer) - api.rd.services/marketing/*
+    // C. CRM (Token via query param) - crm.rdstation.com/api/v1/token/check
+    // D. CRM (Bearer) - crm.rdstation.com/api/v1/deals
+    const range = _rdMonthRange(0);
     const variants = [
-        { name: 'account_info', path: '/platform/account/info' },
-        { name: 'conversions_1d', path: `/platform/conversions?start_date=${_rdMonthRange(0).start}&end_date=${_rdMonthRange(0).end}&page=1&page_size=1` }
+        // A: Marketing v2
+        {
+            name: 'marketing_v2_contacts',
+            hostname: 'api.rd.services',
+            path: '/platform/contacts?email=teste@teste.com',
+            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+        },
+        {
+            name: 'marketing_v2_conversions',
+            hostname: 'api.rd.services',
+            path: `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=1&page_size=1`,
+            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+        },
+        // B: Marketing v2 events
+        {
+            name: 'marketing_v2_events',
+            hostname: 'api.rd.services',
+            path: '/platform/events?event_type=CONVERSION',
+            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+        },
+        // C: CRM token check (query param)
+        {
+            name: 'crm_token_check',
+            hostname: 'crm.rdstation.com',
+            path: `/api/v1/token/check?token=${encodeURIComponent(RD_STATION_TOKEN)}`,
+            headers: { 'Accept': 'application/json' }
+        },
+        // D: CRM deals (query param auth)
+        {
+            name: 'crm_deals',
+            hostname: 'crm.rdstation.com',
+            path: `/api/v1/deals?token=${encodeURIComponent(RD_STATION_TOKEN)}&limit=1`,
+            headers: { 'Accept': 'application/json' }
+        },
+        // E: CRM contacts
+        {
+            name: 'crm_contacts',
+            hostname: 'crm.rdstation.com',
+            path: `/api/v1/contacts?token=${encodeURIComponent(RD_STATION_TOKEN)}&limit=1`,
+            headers: { 'Accept': 'application/json' }
+        }
     ];
-    for (const v of variants) {
+    await Promise.all(variants.map(async v => {
         try {
             const r = await httpsJsonRequest({
-                hostname: 'api.rd.services',
+                hostname: v.hostname,
                 path: v.path,
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+                headers: v.headers
             });
-            report.checks.push({ name: v.name, ok: true, sample: JSON.stringify(r).slice(0, 400) });
+            report.checks.push({ name: v.name, host: v.hostname, ok: true, sample: JSON.stringify(r).slice(0, 400) });
         } catch (e) {
-            report.checks.push({ name: v.name, ok: false, error: e.message.slice(0, 400) });
+            report.checks.push({ name: v.name, host: v.hostname, ok: false, error: e.message.slice(0, 300) });
+        }
+    }));
+    const anyOk = report.checks.find(c => c.ok);
+    if (anyOk) {
+        const family = anyOk.name.startsWith('marketing') ? 'RD Station Marketing (Bearer)' : 'RD Station CRM (token query param)';
+        report.diagnosis = `Token e do tipo: ${family}. Endpoint que funcionou: "${anyOk.name}" @ ${anyOk.host}. Vou ajustar rdStationFetchConversions pra usar esse formato.`;
+        report.detectedApi = anyOk.name.startsWith('marketing') ? 'marketing' : 'crm';
+    } else {
+        // Analisa os erros pra dar dica
+        const errors = report.checks.map(c => c.error).join(' | ');
+        const has401 = errors.includes('401');
+        const has403 = errors.includes('403');
+        const has404 = errors.includes('404');
+        if (has401 || has403) {
+            report.diagnosis = 'Token INVALIDO ou sem escopo — 401/403 em varios endpoints. Regenera o token no RD com escopo de leitura de conversoes/contatos.';
+        } else if (has404) {
+            report.diagnosis = 'Todos os endpoints retornaram 404. Pode ser API do RD que mudou de path, ou o token e de uma plataforma diferente (nao Marketing nem CRM). Confirma no RD onde voce gerou o token.';
+        } else {
+            report.diagnosis = 'Nenhum endpoint respondeu. Confira erros de rede acima.';
         }
     }
-    const anyOk = report.checks.find(c => c.ok);
-    report.diagnosis = anyOk
-        ? `Token valido — endpoint "${anyOk.name}" respondeu OK.`
-        : `Token nao autenticou em nenhum endpoint. Verifica se e Bearer Token (RD Station Marketing) e se tem escopo pra conversions.`;
     return report;
 }
 
