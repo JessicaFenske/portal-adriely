@@ -4024,7 +4024,7 @@
         /* KPIs pessoais */
         .cp-kpis {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px;
             margin-bottom: 18px;
         }
@@ -11592,6 +11592,21 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // Taxa realização do mês
     const taxaReal = myAgendadasMonth.length > 0 ? Math.round((myRealizadasMonth.length / myAgendadasMonth.length) * 100) : 0;
 
+    // No-show do mês: agendadas do mês vencidas sem Realizada concluída (regra estrita)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const noShowMonth = (dashMeetings || []).filter(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return false;
+        const creator = dashUsersById[t.CreatorId] || '';
+        if (getCanonicalSdrName(creator) !== canonicalSdr) return false;
+        const dt = new Date(t.DateTime);
+        if (dt < monthStart || dt > monthEnd) return false; // fora do mês
+        if (dt > now) return false; // ainda vai acontecer
+        if (t.Finished === true) return false;
+        if (realizadaByDealConcluded.has(t.DealId)) return false;
+        return true;
+    });
+
     // Cards devolvidos: deals em sales pipeline com Owner = canonicalSdr
     const SALES_PIPES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
     const cardsDevolvidos = (dashOpenDeals || []).filter(d => {
@@ -11614,6 +11629,11 @@ function _cpRenderSdrCockpit(canonicalSdr) {
             <div class="label">⚠️ Compliance pendente</div>
             <div class="value" style="color:${pendingCompliance.length > 0 ? '#ef4444' : '#22c55e'};">${pendingCompliance.length}</div>
             <div class="delta ${pendingCompliance.length > 0 ? 'down' : 'up'}">${pendingCompliance.length === 0 ? 'Tudo em dia ✅' : 'Agendadas vencidas sem Realizada'}</div>
+        </div>
+        <div class="cp-kpi-card">
+            <div class="label">🚫 No-show (mês)</div>
+            <div class="value" style="color:${noShowMonth.length === 0 ? '#22c55e' : noShowMonth.length <= 2 ? '#f59e0b' : '#ef4444'};">${noShowMonth.length}</div>
+            <div class="delta flat">${noShowMonth.length === 0 ? 'Zero no-show ✅' : 'agendadas do mês sem Realizada'}</div>
         </div>
         <div class="cp-kpi-card">
             <div class="label">📊 Taxa Realização (mês)</div>
