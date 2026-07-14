@@ -11627,8 +11627,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     const taxaReal = myAgendadasMonth.length > 0 ? Math.round((myRealizadasMonth.length / myAgendadasMonth.length) * 100) : 0;
 
     // No-show do mês: agendadas do mês vencidas sem Realizada concluída (regra estrita)
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    // (monthStart/monthEnd ja declarados no topo da funcao)
     const noShowMonth = (dashMeetings || []).filter(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return false;
         const creator = dashUsersById[t.CreatorId] || '';
