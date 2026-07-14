@@ -10077,16 +10077,20 @@ function _cpOpenAlertSellerDeals(sellerName) {
 // Reusa cpKpis / cpFocusActions / cpRiskList / cpChancesList / cpInsightsGrid.
 // Adiciona blocos próprios em cpMarketingExtras.
 
-// Mapeia Origin (free text vindo do Ploomes) → canal canônico
+// Mapeia Origin (free text vindo do Ploomes) → canal canônico.
+// Patterns cobrem variações comuns: nomes ingleses/portugueses, sinônimos, formatos
+// de plataformas (ex: 'RD Station' vira lead RD, mas o canal que gerou é ads/orgânico).
 const CHANNEL_MAP_PATTERNS = [
-    { name: 'Google Ads',       icon: '🔍', color: '#4285F4', patterns: [/google/i, /adwords/i, /sem/i] },
-    { name: 'Meta Ads',         icon: '📘', color: '#1877F2', patterns: [/facebook/i, /\bmeta\b/i, /instagram/i, /\bfb\b/i, /\big\b/i] },
-    { name: 'LinkedIn Ads',     icon: '💼', color: '#0A66C2', patterns: [/linkedin/i, /\blin\b/i] },
-    { name: 'Eventos',          icon: '🎪', color: '#F59E0B', patterns: [/intermodal/i, /evento/i, /feira/i, /congresso/i] },
-    { name: 'E-mail Marketing', icon: '✉️', color: '#06B6D4', patterns: [/^e-?mail/i, /newsletter/i, /campanha de e-?mail/i] },
-    { name: 'Orgânico / SEO',   icon: '🌱', color: '#22C55E', patterns: [/org[âa]nico/i, /seo/i, /\bsite\b/i, /website/i, /busca/i] },
-    { name: 'Indicação',        icon: '🤝', color: '#EC4899', patterns: [/indica[çc][ãa]o/i, /referral/i, /parceiro/i, /partner/i] },
-    { name: 'Outbound / SDR',   icon: '📞', color: '#8B5CF6', patterns: [/outbound/i, /cold/i, /prospect/i, /cad out/i] },
+    { name: 'Google Ads',       icon: '🔍', color: '#4285F4', patterns: [/google\s*ads/i, /adwords/i, /\bsem\b/i, /google\s*search/i, /google\s*display/i, /\bgoogle\b/i] },
+    { name: 'Meta Ads',         icon: '📘', color: '#1877F2', patterns: [/facebook\s*ads/i, /meta\s*ads/i, /instagram\s*ads/i, /\bfb\s*ads\b/i, /\big\s*ads\b/i, /facebook/i, /instagram/i, /\bmeta\b/i, /\bfb\b/i] },
+    { name: 'LinkedIn Ads',     icon: '💼', color: '#0A66C2', patterns: [/linkedin\s*ads/i, /linkedin\s*sponsored/i, /linkedin\s*lead\s*gen/i, /linkedin/i, /\blin\s*ads\b/i] },
+    { name: 'RD Station',       icon: '🎯', color: '#00d4ff', patterns: [/\brd\s*station/i, /^rd$/i, /\brd\s*mkt/i, /\brd\s*marketing/i, /station\b/i] },
+    { name: 'Landing Page',     icon: '📄', color: '#a78bfa', patterns: [/landing/i, /\blp\b/i, /form(ul[áa]rio)?\s*site/i, /form(ul[áa]rio)?\s*web/i] },
+    { name: 'Eventos',          icon: '🎪', color: '#F59E0B', patterns: [/intermodal/i, /evento/i, /feira/i, /congresso/i, /webinar/i, /workshop/i] },
+    { name: 'E-mail Marketing', icon: '✉️', color: '#06B6D4', patterns: [/^e-?mail/i, /newsletter/i, /campanha\s*de\s*e-?mail/i, /nutri[çc][ãa]o/i, /automa[çc][ãa]o\s*e-?mail/i] },
+    { name: 'Orgânico / SEO',   icon: '🌱', color: '#22C55E', patterns: [/org[âa]nico/i, /seo/i, /\bsite\b/i, /website/i, /busca\s*org[âa]nica/i, /google\s*org/i, /blog/i] },
+    { name: 'Indicação',        icon: '🤝', color: '#EC4899', patterns: [/indica[çc][ãa]o/i, /referral/i, /parceiro/i, /partner/i, /cliente\s*atual/i] },
+    { name: 'Outbound / SDR',   icon: '📞', color: '#8B5CF6', patterns: [/outbound/i, /cold/i, /prospect/i, /cad\s*out/i, /apollo/i, /reev/i, /sales\s*navigator/i] },
     { name: 'WhatsApp',         icon: '💬', color: '#25D366', patterns: [/whats/i, /\bwa\b/i, /\bzap\b/i] }
 ];
 function getChannelFromOrigin(origin) {
@@ -10162,6 +10166,18 @@ function _cpGetChannelInvest(channelName, monthKey) {
     const apiSpend = Number(platData.totals?.spend || 0);
     if (apiSpend <= 0 && !platData.mock) return { value: manual, source: 'manual' };
     return { value: apiSpend, source: platData.mock ? 'mock' : 'api' };
+}
+
+// Hint amarelo quando a atribuição API↔Ploomes falha — mostra top 3 origins detectadas
+// no CRM que não estão sendo mapeadas pros canais, ajudando a Fê a padronizar os nomes.
+function _cpUnmappedHint() {
+    const unmapped = window._mktUnmappedOrigins || {};
+    const top = Object.entries(unmapped).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    if (top.length === 0) {
+        return ` · <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;">sem leads no CRM com essa Origin</span>`;
+    }
+    const list = top.map(([o, c]) => `"${o}" (${c})`).join(' · ');
+    return ` · <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;" title="Estes leads chegaram no Ploomes mas com nome de Origin que não mapeia pra este canal. Padronize no marketing.">origins não mapeadas no CRM: ${list}</span>`;
 }
 
 function _cpRenderAdsLive(data, containerId) {
@@ -10250,7 +10266,7 @@ function _cpRenderAdsLive(data, containerId) {
             </div>
 
             ${t.spend > 0 ? `
-                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">💼 Impacto no Ploomes ${leadsPloomes === 0 ? '· <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;">sem leads atribuídos — Origin vazio</span>' : ''}</div>
+                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">💼 Impacto no Ploomes${leadsPloomes === 0 ? _cpUnmappedHint() : ''}</div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
                     ${cell('Leads',      leadsPloomes.toLocaleString('pt-BR'),      '#fff')}
                     ${cell('OPOs',       oposPloomes.toLocaleString('pt-BR'),       '#a78bfa')}
@@ -10458,13 +10474,20 @@ function _cpRenderMarketingCockpit(me, _opts) {
         return inMonth(pd);
     });
 
-    // Agrupa por canal
+    // Agrupa por canal + rastreia origins brutas que caíram em 'Outros'/'Sem origem'
+    // pra ajudar a Fê a diagnosticar por que a atribuição não bate com Meta/LinkedIn/Google.
     const channelData = {};
+    const unmappedOrigins = {}; // origin_raw -> count
     monthLeads.forEach(d => {
-        const ch = getChannelFromOrigin(getDealOrigin(d));
+        const rawOrigin = getDealOrigin(d) || '(sem origem)';
+        const ch = getChannelFromOrigin(rawOrigin);
         if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
         channelData[ch].leads.push(d);
+        if (ch === 'Outros' || ch === 'Sem origem') {
+            unmappedOrigins[rawOrigin] = (unmappedOrigins[rawOrigin] || 0) + 1;
+        }
     });
+    window._mktUnmappedOrigins = unmappedOrigins;
     monthOpos.forEach(d => {
         const ch = getChannelFromOrigin(getDealOrigin(d));
         if (!channelData[ch]) channelData[ch] = { leads: [], opos: [], won: [], open: [] };
