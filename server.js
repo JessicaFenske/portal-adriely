@@ -1628,7 +1628,11 @@ let _rdStationLastRaw = null; // guarda a resposta bruta pra debug
 async function rdStationFetchConversions(monthOffset) {
     const accessToken = await rdStationAccessToken();
     const range = _rdMonthRange(monthOffset);
-    const path = `/platform/analytics/conversions?start_date=${range.start}&end_date=${range.end}`;
+    // /platform/analytics/funnel retorna array diario com contacts_count,
+    // qualified_contacts_count, opportunities_count, sales_count, visitors_count.
+    // Bate EXATAMENTE com os cards Visitantes/Leads/Qualificados/Oportunidades/Vendas
+    // do dashboard nativo do RD Marketing.
+    const path = `/platform/analytics/funnel?start_date=${range.start}&end_date=${range.end}`;
     const r = await httpsJsonRequest({
         hostname: 'api.rd.services',
         path,
@@ -1637,42 +1641,37 @@ async function rdStationFetchConversions(monthOffset) {
     });
     _rdStationLastRaw = { monthOffset, range, path, response: r };
 
-    // O RD retorna 1 item por ASSET (LandingPage/Form/Popup), nao por conversao.
-    // Cada asset tem: conversion_count (conversoes daquele asset no periodo),
-    // visits_count (visitas no periodo), asset_identifier (nome), assets_type.
-    // NAO tem traffic_source/channel — por isso NAO da pra fazer breakdown por canal aqui.
-    const list = Array.isArray(r?.conversions) ? r.conversions : [];
+    const days = Array.isArray(r?.funnel) ? r.funnel : [];
+    const sumField = (field) => days.reduce((s, d) => s + (Number(d[field]) || 0), 0);
 
-    // Soma real das conversoes = soma dos conversion_count de cada asset
-    const total = list.reduce((sum, item) => sum + (Number(item.conversion_count) || 0), 0);
-    const totalVisits = list.reduce((sum, item) => sum + (Number(item.visits_count) || 0), 0);
+    const total = sumField('contacts_count');           // = "Leads" do RD
+    const visitors = sumField('visitors_count');
+    const qualified = sumField('qualified_contacts_count');
+    const opportunities = sumField('opportunities_count');
+    const sales = sumField('sales_count');
 
-    // Top forms com conversoes > 0 (assets zerados nao ajudam)
-    const formsWithConversions = list
-        .filter(item => Number(item.conversion_count) > 0)
-        .map(item => ({
-            name: item.asset_identifier || 'sem_identifier',
-            type: item.assets_type || 'unknown',
-            count: Number(item.conversion_count) || 0,
-            visits: Number(item.visits_count) || 0
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 15);
-
-    // ⚠️ Analytics/conversions do RD cobre apenas conversoes em LP/Form/Popup criados no
-    // proprio RD. NAO cobre: leads via LinkedIn Lead Gen, Meta Lead Ads, LPH, importados,
-    // ou integracoes que criam contatos direto na API. Total sub-representa leads reais.
+    // Serie diaria pra sparkline no card
+    const daily = days.map(d => ({
+        day: (d.reference_day || '').slice(0, 10),
+        contacts: Number(d.contacts_count) || 0,
+        visitors: Number(d.visitors_count) || 0,
+        qualified: Number(d.qualified_contacts_count) || 0,
+        opportunities: Number(d.opportunities_count) || 0,
+        sales: Number(d.sales_count) || 0
+    }));
 
     return {
         monthOffset,
         range,
         total,
-        totalVisits,
-        byForm: formsWithConversions,
-        byChannel: [], // nao disponivel neste endpoint
-        assetsListed: list.length,
-        endpoint: 'analytics/conversions',
-        caveat: 'Cobre apenas LP/Form/Popup do RD. Nao inclui LinkedIn Lead Gen, Meta Lead Ads, LPH, integracoes.'
+        visitors,
+        qualified,
+        opportunities,
+        sales,
+        daily,
+        endpoint: 'analytics/funnel',
+        // conversion_rate visitor → lead
+        conversionRate: visitors > 0 ? +(total / visitors * 100).toFixed(2) : null
     };
 }
 
@@ -1680,7 +1679,7 @@ async function rdStationGetCached(force) {
     const c = adsCache.rd;
     if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
     if (!isRdStationConfigured()) {
-        const empty = { source: 'rd-station', configured: false, total: 0, byChannel: [], byForm: [], previous: null };
+        const empty = { source: 'rd-station', configured: false, total: 0, visitors: 0, qualified: 0, opportunities: 0, sales: 0, daily: [], previous: null };
         c.data = empty; c.ts = Date.now(); c.error = null;
         return empty;
     }
@@ -1695,8 +1694,11 @@ async function rdStationGetCached(force) {
             ...current,
             previous: previous ? {
                 total: previous.total,
-                byChannel: previous.byChannel,
-                byForm: previous.byForm,
+                visitors: previous.visitors,
+                qualified: previous.qualified,
+                opportunities: previous.opportunities,
+                sales: previous.sales,
+                conversionRate: previous.conversionRate,
                 range: previous.range
             } : null
         };
@@ -1705,7 +1707,7 @@ async function rdStationGetCached(force) {
     } catch (e) {
         c.error = e.message;
         if (c.data) return Object.assign({}, c.data, { stale: true, lastError: e.message });
-        return { source: 'rd-station', configured: true, error: e.message, total: 0, byChannel: [], byForm: [], previous: null };
+        return { source: 'rd-station', configured: true, error: e.message, total: 0, visitors: 0, qualified: 0, opportunities: 0, sales: 0, daily: [], previous: null };
     }
 }
 
