@@ -1637,64 +1637,42 @@ async function rdStationFetchConversions(monthOffset) {
     });
     _rdStationLastRaw = { monthOffset, range, path, response: r };
 
-    // Estruturas possiveis do retorno:
-    //   {total: N, conversions: [...]}
-    //   {assets: [{asset_identifier, total, source, ...}]}
-    //   {results: [...]}
-    //   [{...}, ...] direto
-    // Extrai a "lista" (que pode ser lista de conversoes individuais OU agregado por asset)
-    const list = Array.isArray(r) ? r
-              : Array.isArray(r?.conversions) ? r.conversions
-              : Array.isArray(r?.assets) ? r.assets
-              : Array.isArray(r?.results) ? r.results
-              : Array.isArray(r?.items) ? r.items
-              : [];
+    // O RD retorna 1 item por ASSET (LandingPage/Form/Popup), nao por conversao.
+    // Cada asset tem: conversion_count (conversoes daquele asset no periodo),
+    // visits_count (visitas no periodo), asset_identifier (nome), assets_type.
+    // NAO tem traffic_source/channel — por isso NAO da pra fazer breakdown por canal aqui.
+    const list = Array.isArray(r?.conversions) ? r.conversions : [];
 
-    // total geral: pode vir explicito ou soma dos itens
-    let total = 0;
-    if (typeof r?.total === 'number') total = r.total;
-    else if (typeof r?.total_conversions === 'number') total = r.total_conversions;
-    else if (typeof r?.conversions_total === 'number') total = r.conversions_total;
-    else if (list.length > 0) {
-        // se cada item tem 'total' ou 'count' individual, soma
-        total = list.reduce((sum, item) => sum + (Number(item.total) || Number(item.count) || Number(item.conversions) || 1), 0);
-    }
+    // Soma real das conversoes = soma dos conversion_count de cada asset
+    const total = list.reduce((sum, item) => sum + (Number(item.conversion_count) || 0), 0);
+    const totalVisits = list.reduce((sum, item) => sum + (Number(item.visits_count) || 0), 0);
 
-    // Agregacoes por canal e por form
-    // Cada item pode ter: source/traffic_source/channel/utm_source
-    // E identifier/asset_identifier/form_identifier/name
-    const byChannel = {};
-    const byForm = {};
-    list.forEach(item => {
-        const cnt = Number(item.total) || Number(item.count) || Number(item.conversions) || 1;
-        const src = String(
-            item.traffic_source || item.source || item.channel || item.utm_source || 'direto'
-        ).toLowerCase().trim() || 'direto';
-        const form = String(
-            item.asset_identifier || item.identifier || item.name || item.form_identifier || 'sem_identifier'
-        );
-        byChannel[src] = (byChannel[src] || 0) + cnt;
-        byForm[form] = (byForm[form] || 0) + cnt;
-    });
+    // Top forms com conversoes > 0 (assets zerados nao ajudam)
+    const formsWithConversions = list
+        .filter(item => Number(item.conversion_count) > 0)
+        .map(item => ({
+            name: item.asset_identifier || 'sem_identifier',
+            type: item.assets_type || 'unknown',
+            count: Number(item.conversion_count) || 0,
+            visits: Number(item.visits_count) || 0
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
 
-    // Se o total explicito vier mas as agregacoes ficarem vazias (estrutura diferente),
-    // pelo menos entregamos o total no card
-    const topForms = Object.entries(byForm)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 15)
-        .map(([name, count]) => ({ name, count }));
-    const channels = Object.entries(byChannel)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => ({ name, count }));
+    // ⚠️ Analytics/conversions do RD cobre apenas conversoes em LP/Form/Popup criados no
+    // proprio RD. NAO cobre: leads via LinkedIn Lead Gen, Meta Lead Ads, LPH, importados,
+    // ou integracoes que criam contatos direto na API. Total sub-representa leads reais.
 
     return {
         monthOffset,
         range,
         total,
-        byChannel: channels,
-        byForm: topForms,
-        rawItemCount: list.length,
-        endpoint: 'analytics/conversions'
+        totalVisits,
+        byForm: formsWithConversions,
+        byChannel: [], // nao disponivel neste endpoint
+        assetsListed: list.length,
+        endpoint: 'analytics/conversions',
+        caveat: 'Cobre apenas LP/Form/Popup do RD. Nao inclui LinkedIn Lead Gen, Meta Lead Ads, LPH, integracoes.'
     };
 }
 
@@ -2463,16 +2441,20 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
                 hostname: 'api.rd.services', path, method: 'GET',
                 headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
             }).catch(e => ({ __error: e.message }));
-            const [convCur, convPrev, emailsCur] = await Promise.all([
+            const [convCur, convPrev, emailsCur, funnelCur, segList] = await Promise.all([
                 call(`/platform/analytics/conversions?start_date=${rangeCur.start}&end_date=${rangeCur.end}`),
                 call(`/platform/analytics/conversions?start_date=${rangePrev.start}&end_date=${rangePrev.end}`),
-                call(`/platform/analytics/emails?start_date=${rangeCur.start}&end_date=${rangeCur.end}`)
+                call(`/platform/analytics/emails?start_date=${rangeCur.start}&end_date=${rangeCur.end}`),
+                call(`/platform/analytics/funnel?start_date=${rangeCur.start}&end_date=${rangeCur.end}`),
+                call(`/platform/segmentations`)
             ]);
             return jsonReply(res, 200, {
                 rangeCur, rangePrev,
                 analytics_conversions_current: convCur,
                 analytics_conversions_previous: convPrev,
                 analytics_emails_current: emailsCur,
+                analytics_funnel_current: funnelCur,
+                segmentations: segList,
                 sameResponse: JSON.stringify(convCur) === JSON.stringify(convPrev)
             });
         } catch (e) {
