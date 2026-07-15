@@ -1573,12 +1573,27 @@ async function rdStationDiag() {
         report.diagnosis = 'Falhou ao trocar refresh_token por access_token. Verifica se CLIENT_ID/CLIENT_SECRET/REFRESH_TOKEN estao corretos e se o app nao foi desativado no App Store.';
         return report;
     }
-    // Passo 2: testar endpoints com o access_token novo
+    // Passo 2: testar endpoints com o access_token novo — sondamos a API atual v2
+    // pra descobrir qual endpoint retorna dados de conversao real (a doc do RD e confusa).
     const range = _rdMonthRange(0);
     const variants = [
+        // Contacts — CRUD legado, retorna 500 quando email nao existe (comportamento conhecido)
         { name: 'contacts_probe', path: '/platform/contacts?email=teste-diag@lincros.com' },
-        { name: 'conversions_range', path: `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=1&page_size=1` },
-        { name: 'events_conversion', path: '/platform/events?event_type=CONVERSION' }
+
+        // Analytics API (a nova, se ativada na conta)
+        { name: 'analytics_conversions', path: `/platform/analytics/conversions?start_date=${range.start}&end_date=${range.end}` },
+        { name: 'analytics_emails',      path: `/platform/analytics/emails?start_date=${range.start}&end_date=${range.end}` },
+        { name: 'analytics_funnel',      path: `/platform/analytics/funnel?start_date=${range.start}&end_date=${range.end}` },
+
+        // Reports API (mais nova ainda, RD "Reports 2.0")
+        { name: 'reports_conversions',   path: `/platform/reports/conversions?start_date=${range.start}&end_date=${range.end}` },
+        { name: 'reports_funnels',       path: '/platform/reports/funnels' },
+
+        // Segmentations (lista contatos por segmento — poderia servir se tiver segmento "leads do mes")
+        { name: 'segmentations_list',    path: '/platform/segmentations' },
+
+        // Fields (metadata — util pra saber quais campos temos disponivel)
+        { name: 'fields_list',           path: '/platform/fields' }
     ];
     await Promise.all(variants.map(async v => {
         try {
