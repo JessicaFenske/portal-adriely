@@ -6755,6 +6755,20 @@
             <div id="mktContentArea" style="display:none;">
                 <div class="mkt-grid" style="padding:16px 30px 30px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:minmax(0,auto);gap:18px;align-items:stretch;">
 
+                    <!-- LINHA -1: Total de leads consolidado (soma LinkedIn RD + Meta/Google/LPH Ploomes) -->
+                    <div class="dash-card" style="padding:22px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
+                            <div>
+                                <h2 style="color:#fff;font-size:16px;margin:0 0 4px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                    <span class="section-num" data-svg-icon="megaphone"></span>
+                                    Total de Leads no Mês — Todos os Canais
+                                </h2>
+                                <div style="color:#94a3b8;font-size:12px;">LinkedIn (via RD) + Meta + Google + LPH · fonte real de cada canal</div>
+                            </div>
+                        </div>
+                        <div id="mktLeadsTotal" style="min-height:120px;"></div>
+                    </div>
+
                     <!-- LINHA 0: Funil LinkedIn (via RD Station) — topo, full width -->
                     <div class="dash-card" style="padding:22px;grid-column:span 12;">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
@@ -10228,6 +10242,81 @@ function _cpUnmappedHint() {
     return ` · <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;" title="Estes leads chegaram no Ploomes mas com nome de Origin que não mapeia pra este canal. Padronize no marketing.">origins não mapeadas no CRM: ${list}</span>`;
 }
 
+// Total de leads consolidado — soma LinkedIn (via RD) + Meta/Google/LPH (via Ploomes Origin).
+// Fluxo real Lincros: LinkedIn passa pelo RD, resto vai direto pro Ploomes com Origin.
+function _cpRenderLeadsTotal(rdData, channelDataAll, containerId) {
+    const container = document.getElementById(containerId || 'mktLeadsTotal');
+    if (!container) return;
+    channelDataAll = channelDataAll || {};
+
+    // LinkedIn: fonte = RD Station
+    const leadsLinkedIn = Number(rdData?.total || 0);
+    const leadsLinkedInPrev = Number(rdData?.previous?.total || 0);
+
+    // Outros canais: fonte = Ploomes (Origin match). Se _mktChannelData nao carregou,
+    // fica 0 e mostra hint.
+    const leadsMeta   = channelDataAll['Meta Ads']?.leads?.length   || 0;
+    const leadsGoogle = channelDataAll['Google Ads']?.leads?.length || 0;
+    // LPH cai em "Outbound / SDR" no mapeamento CHANNEL_MAP_PATTERNS
+    const leadsLPH    = channelDataAll['Outbound / SDR']?.leads?.length || 0;
+
+    const total = leadsLinkedIn + leadsMeta + leadsGoogle + leadsLPH;
+
+    function delta(curr, prev) {
+        if (prev == null || prev === 0 || curr == null) return '';
+        const pctChg = (curr - prev) / prev;
+        if (Math.abs(pctChg) < 0.01) return '<span style="font-size:10px;color:#94a3b8;margin-left:6px;">~</span>';
+        const arrow = pctChg > 0 ? '▲' : '▼';
+        const sign = pctChg > 0 ? '+' : '−';
+        const color = pctChg > 0 ? '#22c55e' : '#ef4444';
+        return `<span style="font-size:10px;color:${color};margin-left:6px;font-weight:700;">${arrow} ${sign}${(Math.abs(pctChg)*100).toFixed(0)}%</span>`;
+    }
+    const share = (v) => total > 0 ? ((v / total) * 100).toFixed(0) + '%' : '—';
+
+    function channelCard(label, icon, color, count, source, prevCount) {
+        const s = share(count);
+        // Barra de proporcao
+        const barPct = total > 0 ? (count / total) * 100 : 0;
+        return `<div style="flex:1;min-width:150px;background:rgba(255,255,255,0.025);border:1px solid ${color}30;border-left:3px solid ${color};border-radius:10px;padding:14px 14px;">
+            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                <span style="opacity:0.85;">${icon}</span> ${label}
+            </div>
+            <div style="font-size:22px;color:${color};font-weight:700;line-height:1.1;margin-top:6px;">${count.toLocaleString('pt-BR')}${delta(count, prevCount)}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;">
+                <div style="font-size:10px;color:#6b7280;">${s} do total</div>
+                <div style="font-size:9px;color:#94a3b8;background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:4px;">${source}</div>
+            </div>
+            <div style="margin-top:8px;height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;">
+                <div style="height:100%;width:${barPct.toFixed(1)}%;background:${color};border-radius:2px;transition:width 0.4s ease;"></div>
+            </div>
+        </div>`;
+    }
+
+    // Header com total grande
+    const totalHtml = `<div style="text-align:center;padding:12px 0 18px;">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Total de leads no mês</div>
+        <div style="font-size:44px;color:#fff;font-weight:800;line-height:1.1;margin-top:4px;">${total.toLocaleString('pt-BR')}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px;">soma de todos os canais</div>
+    </div>`;
+
+    container.innerHTML = `
+        ${totalHtml}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;">
+            ${channelCard('LinkedIn Ads', '💼', '#0A66C2', leadsLinkedIn, 'RD Station', leadsLinkedInPrev)}
+            ${channelCard('Meta Ads',     '📘', '#1877F2', leadsMeta,     'Ploomes · Origin', null)}
+            ${channelCard('Google Ads',   '🔍', '#4285F4', leadsGoogle,   'Ploomes · Origin', null)}
+            ${channelCard('Leads per Hour','🎯', '#f59e0b', leadsLPH,     'Ploomes · Origin', null)}
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 12px;">
+            <strong style="color:#c4b5fd;">Como é feita a contagem:</strong>
+            LinkedIn passa pelo RD Station (sync bidirecional) e o número vem direto de lá.
+            Meta, Google e LPH entram direto no Ploomes com Origin específico —
+            contamos leads com Origin batendo no CRM. Se o número parecer baixo, checa
+            se o Origin do Ploomes está sendo preenchido corretamente na régua RD → Ploomes.
+        </div>
+    `;
+}
+
 // Renderiza o funil RD Station (Visitantes -> Leads -> Qualificados -> Oportunidades -> Vendas)
 // Dados vem de /api/marketing/ads-summary -> data.rd (backend usa /platform/analytics/funnel).
 function _cpRenderRdFunnel(rd, containerId) {
@@ -10363,12 +10452,19 @@ function _cpRenderAdsLive(data, containerId) {
         else if (stale) badge = '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">⚠️ CACHE ANTIGO</span>';
         else badge = '<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;">🟢 AO VIVO</span>';
 
-        // Cadeia completa: dados da API × dados do Ploomes (atribuição via Origin do lead/deal)
+        // Cadeia completa: dados da API × dados do funil (Ploomes Origin OU RD Station)
         const ch = channelDataAll[channelName];
-        const leadsPloomes = ch ? ch.leads.length : 0;
+        let leadsPloomes = ch ? ch.leads.length : 0;
         const oposPloomes = ch ? ch.opos.length : 0;
         const wonCount = ch ? ch.won.length : 0;
         const wonReceita = ch ? ch.won.reduce((s, d) => s + getMRR(d) + getSetup(d), 0) : 0;
+        // Override pra LinkedIn: leads reais vem do RD (fluxo Lincros: LinkedIn -> RD -> Ploomes,
+        // Origin no Ploomes fica em branco ou 'RD Station', nao 'LinkedIn Ads')
+        let isLinkedInViaRd = false;
+        if (channelName === 'LinkedIn Ads' && typeof data.rd?.total === 'number' && data.rd.configured !== false) {
+            leadsPloomes = data.rd.total;
+            isLinkedInViaRd = true;
+        }
         const cacReal = t.spend > 0 && wonCount > 0 ? t.spend / wonCount : 0;
         const cplPloomes = t.spend > 0 && leadsPloomes > 0 ? t.spend / leadsPloomes : 0;
         const roasReal = t.spend > 0 ? wonReceita / t.spend : 0;
@@ -10408,7 +10504,7 @@ function _cpRenderAdsLive(data, containerId) {
             </div>
 
             ${t.spend > 0 ? `
-                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">💼 Impacto no Ploomes${leadsPloomes === 0 ? _cpUnmappedHint() : ''}</div>
+                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">💼 Impacto no funil${isLinkedInViaRd ? ' <span style="text-transform:none;font-weight:500;color:#c4b5fd;letter-spacing:0.2px;">· leads via RD Station</span>' : (leadsPloomes === 0 ? _cpUnmappedHint() : '')}</div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
                     ${cell('Leads',      leadsPloomes.toLocaleString('pt-BR'),      '#fff')}
                     ${cell('OPOs',       oposPloomes.toLocaleString('pt-BR'),       '#a78bfa')}
@@ -21296,10 +21392,12 @@ async function loadMarketing() {
         `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
 
     // Dispara fetch dos ads (Meta/Google/LinkedIn + RD Station) em background —
-    // renderiza bloco Mídia Paga + Funil RD + integra alertas nos Insights
+    // renderiza bloco Mídia Paga + Funil RD + Total consolidado + Insights alertas
     if (typeof _cpFetchAdsSummary === 'function') {
         _cpFetchAdsSummary(false).then(adsData => {
             if (!adsData) return;
+            // Total consolidado (LinkedIn RD + Meta/Google/LPH Ploomes) — depende de _mktChannelData
+            try { _cpRenderLeadsTotal(adsData.rd, window._mktChannelData, 'mktLeadsTotal'); } catch (e) { console.warn('[mkt] leads total render:', e); }
             // Bloco Funil RD Station (usa dados do backend /platform/analytics/funnel)
             try { _cpRenderRdFunnel(adsData.rd, 'mktRdFunnel'); } catch (e) { console.warn('[mkt] rd funnel render:', e); }
             // Bloco Mídia Paga na view Marketing
