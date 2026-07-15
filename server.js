@@ -2449,18 +2449,35 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
         }
     }
-    // Raw da ultima resposta do /platform/analytics/conversions — pra debug de parsing
+    // Raw: chama analytics/conversions no mes atual E anterior pra debug de parsing.
+    // Tambem tenta analytics/emails no mesmo periodo pra comparar breakdown.
     if (urlPath === '/api/marketing/rdstation-raw' && req.method === 'GET') {
         const user = getCurrentUser(req);
         if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
         if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
-        // Forca fetch novo se ainda nao ha raw ou se ?refresh=1
-        if (!_rdStationLastRaw || req.url.includes('refresh=1')) {
-            try { await rdStationFetchConversions(0); } catch (e) {
-                return jsonReply(res, 502, { error: e.message });
-            }
+        try {
+            const accessToken = await rdStationAccessToken();
+            const rangeCur = _rdMonthRange(0);
+            const rangePrev = _rdMonthRange(-1);
+            const call = (path) => httpsJsonRequest({
+                hostname: 'api.rd.services', path, method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+            }).catch(e => ({ __error: e.message }));
+            const [convCur, convPrev, emailsCur] = await Promise.all([
+                call(`/platform/analytics/conversions?start_date=${rangeCur.start}&end_date=${rangeCur.end}`),
+                call(`/platform/analytics/conversions?start_date=${rangePrev.start}&end_date=${rangePrev.end}`),
+                call(`/platform/analytics/emails?start_date=${rangeCur.start}&end_date=${rangeCur.end}`)
+            ]);
+            return jsonReply(res, 200, {
+                rangeCur, rangePrev,
+                analytics_conversions_current: convCur,
+                analytics_conversions_previous: convPrev,
+                analytics_emails_current: emailsCur,
+                sameResponse: JSON.stringify(convCur) === JSON.stringify(convPrev)
+            });
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message });
         }
-        return jsonReply(res, 200, _rdStationLastRaw || { error: 'no raw yet' });
     }
     // Endpoint combinado — única chamada do frontend pra puxar tudo
     if (urlPath === '/api/marketing/ads-summary' && req.method === 'GET') {
