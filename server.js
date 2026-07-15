@@ -55,7 +55,10 @@ const LINKEDIN_CLIENT_SECRET = cleanEnv(process.env.LINKEDIN_CLIENT_SECRET);
 const LINKEDIN_REFRESH_TOKEN = cleanEnv(process.env.LINKEDIN_REFRESH_TOKEN);
 const LINKEDIN_AD_ACCOUNT_ID = cleanEnv(process.env.LINKEDIN_AD_ACCOUNT_ID).replace(/\D/g, '');
 const LINKEDIN_API_VERSION = cleanEnv(process.env.LINKEDIN_API_VERSION) || '202405';
-const RD_STATION_TOKEN = cleanEnv(process.env.RD_STATION_TOKEN);
+const RD_STATION_TOKEN = cleanEnv(process.env.RD_STATION_TOKEN); // legacy — nao usar
+const RD_STATION_CLIENT_ID = cleanEnv(process.env.RD_STATION_CLIENT_ID);
+const RD_STATION_CLIENT_SECRET = cleanEnv(process.env.RD_STATION_CLIENT_SECRET);
+const RD_STATION_REFRESH_TOKEN = cleanEnv(process.env.RD_STATION_REFRESH_TOKEN);
 let redisStatusAtBoot = { configured: false, urlOk: false, seedOk: false, error: null };
 
 // ==================== Upstash Redis helpers ====================
@@ -700,7 +703,7 @@ function isLinkedinAdsConfigured() {
     return !!(LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET && LINKEDIN_REFRESH_TOKEN && LINKEDIN_AD_ACCOUNT_ID);
 }
 function isRdStationConfigured() {
-    return !!RD_STATION_TOKEN;
+    return !!(RD_STATION_CLIENT_ID && RD_STATION_CLIENT_SECRET && RD_STATION_REFRESH_TOKEN);
 }
 
 // HTTP helper genérico (POST com body, retorna JSON parsed)
@@ -1514,105 +1517,96 @@ function _rdMonthRange(monthOffset) {
     return { start: iso(start), end: iso(end), startISO: start.toISOString(), endISO: end.toISOString() };
 }
 
-// Diagnostico simples: chama /platform/account/info (endpoint leve que apenas
-// valida o token). Retorna raw pra debug — usado antes de investir na integracao.
+// Cache do access_token do RD (dura 24h, renovamos com 5min de folga)
+let _rdAccessTokenCache = { token: null, expiresAt: 0 };
+
+// Troca refresh_token por access_token novo. RD Marketing retorna:
+// { access_token, refresh_token, expires_in }
+// Note: o refresh_token as vezes vem rotacionado — se vier diferente, atualizamos.
+async function rdStationAccessToken() {
+    if (_rdAccessTokenCache.token && Date.now() < _rdAccessTokenCache.expiresAt - 5 * 60 * 1000) {
+        return _rdAccessTokenCache.token;
+    }
+    if (!RD_STATION_CLIENT_ID || !RD_STATION_CLIENT_SECRET || !RD_STATION_REFRESH_TOKEN) {
+        throw new Error('RD Station OAuth nao configurado (falta CLIENT_ID, CLIENT_SECRET ou REFRESH_TOKEN)');
+    }
+    const body = JSON.stringify({
+        client_id: RD_STATION_CLIENT_ID,
+        client_secret: RD_STATION_CLIENT_SECRET,
+        refresh_token: RD_STATION_REFRESH_TOKEN
+    });
+    const r = await httpsJsonRequest({
+        hostname: 'api.rd.services',
+        path: '/auth/token',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body
+    });
+    if (!r?.access_token) throw new Error('RD Station /auth/token nao retornou access_token: ' + JSON.stringify(r).slice(0, 300));
+    const ttl = (r.expires_in || 86400) * 1000;
+    _rdAccessTokenCache = { token: r.access_token, expiresAt: Date.now() + ttl };
+    if (r.refresh_token && r.refresh_token !== RD_STATION_REFRESH_TOKEN) {
+        console.warn('[rdStation] refresh_token foi rotacionado pelo RD — atualiza a env var RD_STATION_REFRESH_TOKEN no Render pra:', r.refresh_token.slice(0, 6) + '...');
+    }
+    return r.access_token;
+}
+
+// Diagnostico: valida OAuth flow + testa endpoints reais (Marketing v2).
 async function rdStationDiag() {
     const report = {
         checks: [],
-        hasToken: !!RD_STATION_TOKEN,
-        tokenPreview: RD_STATION_TOKEN ? `${RD_STATION_TOKEN.slice(0,6)}...${RD_STATION_TOKEN.slice(-4)}` : null,
-        tokenLength: RD_STATION_TOKEN ? RD_STATION_TOKEN.length : 0
+        hasClientId: !!RD_STATION_CLIENT_ID,
+        hasClientSecret: !!RD_STATION_CLIENT_SECRET,
+        hasRefreshToken: !!RD_STATION_REFRESH_TOKEN
     };
-    if (!RD_STATION_TOKEN) {
-        report.diagnosis = 'RD_STATION_TOKEN nao configurado no env.';
+    if (!isRdStationConfigured()) {
+        report.diagnosis = 'RD Station OAuth nao configurado — falta CLIENT_ID, CLIENT_SECRET ou REFRESH_TOKEN no env do Render.';
         return report;
     }
-    // 4 hipoteses testadas em paralelo:
-    // A. Marketing v2 (Bearer) - api.rd.services/platform/*
-    // B. Marketing legacy (Bearer) - api.rd.services/marketing/*
-    // C. CRM (Token via query param) - crm.rdstation.com/api/v1/token/check
-    // D. CRM (Bearer) - crm.rdstation.com/api/v1/deals
+    // Passo 1: trocar refresh_token por access_token
+    let accessToken;
+    try {
+        accessToken = await rdStationAccessToken();
+        report.checks.push({ name: 'oauth_token_exchange', ok: true, tokenLen: accessToken.length, tokenPreview: `${accessToken.slice(0,8)}...` });
+    } catch (e) {
+        report.checks.push({ name: 'oauth_token_exchange', ok: false, error: e.message.slice(0, 400) });
+        report.diagnosis = 'Falhou ao trocar refresh_token por access_token. Verifica se CLIENT_ID/CLIENT_SECRET/REFRESH_TOKEN estao corretos e se o app nao foi desativado no App Store.';
+        return report;
+    }
+    // Passo 2: testar endpoints com o access_token novo
     const range = _rdMonthRange(0);
     const variants = [
-        // A: Marketing v2
-        {
-            name: 'marketing_v2_contacts',
-            hostname: 'api.rd.services',
-            path: '/platform/contacts?email=teste@teste.com',
-            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
-        },
-        {
-            name: 'marketing_v2_conversions',
-            hostname: 'api.rd.services',
-            path: `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=1&page_size=1`,
-            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
-        },
-        // B: Marketing v2 events
-        {
-            name: 'marketing_v2_events',
-            hostname: 'api.rd.services',
-            path: '/platform/events?event_type=CONVERSION',
-            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
-        },
-        // C: CRM token check (query param)
-        {
-            name: 'crm_token_check',
-            hostname: 'crm.rdstation.com',
-            path: `/api/v1/token/check?token=${encodeURIComponent(RD_STATION_TOKEN)}`,
-            headers: { 'Accept': 'application/json' }
-        },
-        // D: CRM deals (query param auth)
-        {
-            name: 'crm_deals',
-            hostname: 'crm.rdstation.com',
-            path: `/api/v1/deals?token=${encodeURIComponent(RD_STATION_TOKEN)}&limit=1`,
-            headers: { 'Accept': 'application/json' }
-        },
-        // E: CRM contacts
-        {
-            name: 'crm_contacts',
-            hostname: 'crm.rdstation.com',
-            path: `/api/v1/contacts?token=${encodeURIComponent(RD_STATION_TOKEN)}&limit=1`,
-            headers: { 'Accept': 'application/json' }
-        }
+        { name: 'contacts_probe', path: '/platform/contacts?email=teste-diag@lincros.com' },
+        { name: 'conversions_range', path: `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=1&page_size=1` },
+        { name: 'events_conversion', path: '/platform/events?event_type=CONVERSION' }
     ];
     await Promise.all(variants.map(async v => {
         try {
             const r = await httpsJsonRequest({
-                hostname: v.hostname,
+                hostname: 'api.rd.services',
                 path: v.path,
                 method: 'GET',
-                headers: v.headers
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
             });
-            report.checks.push({ name: v.name, host: v.hostname, ok: true, sample: JSON.stringify(r).slice(0, 400) });
+            report.checks.push({ name: v.name, ok: true, sample: JSON.stringify(r).slice(0, 400) });
         } catch (e) {
-            report.checks.push({ name: v.name, host: v.hostname, ok: false, error: e.message.slice(0, 300) });
+            report.checks.push({ name: v.name, ok: false, error: e.message.slice(0, 300) });
         }
     }));
-    const anyOk = report.checks.find(c => c.ok);
-    if (anyOk) {
-        const family = anyOk.name.startsWith('marketing') ? 'RD Station Marketing (Bearer)' : 'RD Station CRM (token query param)';
-        report.diagnosis = `Token e do tipo: ${family}. Endpoint que funcionou: "${anyOk.name}" @ ${anyOk.host}. Vou ajustar rdStationFetchConversions pra usar esse formato.`;
-        report.detectedApi = anyOk.name.startsWith('marketing') ? 'marketing' : 'crm';
+    const dataChecks = report.checks.filter(c => c.name !== 'oauth_token_exchange');
+    const anyDataOk = dataChecks.find(c => c.ok);
+    if (anyDataOk) {
+        report.diagnosis = `OAuth OK. Endpoint que funcionou: "${anyDataOk.name}". Pronto pra buscar conversoes reais.`;
+        report.usableEndpoint = anyDataOk.name;
     } else {
-        // Analisa os erros pra dar dica
-        const errors = report.checks.map(c => c.error).join(' | ');
-        const has401 = errors.includes('401');
-        const has403 = errors.includes('403');
-        const has404 = errors.includes('404');
-        if (has401 || has403) {
-            report.diagnosis = 'Token INVALIDO ou sem escopo — 401/403 em varios endpoints. Regenera o token no RD com escopo de leitura de conversoes/contatos.';
-        } else if (has404) {
-            report.diagnosis = 'Todos os endpoints retornaram 404. Pode ser API do RD que mudou de path, ou o token e de uma plataforma diferente (nao Marketing nem CRM). Confirma no RD onde voce gerou o token.';
-        } else {
-            report.diagnosis = 'Nenhum endpoint respondeu. Confira erros de rede acima.';
-        }
+        report.diagnosis = 'OAuth OK mas nenhum endpoint retornou dados. Verifica se o app tem escopo de leitura de conversoes/contatos.';
     }
     return report;
 }
 
-// Puxa TODAS as conversoes de um mes, com paginacao.
+// Puxa TODAS as conversoes de um mes, com paginacao. Usa access_token OAuth.
 async function rdStationFetchConversions(monthOffset) {
+    const accessToken = await rdStationAccessToken();
     const range = _rdMonthRange(monthOffset);
     const PAGE_SIZE = 200;
     const MAX_PAGES = 25; // safety: 25 * 200 = 5000 conversoes/mes
@@ -1625,7 +1619,7 @@ async function rdStationFetchConversions(monthOffset) {
             hostname: 'api.rd.services',
             path,
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${RD_STATION_TOKEN}`, 'Accept': 'application/json' }
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
         });
         // API pode retornar em varias formas: {conversions:[...]}, {items:[...]}, ou array direto
         const items = Array.isArray(r) ? r
