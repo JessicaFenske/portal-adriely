@@ -1619,49 +1619,66 @@ async function rdStationDiag() {
     return report;
 }
 
-// Puxa TODAS as conversoes de um mes, com paginacao. Usa access_token OAuth.
+// Puxa dados de conversoes do mes via /platform/analytics/conversions.
+// API RD analytics retorna agregados (nao lista por conversao) — parsing resiliente
+// pra varias estruturas possiveis. Se algo der errado, o raw fica exposto no
+// endpoint /api/marketing/rdstation-raw pra debug.
+let _rdStationLastRaw = null; // guarda a resposta bruta pra debug
+
 async function rdStationFetchConversions(monthOffset) {
     const accessToken = await rdStationAccessToken();
     const range = _rdMonthRange(monthOffset);
-    const PAGE_SIZE = 200;
-    const MAX_PAGES = 25; // safety: 25 * 200 = 5000 conversoes/mes
-    const all = [];
-    let page = 1;
-    let totalReported = null;
-    while (page <= MAX_PAGES) {
-        const path = `/platform/conversions?start_date=${range.start}&end_date=${range.end}&page=${page}&page_size=${PAGE_SIZE}`;
-        const r = await httpsJsonRequest({
-            hostname: 'api.rd.services',
-            path,
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
-        });
-        // API pode retornar em varias formas: {conversions:[...]}, {items:[...]}, ou array direto
-        const items = Array.isArray(r) ? r
-                    : Array.isArray(r?.conversions) ? r.conversions
-                    : Array.isArray(r?.items) ? r.items
-                    : Array.isArray(r?.data) ? r.data
-                    : [];
-        all.push(...items);
-        // Detecta fim da paginacao
-        if (r?.paging?.total != null) totalReported = r.paging.total;
-        if (items.length < PAGE_SIZE) break;
-        if (totalReported != null && all.length >= totalReported) break;
-        page++;
-    }
-    if (page > MAX_PAGES) {
-        console.warn(`[rdStation] month=${monthOffset} atingiu MAX_PAGES (${MAX_PAGES}). Total capado em ${all.length}. Totalizador API: ${totalReported}`);
-    }
-    // Agregacoes
-    const byChannel = {};    // agrupa por traffic_source
-    const byForm = {};       // agrupa por identifier
-    all.forEach(c => {
-        const src = (c.traffic_source || c.source || 'direto').toString().toLowerCase().trim() || 'direto';
-        const form = (c.identifier || c.conversion_identifier || 'sem_identifier').toString();
-        byChannel[src] = (byChannel[src] || 0) + 1;
-        byForm[form] = (byForm[form] || 0) + 1;
+    const path = `/platform/analytics/conversions?start_date=${range.start}&end_date=${range.end}`;
+    const r = await httpsJsonRequest({
+        hostname: 'api.rd.services',
+        path,
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
     });
-    // Top 15 formularios (o resto pouco importa)
+    _rdStationLastRaw = { monthOffset, range, path, response: r };
+
+    // Estruturas possiveis do retorno:
+    //   {total: N, conversions: [...]}
+    //   {assets: [{asset_identifier, total, source, ...}]}
+    //   {results: [...]}
+    //   [{...}, ...] direto
+    // Extrai a "lista" (que pode ser lista de conversoes individuais OU agregado por asset)
+    const list = Array.isArray(r) ? r
+              : Array.isArray(r?.conversions) ? r.conversions
+              : Array.isArray(r?.assets) ? r.assets
+              : Array.isArray(r?.results) ? r.results
+              : Array.isArray(r?.items) ? r.items
+              : [];
+
+    // total geral: pode vir explicito ou soma dos itens
+    let total = 0;
+    if (typeof r?.total === 'number') total = r.total;
+    else if (typeof r?.total_conversions === 'number') total = r.total_conversions;
+    else if (typeof r?.conversions_total === 'number') total = r.conversions_total;
+    else if (list.length > 0) {
+        // se cada item tem 'total' ou 'count' individual, soma
+        total = list.reduce((sum, item) => sum + (Number(item.total) || Number(item.count) || Number(item.conversions) || 1), 0);
+    }
+
+    // Agregacoes por canal e por form
+    // Cada item pode ter: source/traffic_source/channel/utm_source
+    // E identifier/asset_identifier/form_identifier/name
+    const byChannel = {};
+    const byForm = {};
+    list.forEach(item => {
+        const cnt = Number(item.total) || Number(item.count) || Number(item.conversions) || 1;
+        const src = String(
+            item.traffic_source || item.source || item.channel || item.utm_source || 'direto'
+        ).toLowerCase().trim() || 'direto';
+        const form = String(
+            item.asset_identifier || item.identifier || item.name || item.form_identifier || 'sem_identifier'
+        );
+        byChannel[src] = (byChannel[src] || 0) + cnt;
+        byForm[form] = (byForm[form] || 0) + cnt;
+    });
+
+    // Se o total explicito vier mas as agregacoes ficarem vazias (estrutura diferente),
+    // pelo menos entregamos o total no card
     const topForms = Object.entries(byForm)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 15)
@@ -1669,14 +1686,15 @@ async function rdStationFetchConversions(monthOffset) {
     const channels = Object.entries(byChannel)
         .sort((a, b) => b[1] - a[1])
         .map(([name, count]) => ({ name, count }));
+
     return {
         monthOffset,
         range,
-        total: all.length,
-        totalReportedByApi: totalReported,
+        total,
         byChannel: channels,
         byForm: topForms,
-        capped: page > MAX_PAGES
+        rawItemCount: list.length,
+        endpoint: 'analytics/conversions'
     };
 }
 
@@ -2430,6 +2448,19 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
         } catch (e) {
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
         }
+    }
+    // Raw da ultima resposta do /platform/analytics/conversions — pra debug de parsing
+    if (urlPath === '/api/marketing/rdstation-raw' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
+        // Forca fetch novo se ainda nao ha raw ou se ?refresh=1
+        if (!_rdStationLastRaw || req.url.includes('refresh=1')) {
+            try { await rdStationFetchConversions(0); } catch (e) {
+                return jsonReply(res, 502, { error: e.message });
+            }
+        }
+        return jsonReply(res, 200, _rdStationLastRaw || { error: 'no raw yet' });
     }
     // Endpoint combinado — única chamada do frontend pra puxar tudo
     if (urlPath === '/api/marketing/ads-summary' && req.method === 'GET') {
