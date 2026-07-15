@@ -6755,6 +6755,20 @@
             <div id="mktContentArea" style="display:none;">
                 <div class="mkt-grid" style="padding:16px 30px 30px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:minmax(0,auto);gap:18px;align-items:stretch;">
 
+                    <!-- LINHA 0: Funil RD Station (topo, full width) -->
+                    <div class="dash-card" style="padding:22px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
+                            <div>
+                                <h2 style="color:#fff;font-size:16px;margin:0 0 4px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                    <span class="section-num" data-svg-icon="bar"></span>
+                                    Funil RD Station — Ao Vivo
+                                </h2>
+                                <div style="color:#94a3b8;font-size:12px;">Visitantes → Leads → Qualificados → Oportunidades → Vendas · vs mês anterior</div>
+                            </div>
+                        </div>
+                        <div id="mktRdFunnel" style="min-height:120px;"></div>
+                    </div>
+
                     <!-- LINHA 1: Mídia Paga AO VIVO (full width, destaque) -->
                     <div class="dash-card" style="padding:22px;grid-column:span 12;">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
@@ -10212,6 +10226,100 @@ function _cpUnmappedHint() {
     }
     const list = top.map(([o, c]) => `"${o}" (${c})`).join(' · ');
     return ` · <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;" title="Estes leads chegaram no Ploomes mas com nome de Origin que não mapeia pra este canal. Padronize no marketing.">origins não mapeadas no CRM: ${list}</span>`;
+}
+
+// Renderiza o funil RD Station (Visitantes -> Leads -> Qualificados -> Oportunidades -> Vendas)
+// Dados vem de /api/marketing/ads-summary -> data.rd (backend usa /platform/analytics/funnel).
+function _cpRenderRdFunnel(rd, containerId) {
+    const container = document.getElementById(containerId || 'mktRdFunnel');
+    if (!container) return;
+    if (!rd || rd.configured === false) {
+        container.innerHTML = '<div style="color:#94a3b8;font-size:12px;padding:14px;text-align:center;">RD Station nao configurado no backend. Adicione RD_STATION_CLIENT_ID/SECRET/REFRESH_TOKEN no Render.</div>';
+        return;
+    }
+    if (rd.error && !rd.total) {
+        container.innerHTML = `<div style="color:#ef4444;font-size:12px;padding:14px;text-align:center;">Falha ao buscar RD Station: ${rd.error}</div>`;
+        return;
+    }
+    const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
+    const p = rd.previous || {};
+    // delta MoM: nao normaliza por dias uteis, e comparacao bruta.
+    // Mes atual pode estar parcial — mostra hint disso.
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const daysElapsed = Math.min(now.getDate(), daysInMonth);
+    const isPartial = daysElapsed < daysInMonth;
+
+    function delta(curr, prev) {
+        if (prev == null || prev === 0 || curr == null) return '';
+        const pctChg = (curr - prev) / prev;
+        if (Math.abs(pctChg) < 0.01) return '<span style="font-size:10px;color:#94a3b8;margin-left:4px;">~ estável</span>';
+        const arrow = pctChg > 0 ? '▲' : '▼';
+        const sign = pctChg > 0 ? '+' : '−';
+        const color = pctChg > 0 ? '#22c55e' : '#ef4444';
+        return `<span style="font-size:10px;color:${color};margin-left:4px;font-weight:700;">${arrow} ${sign}${(Math.abs(pctChg)*100).toFixed(0)}%</span>`;
+    }
+    // Taxa de conversao entre estagios
+    const convRate = (from, to) => {
+        if (!from || from === 0) return null;
+        return (to / from) * 100;
+    };
+    function stageCard(label, icon, curr, prev, subLabel, color) {
+        const rate = subLabel || '';
+        const d = delta(curr, prev);
+        return `<div style="flex:1;min-width:130px;background:rgba(255,255,255,0.025);border:1px solid ${color}30;border-left:3px solid ${color};border-radius:10px;padding:14px 12px;">
+            <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                <span style="opacity:0.7;">${icon}</span> ${label}
+            </div>
+            <div style="font-size:24px;color:${color};font-weight:700;line-height:1.1;margin-top:6px;">${fmt(curr)}${d}</div>
+            ${rate ? `<div style="font-size:10px;color:#94a3b8;margin-top:4px;">${rate}</div>` : ''}
+        </div>`;
+    }
+    // Setinha entre stages
+    const arrow = `<div style="display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:20px;flex-shrink:0;padding:0 2px;">›</div>`;
+
+    const rateV2L = convRate(rd.visitors, rd.total);
+    const rateL2Q = convRate(rd.total, rd.qualified);
+    const rateQ2O = convRate(rd.qualified, rd.opportunities);
+    const rateO2S = convRate(rd.opportunities, rd.sales);
+
+    // Sparkline dos leads diarios (contacts_count)
+    let sparkline = '';
+    if (Array.isArray(rd.daily) && rd.daily.length > 0) {
+        const days = rd.daily.slice(0, daysElapsed); // so ate hoje pra nao mostrar futuro
+        const max = Math.max(...days.map(d => d.contacts), 1);
+        const w = 4;
+        const barsHtml = days.map((d, i) => {
+            const h = Math.max(2, (d.contacts / max) * 30);
+            const color = d.contacts > 0 ? '#8b5cf6' : '#374151';
+            return `<div title="${d.day}: ${d.contacts} leads" style="width:${w}px;height:${h}px;background:${color};border-radius:1px;flex-shrink:0;"></div>`;
+        }).join('');
+        sparkline = `<div style="margin-top:12px;background:rgba(255,255,255,0.02);border-radius:8px;padding:10px 14px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:6px;font-weight:600;">📈 Leads por dia · ${daysElapsed}/${daysInMonth} dias</div>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:32px;">${barsHtml}</div>
+        </div>`;
+    }
+
+    const partialWarn = isPartial ? `<span style="font-size:11px;color:#fbbf24;">⏳ Mês parcial (${daysElapsed}/${daysInMonth} dias) — mês passado é completo</span>` : '';
+
+    container.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;">
+            ${stageCard('Visitantes', '👀', rd.visitors, p.visitors, rateV2L != null ? `${rateV2L.toFixed(1)}% → Leads` : '', '#06b6d4')}
+            ${arrow}
+            ${stageCard('Leads', '📥', rd.total, p.total, rateL2Q != null ? `${rateL2Q.toFixed(1)}% → Qualif.` : '', '#8b5cf6')}
+            ${arrow}
+            ${stageCard('Qualificados', '⭐', rd.qualified, p.qualified, rateQ2O != null ? `${rateQ2O.toFixed(1)}% → Opp.` : '', '#a855f7')}
+            ${arrow}
+            ${stageCard('Oportunidades', '🎯', rd.opportunities, p.opportunities, rateO2S != null ? `${rateO2S.toFixed(1)}% → Venda` : '', '#f59e0b')}
+            ${arrow}
+            ${stageCard('Vendas', '💰', rd.sales, p.sales, '', '#22c55e')}
+        </div>
+        ${sparkline}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:#94a3b8;gap:10px;flex-wrap:wrap;">
+            <span>📊 Fonte: RD Station · endpoint <code style="color:#c4b5fd;">analytics/funnel</code> · comparação vs mês passado (completo)</span>
+            ${partialWarn}
+        </div>
+    `;
 }
 
 function _cpRenderAdsLive(data, containerId) {
@@ -21187,11 +21295,13 @@ async function loadMarketing() {
     document.getElementById('mktLastUpdate').textContent =
         `Última atualização: ${new Date().toLocaleString('pt-BR')}`;
 
-    // Dispara fetch dos ads (Meta/Google/LinkedIn) em background —
-    // renderiza bloco Mídia Paga + integra alertas nos Insights
+    // Dispara fetch dos ads (Meta/Google/LinkedIn + RD Station) em background —
+    // renderiza bloco Mídia Paga + Funil RD + integra alertas nos Insights
     if (typeof _cpFetchAdsSummary === 'function') {
         _cpFetchAdsSummary(false).then(adsData => {
             if (!adsData) return;
+            // Bloco Funil RD Station (usa dados do backend /platform/analytics/funnel)
+            try { _cpRenderRdFunnel(adsData.rd, 'mktRdFunnel'); } catch (e) { console.warn('[mkt] rd funnel render:', e); }
             // Bloco Mídia Paga na view Marketing
             try { _cpRenderAdsLive(adsData, 'mktAdsLive'); } catch (e) { console.warn('[mkt] ads render:', e); }
             // Re-renderiza Insights pra integrar alertas de ads
