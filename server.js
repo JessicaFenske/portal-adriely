@@ -1685,8 +1685,8 @@ async function rdStationFetchMonthlyLeads(monthOffset) {
     const monthStart = new Date(range.startISO).getTime();
     const monthEnd = new Date(range.endISO).getTime();
     const SEGMENTATION_ID = 14015896; // "Todos os contatos da base de Leads"
-    const PAGE_SIZE = 200;
-    const MAX_PAGES = 10;
+    const PAGE_SIZE = 125; // limite maximo da API RD (retorna HTTP 400 se maior)
+    const MAX_PAGES = 15;  // 15 * 125 = 1875 contatos suporte teto do mes
     const results = [];
     let hitOldContact = false;
     for (let page = 1; page <= MAX_PAGES && !hitOldContact; page++) {
