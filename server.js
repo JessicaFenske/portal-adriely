@@ -1675,6 +1675,48 @@ async function rdStationFetchConversions(monthOffset) {
     };
 }
 
+// Puxa leads criados no mes corrente da segmentacao "Todos os contatos da base de Leads".
+// Estrategia: ordem padrao do RD e last_conversion_date DESC, entao os primeiros N contatos
+// sao os mais recentes. Paginamos ate encontrar um contato com created_at fora do mes,
+// ou ate o limite de MAX_PAGES.
+async function rdStationFetchMonthlyLeads(monthOffset) {
+    const accessToken = await rdStationAccessToken();
+    const range = _rdMonthRange(monthOffset);
+    const monthStart = new Date(range.startISO).getTime();
+    const monthEnd = new Date(range.endISO).getTime();
+    const SEGMENTATION_ID = 14015896; // "Todos os contatos da base de Leads"
+    const PAGE_SIZE = 200;
+    const MAX_PAGES = 10;
+    const results = [];
+    let hitOldContact = false;
+    for (let page = 1; page <= MAX_PAGES && !hitOldContact; page++) {
+        const path = `/platform/segmentations/${SEGMENTATION_ID}/contacts?page=${page}&page_size=${PAGE_SIZE}`;
+        const r = await httpsJsonRequest({
+            hostname: 'api.rd.services',
+            path,
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+        });
+        const contacts = Array.isArray(r?.contacts) ? r.contacts : [];
+        if (contacts.length === 0) break;
+        for (const c of contacts) {
+            const ts = c.created_at ? new Date(c.created_at).getTime() : NaN;
+            if (isNaN(ts)) continue;
+            if (ts < monthStart) { hitOldContact = true; break; }
+            if (ts > monthEnd) continue; // criado depois do mes (previous), pula
+            results.push({
+                uuid: c.uuid,
+                name: c.name || '',
+                email: (c.email || '').toLowerCase().trim(),
+                created_at: c.created_at,
+                last_conversion_date: c.last_conversion_date || null
+            });
+        }
+        if (contacts.length < PAGE_SIZE) break;
+    }
+    return { monthOffset, range, count: results.length, contacts: results, capped: !hitOldContact && results.length >= MAX_PAGES * PAGE_SIZE };
+}
+
 async function rdStationGetCached(force) {
     const c = adsCache.rd;
     if (!force && c.data && (Date.now() - c.ts) < ADS_CACHE_TTL_MS) return c.data;
@@ -2427,6 +2469,27 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
             return jsonReply(res, 200, report);
         } catch (e) {
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
+        }
+    }
+    // Lista de leads criados no mes corrente (RD Station) — usado no frontend pra cruzar
+    // com deals do Ploomes e calcular conversion rate LinkedIn -> Deal.
+    if (urlPath === '/api/marketing/rdstation-monthly-leads' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        try {
+            const cacheKey = 'rd_monthly_leads';
+            const now = Date.now();
+            if (!adsCache[cacheKey]) adsCache[cacheKey] = { data: null, ts: 0 };
+            const cache = adsCache[cacheKey];
+            const force = req.url.includes('refresh=1');
+            if (!force && cache.data && (now - cache.ts) < ADS_CACHE_TTL_MS) {
+                return jsonReply(res, 200, cache.data);
+            }
+            const data = await rdStationFetchMonthlyLeads(0);
+            cache.data = data; cache.ts = now;
+            return jsonReply(res, 200, data);
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message, source: 'rd-station-monthly-leads' });
         }
     }
     // Diag de contatos: puxa 5 contatos da segmentacao "Todos os contatos da base de Leads"
