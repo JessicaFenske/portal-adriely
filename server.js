@@ -2429,6 +2429,36 @@ Cole direto no painel do Render (Environment tab) e feche esta janela.
             return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
         }
     }
+    // Diag de contatos: puxa 5 contatos da segmentacao "Todos os contatos da base de Leads"
+    // pra descobrir formato do payload (tem created_at? aceita filtro por data?)
+    if (urlPath === '/api/marketing/rdstation-contacts-diag' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        if (!user.isAdmin) return jsonReply(res, 403, { error: 'admin only' });
+        try {
+            const accessToken = await rdStationAccessToken();
+            const rangeCur = _rdMonthRange(0);
+            const call = (path) => httpsJsonRequest({
+                hostname: 'api.rd.services', path, method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+            }).catch(e => ({ __error: e.message }));
+            // Testa 3 variantes: sem filtro, com filtro server-side (se aceitar), com order
+            const [noFilter, withDate, withOrder] = await Promise.all([
+                call('/platform/segmentations/14015896/contacts?page=1&page_size=5'),
+                call(`/platform/segmentations/14015896/contacts?page=1&page_size=5&created_at_start=${rangeCur.start}&created_at_end=${rangeCur.end}`),
+                call('/platform/segmentations/14015896/contacts?page=1&page_size=5&order=created_at&direction=desc')
+            ]);
+            return jsonReply(res, 200, {
+                rangeCur,
+                no_filter: noFilter,
+                with_date_filter: withDate,
+                with_order_desc: withOrder,
+                notes: 'Se withDate retorna N contatos == leads do mes, filtro server-side funciona (RAPIDO). Se ignorou o filtro, teremos que paginar tudo e filtrar client-side (LENTO se base grande).'
+            });
+        } catch (e) {
+            return jsonReply(res, 502, { error: e.message });
+        }
+    }
     // Raw: chama analytics/conversions no mes atual E anterior pra debug de parsing.
     // Tambem tenta analytics/emails no mesmo periodo pra comparar breakdown.
     if (urlPath === '/api/marketing/rdstation-raw' && req.method === 'GET') {
