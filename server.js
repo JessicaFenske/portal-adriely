@@ -1686,10 +1686,15 @@ async function rdStationFetchMonthlyLeads(monthOffset) {
     const monthEnd = new Date(range.endISO).getTime();
     const SEGMENTATION_ID = 14015896; // "Todos os contatos da base de Leads"
     const PAGE_SIZE = 125; // limite maximo da API RD (retorna HTTP 400 se maior)
-    const MAX_PAGES = 15;  // 15 * 125 = 1875 contatos suporte teto do mes
+    const MAX_PAGES = 40;  // 40 * 125 = 5000 contatos varridos (cap de seguranca)
     const results = [];
-    let hitOldContact = false;
-    for (let page = 1; page <= MAX_PAGES && !hitOldContact; page++) {
+    const seenUuids = new Set(); // dedup por uuid
+    let totalScanned = 0;
+    let lastPageHadContent = false;
+    // A segmentacao ordena por last_conversion_date DESC — contatos antigos podem aparecer
+    // no meio da lista se reconverteram recentemente. NAO usamos "para cedo" — varremos ate
+    // esgotar ou bater MAX_PAGES.
+    for (let page = 1; page <= MAX_PAGES; page++) {
         const path = `/platform/segmentations/${SEGMENTATION_ID}/contacts?page=${page}&page_size=${PAGE_SIZE}`;
         const r = await httpsJsonRequest({
             hostname: 'api.rd.services',
@@ -1699,11 +1704,14 @@ async function rdStationFetchMonthlyLeads(monthOffset) {
         });
         const contacts = Array.isArray(r?.contacts) ? r.contacts : [];
         if (contacts.length === 0) break;
+        lastPageHadContent = contacts.length === PAGE_SIZE;
+        totalScanned += contacts.length;
         for (const c of contacts) {
+            if (!c.uuid || seenUuids.has(c.uuid)) continue;
             const ts = c.created_at ? new Date(c.created_at).getTime() : NaN;
             if (isNaN(ts)) continue;
-            if (ts < monthStart) { hitOldContact = true; break; }
-            if (ts > monthEnd) continue; // criado depois do mes (previous), pula
+            if (ts < monthStart || ts > monthEnd) continue; // fora do mes
+            seenUuids.add(c.uuid);
             results.push({
                 uuid: c.uuid,
                 name: c.name || '',
@@ -1712,9 +1720,16 @@ async function rdStationFetchMonthlyLeads(monthOffset) {
                 last_conversion_date: c.last_conversion_date || null
             });
         }
-        if (contacts.length < PAGE_SIZE) break;
+        if (!lastPageHadContent) break; // ultima pagina — acabaram os contatos
     }
-    return { monthOffset, range, count: results.length, contacts: results, capped: !hitOldContact && results.length >= MAX_PAGES * PAGE_SIZE };
+    return {
+        monthOffset,
+        range,
+        count: results.length,
+        totalScanned,
+        contacts: results,
+        capped: lastPageHadContent // true = paramos por cap, pode ter mais leads
+    };
 }
 
 async function rdStationGetCached(force) {
