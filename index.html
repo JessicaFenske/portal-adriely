@@ -6783,6 +6783,22 @@
                         <div id="mktRdFunnel" style="min-height:120px;"></div>
                     </div>
 
+                    <!-- LINHA 0.5: Cruzamento LinkedIn (RD) x Deals (Ploomes) — full width -->
+                    <div class="dash-card" style="padding:22px;grid-column:span 12;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
+                            <div>
+                                <h2 style="color:#fff;font-size:16px;margin:0 0 4px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                                    <span class="section-num" data-svg-icon="target"></span>
+                                    Conversão LinkedIn → Deal
+                                </h2>
+                                <div style="color:#94a3b8;font-size:12px;">Dos leads captados no LinkedIn (RD), quantos viraram deal no Ploomes · match por e-mail</div>
+                            </div>
+                        </div>
+                        <div id="mktRdVsPloomes" style="min-height:120px;">
+                            <div style="color:#94a3b8;font-size:12px;padding:14px;text-align:center;">Carregando cruzamento…</div>
+                        </div>
+                    </div>
+
                     <!-- LINHA 1: Mídia Paga AO VIVO (full width, destaque) -->
                     <div class="dash-card" style="padding:22px;grid-column:span 12;">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
@@ -10240,6 +10256,131 @@ function _cpUnmappedHint() {
     }
     const list = top.map(([o, c]) => `"${o}" (${c})`).join(' · ');
     return ` · <span style="color:#f59e0b;font-weight:400;text-transform:none;letter-spacing:0;" title="Estes leads chegaram no Ploomes mas com nome de Origin que não mapeia pra este canal. Padronize no marketing.">origins não mapeadas no CRM: ${list}</span>`;
+}
+
+// Puxa lista de leads criados no mes do RD (com cache em memoria pra evitar fetch duplo)
+async function _cpFetchRdMonthlyLeads(force) {
+    try {
+        const url = '/api/marketing/rdstation-monthly-leads' + (force ? '?refresh=1' : '');
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        window._rdMonthlyLeadsCache = j;
+        return j;
+    } catch (e) {
+        console.warn('[rd-monthly-leads] fetch falhou:', e.message);
+        return null;
+    }
+}
+
+// Cruza leads do RD (LinkedIn) com deals do Ploomes por email — mostra conversion rate.
+function _cpRenderRdVsPloomes(rdLeads, containerId) {
+    const container = document.getElementById(containerId || 'mktRdVsPloomes');
+    if (!container) return;
+    if (!rdLeads || !Array.isArray(rdLeads.contacts)) {
+        container.innerHTML = '<div style="color:#94a3b8;font-size:12px;padding:14px;text-align:center;">Sem dados de leads do RD Station.</div>';
+        return;
+    }
+    // Set de emails dos leads do RD (lowercase, trim, ignora vazios)
+    const rdEmails = new Set(
+        rdLeads.contacts.map(c => (c.email || '').toLowerCase().trim()).filter(Boolean)
+    );
+    const totalLeads = rdLeads.count || rdLeads.contacts.length;
+
+    // Todos deals do Ploomes disponiveis no cache do dash
+    const allDeals = [
+        ...(typeof wonDeals !== 'undefined' ? wonDeals : []),
+        ...(typeof lostDeals !== 'undefined' ? lostDeals : []),
+        ...(typeof dashOpenDeals !== 'undefined' ? dashOpenDeals : [])
+    ];
+    if (allDeals.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8;font-size:12px;padding:14px;text-align:center;">Cache do Ploomes ainda carregando — recarrega em alguns segundos.</div>';
+        return;
+    }
+
+    // Match: pra cada deal, verifica se contact.email bate com algum lead do RD
+    const matched = [];
+    const dedupDealIds = new Set();
+    for (const d of allDeals) {
+        if (dedupDealIds.has(d.Id)) continue;
+        const email = (d.Contact?.Email || '').toLowerCase().trim();
+        if (!email || !rdEmails.has(email)) continue;
+        dedupDealIds.add(d.Id);
+        matched.push(d);
+    }
+
+    // Breakdown por pipeline e status
+    const byPipeline = {};
+    let wonCount = 0, lostCount = 0, openCount = 0, wonReceita = 0;
+    for (const d of matched) {
+        const pipe = (typeof getPipelineName === 'function' ? getPipelineName(d) : (d.Pipeline?.Name || 'Sem pipeline'));
+        byPipeline[pipe] = (byPipeline[pipe] || 0) + 1;
+        if (d.StatusId === 2 || d.Status?.Name === 'Ganho') { wonCount++; wonReceita += (typeof getMRR === 'function' ? getMRR(d) : 0) + (typeof getSetup === 'function' ? getSetup(d) : 0); }
+        else if (d.StatusId === 3 || d.Status?.Name === 'Perda') { lostCount++; }
+        else { openCount++; }
+    }
+    const convRate = totalLeads > 0 ? (matched.length / totalLeads * 100) : 0;
+    const fmtMoney = (n) => 'R$ ' + Number(n||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    // Cards de resumo
+    const summaryCards = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px;">
+            <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:14px;">
+                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Leads LinkedIn (mês)</div>
+                <div style="font-size:26px;color:#8b5cf6;font-weight:800;margin-top:4px;">${totalLeads.toLocaleString('pt-BR')}</div>
+                <div style="font-size:10px;color:#6b7280;">via RD Station</div>
+            </div>
+            <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.3);border-radius:10px;padding:14px;">
+                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Viraram deal</div>
+                <div style="font-size:26px;color:#06b6d4;font-weight:800;margin-top:4px;">${matched.length}</div>
+                <div style="font-size:10px;color:${convRate >= 20 ? '#22c55e' : convRate >= 10 ? '#f59e0b' : '#ef4444'};font-weight:700;">${convRate.toFixed(1)}% conversão</div>
+            </div>
+            <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:14px;">
+                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Ganhos</div>
+                <div style="font-size:26px;color:#22c55e;font-weight:800;margin-top:4px;">${wonCount}</div>
+                <div style="font-size:10px;color:#94a3b8;">${wonReceita > 0 ? fmtMoney(wonReceita) + ' MRR+Setup' : 'sem receita'}</div>
+            </div>
+            <div style="background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.3);border-radius:10px;padding:14px;">
+                <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Em aberto</div>
+                <div style="font-size:26px;color:#e5e7eb;font-weight:800;margin-top:4px;">${openCount}</div>
+                <div style="font-size:10px;color:#94a3b8;">${lostCount} perdidos</div>
+            </div>
+        </div>`;
+
+    // Breakdown por pipeline
+    const pipelineEntries = Object.entries(byPipeline).sort((a,b) => b[1] - a[1]);
+    const pipelineHtml = pipelineEntries.length === 0
+        ? '<div style="color:#6b7280;font-size:12px;font-style:italic;padding:10px;">Nenhum lead do RD virou deal no Ploomes ainda.</div>'
+        : `<div style="display:flex;flex-wrap:wrap;gap:8px;">${pipelineEntries.map(([pipe, count]) => {
+            const pct = matched.length > 0 ? (count / matched.length * 100).toFixed(0) : 0;
+            return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 12px;">
+                <span style="color:#c4b5fd;font-weight:700;font-size:13px;">${pipe}</span>
+                <span style="color:#e5e7eb;font-weight:600;margin-left:6px;">${count}</span>
+                <span style="color:#94a3b8;font-size:11px;margin-left:4px;">(${pct}%)</span>
+            </div>`;
+        }).join('')}</div>`;
+
+    // Insight footer
+    let insight = '';
+    if (totalLeads > 20 && convRate < 5) {
+        insight = `<div style="background:rgba(239,68,68,0.06);border-left:3px solid #ef4444;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:12px;color:#fca5a5;">
+            🚨 <strong>Conversão baixa (${convRate.toFixed(1)}%):</strong> maioria dos ${totalLeads} leads do LinkedIn não virou deal. Provável causa: qualidade do público-alvo LinkedIn Ads OU integração RD → Ploomes não está criando contatos automaticamente. Investigar.
+        </div>`;
+    } else if (totalLeads > 20 && convRate >= 20) {
+        insight = `<div style="background:rgba(34,197,94,0.06);border-left:3px solid #22c55e;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:12px;color:#86efac;">
+            ✅ <strong>Conversão saudável (${convRate.toFixed(1)}%):</strong> LinkedIn Ads está gerando leads que viram deal no Ploomes.
+        </div>`;
+    }
+
+    container.innerHTML = `
+        ${summaryCards}
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:8px;">📂 Por pipeline no Ploomes</div>
+        ${pipelineHtml}
+        ${insight}
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;">
+            🔗 Match feito por e-mail (RD ↔ Ploomes.Contact.Email). Se o Ploomes não criou o contato automaticamente vindo do RD, o match não acontece.
+        </div>
+    `;
 }
 
 // Total de leads consolidado — soma LinkedIn (via RD) + Meta/Google/LPH (via Ploomes Origin).
@@ -21407,6 +21548,14 @@ async function loadMarketing() {
                 renderMktInsights(window._lastMktInsightsArgs);
             }
         }).catch(e => console.warn('[mkt] ads fetch falhou:', e.message));
+    }
+
+    // Fetch da lista de leads do RD (paginado — endpoint separado, mais pesado) pra fazer
+    // cruzamento com deals do Ploomes. Roda em paralelo, nao bloqueia render principal.
+    if (typeof _cpFetchRdMonthlyLeads === 'function') {
+        _cpFetchRdMonthlyLeads(false).then(rdLeads => {
+            try { _cpRenderRdVsPloomes(rdLeads, 'mktRdVsPloomes'); } catch (e) { console.warn('[mkt] rd vs ploomes render:', e); }
+        }).catch(e => console.warn('[mkt] rd monthly leads fetch falhou:', e.message));
     }
 }
 
