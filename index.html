@@ -10846,11 +10846,16 @@ function _cpRenderMarketingCockpit(me, _opts) {
     const lastMonthLeads = allDeals.filter(d => inLastMonth(d.CreateDate) && isSalesPipeline(d));
     const lastMonthWon = (wonDeals || []).filter(d => inLastMonth(d.FinishDate) && isSalesPipeline(d));
 
-    // OPOs do mês (deals com proposta gerada)
+    // OPOs do mês — mesma regra do Hall de Vendedores / sec7Inter:
+    //   (a) Data Proposta Enviada no mes, OU
+    //   (b) MRR ou Setup > 0 E CreateDate no mes (captura propostas sem data preenchida)
+    //   (c) fallback: tem marcador de proposta E LastUpdate no mes
     const monthOpos = allDeals.filter(d => {
-        if (!hasProposalSent(d)) return false;
-        const pd = getProposalDate(d) || d.LastUpdateDate;
-        return inMonth(pd);
+        if (inMonth(getProposalDate(d))) return true;
+        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
+        if (hasValue && inMonth(d.CreateDate)) return true;
+        if (hasProposalSent(d) && inMonth(d.LastUpdateDate)) return true;
+        return false;
     });
 
     // Agrupa por canal + rastreia origins brutas que caíram em 'Outros'/'Sem origem'
@@ -12572,10 +12577,14 @@ function _cpRenderSdrAdvanced(ctx) {
         return false;
     };
     const weeklyOpos = weeks.map(w => allDealsAll.filter(d => {
-        if (!hasProposalSent(d)) return false;
-        const propDate = getProposalDate(d) || d.LastUpdateDate;
-        if (!inRange(propDate, w)) return false;
-        return dealIsMyOpo(d);
+        if (!dealIsMyOpo(d)) return false;
+        // Mesma regra do Hall/sec7Inter: (a) data proposta no periodo, (b) MRR/Setup + criado
+        // no periodo, (c) marcador + LastUpdate no periodo
+        if (inRange(getProposalDate(d), w)) return true;
+        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
+        if (hasValue && inRange(d.CreateDate, w)) return true;
+        if (hasProposalSent(d) && inRange(d.LastUpdateDate, w)) return true;
+        return false;
     }).length);
 
     const sparkSeries = [
