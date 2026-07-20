@@ -2027,6 +2027,68 @@ const server = http.createServer(async (req, res) => {
     // ========== MCP Query Endpoint (auth via Bearer token) ==========
     // Esse endpoint NÃO usa sessão de cookie — usa Bearer token gerado pelo admin.
     // É chamado pelo servidor MCP rodando no PC do líder via Claude Desktop.
+    // Busca deals no cache do Ploomes por nome (para forecast/reporting da Jessica)
+    // POST { names: ["Maqtron", "Fortlev", ...] } → { results: { name: { matches: [...] } } }
+    if (urlPath === '/api/ploomes/search-deals' && req.method === 'POST') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const body = await readJSON(req);
+        const names = Array.isArray(body.names) ? body.names : [];
+        if (names.length === 0) return jsonReply(res, 400, { error: 'body.names deve ser array de strings' });
+
+        const won = (responseCache.won?.data?.value || []);
+        const lost = (responseCache.lost?.data?.value || []);
+        const open = (responseCache.open?.data?.value || []);
+        const allDeals = [...open, ...won, ...lost];
+
+        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+        const FIELD_FORECAST = 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC';
+        const getProp = (d, key) => (d.OtherProperties || []).find(x => x.FieldKey === key);
+        const getMRR = (d) => getProp(d, FIELD_MRR)?.DecimalValue || 0;
+        const getSetup = (d) => getProp(d, FIELD_SETUP)?.DecimalValue || 0;
+        const getForecast = (d) => getProp(d, FIELD_FORECAST)?.ObjectValueName || null;
+
+        // Normaliza: lowercase, remove acentos, colapsa espacos
+        const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+
+        const results = {};
+        const dealCache = allDeals.map(d => ({ d, normTitle: norm(d.Title || '') }));
+
+        for (const name of names) {
+            const nName = norm(name);
+            if (!nName) { results[name] = { matches: [], error: 'nome vazio' }; continue; }
+            // Match: normTitle inclui nName (busca substring). Tolera "Buschle e Lepper" vs "Buschle & Lepper" etc.
+            // Se nome tem 2+ palavras, exige TODAS as palavras estejam no title
+            const words = nName.split(' ').filter(w => w.length >= 3);
+            const matches = dealCache
+                .filter(({ normTitle }) => {
+                    if (words.length === 0) return normTitle.includes(nName);
+                    return words.every(w => normTitle.includes(w));
+                })
+                .map(({ d }) => ({
+                    id: d.Id,
+                    title: d.Title || '',
+                    mrr: getMRR(d),
+                    setup: getSetup(d),
+                    pipeline: d.Pipeline?.Name || '',
+                    stage: d.Stage?.Name || '',
+                    owner: d.Owner?.Name || '',
+                    contact: d.Contact?.Name || '',
+                    company: d.Contact?.CompanyName || '',
+                    forecast: getForecast(d),
+                    statusId: d.StatusId,
+                    status: d.StatusId === 2 ? 'ganho' : d.StatusId === 3 ? 'perdido' : 'aberto',
+                    startDate: d.StartDate || null,
+                    finishDate: d.FinishDate || null,
+                    lastUpdate: d.LastUpdateDate || null,
+                    url: `https://app.ploomes.com/Deals/${d.Id}`
+                }));
+            results[name] = { matches, count: matches.length };
+        }
+        return jsonReply(res, 200, { results, totalDealsScanned: allDeals.length });
+    }
+
     if (urlPath === '/api/mcp/query' && req.method === 'POST') {
         const authHeader = req.headers['authorization'] || '';
         const m = authHeader.match(/^Bearer\s+(mcp_[a-f0-9]{40})\s*$/i);
