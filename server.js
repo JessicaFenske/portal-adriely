@@ -2040,7 +2040,15 @@ const server = http.createServer(async (req, res) => {
 
         const won = (responseCache.won?.data?.value || []);
         const open = (responseCache.open?.data?.value || []);
-        const allDeals = [...open, ...won]; // ignora perdidos no forecast
+        const forecast = (responseCache.forecast?.data?.value || []); // deals com Forecast preenchido
+        // Merge: forecast tem os deals com forecast preenchido (fonte principal), open tem os outros abertos
+        const seenForMerge = new Set();
+        const allDeals = [];
+        [...forecast, ...open, ...won].forEach(d => {
+            if (!d.Id || seenForMerge.has(d.Id)) return;
+            seenForMerge.add(d.Id);
+            allDeals.push(d);
+        });
         const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
         const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
         const FIELD_FORECAST = 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC';
