@@ -2027,6 +2027,39 @@ const server = http.createServer(async (req, res) => {
     // ========== MCP Query Endpoint (auth via Bearer token) ==========
     // Esse endpoint NÃO usa sessão de cookie — usa Bearer token gerado pelo admin.
     // É chamado pelo servidor MCP rodando no PC do líder via Claude Desktop.
+    // PPT de forecast — gerado server-side com dados frescos do cache Ploomes.
+    // Abre no browser autenticado, faz download automatico do .pptx.
+    // GET /api/ploomes/forecast-ppt?since=YYYY-MM-DD (default: 7 dias atras)
+    if (urlPath === '/api/ploomes/forecast-ppt' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        try {
+            const { generateForecastPpt } = require('./ppt-forecast');
+            const urlObj = new URL(req.url, `https://${req.headers.host}`);
+            const sinceStr = urlObj.searchParams.get('since');
+            const buffer = await generateForecastPpt({
+                won: responseCache.won?.data?.value || [],
+                lost: responseCache.lost?.data?.value || [],
+                open: responseCache.open?.data?.value || [],
+                forecast: responseCache.forecast?.data?.value || [],
+                meetings: responseCache.meetings?.data?.value || [],
+                users: responseCache.users?.data?.value || []
+            }, {
+                sinceReunioes: sinceStr || null
+            });
+            const now = new Date();
+            const filename = `Resultados_Comerciais_${String(now.getDate()).padStart(2,'0')}_${String(now.getMonth()+1).padStart(2,'0')}.pptx`;
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', buffer.length);
+            res.writeHead(200);
+            return res.end(buffer);
+        } catch (e) {
+            console.error('[forecast-ppt] falhou:', e);
+            return jsonReply(res, 500, { error: e.message, stack: e.stack?.slice(0, 500) });
+        }
+    }
+
     // Atividades da semana — reunioes realizadas + propostas enviadas por vendedor no periodo.
     // GET /api/ploomes/atividades-semana?since=YYYY-MM-DD (default: 7 dias atras)
     // Retorna text/plain formatado pronto pra copiar.
