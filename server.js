@@ -2027,6 +2027,98 @@ const server = http.createServer(async (req, res) => {
     // ========== MCP Query Endpoint (auth via Bearer token) ==========
     // Esse endpoint NÃO usa sessão de cookie — usa Bearer token gerado pelo admin.
     // É chamado pelo servidor MCP rodando no PC do líder via Claude Desktop.
+    // Atividades da semana — reunioes realizadas + propostas enviadas por vendedor no periodo.
+    // GET /api/ploomes/atividades-semana?since=YYYY-MM-DD (default: 7 dias atras)
+    // Retorna text/plain formatado pronto pra copiar.
+    if (urlPath === '/api/ploomes/atividades-semana' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const urlObj = new URL(req.url, `https://${req.headers.host}`);
+        const sinceStr = urlObj.searchParams.get('since');
+        const since = sinceStr ? new Date(sinceStr + 'T00:00:00-03:00') : new Date(Date.now() - 7 * 86400000);
+        const until = new Date();
+
+        const meetings = responseCache.meetings?.data?.value || [];
+        const open = responseCache.open?.data?.value || [];
+        const won = responseCache.won?.data?.value || [];
+        const lost = responseCache.lost?.data?.value || [];
+        const forecast = responseCache.forecast?.data?.value || [];
+        const usersArr = responseCache.users?.data?.value || [];
+        const userMap = {};
+        usersArr.forEach(u => { userMap[u.Id] = u.Name; });
+
+        const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const FIELD_PROPOSAL_DATE = 'deal_12C64ECD-CD5C-4C83-B0CD-7E7CCB415D7E';
+
+        // Reunioes realizadas no periodo
+        const reunioes = {};
+        for (const t of meetings) {
+            if (!norm(t.Title).includes('reuniao realizada')) continue;
+            if (t.Finished !== true) continue;
+            const dtStr = t.FinishDate || t.DateTime;
+            if (!dtStr) continue;
+            const dt = new Date(dtStr);
+            if (dt < since || dt > until) continue;
+            const creator = userMap[t.CreatorId] || t.Creator?.Name || '(sem creator)';
+            reunioes[creator] = (reunioes[creator] || 0) + 1;
+        }
+
+        // Propostas: deals com data de proposta OU marcador "Proposta Gerada"/"Enviada" no periodo
+        const propostas = {};
+        const seenDeals = new Set();
+        for (const d of [...open, ...won, ...lost, ...forecast]) {
+            if (!d.Id || seenDeals.has(d.Id)) continue;
+            seenDeals.add(d.Id);
+            let propDate = null;
+            const props = d.OtherProperties || [];
+            const nativeDate = props.find(p => p.FieldKey === FIELD_PROPOSAL_DATE);
+            if (nativeDate?.DateTimeValue) propDate = new Date(nativeDate.DateTimeValue);
+            if (!propDate) {
+                let hasMarker = false, markerDate = null;
+                for (const p of props) {
+                    const val = String(p.ObjectValueName || p.StringValue || '').toLowerCase().trim();
+                    if (val.includes('proposta gerada') || val.includes('proposta enviada')) hasMarker = true;
+                    const fn = String(p.FieldName || '').toLowerCase();
+                    if ((fn.includes('data') && fn.includes('marcador')) || fn === 'data do marcador') {
+                        if (p.DateTimeValue) markerDate = new Date(p.DateTimeValue);
+                    }
+                }
+                if (hasMarker && markerDate) propDate = markerDate;
+            }
+            if (!propDate) continue;
+            if (propDate < since || propDate > until) continue;
+            const owner = d.Owner?.Name || '(sem owner)';
+            propostas[owner] = (propostas[owner] || 0) + 1;
+        }
+
+        const fmtDate = (d) => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        let text = '';
+        text += `ATIVIDADES DA SEMANA\n`;
+        text += `Periodo: ${fmtDate(since)}  a  ${fmtDate(until)}\n\n`;
+
+        text += `===== REUNIOES REALIZADAS =====\n`;
+        const reunioesSort = Object.entries(reunioes).sort((a,b) => b[1]-a[1]);
+        if (reunioesSort.length === 0) text += `(nenhuma no periodo)\n`;
+        else {
+            reunioesSort.forEach(([nome, c]) => { text += `${nome}: ${c}\n`; });
+        }
+        const totalReunioes = reunioesSort.reduce((s, [_, c]) => s + c, 0);
+        text += `\nTOTAL: ${totalReunioes} reunioes\n\n`;
+
+        text += `===== PROPOSTAS ENVIADAS =====\n`;
+        const propostasSort = Object.entries(propostas).sort((a,b) => b[1]-a[1]);
+        if (propostasSort.length === 0) text += `(nenhuma no periodo)\n`;
+        else {
+            propostasSort.forEach(([nome, c]) => { text += `${nome}: ${c}\n`; });
+        }
+        const totalPropostas = propostasSort.reduce((s, [_, c]) => s + c, 0);
+        text += `\nTOTAL: ${totalPropostas} propostas\n`;
+
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.writeHead(200);
+        return res.end(text);
+    }
+
     // Resumo semanal de forecast — texto plano pronto pra colar no e-mail/Slack pra diretoria.
     // Abre no browser (autenticado por cookie), Ctrl+A/Ctrl+C, cola. Zero dev tools.
     // GET /api/ploomes/forecast-report[?names=Maqtron|Fortlev|...] — se names vier,
