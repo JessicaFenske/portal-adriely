@@ -2063,32 +2063,43 @@ const server = http.createServer(async (req, res) => {
             reunioes[creator] = (reunioes[creator] || 0) + 1;
         }
 
-        // Propostas: deals com data de proposta OU marcador "Proposta Gerada"/"Enviada" no periodo
+        // Propostas: mesma logica do dashboard (sec7Inter linhas 15685-15699):
+        //   (a) Data Proposta Enviada preenchida no periodo, OU
+        //   (b) MRR ou Setup preenchidos (sinal de proposta com valor) E deal criado no periodo
+        // Captura propostas cujo vendedor colocou valor mas esqueceu de marcar a data.
+        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+        const getFieldNum = (d, key) => {
+            const p = (d.OtherProperties || []).find(x => x.FieldKey === key);
+            return typeof p?.DecimalValue === 'number' ? p.DecimalValue : 0;
+        };
         const propostas = {};
+        const propostasDeals = {};
         const seenDeals = new Set();
         for (const d of [...open, ...won, ...lost, ...forecast]) {
             if (!d.Id || seenDeals.has(d.Id)) continue;
             seenDeals.add(d.Id);
-            let propDate = null;
             const props = d.OtherProperties || [];
+            // (a) Data Proposta Enviada
             const nativeDate = props.find(p => p.FieldKey === FIELD_PROPOSAL_DATE);
+            let propDate = null;
             if (nativeDate?.DateTimeValue) propDate = new Date(nativeDate.DateTimeValue);
-            if (!propDate) {
-                let hasMarker = false, markerDate = null;
-                for (const p of props) {
-                    const val = String(p.ObjectValueName || p.StringValue || '').toLowerCase().trim();
-                    if (val.includes('proposta gerada') || val.includes('proposta enviada')) hasMarker = true;
-                    const fn = String(p.FieldName || '').toLowerCase();
-                    if ((fn.includes('data') && fn.includes('marcador')) || fn === 'data do marcador') {
-                        if (p.DateTimeValue) markerDate = new Date(p.DateTimeValue);
-                    }
-                }
-                if (hasMarker && markerDate) propDate = markerDate;
-            }
-            if (!propDate) continue;
-            if (propDate < since || propDate > until) continue;
+            const hasProposalDateInRange = propDate && propDate >= since && propDate <= until;
+            // (b) MRR ou Setup preenchido E deal criado no periodo
+            const mrrVal = getFieldNum(d, FIELD_MRR);
+            const setupVal = getFieldNum(d, FIELD_SETUP);
+            const hasValue = mrrVal > 0 || setupVal > 0;
+            const createDate = d.CreateDate ? new Date(d.CreateDate) : null;
+            const createdInRange = createDate && createDate >= since && createDate <= until;
+            const inclusoPorValor = hasValue && createdInRange;
+            if (!hasProposalDateInRange && !inclusoPorValor) continue;
             const owner = d.Owner?.Name || '(sem owner)';
             propostas[owner] = (propostas[owner] || 0) + 1;
+            if (!propostasDeals[owner]) propostasDeals[owner] = [];
+            propostasDeals[owner].push({
+                title: d.Title || '', mrr: mrrVal, setup: setupVal,
+                sinal: hasProposalDateInRange ? 'data' : 'valor+criacao'
+            });
         }
 
         const fmtDate = (d) => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
