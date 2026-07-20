@@ -13894,12 +13894,19 @@ async function renderHallPreVendas() {
 function renderSection5() {
     const sp = getSectionPeriod('sec5');
     const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
+    // Mesma regra unificada (Hall/sec7Inter/Cockpit Mkt/Cockpit SDR):
+    //   (a) Data Proposta Enviada no periodo, OU
+    //   (b) MRR ou Setup > 0 E CreateDate no periodo (captura propostas sem data preenchida), OU
+    //   (c) marcador de proposta + LastUpdate no periodo (fallback)
+    const inR = (dt) => dt && inPeriodSection(dt, sp.start, sp.end);
     const proposalDeals = allD.filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (!ownerMatchesGlobal(d)) return false;
-        const pd = getProposalDate(d);
-        if (!pd) return false;
-        return inPeriodSection(pd, sp.start, sp.end);
+        if (inR(getProposalDate(d))) return true;
+        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
+        if (hasValue && inR(d.CreateDate)) return true;
+        if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inR(d.LastUpdateDate)) return true;
+        return false;
     });
     window._sec5_deals = proposalDeals;
     const sellerMap = {};
