@@ -2027,6 +2027,149 @@ const server = http.createServer(async (req, res) => {
     // ========== MCP Query Endpoint (auth via Bearer token) ==========
     // Esse endpoint NÃO usa sessão de cookie — usa Bearer token gerado pelo admin.
     // É chamado pelo servidor MCP rodando no PC do líder via Claude Desktop.
+    // Resumo semanal de forecast — texto plano pronto pra colar no e-mail/Slack pra diretoria.
+    // Abre no browser (autenticado por cookie), Ctrl+A/Ctrl+C, cola. Zero dev tools.
+    // GET /api/ploomes/forecast-report[?names=Maqtron|Fortlev|...] — se names vier,
+    // filtra so essas OPOs; sem names, pega automaticamente deals do mes com Forecast preenchido.
+    if (urlPath === '/api/ploomes/forecast-report' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const urlObj = new URL(req.url, `https://${req.headers.host}`);
+        const namesParam = urlObj.searchParams.get('names') || '';
+        const providedNames = namesParam ? namesParam.split(/[|,]/).map(s => s.trim()).filter(Boolean) : [];
+
+        const won = (responseCache.won?.data?.value || []);
+        const open = (responseCache.open?.data?.value || []);
+        const allDeals = [...open, ...won]; // ignora perdidos no forecast
+        const FIELD_MRR = 'deal_1F7F1DEC-39B3-4621-9237-96D7793DAD03';
+        const FIELD_SETUP = 'deal_90CB9147-95C6-4A5F-8607-A2B5225ADFC3';
+        const FIELD_FORECAST = 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC';
+        const getProp = (d, key) => (d.OtherProperties || []).find(x => x.FieldKey === key);
+        const getMRR = (d) => getProp(d, FIELD_MRR)?.DecimalValue || 0;
+        const getSetup = (d) => getProp(d, FIELD_SETUP)?.DecimalValue || 0;
+        const getForecast = (d) => getProp(d, FIELD_FORECAST)?.ObjectValueName || null;
+
+        // Mapeia forecast antigo -> semana (transicao)
+        const FORECAST_MAP = {
+            'Semana 1': 'S1', 'Semana 2': 'S2', 'Semana 3': 'S3', 'Semana 4': 'S4',
+            'Pessimista': 'S1', 'Realista': 'S2', 'Otimista': 'S3'
+        };
+        const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+
+        // Filtra deals do mes corrente
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
+        const inMonth = (d) => {
+            const closeIso = d.ForecastCloseDate || d.ExpectedCloseDate || d.StartDate;
+            if (!closeIso) return false;
+            const t = new Date(closeIso).getTime();
+            return t >= monthStart && t <= monthEnd;
+        };
+
+        // Match por nome fornecido
+        const matchesProvided = (d) => {
+            if (providedNames.length === 0) return true;
+            const nTitle = norm(d.Title || '');
+            return providedNames.some(name => {
+                const words = norm(name).split(' ').filter(w => w.length >= 3);
+                if (words.length === 0) return nTitle.includes(norm(name));
+                return words.every(w => nTitle.includes(w));
+            });
+        };
+
+        // Coleta deals candidatos
+        const candidates = allDeals.filter(d => {
+            if (d.StatusId === 3) return false; // ignora perdidos
+            return matchesProvided(d);
+        });
+        // Dedup por Id
+        const seenIds = new Set();
+        const dedup = [];
+        for (const d of candidates) {
+            if (seenIds.has(d.Id)) continue;
+            seenIds.add(d.Id);
+            dedup.push(d);
+        }
+
+        // Categoriza
+        const garantido = [];
+        const pipeline = [];
+        for (const d of dedup) {
+            const fc = getForecast(d);
+            if (fc && FORECAST_MAP[fc]) {
+                garantido.push({ deal: d, week: FORECAST_MAP[fc] });
+            } else {
+                pipeline.push({ deal: d });
+            }
+        }
+
+        // Ordena: garantido por semana, pipeline por MRR desc
+        garantido.sort((a, b) => a.week.localeCompare(b.week));
+        pipeline.sort((a, b) => getMRR(b.deal) - getMRR(a.deal));
+
+        // Formata numero
+        const fmt = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const fmtDate = (iso) => {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        };
+
+        let text = '';
+        text += `📊 RESUMO SEMANAL — FORECAST | ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}\n\n`;
+
+        // ✅ Garantido
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `✅ FORECAST GARANTIDO\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        let garMrr = 0, garSetup = 0;
+        garantido.forEach((entry, i) => {
+            const d = entry.deal;
+            const mrr = getMRR(d), setup = getSetup(d);
+            garMrr += mrr; garSetup += setup;
+            const closeIso = d.ForecastCloseDate || d.ExpectedCloseDate;
+            text += `${i+1}) ${d.Title}\n`;
+            text += `   Vendedor: ${d.Owner?.Name || '—'} | Etapa: ${d.Stage?.Name || '—'} | ${entry.week}\n`;
+            text += `   MRR: ${fmt(mrr)} | Setup: ${fmt(setup)} | Fechamento: ${fmtDate(closeIso)}\n\n`;
+        });
+        if (garantido.length === 0) text += `(nenhuma OPO com Forecast preenchido)\n\n`;
+        text += `Subtotal: MRR ${fmt(garMrr)} | Setup ${fmt(garSetup)}\n\n`;
+
+        // 🔥 Pipeline
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `🔥 PIPELINE — CHANCE DE ENTRAR\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        let pipMrr = 0, pipSetup = 0;
+        pipeline.forEach((entry, i) => {
+            const d = entry.deal;
+            const mrr = getMRR(d), setup = getSetup(d);
+            pipMrr += mrr; pipSetup += setup;
+            text += `${i+1}) ${d.Title}\n`;
+            text += `   Vendedor: ${d.Owner?.Name || '—'} | Etapa: ${d.Stage?.Name || '—'}\n`;
+            text += `   MRR: ${fmt(mrr)} | Setup: ${fmt(setup)}\n\n`;
+        });
+        if (pipeline.length === 0) text += `(nenhuma OPO em pipeline sem Forecast)\n\n`;
+        text += `Subtotal: MRR ${fmt(pipMrr)} | Setup ${fmt(pipSetup)}\n\n`;
+
+        // 💰 Total
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `💰 TOTAL GERAL\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        text += `Garantido:  MRR ${fmt(garMrr)} | Setup ${fmt(garSetup)}\n`;
+        text += `Pipeline:   MRR ${fmt(pipMrr)} | Setup ${fmt(pipSetup)}\n`;
+        text += `─────────────────────────\n`;
+        text += `TOTAL:      MRR ${fmt(garMrr+pipMrr)} | Setup ${fmt(garSetup+pipSetup)}\n\n`;
+        const metaMRR = 200000;
+        text += `Meta MRR do mês: ${fmt(metaMRR)}\n`;
+        text += `Cobertura garantida: ${((garMrr/metaMRR)*100).toFixed(0)}%\n`;
+        text += `Cobertura total (com pipeline): ${(((garMrr+pipMrr)/metaMRR)*100).toFixed(0)}%\n`;
+
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.writeHead(200);
+        return res.end(text);
+    }
+
     // Busca deals no cache do Ploomes por nome (para forecast/reporting da Jessica)
     // POST { names: ["Maqtron", "Fortlev", ...] } → { results: { name: { matches: [...] } } }
     if (urlPath === '/api/ploomes/search-deals' && req.method === 'POST') {
