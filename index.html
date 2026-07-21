@@ -18849,11 +18849,16 @@ function getContactCargo(d) {
     }
     return '';
 }
-// Detecta cargo de decisão (heurística pt-BR)
+// Detecta cargo de decisão (heurística pt-BR + termos comuns em inglês).
+// Inclui:
+//   PT-BR: presidente/VP, diretor, gerente, gestor (senior BR), head, coordenador,
+//          supervisor, sócio/fundador/proprietário/dono, líder, chefe, superintendente
+//   EN:    CEO/CTO/CFO/COO/CMO/CRO/CIO, president, manager, director, head, lead,
+//          chief, founder, owner, principal
 function isCargoDecisao(cargo) {
     if (!cargo) return false;
     const c = cargo.toLowerCase();
-    return /\b(ceo|cto|cfo|coo|cmo|cro|cio|presidente|vice[\s-]?presidente|vp|diretor|director|gerente|head|coordenador|coord|supervisor|founder|fundador|s[oó]cio|owner|proprietário|líder|lider|chefe|superintendente)\b/.test(c);
+    return /\b(ceo|cto|cfo|coo|cmo|cro|cio|presidente|president|vice[\s-]?presidente|vp|diretor|director|gerente|gestor|manager|head|coordenador|coord|supervisor|founder|fundador|s[oó]cio|owner|proprietário|proprietario|dono|líder|lider|lead|chefe|chief|superintendente|principal)\b/.test(c);
 }
 
 function showDrilldown(title, deals, columns, type) {
