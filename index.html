@@ -7039,6 +7039,8 @@
                             <div style="color:#6b7280;font-size:11px;">Prioridades da semana · ordem: crítico → oportunidade → otimização</div>
                         </div>
                         <div id="mktInsights"></div>
+                        <!-- Alerta: leads do mes sem cargo do contato preenchido -->
+                        <div id="mktCargoAlert" style="margin-top:14px;"></div>
                     </div>
 
                     <!-- LINHA 3: 2 Funis lado-a-lado (Cohort + Flow) full width -->
@@ -23317,6 +23319,9 @@ function renderMarketing(range, rd) {
     window._lastMktInsightsArgs = insightsArgs;
     renderMktInsights(insightsArgs);
 
+    // Alerta: leads do periodo sem cargo do Person preenchido no Ploomes
+    try { renderMktCargoAlert(range); } catch (e) { console.warn('[mkt] cargo alert:', e); }
+
     // Capacity Planning (Lead → MQL → Agenda → Ganho vs meta dos vendedores)
     if (typeof renderCapacityPlanning === 'function') {
         try { renderCapacityPlanning(range, totalLeads, totalMql, totalReun); } catch (e) { console.warn('[capacity]', e.message); }
@@ -23611,6 +23616,93 @@ function _computeMktInsights(m) {
         }
     }
     return insights;
+}
+
+// Alerta pra Fernanda (mkt): leads do periodo em que a pessoa de contato
+// (Deal.Person) esta sem Cargo preenchido no Ploomes. Sem cargo, nao da pra
+// aferir MQL qualificado (decisor+) — ela cobra os SDRs/RD Station a preencher.
+function renderMktCargoAlert(range) {
+    const el = document.getElementById('mktCargoAlert');
+    if (!el) return;
+    if (!wonDeals && !dashOpenDeals) { el.innerHTML = ''; return; }
+    if (!range || !range.start || !range.end) { el.innerHTML = ''; return; }
+
+    const inRange = (iso) => {
+        if (!iso) return false;
+        const t = new Date(iso).getTime();
+        return t >= range.start.getTime() && t <= range.end.getTime();
+    };
+
+    // Foco em pipelines de Novos Negocios (SDR Inbound, SDR Outbound, Funil de Vendas)
+    // pra bater com a definicao de MQL do dashboard. Ignora Farmer/Sankhya que sao
+    // upsell/parceria e nao passam por qualificacao de topo.
+    const NN_PIPES = ['Funil de Vendas', 'SDR Inbound', 'SDR Outbound'];
+    const isNnPipe = (d) => NN_PIPES.includes(d.Pipeline?.Name || '');
+
+    const all = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const semCargo = all.filter(d => {
+        if (!inRange(d.CreateDate)) return false;
+        if (!isNnPipe(d)) return false;
+        return !getContactCargo(d);
+    });
+    const totalNoPeriodo = all.filter(d => inRange(d.CreateDate) && isNnPipe(d)).length;
+
+    if (totalNoPeriodo === 0) { el.innerHTML = ''; return; }
+    if (semCargo.length === 0) {
+        el.innerHTML = `<div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:14px 16px;color:#86efac;font-size:12.5px;">
+            <b>✓ 100% dos leads do período têm cargo preenchido</b> — qualificação de MQL confiável.
+        </div>`;
+        return;
+    }
+
+    const pctSemCargo = Math.round((semCargo.length / totalNoPeriodo) * 100);
+
+    // Agrupa por Origem pra Fernanda ver quais canais têm pior compliance
+    const byOrigin = {};
+    semCargo.forEach(d => {
+        const origem = d.Origin?.Name || d.OriginName || 'Sem origem';
+        byOrigin[origem] = (byOrigin[origem] || 0) + 1;
+    });
+    const originsSorted = Object.entries(byOrigin).sort((a, b) => b[1] - a[1]);
+
+    const dealsList = semCargo
+        .sort((a, b) => new Date(b.CreateDate) - new Date(a.CreateDate))
+        .slice(0, 15)
+        .map(d => {
+            const url = `https://app10.ploomes.com/deal/${d.Id}`;
+            const dt = new Date(d.CreateDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const personName = (d.Person?.Name || d.PersonName || '(sem pessoa)').substring(0, 40);
+            const title = (d.Title || '(sem título)').substring(0, 50);
+            const origem = (d.Origin?.Name || 'Sem origem').substring(0, 20);
+            return `<a href="${url}" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:5px;text-decoration:none;color:#e5e7eb;font-size:12px;margin-bottom:3px;">
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">
+                    <span style="color:#e5e7eb;">${title}</span>
+                    <span style="color:#94a3b8;margin-left:8px;font-size:11px;">${personName}</span>
+                </div>
+                <span style="color:#64748b;font-size:11px;margin-left:8px;">${origem} · ${dt}</span>
+            </a>`;
+        }).join('');
+
+    const originsBadges = originsSorted.map(([o, n]) =>
+        `<span style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 8px;font-size:11px;color:#cbd5e1;font-family:ui-monospace,monospace;">${o}: <b style="color:#fbbf24;">${n}</b></span>`
+    ).join(' ');
+
+    el.innerHTML = `
+        <div style="background:linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:16px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                <div>
+                    <div style="font-size:11px;color:#fbbf24;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">⚠️ Compliance — Cargo do contato</div>
+                    <div style="font-size:15px;color:#e5e7eb;font-weight:700;margin-top:3px;">${semCargo.length} de ${totalNoPeriodo} leads do período estão sem Cargo preenchido (${pctSemCargo}%)</div>
+                </div>
+            </div>
+            <div style="color:#cbd5e1;font-size:12px;line-height:1.55;margin-bottom:12px;">
+                Sem o Cargo do <b>Person</b> preenchido, o dashboard não consegue aferir se o lead é MQL qualificado (decisor+/TI). Cobre os SDRs e revise o form do RD Station pra capturar o cargo já na entrada do lead.
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${originsBadges}</div>
+            <div style="margin-top:8px;">${dealsList}</div>
+            ${semCargo.length > 15 ? `<div style="text-align:center;color:#64748b;font-size:11px;margin-top:8px;font-style:italic;">+ ${semCargo.length - 15} outros deals (mostrando 15 mais recentes)</div>` : ''}
+        </div>
+    `;
 }
 
 function renderMktInsights(m) {
