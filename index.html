@@ -5381,6 +5381,17 @@
                         <div class="cp-insights-grid" id="cpInsightsGrid"></div>
                     </div>
 
+                    <!-- ============ SAMIRA · leads da Adriely com cargo de decisão ============ -->
+                    <div id="cpSamiraAdrielyLeads" style="display:none;">
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">🎯</span> Leads Inbound da Adriely — cargo de decisão</h2>
+                                <div class="cp-card-sub">Deals que a Adriely qualificou (inbound) cuja pessoa de contato tem cargo Coordenador+ ou TI — priorize esses no outbound</div>
+                            </div>
+                            <div id="cpSamiraAdrielyList" style="padding:6px 4px 4px;"></div>
+                        </div>
+                    </div>
+
                     <!-- ============ ANÁLISES ESTRATÉGICAS DE PRÉ-VENDAS — só pra LÍDER ============ -->
                     <div id="cpLeaderPreSales" style="display:none;">
                         <!-- Funil completo do time (Lead → Win) -->
@@ -12033,6 +12044,101 @@ function _cpImpersonateAsSdr(sdrName) {
 // Detecta SDR logado e renderiza visão personalizada com foco em ação diária:
 // agenda do dia, compliance gaps, cards devolvidos, próximas reuniões, KPIs e
 // coaching SPIN qualificador. Reusa os containers do view-cockpit.
+// Seção exclusiva do cockpit da Samira: lista os leads inbound qualificados pela
+// Adriely (deals cujo CreatorId é da Adriely) cuja pessoa de contato (d.Person)
+// tem cargo de decisão (Coordenador+/TI). Ajuda a Samira a priorizar quais
+// pegar pra outbound consultivo.
+function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
+    const wrapper = document.getElementById('cpSamiraAdrielyLeads');
+    const listEl = document.getElementById('cpSamiraAdrielyList');
+    if (!wrapper || !listEl) return;
+    // Só ativa pra Samira
+    if (canonicalSdr !== 'Samira Cristina') { wrapper.style.display = 'none'; return; }
+
+    // Identifica Adriely no dashUsersById (pega o Id do user Adriely)
+    const usersById = (typeof dashUsersById !== 'undefined' && dashUsersById) || {};
+    const adrielyIds = Object.entries(usersById)
+        .filter(([_, name]) => (name || '').toLowerCase().includes('adriely'))
+        .map(([id]) => Number(id));
+    if (adrielyIds.length === 0) {
+        wrapper.style.display = 'block';
+        listEl.innerHTML = `<div style="color:#94a3b8;padding:14px;font-size:12px;">Não encontrei usuário Adriely no cache do Ploomes. Recarregue depois que o dashboard terminar de carregar.</div>`;
+        return;
+    }
+
+    // Pega deals abertos criados pela Adriely (Novos Negócios/SDR Inbound geralmente)
+    const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
+    const dealsAdriely = all.filter(d => adrielyIds.includes(Number(d.CreatorId)));
+
+    // Filtra os que têm cargo decisor via getContactCargo + isCargoDecisao
+    const decisores = dealsAdriely.filter(d => {
+        if (typeof getContactCargo !== 'function' || typeof isCargoDecisao !== 'function') return false;
+        return isCargoDecisao(getContactCargo(d));
+    });
+
+    // Estatísticas
+    const total = dealsAdriely.length;
+    const comCargo = dealsAdriely.filter(d => typeof getContactCargo === 'function' && getContactCargo(d)).length;
+    const semCargoNota = dealsAdriely.length - comCargo;
+
+    wrapper.style.display = 'block';
+
+    if (decisores.length === 0) {
+        listEl.innerHTML = `<div style="color:#94a3b8;padding:14px;font-size:12px;">
+            Nenhum deal da Adriely com cargo de decisão identificado no momento.<br>
+            <span style="color:#6b7280;font-size:11px;">Total de deals da Adriely: ${total} · com cargo preenchido: ${comCargo} · sem cargo: ${semCargoNota}</span>
+        </div>`;
+        return;
+    }
+
+    // Ordena por prioridade: aberto primeiro, dentro do aberto por CreateDate desc
+    decisores.sort((a, b) => {
+        const sa = a.StatusId === 1 ? 0 : 1;
+        const sb = b.StatusId === 1 ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        return new Date(b.CreateDate) - new Date(a.CreateDate);
+    });
+
+    const statusLabel = (s) => s === 1 ? '<span style="color:#4ade80;">● Aberto</span>' : s === 2 ? '<span style="color:#60a5fa;">● Ganho</span>' : '<span style="color:#94a3b8;">● Perdido</span>';
+    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return '—'; } };
+
+    const rows = decisores.map(d => {
+        const url = `https://app10.ploomes.com/Deals/${d.Id}`;
+        const personName = (d.Person?.Name || d.PersonName || '(sem pessoa)').substring(0, 35);
+        const cargo = getContactCargo(d);
+        const empresa = (d.Contact?.Name || d.ContactName || '(sem empresa)').substring(0, 35);
+        const title = (d.Title || '(sem título)').substring(0, 55);
+        const pipe = (d.Pipeline?.Name || '');
+        const stage = (d.Stage?.Name || '');
+        const dt = fmtDate(d.CreateDate);
+        return `<a href="${url}" target="_blank" style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:7px;text-decoration:none;color:#e5e7eb;margin-bottom:5px;border-left:3px solid ${d.StatusId === 1 ? '#4ade80' : '#334155'};">
+            <div style="min-width:0;">
+                <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</div>
+                <div style="font-size:11.5px;color:#cbd5e1;margin-top:3px;">
+                    <b>${personName}</b> <span style="color:#a78bfa;">· ${cargo}</span>
+                </div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px;font-family:ui-monospace,monospace;">${empresa} · ${pipe} / ${stage}</div>
+            </div>
+            <div style="text-align:right;font-size:11px;color:#94a3b8;white-space:nowrap;">
+                ${statusLabel(d.StatusId)}<br>
+                <span style="font-family:ui-monospace,monospace;">${dt}</span>
+            </div>
+        </a>`;
+    }).join('');
+
+    listEl.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:11.5px;">
+            <div style="background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.3);border-radius:6px;padding:5px 10px;color:#c4b5fd;">
+                <b>${decisores.length}</b> com cargo decisor
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:5px 10px;color:#94a3b8;">
+                ${total} deals no total da Adriely · ${comCargo} c/ cargo · ${semCargoNota} sem cargo
+            </div>
+        </div>
+        ${rows}
+    `;
+}
+
 function _cpRenderSdrCockpit(canonicalSdr) {
     // Esconde blocos exclusivos do líder e do marketing (caso esteja vindo de outro render)
     const _ldrPS = document.getElementById('cpLeaderPreSales');
@@ -12042,6 +12148,8 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // Mostra coaching SDR de volta (marketing esconde)
     const _coachSdr = document.querySelector('.cp-coaching-card');
     if (_coachSdr) _coachSdr.style.display = '';
+    // Seção específica pra Samira: leads da Adriely com cargo decisor
+    try { _cpRenderSamiraAdrielyLeads(canonicalSdr); } catch (e) { console.warn('[cp] samira leads:', e); }
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const firstName = canonicalSdr.split(/\s+/)[0];
 
