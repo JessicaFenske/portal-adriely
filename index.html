@@ -20483,12 +20483,22 @@ function switchMktTab(tab) {
 
 // ==================== ANALISE DE FUNIL ====================
 const AF_SALES_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer', 'Farmer IPCA'];
+// Consolidado exclui Farmer IPCA (reajuste automatico de contrato, nao e MRR novo comercial)
+const AF_CONSOLIDADO_PIPELINES = ['Funil de Vendas', 'Sankhya', 'Farmer'];
+const AF_PIPELINE_TABS = ['Todos', ...AF_SALES_PIPELINES];
 const AF_PIPELINE_IDS = {
     'Funil de Vendas': 60009389,
     'Sankhya': 60009518,
     'Farmer': 60009513,
     'Farmer IPCA': 60009522
 };
+// True quando o pipeline do deal bate com o filtro ativo. Modo "Todos" agrega os
+// 3 pipelines comerciais (exclui Farmer IPCA).
+function afPipelineMatch(d) {
+    const pn = d.Pipeline?.Name || '';
+    if (afActivePipeline === 'Todos') return AF_CONSOLIDADO_PIPELINES.includes(pn);
+    return pn === afActivePipeline;
+}
 let afOpenDealsCache = null;
 
 async function fetchAfDealsByStatus(statusId, maxSkip = 3000) {
@@ -20523,8 +20533,16 @@ function onAfConvPeriodChange() {
 }
 
 function getAfMeta(pipeline) {
-    try { const o = JSON.parse(localStorage.getItem(AF_META_KEY) || '{}'); return parseFloat(o[pipeline]) || 0; }
-    catch { return 0; }
+    try {
+        const o = JSON.parse(localStorage.getItem(AF_META_KEY) || '{}');
+        if (pipeline === 'Todos') {
+            // Se tem meta explicita de "Todos", usa; senao soma as 3 metas dos comerciais
+            const explicit = parseFloat(o['Todos']);
+            if (Number.isFinite(explicit) && explicit > 0) return explicit;
+            return AF_CONSOLIDADO_PIPELINES.reduce((s, p) => s + (parseFloat(o[p]) || 0), 0);
+        }
+        return parseFloat(o[pipeline]) || 0;
+    } catch { return 0; }
 }
 function setAfMeta(pipeline, value) {
     let o = {};
@@ -20582,10 +20600,11 @@ async function loadAnaliseFunil() {
         catch (e) { console.warn('[af] fallback lost failed:', e.message); afLostDealsCache = []; }
     }
 
-    // Renderiza tabs de pipeline
-    document.getElementById('afPipelineTabs').innerHTML = AF_SALES_PIPELINES.map(p =>
-        `<button class="af-pipeline-tab ${p === afActivePipeline ? 'active' : ''}" onclick="setAfPipeline('${p.replace(/'/g, "\\'")}')">${p}</button>`
-    ).join('');
+    // Renderiza tabs de pipeline (primeiro "Todos" = consolidado dos 3 comerciais)
+    document.getElementById('afPipelineTabs').innerHTML = AF_PIPELINE_TABS.map(p => {
+        const label = p === 'Todos' ? 'Todos os funis' : p;
+        return `<button class="af-pipeline-tab ${p === afActivePipeline ? 'active' : ''}" onclick="setAfPipeline('${p.replace(/'/g, "\\'")}')">${label}</button>`;
+    }).join('');
 
     // Popula filtro de executivo
     populateAfOwnerFilter();
@@ -20617,8 +20636,9 @@ function afGetLostDealsSource() {
 
 function setAfPipeline(p) {
     afActivePipeline = p;
+    const label = p === 'Todos' ? 'Todos os funis' : p;
     document.querySelectorAll('#afPipelineTabs .af-pipeline-tab').forEach(b => {
-        b.classList.toggle('active', b.textContent === p);
+        b.classList.toggle('active', b.textContent === label);
     });
     populateAfOwnerFilter();
     document.getElementById('afMetaInput').value = getAfMeta(afActivePipeline) || '';
@@ -20631,7 +20651,7 @@ function populateAfOwnerFilter() {
     const current = sel.value;
     const owners = [...new Set(
         [...afGetWonDealsSource(), ...afGetLostDealsSource(), ...afGetOpenDealsSource()]
-            .filter(d => d.Pipeline?.Name === afActivePipeline)
+            .filter(afPipelineMatch)
             .map(d => d.Owner?.Name).filter(Boolean)
     )].sort();
     sel.innerHTML = '<option value="">Todos os executivos</option>' +
@@ -20675,15 +20695,17 @@ function afStageProb(stageName, ordIdx, totalStages) {
 function renderAnaliseFunil() {
     const ownerFilter = document.getElementById('afOwnerFilter').value;
     const pipeline = afActivePipeline;
+    const isConsolidado = pipeline === 'Todos';
 
-    // Filtra deals (fonte: dashboard caches OU fallback API caches)
+    // Filtra deals (fonte: dashboard caches OU fallback API caches). Modo Todos
+    // agrega Novos + Farmer + Sankhya (exclui Farmer IPCA que e reajuste).
     const ownMatch = d => !ownerFilter || d.Owner?.Name === ownerFilter;
     const openSrc = afGetOpenDealsSource();
     const wonSrc = afGetWonDealsSource();
     const lostSrc = afGetLostDealsSource();
-    const openDeals = openSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
-    const wonAll = wonSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
-    const lostAll = lostSrc.filter(d => d.Pipeline?.Name === pipeline && ownMatch(d));
+    const openDeals = openSrc.filter(d => afPipelineMatch(d) && ownMatch(d));
+    const wonAll = wonSrc.filter(d => afPipelineMatch(d) && ownMatch(d));
+    const lostAll = lostSrc.filter(d => afPipelineMatch(d) && ownMatch(d));
 
     // === Etapas do pipeline (ordenadas) ===
     const stageOrdMap = {};
@@ -20745,7 +20767,8 @@ function renderAnaliseFunil() {
     `;
 
     // Subtítulos contextuais dos slides
-    const subCtx = (ownerFilter || 'Todos executivos') + ' · ' + pipeline;
+    const pipelineLabel = isConsolidado ? 'Todos os funis comerciais' : pipeline;
+    const subCtx = (ownerFilter || 'Todos executivos') + ' · ' + pipelineLabel;
     const subSlide2 = document.getElementById('afSlide2Sub'); if (subSlide2) subSlide2.textContent = `${totalDealsOpen} deals abertos · ${brlFull(totalMrrPipeline)} em MRR projetado · ${subCtx}`;
     const subHist = document.getElementById('afHistSub'); if (subHist) subHist.textContent = `Últimos 6 meses · ${wonAll.length} ganhos · ${lostAll.length} perdidos · ${subCtx}`;
 
