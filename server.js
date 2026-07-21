@@ -2199,27 +2199,43 @@ const server = http.createServer(async (req, res) => {
         const dealId = urlObj.searchParams.get('dealId') || '';
         try {
             const results = {};
+            // Trying combinations of verb + path + body
             const attempts = [
-                { name: 'list-filter-item', url: `https://logs-api.ploomes.com/api/ChangeLog?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${encodeURIComponent(dealId)}&%24top=20&%24orderby=DateTime%20desc` },
-                { name: 'list-filter-item-account', url: `https://logs-api.ploomes.com/api/ChangeLog?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${encodeURIComponent(dealId)}&%24top=20&%24orderby=DateTime%20desc&AccountId=6003045` },
-                { name: 'no-odata', url: `https://logs-api.ploomes.com/api/ChangeLog?EntityId=2&ItemId=${encodeURIComponent(dealId)}` }
+                // GET simple
+                { name: 'GET-base',          method: 'GET',  url: 'https://logs-api.ploomes.com/api/ChangeLog' },
+                { name: 'GET-lower',         method: 'GET',  url: 'https://logs-api.ploomes.com/api/changelog' },
+                { name: 'GET-with-slash',    method: 'GET',  url: 'https://logs-api.ploomes.com/api/ChangeLog/' },
+                { name: 'GET-getbyid',       method: 'GET',  url: `https://logs-api.ploomes.com/api/ChangeLog/GetById/fa1737dee6b34d44b53bf8eb?entityId=2&itemId=${encodeURIComponent(dealId)}` },
+                { name: 'GET-getbyitem',     method: 'GET',  url: `https://logs-api.ploomes.com/api/ChangeLog/GetByItem?entityId=2&itemId=${encodeURIComponent(dealId)}` },
+                { name: 'GET-list-item',     method: 'GET',  url: `https://logs-api.ploomes.com/api/ChangeLog/List?entityId=2&itemId=${encodeURIComponent(dealId)}` },
+                { name: 'GET-search',        method: 'GET',  url: `https://logs-api.ploomes.com/api/ChangeLog/Search?entityId=2&itemId=${encodeURIComponent(dealId)}` },
+                // POST
+                { name: 'POST-body',         method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',  body: JSON.stringify({ entityId: 2, itemId: Number(dealId) }) },
+                { name: 'POST-search',       method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog/Search', body: JSON.stringify({ entityId: 2, itemId: Number(dealId) }) },
+                { name: 'POST-getbyitem',    method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog/GetByItem', body: JSON.stringify({ entityId: 2, itemId: Number(dealId) }) }
             ];
             for (const at of attempts) {
                 try {
                     const r = await new Promise((resolve, reject) => {
-                        const req2 = https.request(at.url, {
-                            method: 'GET',
+                        const opts = {
+                            method: at.method,
                             headers: {
                                 'User-Key': API_KEY,
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json'
                             }
-                        }, resp => {
+                        };
+                        const req2 = https.request(at.url, opts, resp => {
                             let data = '';
                             resp.on('data', c => data += c);
-                            resp.on('end', () => resolve({ status: resp.statusCode, body: data.slice(0, 4000) }));
+                            resp.on('end', () => resolve({
+                                status: resp.statusCode,
+                                headers: { allow: resp.headers.allow, 'www-authenticate': resp.headers['www-authenticate'] },
+                                body: data.slice(0, 1500)
+                            }));
                         });
                         req2.on('error', reject);
+                        if (at.body) req2.write(at.body);
                         req2.end();
                     });
                     results[at.name] = r;
