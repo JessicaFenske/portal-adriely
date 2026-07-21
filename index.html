@@ -18000,21 +18000,30 @@ function pmComputeRealizado(team) {
         opo = opoSet.size;
     } catch (e) { console.warn('[pm] OPO falhou:', team.name, e.message); }
 
-    // SAL — reunioes AGENDADAS no mes atribuidas aos SDRs do time (Novos: Adriely/Gui/Samira,
-    // Farmer: Agnes, Sankhya: Maja). Atribuicao por SDR, NAO por pipeline do deal.
+    // Task pertence ao time se: SDR canonical do time OU deal no pipeline do time.
+    // OR (nao AND) porque:
+    //  - Farmer/Sankhya sao upsell — muitas agendadas nao tem SDR como creator (pipeline resolve)
+    //  - Novos tem cards que migram pra outro pipeline mas foram agendados por SDR (SDR resolve)
+    const isTeamTask = (t) => {
+        if (isTeamSdrTask(t)) return true;
+        const deal = t.DealId ? dealsIdx[t.DealId] : null;
+        return !!(deal && meetingFilter(deal));
+    };
+
+    // SAL — reunioes AGENDADAS no mes atribuidas ao time
     let sal = 0;
     try {
         const salSet = new Set();
         meetings.forEach(t => {
             if (!nrm(t.Title).includes('reuniao agendada')) return;
             if (!inMonth(t.CreateDate)) return;
-            if (!isTeamSdrTask(t)) return;
+            if (!isTeamTask(t)) return;
             salSet.add(t.DealId || ('t' + t.Id));
         });
         sal = salSet.size;
     } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
 
-    // SQL — reunioes REALIZADAS (Finished=true) no mes atribuidas aos SDRs do time
+    // SQL — reunioes REALIZADAS (Finished=true) no mes atribuidas ao time
     let sql = 0;
     try {
         const sqlSet = new Set();
@@ -18023,7 +18032,7 @@ function pmComputeRealizado(team) {
             if (t.Finished !== true) return;
             const refDate = t.FinishDate || t.DateTime;
             if (!inMonth(refDate)) return;
-            if (!isTeamSdrTask(t)) return;
+            if (!isTeamTask(t)) return;
             sqlSet.add(t.DealId || ('t' + t.Id));
         });
         sql = sqlSet.size;
