@@ -2199,26 +2199,26 @@ const server = http.createServer(async (req, res) => {
         const dealId = urlObj.searchParams.get('dealId') || '';
         try {
             const results = {};
-            // POST-body funciona com Top + Filter. Descobrir sintaxe do Filter.
+            // v4: testar rotas alternativas + sintaxes de Filter diferentes
             const attempts = [
-                // Filter como objeto (com campos entityId + itemId)
-                { name: 'POST-obj-filter',   method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 10, Filter: { EntityId: 2, ItemId: Number(dealId) } }) },
-                // Filter como string OData
-                { name: 'POST-odata-filter', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 10, Filter: `EntityId eq 2 and ItemId eq ${dealId}` }) },
-                // Filter como string com aspas simples e chave EntityId minuscula
-                { name: 'POST-lower-filter', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 10, Filter: `entityId eq 2 and itemId eq ${dealId}` }) },
-                // Filter vazio (pra ver se aceita e retorna tudo)
-                { name: 'POST-empty-filter', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 5, Filter: '' }) },
-                // Filter mais simples só EntityId
-                { name: 'POST-only-entity',  method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 5, Filter: 'EntityId eq 2' }) },
-                // Filter com sort/orderby
-                { name: 'POST-with-orderby', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
-                  body: JSON.stringify({ Top: 10, Filter: `EntityId eq 2 and ItemId eq ${dealId}`, OrderBy: 'DateTime desc' }) }
+                // Filter como string JSON (Ploomes pode esperar MongoDB-style)
+                { name: 'POST-mongo-filter', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
+                  body: JSON.stringify({ Top: 10, Filter: `{"EntityId":2,"ItemId":${dealId}}` }) },
+                // Filter LINQ-like (.NET)
+                { name: 'POST-linq-filter', method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
+                  body: JSON.stringify({ Top: 10, Filter: `EntityId=2;ItemId=${dealId}` }) },
+                // Filter com apenas ItemId numerico (talvez EntityId seja default)
+                { name: 'POST-just-item',   method: 'POST', url: 'https://logs-api.ploomes.com/api/ChangeLog',
+                  body: JSON.stringify({ Top: 10, Filter: `${dealId}` }) },
+                // Query params na URL alem do body
+                { name: 'POST-with-qs',     method: 'POST', url: `https://logs-api.ploomes.com/api/ChangeLog?entityId=2&itemId=${dealId}`,
+                  body: JSON.stringify({ Top: 10, Filter: 'x' }) },
+                // Rotas OData alternativas em public-api2
+                { name: 'GET-p2-entitylogs',  method: 'GET', url: `https://public-api2.ploomes.com/EntityLogs?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${dealId}&%24top=10` },
+                { name: 'GET-p2-dealtags',    method: 'GET', url: `https://public-api2.ploomes.com/Deals@Tags?%24filter=DealId%20eq%20${dealId}` },
+                { name: 'GET-p2-changelog',   method: 'GET', url: `https://public-api2.ploomes.com/ChangeLog?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${dealId}` },
+                // Se o Ploomes indexa a tag como sub-entidade do Deal com CreateDate
+                { name: 'GET-p2-deal-expand', method: 'GET', url: `https://public-api2.ploomes.com/Deals?%24filter=Id%20eq%20${dealId}&%24expand=Tags` }
             ];
             for (const at of attempts) {
                 try {
