@@ -8045,7 +8045,14 @@ function showView(viewName) {
     if (viewName === 'planejamento-metas') {
         if (!dashLoaded) { loadDashboard(); dashLoaded = true; }
         if (typeof renderPlanejamentoMetas === 'function') {
-            setTimeout(() => renderPlanejamentoMetas(), (wonDeals && wonDeals.length) ? 50 : 1200);
+            // Espera wonDeals + dashMeetings — realizado por time depende dos dois.
+            const ready = (wonDeals && wonDeals.length && dashMeetings && dashMeetings.length);
+            setTimeout(() => renderPlanejamentoMetas(), ready ? 50 : 1500);
+            // Fallback: se meetings ainda nao chegou em 1.5s, tenta re-render em 4s e 8s
+            if (!ready) {
+                setTimeout(() => { if (dashMeetings && dashMeetings.length && document.getElementById('view-planejamento-metas')?.style.display !== 'none') renderPlanejamentoMetas(); }, 4000);
+                setTimeout(() => { if (dashMeetings && dashMeetings.length && document.getElementById('view-planejamento-metas')?.style.display !== 'none') renderPlanejamentoMetas(); }, 8000);
+            }
         }
     }
     if (viewName === 'cockpit') {
