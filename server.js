@@ -2038,29 +2038,19 @@ const server = http.createServer(async (req, res) => {
         if (urlObjDbg.searchParams.get('debug') === '1') {
             return jsonReply(res, 200, {
                 cache_status: {
-                    won: (responseCache.won?.data?.value || []).length,
-                    lost: (responseCache.lost?.data?.value || []).length,
-                    open: (responseCache.open?.data?.value || []).length,
-                    forecast: (responseCache.forecast?.data?.value || []).length,
-                    meetings: (responseCache.meetings?.data?.value || []).length,
-                    users: (responseCache.users?.data?.value || []).length
+                    won: (cache.won || []).length,
+                    lost: (cache.lost || []).length,
+                    open: (cache.open || []).length,
+                    forecast: (cache.forecast || []).length,
+                    meetings: (cache.meetings || []).length,
+                    users: (cache.users || []).length
                 },
-                last_refresh: {
-                    won: responseCache.won?.timestamp,
-                    open: responseCache.open?.timestamp,
-                    forecast: responseCache.forecast?.timestamp
-                },
-                errors: {
-                    won: responseCache.won?.error,
-                    open: responseCache.open?.error,
-                    forecast: responseCache.forecast?.error,
-                    meetings: responseCache.meetings?.error
-                },
-                sample_won_deal: (responseCache.won?.data?.value || [])[0] ? {
-                    id: responseCache.won.data.value[0].Id,
-                    title: responseCache.won.data.value[0].Title,
-                    pipeline: responseCache.won.data.value[0].Pipeline?.Name,
-                    hasOtherProperties: (responseCache.won.data.value[0].OtherProperties || []).length
+                last_refresh: cache.lastRefresh || {},
+                sample_won_deal: (cache.won || [])[0] ? {
+                    id: cache.won[0].Id,
+                    title: cache.won[0].Title,
+                    pipeline: cache.won[0].Pipeline?.Name,
+                    hasOtherProperties: (cache.won[0].OtherProperties || []).length
                 } : null
             });
         }
@@ -2069,12 +2059,12 @@ const server = http.createServer(async (req, res) => {
             const urlObj = new URL(req.url, `https://${req.headers.host}`);
             const sinceStr = urlObj.searchParams.get('since');
             const buffer = await generateForecastPpt({
-                won: responseCache.won?.data?.value || [],
-                lost: responseCache.lost?.data?.value || [],
-                open: responseCache.open?.data?.value || [],
-                forecast: responseCache.forecast?.data?.value || [],
-                meetings: responseCache.meetings?.data?.value || [],
-                users: responseCache.users?.data?.value || []
+                won: cache.won || [],
+                lost: cache.lost || [],
+                open: cache.open || [],
+                forecast: cache.forecast || [],
+                meetings: cache.meetings || [],
+                users: cache.users || []
             }, {
                 sinceReunioes: sinceStr || null
             });
