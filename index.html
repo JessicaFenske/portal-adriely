@@ -18215,7 +18215,10 @@ function pmComputeRealizado(team) {
             const hasPropDate = inMonth(gPropDate(d));
             const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
             const hasValueMove = hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate));
-            const hasMarcador = gHasPropSent(d) && inMonth(d.LastUpdateDate);
+            // Marcador tolerante: se o deal tem o marcador Proposta Gerada ativo E foi
+            // criado OU tocado no mes, conta. Sem esse OR, deals cujo marcador foi
+            // inserido mas ninguem editou o deal depois nao apareciam.
+            const hasMarcador = gHasPropSent(d) && (inMonth(d.LastUpdateDate) || inMonth(d.CreateDate));
 
             // OPO regra unificada
             if ((hasPropDate || hasValueMove || hasMarcador) && !opoSet.has(d.Id)) {
