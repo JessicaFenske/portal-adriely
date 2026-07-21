@@ -11028,12 +11028,13 @@ function _cpRenderMarketingCockpit(me, _opts) {
 
     // OPOs do mês — mesma regra do Hall de Vendedores / sec7Inter:
     //   (a) Data Proposta Enviada no mes, OU
-    //   (b) MRR ou Setup > 0 E CreateDate no mes (captura propostas sem data preenchida)
+    //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no mes) - captura deal antigo
+    //       que teve valor preenchido/atualizado essa semana (proposta gerada agora)
     //   (c) fallback: tem marcador de proposta E LastUpdate no mes
     const monthOpos = allDeals.filter(d => {
         if (inMonth(getProposalDate(d))) return true;
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && inMonth(d.CreateDate)) return true;
+        if (hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) return true;
         if (hasProposalSent(d) && inMonth(d.LastUpdateDate)) return true;
         return false;
     });
@@ -12762,7 +12763,7 @@ function _cpRenderSdrAdvanced(ctx) {
         // no periodo, (c) marcador + LastUpdate no periodo
         if (inRange(getProposalDate(d), w)) return true;
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && inRange(d.CreateDate, w)) return true;
+        if (hasValue && (inRange(d.CreateDate, w) || inRange(d.LastUpdateDate, w))) return true;
         if (hasProposalSent(d) && inRange(d.LastUpdateDate, w)) return true;
         return false;
     }).length);
@@ -14076,7 +14077,8 @@ function renderSection5() {
     const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
     // Mesma regra unificada (Hall/sec7Inter/Cockpit Mkt/Cockpit SDR):
     //   (a) Data Proposta Enviada no periodo, OU
-    //   (b) MRR ou Setup > 0 E CreateDate no periodo (captura propostas sem data preenchida), OU
+    //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no periodo) - captura deal antigo
+    //       cujo valor foi preenchido/atualizado nessa janela
     //   (c) marcador de proposta + LastUpdate no periodo (fallback)
     const inR = (dt) => dt && inPeriodSection(dt, sp.start, sp.end);
     const proposalDeals = allD.filter(d => {
@@ -14084,7 +14086,7 @@ function renderSection5() {
         if (!ownerMatchesGlobal(d)) return false;
         if (inR(getProposalDate(d))) return true;
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && inR(d.CreateDate)) return true;
+        if (hasValue && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
         if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inR(d.LastUpdateDate)) return true;
         return false;
     });
@@ -17574,7 +17576,8 @@ function pmComputeRealRates(team, periodDays) {
         const inR = (dt) => { if (!dt) return false; const t = new Date(dt); return t >= cutoff && t <= endPeriod; };
         const isProposta = (d) => {
             if (inR(gPropDate2(d))) return true;
-            if ((gMRR2(d) > 0 || gSetup2(d) > 0) && inR(d.CreateDate)) return true;
+            // (b) tolerante: valor preenchido no deal (novo ou editado) dentro do periodo
+            if ((gMRR2(d) > 0 || gSetup2(d) > 0) && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
             if (gHasProp2(d) && inR(d.LastUpdateDate)) return true;
             return false;
         };
@@ -18054,7 +18057,9 @@ function pmComputeRealizado(team) {
     try { go = won.filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length; }
     catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
-    // OPO — regra unificada (bate com Propostas Enviadas sec5)
+    // OPO — regra unificada (bate com Propostas Enviadas sec5).
+    // (b) tolerante: aceita CreateDate OU LastUpdate no periodo — captura deal
+    // antigo que teve MRR/Setup preenchido essa semana.
     let opo = 0;
     try {
         const opoSet = new Set();
@@ -18062,7 +18067,7 @@ function pmComputeRealizado(team) {
             if (!commercialFilter(d)) return;
             if (inMonth(gPropDate(d))) { opoSet.add(d.Id); return; }
             const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
-            if (hasValue && inMonth(d.CreateDate)) { opoSet.add(d.Id); return; }
+            if (hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) { opoSet.add(d.Id); return; }
             if (gHasPropSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
         });
         opo = opoSet.size;
