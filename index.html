@@ -1551,6 +1551,11 @@
         #view-planejamento-metas .pm-funnel-row .pm-bar-real { position: absolute; left: 0; top: 0; bottom: 0; z-index: 0; transition: width 0.4s ease; background: rgba(74, 222, 128, 0.35); border-right: 2px solid rgba(74, 222, 128, 0.8); }
         #view-planejamento-metas .pm-funnel-row.pm-realized-low .pm-bar-real { background: rgba(248, 113, 113, 0.30); border-right-color: rgba(248, 113, 113, 0.8); }
         #view-planejamento-metas .pm-funnel-row.pm-realized-mid .pm-bar-real { background: rgba(245, 158, 11, 0.30); border-right-color: rgba(245, 158, 11, 0.8); }
+        /* Farmer e Sankhya nao trackeiam Lead/MQL (base morna/parceria, sem topo de funil proprio) */
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-funnel-row[data-stage="lead"],
+        #view-planejamento-metas .pm-team[data-team="fm"] .pm-funnel-row[data-stage="mql"],
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-funnel-row[data-stage="lead"],
+        #view-planejamento-metas .pm-team[data-team="sk"] .pm-funnel-row[data-stage="mql"] { display: none; }
         /* Coluna direita: 2 contadores empilhados (meta grande, realizado pequeno) */
         #view-planejamento-metas .pm-funnel-row .pm-count-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 68px; }
         #view-planejamento-metas .pm-funnel-row .pm-count-real { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px; font-weight: 600; color: #94a3b8; line-height: 1; white-space: nowrap; }
@@ -17810,6 +17815,30 @@ function pmReadInputs(teamId) {
 // Conta o que ja foi realizado ate hoje pra um time (mes corrente).
 // Retorna { lead, mql, sal, sql, opo, go } — null quando estagio nao e trackeado.
 // Retorna null completo se caches nao estao populados ainda (evita mostrar 0 falso).
+// Cache do total do RD Station (populado pelo pmFetchRdTotal). Usado no LEAD de Novos Negocios.
+window._pmRdTotalCache = window._pmRdTotalCache || { total: 0, ts: 0 };
+async function pmFetchRdTotal() {
+    const c = window._pmRdTotalCache;
+    if (c.total > 0 && (Date.now() - c.ts) < 10 * 60 * 1000) return c.total; // cache 10min
+    try {
+        // Se ja tem no ads-summary cache do Marketing view, usa
+        if (window._adsCachedSummary?.rd?.total > 0) {
+            c.total = window._adsCachedSummary.rd.total;
+            c.ts = Date.now();
+            return c.total;
+        }
+        const r = await fetch('/api/marketing/rdstation', { credentials: 'same-origin' });
+        if (!r.ok) return 0;
+        const j = await r.json();
+        const total = Number(j?.total || 0);
+        c.total = total; c.ts = Date.now();
+        return total;
+    } catch (e) {
+        console.warn('[pm] RD total fetch falhou:', e.message);
+        return 0;
+    }
+}
+
 function pmComputeRealizado(team) {
     const won  = (typeof wonDeals !== 'undefined' && wonDeals) || [];
     const lost = (typeof lostDeals !== 'undefined' && lostDeals) || [];
@@ -17885,8 +17914,30 @@ function pmComputeRealizado(team) {
         sal = salSet.size;
     } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
 
-    console.log(`[pm] realizado END ${team.name}: SAL=${sal} SQL=${sql} OPO=${opo} GO=${go}`);
-    return { lead: null, mql: null, sal, sql, opo, go };
+    // MQL e LEAD só fazem sentido pra Novos Negocios (Farmer/Sankhya são base morna/parceria, sem topo de funil próprio)
+    let lead = null;
+    let mql = null;
+    if (team.id === 'nn') {
+        // MQL = cards criados no mes nos meetingPipelines (Funil de Vendas + SDR Inbound + SDR Outbound)
+        try {
+            const mqlSet = new Set();
+            allD.forEach(d => {
+                if (!meetingFilter(d)) return;
+                if (!inMonth(d.CreateDate)) return;
+                mqlSet.add(d.Id);
+            });
+            mql = mqlSet.size;
+        } catch (e) { console.warn('[pm] MQL Novos falhou:', e.message); mql = 0; }
+
+        // LEAD = max(RD Station total, MQL Ploomes)
+        // RD tem os leads que passaram pelo RD (LinkedIn). Ploomes MQL inclui todos os cards
+        // (RD + Meta/Google/LPH via Origin direto). Usar MAX aproxima somando canais.
+        const rdTotal = Number(window._pmRdTotalCache?.total || 0);
+        lead = Math.max(rdTotal, mql || 0);
+    }
+
+    console.log(`[pm] realizado END ${team.name}: LEAD=${lead} MQL=${mql} SAL=${sal} SQL=${sql} OPO=${opo} GO=${go}`);
+    return { lead, mql, sal, sql, opo, go };
 }
 
 function pmComputeFunnel(inputs, metaTotal) {
@@ -17994,6 +18045,16 @@ function pmUpdateCalculations() {
 }
 
 function renderPlanejamentoMetas() {
+    // Dispara fetch do RD total em background (populara cache pra LEAD de Novos Negocios).
+    // Se ainda nao respondeu na 1a passada, agenda re-render em 2s pra pegar quando chegar.
+    if (typeof pmFetchRdTotal === 'function' && !window._pmRdTotalCache?.total) {
+        pmFetchRdTotal().then(total => {
+            if (total > 0 && document.getElementById('view-planejamento-metas')?.style.display !== 'none') {
+                pmUpdateCalculations();
+            }
+        });
+    }
+
     // Restaura meta e período salvos
     const savedMeta = pmLsGet('meta', '200000');
     const savedPeriod = pmLsGet('period', '180');
