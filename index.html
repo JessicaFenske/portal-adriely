@@ -18203,11 +18203,19 @@ function pmComputeRealizado(team) {
                 const name = (usersById[creatorId] || '').toLowerCase();
                 return NN_SDR_TOKENS.some(s => name.includes(s));
             };
+            // Regra do time: MQL = LEAD com cargo de decisor (coordenador+).
+            // Ver getContactCargo/isCargoDecisao — detecta CEO/CxO/Presidente/VP/Diretor/
+            // Gerente/Head/Coordenador/Supervisor/Sócio/Líder/Chefe/Superintendente.
+            const hasDecisorCargo = (d) => {
+                if (typeof getContactCargo !== 'function' || typeof isCargoDecisao !== 'function') return true;
+                return isCargoDecisao(getContactCargo(d));
+            };
             const mqlSet = new Set();
             const mqlList = [];
             allD.forEach(d => {
                 if (!inMonth(d.CreateDate)) return;
                 if (!isNnSdrCreator(d.CreatorId) && !meetingFilter(d)) return;
+                if (!hasDecisorCargo(d)) return;
                 if (!mqlSet.has(d.Id)) { mqlSet.add(d.Id); mqlList.push(d); }
             });
             mql = mqlSet.size;
