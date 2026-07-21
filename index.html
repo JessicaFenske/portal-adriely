@@ -17949,7 +17949,9 @@ function pmComputeRealizado(team) {
     const gSetup = (d) => (typeof getSetup === 'function' ? getSetup(d) : 0);
     const gPropDate = (d) => (typeof getProposalDate === 'function' ? getProposalDate(d) : null);
     const gHasPropSent = (d) => (typeof hasProposalSent === 'function' ? hasProposalSent(d) : false);
-    const nrm = (s) => (typeof norm === 'function' ? norm(s) : String(s||'').toLowerCase());
+    // Sem acento + lowercase — "Reunião Agendada" -> "reuniao agendada".
+    // Nao usa `norm` global porque `norm` esta declarado dentro de outras funcoes (nao global).
+    const nrm = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
     const commercialFilter = d => (team.commercialPipelines || []).includes(gPipe(d));
     const meetingFilter = d => (team.meetingPipelines || []).includes(gPipe(d));
