@@ -11093,17 +11093,9 @@ function _cpRenderMarketingCockpit(me, _opts) {
     const lastMonthWon = (wonDeals || []).filter(d => inLastMonth(d.FinishDate) && isSalesPipeline(d));
 
     // OPOs do mês — mesma regra do Hall de Vendedores / sec7Inter:
-    //   (a) Data Proposta Enviada no mes, OU
-    //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no mes) - captura deal antigo
-    //       que teve valor preenchido/atualizado essa semana (proposta gerada agora)
-    //   (c) fallback: tem marcador de proposta E LastUpdate no mes
-    const monthOpos = allDeals.filter(d => {
-        if (inMonth(getProposalDate(d))) return true;
-        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) return true;
-        if (hasProposalSent(d) && inMonth(d.LastUpdateDate)) return true;
-        return false;
-    });
+    //   SO: data do marcador Proposta Gerada aplicado no mes. getProposalDate le
+    //   exclusivamente Data Marcador D7ED2D45 (gravada pela Automacao do Ploomes).
+    const monthOpos = allDeals.filter(d => inMonth(getProposalDate(d)));
 
     // Agrupa por canal + rastreia origins brutas que caíram em 'Outros'/'Sem origem'
     // pra ajudar a Fê a diagnosticar por que a atribuição não bate com Meta/LinkedIn/Google.
@@ -12827,11 +12819,8 @@ function _cpRenderSdrAdvanced(ctx) {
         if (!dealIsMyOpo(d)) return false;
         // Mesma regra do Hall/sec7Inter: (a) data proposta no periodo, (b) MRR/Setup + criado
         // no periodo, (c) marcador + LastUpdate no periodo
-        if (inRange(getProposalDate(d), w)) return true;
-        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && (inRange(d.CreateDate, w) || inRange(d.LastUpdateDate, w))) return true;
-        if (hasProposalSent(d) && inRange(d.LastUpdateDate, w)) return true;
-        return false;
+        // SO: marcador Proposta Gerada aplicado na semana (getProposalDate = Data Marcador)
+        return inRange(getProposalDate(d), w);
     }).length);
 
     const sparkSeries = [
@@ -14141,20 +14130,13 @@ async function renderHallPreVendas() {
 function renderSection5() {
     const sp = getSectionPeriod('sec5');
     const allD = [...wonDeals, ...lostDeals, ...dashOpenDeals];
-    // Mesma regra unificada (Hall/sec7Inter/Cockpit Mkt/Cockpit SDR):
-    //   (a) Data Proposta Enviada no periodo, OU
-    //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no periodo) - captura deal antigo
-    //       cujo valor foi preenchido/atualizado nessa janela
-    //   (c) marcador de proposta + LastUpdate no periodo (fallback)
+    //   SO: data em que o marcador Proposta Gerada foi aplicado no periodo.
+    //   getProposalDate le exclusivamente Data Marcador D7ED2D45 (auditavel).
     const inR = (dt) => dt && inPeriodSection(dt, sp.start, sp.end);
     const proposalDeals = allD.filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (!ownerMatchesGlobal(d)) return false;
-        if (inR(getProposalDate(d))) return true;
-        const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
-        if (hasValue && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
-        if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inR(d.LastUpdateDate)) return true;
-        return false;
+        return inR(getProposalDate(d));
     });
     window._sec5_deals = proposalDeals;
     const sellerMap = {};
@@ -17723,13 +17705,8 @@ function pmComputeRealRates(team, periodDays) {
         const gMRR2 = (d) => (typeof getMRR === 'function') ? getMRR(d) : 0;
         const gSetup2 = (d) => (typeof getSetup === 'function') ? getSetup(d) : 0;
         const inR = (dt) => { if (!dt) return false; const t = new Date(dt); return t >= cutoff && t <= endPeriod; };
-        const isProposta = (d) => {
-            if (inR(gPropDate2(d))) return true;
-            // (b) tolerante: valor preenchido no deal (novo ou editado) dentro do periodo
-            if ((gMRR2(d) > 0 || gSetup2(d) > 0) && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
-            if (gHasProp2(d) && inR(d.LastUpdateDate)) return true;
-            return false;
-        };
+        // SO: marcador Proposta Gerada aplicado no periodo (Data Marcador D7ED2D45)
+        const isProposta = (d) => inR(gPropDate2(d));
         const propostasSet = new Set();
         [...won, ...lost, ...open].forEach(d => {
             if (!pMatch(d)) return;
@@ -18213,13 +18190,11 @@ function pmComputeRealizado(team) {
     }
     catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
-    // OPO tem 2 medidas complementares:
-    //  - opo (regra unificada): tudo que teve movimentacao de valor no mes (a+b+c) — pipeline health
-    //  - opoMarcador: estoque total no funil de deals com marcador "Proposta Gerada" ativo
-    //    OU campo "Data Proposta Enviada" preenchido — SEM filtro de data. Mede quantas
-    //    propostas estao vivas no pipeline (mesmo que geradas em meses anteriores).
-    //    O Ploomes nao expoe data de insercao do marcador de forma confiavel, entao usar
-    //    estoque total e mais util que tentar aproximar "marcador do mes" via LastUpdate.
+    // OPO usa SO a data do marcador Proposta Gerada aplicado (getProposalDate le
+    // exclusivamente Data Marcador D7ED2D45, ignora Data Proposta nativa e
+    // hasValue/LastUpdate). Regra 100% baseada em "quando o marcador foi aplicado".
+    //   - opo: deals cujo marcador foi aplicado no mes corrente (auditavel)
+    //   - opoMarcador: estoque total no funil (marcador ativo, sem restricao de data)
     let opo = 0;
     let opoMarcador = 0;
     try {
@@ -18229,13 +18204,8 @@ function pmComputeRealizado(team) {
         const marcadorList = [];
         allD.forEach(d => {
             if (!commercialFilter(d)) return;
-            const hasPropDate = inMonth(gPropDate(d));
-            const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
-            const hasValueMove = hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate));
-            const hasMarcadorMonth = gHasPropSent(d) && (inMonth(d.LastUpdateDate) || inMonth(d.CreateDate));
-
-            // OPO regra unificada — mantem restricao temporal (mes)
-            if ((hasPropDate || hasValueMove || hasMarcadorMonth) && !opoSet.has(d.Id)) {
+            // OPO do mes: marcador aplicado no mes corrente
+            if (inMonth(gPropDate(d)) && !opoSet.has(d.Id)) {
                 opoSet.add(d.Id);
                 opoList.push(d);
             }
