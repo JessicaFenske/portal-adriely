@@ -2047,8 +2047,9 @@ const server = http.createServer(async (req, res) => {
             }, {
                 sinceReunioes: sinceStr || null
             });
-            const now = new Date();
-            const filename = `Resultados_Comerciais_${String(now.getDate()).padStart(2,'0')}_${String(now.getMonth()+1).padStart(2,'0')}.pptx`;
+            // Data em fuso Brasilia (UTC-3) pra nome do arquivo bater com dia local
+            const nowBr = new Date(Date.now() - 3 * 60 * 60 * 1000);
+            const filename = `Resultados_Comerciais_${String(nowBr.getUTCDate()).padStart(2,'0')}_${String(nowBr.getUTCMonth()+1).padStart(2,'0')}_${nowBr.getUTCFullYear()}.pptx`;
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
             res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
             res.setHeader('Content-Length', buffer.length);
