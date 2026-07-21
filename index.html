@@ -8931,13 +8931,36 @@ function getEffectiveSdr(deal) {
     }
     return '';
 }
+// Cache no frontend da "primeira data" observada pelo backend (persistido em Redis).
+// Backend mantem MIN(D7ED2D45) por deal — uma vez guardada, so aceita valor MAIS ANTIGO.
+// Assim se um SDR edita o campo Data Marcador retroativamente pra uma data mais recente,
+// a data original permanece no cache e o dashboard usa ela.
+window._firstMarkerDates = window._firstMarkerDates || null;
+async function loadFirstMarkerDates() {
+    if (window._firstMarkerDates) return window._firstMarkerDates;
+    try {
+        const r = await fetch('/api/ploomes/first-marker-dates', { credentials: 'same-origin' });
+        if (!r.ok) return null;
+        const j = await r.json();
+        window._firstMarkerDates = j?.data || {};
+        console.log(`[firstMarker] Loaded ${Object.keys(window._firstMarkerDates).length} entries do backend`);
+        return window._firstMarkerDates;
+    } catch (e) { console.warn('[firstMarker] load:', e.message); return null; }
+}
+// Dispara no load pra ter cache pronto quando o dashboard renderizar
+if (typeof window !== 'undefined') setTimeout(() => loadFirstMarkerDates(), 500);
+
 function getProposalDate(deal) {
-    // Regra do time: sempre a data em que o marcador "Proposta Gerada" foi aplicado
-    // pela PRIMEIRA VEZ. Usa exclusivamente o campo Data Marcador (D7ED2D45), gravado
-    // pela Automacao do Ploomes quando o marcador e aplicado. Ignora o campo nativo
-    // Data Proposta Enviada (12C64ECD) porque ele e digitavel manualmente e sujeito
-    // a preenchimento retroativo/errado — o que fazia deals antigos (Honda,
-    // Volkswagen) aparecerem em julho.
+    // Regra do time: sempre a data da PRIMEIRA aplicacao do marcador Proposta Gerada.
+    // Ordem de prioridade:
+    //   1) Cache do backend `firstMarkerDates` (MIN historico ja observado) — evita que
+    //      edicao retroativa pra data mais recente contamine a metrica
+    //   2) Valor atual do campo Data Marcador (D7ED2D45) — fallback pra deals novos
+    //      que o backend ainda nao processou
+    if (window._firstMarkerDates && deal?.Id != null) {
+        const cached = window._firstMarkerDates[deal.Id];
+        if (cached) return cached;
+    }
     return getMarcadorPropostaDate(deal);
 }
 // Data Marcador do Ploomes — FieldKey descoberto via inspecao (2026-07-21):

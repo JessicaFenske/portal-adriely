@@ -429,10 +429,62 @@ async function refreshOne(key, url) {
         responseCache[key] = buildResponse(data, { lastRefresh: cache.lastRefresh[key] });
         saveToDisk(key, data);
         console.log(`[cache] ${key} OK in ${((Date.now() - start)/1000).toFixed(1)}s: ${data.length} items`);
+        // Apos refresh dos deals, atualiza cache "primeira data do marcador" (MIN historico)
+        if (['won','lost','open'].includes(key)) {
+            try { await updateFirstMarkerDates(data); } catch (e) { console.warn('[firstMarker] update:', e.message); }
+        }
     } catch (e) {
         console.error(`[cache] ${key} error:`, e.message);
     }
     cache.refreshing[key] = false;
+}
+
+// ==================== Primeira data do marcador Proposta Gerada ====================
+// Deals podem ter o campo Data Marcador (deal_D7ED2D45) editado retroativamente por
+// vendedores. Pra evitar que uma edicao com data mais recente contamine a metrica de
+// "quando o marcador foi aplicado pela primeira vez", mantemos um cache no Redis com
+// o MIN (menor data ja vista) por dealId. Uma vez guardado, so aceita valor MAIS ANTIGO.
+const FIELD_MARCADOR_DATE = 'deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A';
+const REDIS_KEY_FIRST_MARKER = 'firstMarkerDates';
+let firstMarkerCache = {}; // { dealId: 'YYYY-MM-DDTHH:mm:ss' }
+let firstMarkerCacheLoaded = false;
+let firstMarkerLastSave = 0;
+
+async function loadFirstMarkerCache() {
+    try {
+        const raw = await redisGet(REDIS_KEY_FIRST_MARKER);
+        if (raw) firstMarkerCache = JSON.parse(raw);
+        firstMarkerCacheLoaded = true;
+        console.log(`[firstMarker] Loaded ${Object.keys(firstMarkerCache).length} entries from Redis`);
+    } catch (e) {
+        console.warn('[firstMarker] load falhou:', e.message);
+        firstMarkerCacheLoaded = true; // segue com cache vazio
+    }
+}
+loadFirstMarkerCache();
+
+async function updateFirstMarkerDates(deals) {
+    if (!firstMarkerCacheLoaded) await loadFirstMarkerCache();
+    let updated = 0;
+    (deals || []).forEach(d => {
+        if (!d?.Id || !Array.isArray(d.OtherProperties)) return;
+        const prop = d.OtherProperties.find(p => (p.FieldKey || '').toLowerCase() === FIELD_MARCADOR_DATE.toLowerCase());
+        if (!prop?.DateTimeValue) return;
+        const current = firstMarkerCache[d.Id];
+        // Guarda se: (a) nunca vimos esse deal antes OU (b) o valor atual e MAIS ANTIGO que o guardado
+        if (!current || new Date(prop.DateTimeValue) < new Date(current)) {
+            firstMarkerCache[d.Id] = prop.DateTimeValue;
+            updated++;
+        }
+    });
+    // Persiste no Redis se houve mudanca — throttle: no maximo 1 save por minuto
+    if (updated > 0 && Date.now() - firstMarkerLastSave > 60000) {
+        firstMarkerLastSave = Date.now();
+        try {
+            await redisSet(REDIS_KEY_FIRST_MARKER, JSON.stringify(firstMarkerCache));
+            console.log(`[firstMarker] Saved ${Object.keys(firstMarkerCache).length} entries (${updated} novos/menor este batch)`);
+        } catch (e) { console.warn('[firstMarker] save falhou:', e.message); }
+    }
 }
 
 // Load from disk immediately on startup
@@ -2185,6 +2237,16 @@ const server = http.createServer(async (req, res) => {
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.writeHead(200);
         return res.end(text);
+    }
+
+    // GET /api/ploomes/first-marker-dates
+    // Retorna o cache { dealId: primeiraDataDoMarcador } que o backend mantem via MIN
+    // historico. Frontend consulta uma vez no load do dashboard e usa como fonte
+    // prioritaria da data de proposta (getProposalDate).
+    if (urlPath === '/api/ploomes/first-marker-dates' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        return jsonReply(res, 200, { data: firstMarkerCache, count: Object.keys(firstMarkerCache).length });
     }
 
     // Resumo semanal de forecast — texto plano pronto pra colar no e-mail/Slack pra diretoria.
