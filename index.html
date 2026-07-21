@@ -6715,7 +6715,7 @@
                 <header class="pm-header">
                     <div class="pm-header-text">
                         <div class="pm-eyebrow">Planejamento · Lincros comercial</div>
-                        <h1 class="pm-title">Quantos leads pra fechar <span class="pm-accent" id="pmMetaTitle">R$ 200k</span> de MRR?</h1>
+                        <h1 class="pm-title">Plano para chegar em <span class="pm-accent" id="pmMetaTitle">R$ 200k</span> de MRR</h1>
                         <p class="pm-subtitle">Funil reverso por time usando as taxas de conversão reais do dashboard. Ajuste as premissas — Lead→MQL e MQL→SAL (que o marketing gera) — e veja quantos leads, reuniões e propostas cada time precisa gerar.</p>
                     </div>
                     <div class="pm-controls">
@@ -17366,14 +17366,17 @@ const PM_TEAMS = [
     { id: 'nn', name: 'Novos Negócios',
       commercialPipelines: ['Funil de Vendas'],
       meetingPipelines:    ['Funil de Vendas', 'SDR Inbound', 'SDR Outbound'],
+      sdrs:                ['Adriely', 'Guilherme Tomio', 'Samira Cristina'],
       defaults: { mix: 32, r1: 40, r2: 35 }, desc: 'Funil frio · outbound + inbound' },
     { id: 'fm', name: 'Farmer',
       commercialPipelines: ['Farmer'],
       meetingPipelines:    ['Farmer', 'SDR Farmer'],
+      sdrs:                ['Agnes Roberta'],
       defaults: { mix: 15, r1: 60, r2: 50 }, desc: 'Base morna · upsell/cross' },
     { id: 'sk', name: 'Sankhya',
       commercialPipelines: ['Sankhya'],
       meetingPipelines:    ['Sankhya', 'SDR Sankhya'],
+      sdrs:                ['Maja Siqueira'],
       defaults: { mix: 53, r1: 45, r2: 40 }, desc: 'Parceria integrada · deals consultivos' }
 ];
 const PM_STAGES = [
@@ -17864,13 +17867,38 @@ function pmComputeRealizado(team) {
     const meetingFilter = d => (team.meetingPipelines || []).includes(gPipe(d));
     const allD = [...won, ...lost, ...open];
     const dealsIdx = {}; allD.forEach(d => { if (d?.Id) dealsIdx[d.Id] = d; });
+    const usersById = (typeof dashUsersById !== 'undefined' && dashUsersById) || {};
 
-    // GO
+    // SDR attribution — cascata igual ao Cockpit SDR / sec7:
+    //   direto pelo Creator da task -> Owner canonical do deal -> outra Agendada do mesmo deal
+    const teamSdrs = team.sdrs || [];
+    const canonOf = (name) => (typeof getCanonicalSdrName === 'function') ? getCanonicalSdrName(name) : null;
+    const taskSdrCanon = (t) => {
+        const direct = canonOf(usersById[t.CreatorId] || '');
+        if (direct) return direct;
+        const deal = t.DealId ? dealsIdx[t.DealId] : null;
+        if (deal) {
+            const ownerCanon = canonOf(typeof getOwnerName === 'function' ? getOwnerName(deal) : (deal.Owner?.Name || ''));
+            if (ownerCanon) return ownerCanon;
+            const ag = meetings.find(x => x.DealId === deal.Id && nrm(x.Title).includes('reuniao agendada'));
+            if (ag) {
+                const agCanon = canonOf(usersById[ag.CreatorId] || '');
+                if (agCanon) return agCanon;
+            }
+        }
+        return null;
+    };
+    const isTeamSdrTask = (t) => {
+        const canon = taskSdrCanon(t);
+        return canon && teamSdrs.includes(canon);
+    };
+
+    // GO — bate com Oportunidades Ganhas (sec1) filtrado por funil do time
     let go = 0;
     try { go = won.filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length; }
     catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
-    // OPO — regra unificada
+    // OPO — regra unificada (bate com Propostas Enviadas sec5)
     let opo = 0;
     try {
         const opoSet = new Set();
@@ -17884,7 +17912,21 @@ function pmComputeRealizado(team) {
         opo = opoSet.size;
     } catch (e) { console.warn('[pm] OPO falhou:', team.name, e.message); }
 
-    // SQL — reunioes realizadas do time no mes
+    // SAL — reunioes AGENDADAS no mes atribuidas aos SDRs do time (Novos: Adriely/Gui/Samira,
+    // Farmer: Agnes, Sankhya: Maja). Atribuicao por SDR, NAO por pipeline do deal.
+    let sal = 0;
+    try {
+        const salSet = new Set();
+        meetings.forEach(t => {
+            if (!nrm(t.Title).includes('reuniao agendada')) return;
+            if (!inMonth(t.CreateDate)) return;
+            if (!isTeamSdrTask(t)) return;
+            salSet.add(t.DealId || ('t' + t.Id));
+        });
+        sal = salSet.size;
+    } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
+
+    // SQL — reunioes REALIZADAS (Finished=true) no mes atribuidas aos SDRs do time
     let sql = 0;
     try {
         const sqlSet = new Set();
@@ -17893,45 +17935,30 @@ function pmComputeRealizado(team) {
             if (t.Finished !== true) return;
             const refDate = t.FinishDate || t.DateTime;
             if (!inMonth(refDate)) return;
-            const deal = t.DealId ? dealsIdx[t.DealId] : null;
-            if (!deal || !meetingFilter(deal)) return;
+            if (!isTeamSdrTask(t)) return;
             sqlSet.add(t.DealId || ('t' + t.Id));
         });
         sql = sqlSet.size;
     } catch (e) { console.warn('[pm] SQL falhou:', team.name, e.message); }
 
-    // SAL — reunioes agendadas do time no mes
-    let sal = 0;
-    try {
-        const salSet = new Set();
-        meetings.forEach(t => {
-            if (!nrm(t.Title).includes('reuniao agendada')) return;
-            if (!inMonth(t.CreateDate)) return;
-            const deal = t.DealId ? dealsIdx[t.DealId] : null;
-            if (!deal || !meetingFilter(deal)) return;
-            salSet.add(t.DealId || ('t' + t.Id));
-        });
-        sal = salSet.size;
-    } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
-
     // MQL e LEAD só fazem sentido pra Novos Negocios (Farmer/Sankhya são base morna/parceria, sem topo de funil próprio)
     let lead = null;
     let mql = null;
     if (team.id === 'nn') {
-        // MQL = deals criados no mes por SDRs de Novos Negocios (Adriely, Guilherme Tomio, Samira Cristina).
-        // Filtro por Creator do deal (nao Owner nem Pipeline), porque o deal pode migrar de pipeline
-        // ou dono depois — o que caracteriza como "MQL do Novos" e ter sido qualificado por um SDR de NN.
+        // MQL Novos = uniao de:
+        //   (a) deals criados no mes por SDR de Novos via CreatorId
+        //   (b) deals criados no mes nos meetingPipelines de Novos (Funil de Vendas / SDR Inbound / SDR Outbound)
+        // O (b) captura cards que o RD Station criou automaticamente (Creator = integracao, nao SDR).
         try {
             const NN_SDR_TOKENS = ['adriely', 'tomio', 'samira'];
-            const usersById = (typeof dashUsersById !== 'undefined' && dashUsersById) || {};
-            const isNnSdr = (creatorId) => {
+            const isNnSdrCreator = (creatorId) => {
                 const name = (usersById[creatorId] || '').toLowerCase();
                 return NN_SDR_TOKENS.some(s => name.includes(s));
             };
             const mqlSet = new Set();
             allD.forEach(d => {
                 if (!inMonth(d.CreateDate)) return;
-                if (!isNnSdr(d.CreatorId)) return;
+                if (!isNnSdrCreator(d.CreatorId) && !meetingFilter(d)) return;
                 mqlSet.add(d.Id);
             });
             mql = mqlSet.size;
