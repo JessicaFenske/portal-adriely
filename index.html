@@ -1585,6 +1585,34 @@
         #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="nn"] { color: #8b5cf6; }
         #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="fm"] { color: #06b6d4; }
         #view-planejamento-metas .pm-total-cell .pm-breakdown span[data-t="sk"] { color: #f59e0b; }
+        /* Benchmark SaaS B2B — mesmas metas/tickets, taxas ideais de mercado */
+        #view-planejamento-metas .pm-benchmark { background: linear-gradient(180deg, rgba(34,197,94,0.06) 0%, #1a1d29 100%); border: 1px solid rgba(34,197,94,0.25); border-radius: 14px; padding: 22px; margin-top: 24px; }
+        #view-planejamento-metas .pmb-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; gap: 12px; }
+        #view-planejamento-metas .pmb-title { margin: 0; font-size: 15px; font-weight: 700; color: #86efac; letter-spacing: -0.01em; }
+        #view-planejamento-metas .pmb-eyebrow { text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px; color: #4ade80; font-weight: 700; margin-bottom: 4px; }
+        #view-planejamento-metas .pmb-sub { color: #94a3b8; font-size: 12.5px; margin: 6px 0 18px; max-width: 720px; line-height: 1.55; }
+        #view-planejamento-metas .pmb-taxes { display: flex; gap: 6px; flex-wrap: wrap; font-size: 10.5px; color: #cbd5e1; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+        #view-planejamento-metas .pmb-tax { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); border-radius: 999px; padding: 3px 9px; color: #86efac; }
+        #view-planejamento-metas .pmb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+        @media (max-width: 900px) { #view-planejamento-metas .pmb-grid { grid-template-columns: 1fr; } }
+        #view-planejamento-metas .pmb-card { background: #1f2233; border: 1px solid #2a2e3f; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+        #view-planejamento-metas .pmb-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        #view-planejamento-metas .pmb-card-title { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+        #view-planejamento-metas .pmb-card[data-team="nn"] .pmb-card-title { color: #a78bfa; }
+        #view-planejamento-metas .pmb-card[data-team="fm"] .pmb-card-title { color: #22d3ee; }
+        #view-planejamento-metas .pmb-card[data-team="sk"] .pmb-card-title { color: #fbbf24; }
+        #view-planejamento-metas .pmb-card-meta { font-size: 10.5px; color: #94a3b8; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+        #view-planejamento-metas .pmb-rows { display: flex; flex-direction: column; gap: 4px; }
+        #view-planejamento-metas .pmb-row { display: grid; grid-template-columns: 42px 1fr auto auto; gap: 8px; align-items: center; padding: 7px 10px; background: #252838; border-radius: 7px; font-size: 12px; }
+        #view-planejamento-metas .pmb-stage { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        #view-planejamento-metas .pmb-value { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 17px; font-weight: 700; color: #e5e7eb; text-align: right; }
+        #view-planejamento-metas .pmb-delta { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 10px; font-weight: 700; text-align: right; padding-left: 6px; white-space: nowrap; }
+        #view-planejamento-metas .pmb-delta.down { color: #4ade80; }
+        #view-planejamento-metas .pmb-delta.up { color: #f87171; }
+        #view-planejamento-metas .pmb-delta.same { color: #64748b; }
+        #view-planejamento-metas .pmb-row.go { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+        #view-planejamento-metas .pmb-row.go .pmb-value { color: #4ade80; }
+
         #view-planejamento-metas .pm-note { margin-top: 24px; padding: 16px 20px; background: rgba(139, 92, 246, 0.05); border-left: 3px solid #8b5cf6; border-radius: 6px; font-size: 12.5px; color: #94a3b8; line-height: 1.65; }
         #view-planejamento-metas .pm-note strong { color: #e5e7eb; font-weight: 600; }
         #view-planejamento-metas .pm-note ul { margin: 8px 0 8px 0; padding-left: 18px; }
@@ -6832,6 +6860,8 @@
                 </div>
 
                 <section class="pm-totals" id="pmTotals" style="display:none;"></section>
+
+                <section class="pm-benchmark" id="pmBenchmark" style="display:none;"></section>
 
                 <div class="pm-note">
                     <strong>Como as taxas foram calculadas:</strong>
@@ -18125,6 +18155,87 @@ function pmComputeFunnel(inputs, metaTotal) {
     return { teamMrr, mix, stages: { lead, mql, sal, sql, opo, go } };
 }
 
+// Benchmarks SaaS B2B — taxas usadas em relatorios de mercado (Winning by Design,
+// SaaStr, Bridge Group). Ordem: Lead->MQL, MQL->SAL, SAL->SQL, SQL->OPO, OPO->GO.
+// Mantem meta e ticket iguais aos configurados; recalcula o funil so trocando as taxas.
+const PM_BENCHMARK = { r1: 45, r2: 45, r3: 60, r4: 45, r5: 30 };
+
+function pmRenderBenchmark(results, metaTotal) {
+    const el = document.getElementById('pmBenchmark');
+    if (!el) return;
+
+    const rows = results.map(r => {
+        const team = r.team;
+        // Recalcula com meta/ticket atuais + taxas benchmark
+        const inputs = { goalAbs: r.teamMrr, ticket: 0, r1: PM_BENCHMARK.r1, r2: PM_BENCHMARK.r2, r3: PM_BENCHMARK.r3, r4: PM_BENCHMARK.r4, r5: PM_BENCHMARK.r5 };
+        // Ticket vem do input do card atual — inputs usam data-team + data-field (nao ID).
+        const ticketEl = document.querySelector(`input[data-team="${team.id}"][data-field="ticket"]`);
+        inputs.ticket = Number(ticketEl?.value) || 0;
+        if (!(inputs.ticket > 0)) return null;
+        const bench = pmComputeFunnel(inputs, metaTotal);
+
+        // Para Farmer/Sankhya, esconde LEAD/MQL (nao trackeamos topo do funil desses times)
+        const showStages = team.id === 'nn' ? ['lead','mql','sal','sql','opo','go'] : ['sal','sql','opo','go'];
+
+        const rowsHtml = showStages.map(key => {
+            const stageLabel = PM_STAGES.find(s => s.key === key)?.label || key.toUpperCase();
+            const benchVal = bench.stages[key];
+            const realVal = r.stages[key];
+            const delta = realVal - benchVal;
+            const deltaPct = realVal > 0 ? Math.round((delta / realVal) * 100) : 0;
+            let deltaLabel = '';
+            let deltaClass = 'same';
+            if (delta > 0) {
+                // Real precisa mais que o benchmark => benchmark alivia
+                deltaLabel = `−${pmFmtInt(delta)} (${deltaPct}%)`;
+                deltaClass = 'down';
+            } else if (delta < 0) {
+                deltaLabel = `+${pmFmtInt(-delta)}`;
+                deltaClass = 'up';
+            } else {
+                deltaLabel = '=';
+            }
+            return `<div class="pmb-row ${key === 'go' ? 'go' : ''}">
+                <div class="pmb-stage">${stageLabel}</div>
+                <div class="pmb-stage" style="text-transform:none;font-weight:500;color:#cbd5e1;">${PM_STAGES.find(s => s.key === key)?.desc || ''}</div>
+                <div class="pmb-value">${pmFmtInt(benchVal)}</div>
+                <div class="pmb-delta ${deltaClass}" title="Diferenca vs cenario atual">${deltaLabel}</div>
+            </div>`;
+        }).join('');
+
+        return `<div class="pmb-card" data-team="${team.id}">
+            <div class="pmb-card-head">
+                <div class="pmb-card-title">${team.name}</div>
+                <div class="pmb-card-meta">Meta ${pmFmtMoneyShort(r.teamMrr)} · Ticket ${pmFmtMoneyShort(inputs.ticket)}</div>
+            </div>
+            <div class="pmb-rows">${rowsHtml}</div>
+        </div>`;
+    }).filter(Boolean).join('');
+
+    if (!rows) { el.style.display = 'none'; return; }
+
+    const bmTaxes = [
+        `Lead→MQL <b>${PM_BENCHMARK.r1}%</b>`,
+        `MQL→SAL <b>${PM_BENCHMARK.r2}%</b>`,
+        `SAL→SQL <b>${PM_BENCHMARK.r3}%</b>`,
+        `SQL→OPO <b>${PM_BENCHMARK.r4}%</b>`,
+        `OPO→GO <b>${PM_BENCHMARK.r5}%</b>`
+    ].map(t => `<span class="pmb-tax">${t}</span>`).join('');
+
+    el.style.display = 'block';
+    el.innerHTML = `
+        <div class="pmb-head">
+            <div>
+                <div class="pmb-eyebrow">✨ Cenário benchmark SaaS B2B</div>
+                <h3 class="pmb-title">Quanto de funil precisaríamos com taxas ideais de mercado</h3>
+            </div>
+            <div class="pmb-taxes">${bmTaxes}</div>
+        </div>
+        <p class="pmb-sub">Meta e ticket médio mantidos. Recalcula o funil reverso trocando só as taxas de conversão pelas de referência de mercado (Winning by Design / Bridge Group / SaaStr). O verde à direita mostra quanto o volume cairia se atingíssemos essas conversões.</p>
+        <div class="pmb-grid">${rows}</div>
+    `;
+}
+
 function pmUpdateCalculations() {
     const meta = Number(document.getElementById('pmMeta')?.value) || 0;
     pmLsSet('meta', meta);
@@ -18197,6 +18308,8 @@ function pmUpdateCalculations() {
             : `${icon} ${pmFmtMoneyShort(Math.abs(gap))} abaixo da meta (${gapPct.toFixed(1)}%)`;
         gapBadge = `<div style="font-size:11px;color:${color};font-weight:600;margin-top:2px;">${txt}</div>`;
     }
+    try { pmRenderBenchmark(results, meta); } catch (e) { console.warn('[pm] benchmark falhou:', e.message); }
+
     const totalsEl = document.getElementById('pmTotals');
     if (totalsEl) {
         totalsEl.style.display = 'block';
