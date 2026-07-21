@@ -1547,6 +1547,16 @@
         #view-planejamento-metas .pm-team[data-team="nn"] .pm-funnel-row .pm-bar { background: rgba(139, 92, 246, 0.15); }
         #view-planejamento-metas .pm-team[data-team="fm"] .pm-funnel-row .pm-bar { background: rgba(6, 182, 212, 0.15); }
         #view-planejamento-metas .pm-team[data-team="sk"] .pm-funnel-row .pm-bar { background: rgba(245, 158, 11, 0.15); }
+        /* barra do realizado — sobrepoe a barra do meta, mais escura e cheia */
+        #view-planejamento-metas .pm-funnel-row .pm-bar-real { position: absolute; left: 0; top: 0; bottom: 0; z-index: 0; transition: width 0.4s ease; background: rgba(74, 222, 128, 0.35); border-right: 2px solid rgba(74, 222, 128, 0.8); }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-low .pm-bar-real { background: rgba(248, 113, 113, 0.30); border-right-color: rgba(248, 113, 113, 0.8); }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-mid .pm-bar-real { background: rgba(245, 158, 11, 0.30); border-right-color: rgba(245, 158, 11, 0.8); }
+        /* Coluna direita: 2 contadores empilhados (meta grande, realizado pequeno) */
+        #view-planejamento-metas .pm-funnel-row .pm-count-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 68px; }
+        #view-planejamento-metas .pm-funnel-row .pm-count-real { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px; font-weight: 600; color: #94a3b8; line-height: 1; white-space: nowrap; }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-good .pm-count-real { color: #4ade80; }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-mid .pm-count-real { color: #fbbf24; }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-low .pm-count-real { color: #f87171; }
         #view-planejamento-metas .pm-funnel-row .pm-stage { position: relative; z-index: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
         #view-planejamento-metas .pm-funnel-row .pm-stage-desc { position: relative; z-index: 1; font-size: 10.5px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #view-planejamento-metas .pm-funnel-row .pm-count { position: relative; z-index: 1; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: #e5e7eb; text-align: right; min-width: 56px; }
@@ -17698,9 +17708,13 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
     const funnelHtml = PM_STAGES.map(s => `
         <div class="pm-funnel-row ${s.key === 'go' ? 'go' : ''}" data-stage="${s.key}">
             <div class="pm-bar" id="pmBar-${team.id}-${s.key}" style="width:0%"></div>
+            <div class="pm-bar-real" id="pmBarReal-${team.id}-${s.key}" style="width:0%"></div>
             <div class="pm-stage">${s.label}</div>
             <div class="pm-stage-desc">${s.desc}</div>
-            <div class="pm-count" id="pmCount-${team.id}-${s.key}">0</div>
+            <div class="pm-count-wrap">
+                <div class="pm-count" id="pmCount-${team.id}-${s.key}">0</div>
+                <div class="pm-count-real" id="pmCountReal-${team.id}-${s.key}">—</div>
+            </div>
         </div>
     `).join('');
 
@@ -17747,6 +17761,61 @@ function pmReadInputs(teamId) {
     };
 }
 
+// Conta o que ja foi realizado ate hoje pra um time (mes corrente).
+// Retorna { lead, mql, sal, sql, opo, go } — null quando estagio nao e trackeado.
+function pmComputeRealizado(team) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
+    const inMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart && t <= monthEnd; };
+    const commercialFilter = d => team.commercialPipelines.includes(getPipelineName(d));
+    const meetingFilter = d => team.meetingPipelines.includes(getPipelineName(d));
+    const allD = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+    const dealsIdx = {}; allD.forEach(d => { dealsIdx[d.Id] = d; });
+
+    // GO: deals ganhos no mes (commercial pipeline)
+    const go = (wonDeals || []).filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length;
+
+    // OPO: propostas enviadas no mes — regra unificada
+    const opoSet = new Set();
+    allD.forEach(d => {
+        if (!commercialFilter(d)) return;
+        if (inMonth(getProposalDate(d))) { opoSet.add(d.Id); return; }
+        const hasValue = (typeof getMRR === 'function' ? getMRR(d) : 0) > 0
+                      || (typeof getSetup === 'function' ? getSetup(d) : 0) > 0;
+        if (hasValue && inMonth(d.CreateDate)) { opoSet.add(d.Id); return; }
+        if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
+    });
+    const opo = opoSet.size;
+
+    // SQL: reunioes realizadas do time no mes (dedup por deal)
+    const sqlSet = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao realizada')) return;
+        if (t.Finished !== true) return;
+        const refDate = t.FinishDate || t.DateTime;
+        if (!inMonth(refDate)) return;
+        const deal = dealsIdx[t.DealId];
+        if (!deal || !meetingFilter(deal)) return;
+        sqlSet.add(t.DealId || ('t' + t.Id));
+    });
+    const sql = sqlSet.size;
+
+    // SAL: reunioes agendadas do time no mes (por CreateDate da task)
+    const salSet = new Set();
+    (dashMeetings || []).forEach(t => {
+        if (!norm(t.Title).includes('reuniao agendada')) return;
+        if (!inMonth(t.CreateDate)) return;
+        const deal = dealsIdx[t.DealId];
+        if (!deal || !meetingFilter(deal)) return;
+        salSet.add(t.DealId || ('t' + t.Id));
+    });
+    const sal = salSet.size;
+
+    // MQL e Lead: nao trackeamos ainda por time (dependem de RD por canal + atribuicao)
+    return { lead: null, mql: null, sal, sql, opo, go };
+}
+
 function pmComputeFunnel(inputs, metaTotal) {
     // Meta do time é editada diretamente em R$ (goalAbs). Mix % vira label calculado.
     const teamMrr = inputs.goalAbs;
@@ -17776,11 +17845,35 @@ function pmUpdateCalculations() {
         const g = document.getElementById(`pmGoal-${team.id}`);
         if (g) g.innerHTML = `${pmFmtMoneyShort(teamMrr)}<span class="pct">· ${Math.round(mix)}%</span>`;
         const maxCount = stages.lead || 1;
+        // Calcula realizado do time (mes corrente)
+        let realizado = null;
+        try { realizado = pmComputeRealizado(team); } catch (e) { console.warn('[pm] realizado falhou:', team.name, e.message); }
         PM_STAGES.forEach(s => {
             const c = document.getElementById(`pmCount-${team.id}-${s.key}`);
             if (c) c.textContent = pmFmtInt(stages[s.key]);
             const b = document.getElementById(`pmBar-${team.id}-${s.key}`);
             if (b) b.style.width = (maxCount > 0 ? (stages[s.key] / maxCount) * 100 : 0) + '%';
+
+            // Atualiza contador do realizado + barra + cor
+            const row = c?.closest('.pm-funnel-row');
+            const cReal = document.getElementById(`pmCountReal-${team.id}-${s.key}`);
+            const bReal = document.getElementById(`pmBarReal-${team.id}-${s.key}`);
+            if (row) row.classList.remove('pm-realized-low', 'pm-realized-mid', 'pm-realized-good');
+            if (realizado && realizado[s.key] != null) {
+                const real = realizado[s.key];
+                const meta = stages[s.key] || 0;
+                const pct = meta > 0 ? Math.round((real / meta) * 100) : 0;
+                if (cReal) cReal.textContent = `${pmFmtInt(real)} · ${pct}%`;
+                if (bReal) bReal.style.width = Math.min(100, (maxCount > 0 ? (real / maxCount) * 100 : 0)) + '%';
+                if (row) {
+                    if (pct >= 60) row.classList.add('pm-realized-good');
+                    else if (pct >= 30) row.classList.add('pm-realized-mid');
+                    else row.classList.add('pm-realized-low');
+                }
+            } else {
+                if (cReal) cReal.textContent = '—';
+                if (bReal) bReal.style.width = '0%';
+            }
         });
     });
 
