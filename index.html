@@ -17918,12 +17918,20 @@ function pmComputeRealizado(team) {
     let lead = null;
     let mql = null;
     if (team.id === 'nn') {
-        // MQL = cards criados no mes nos meetingPipelines (Funil de Vendas + SDR Inbound + SDR Outbound)
+        // MQL = deals criados no mes por SDRs de Novos Negocios (Adriely, Guilherme Tomio, Samira Cristina).
+        // Filtro por Creator do deal (nao Owner nem Pipeline), porque o deal pode migrar de pipeline
+        // ou dono depois — o que caracteriza como "MQL do Novos" e ter sido qualificado por um SDR de NN.
         try {
+            const NN_SDR_TOKENS = ['adriely', 'tomio', 'samira'];
+            const usersById = (typeof dashUsersById !== 'undefined' && dashUsersById) || {};
+            const isNnSdr = (creatorId) => {
+                const name = (usersById[creatorId] || '').toLowerCase();
+                return NN_SDR_TOKENS.some(s => name.includes(s));
+            };
             const mqlSet = new Set();
             allD.forEach(d => {
-                if (!meetingFilter(d)) return;
                 if (!inMonth(d.CreateDate)) return;
+                if (!isNnSdr(d.CreatorId)) return;
                 mqlSet.add(d.Id);
             });
             mql = mqlSet.size;
