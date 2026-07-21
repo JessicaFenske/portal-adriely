@@ -1613,6 +1613,28 @@
         #view-planejamento-metas .pmb-row.go { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
         #view-planejamento-metas .pmb-row.go .pmb-value { color: #4ade80; }
 
+        /* Drilldown modal do funil reverso */
+        #view-planejamento-metas .pm-funnel-row.pm-clickable:hover { filter: brightness(1.15); }
+        #view-planejamento-metas .pm-funnel-row.pm-clickable::after { content: "›"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 14px; z-index: 2; opacity: 0.6; }
+        #view-planejamento-metas .pm-funnel-row.pm-clickable:hover::after { opacity: 1; color: #a78bfa; }
+        .pm-drill-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .pm-drill-card { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; width: 100%; max-width: 720px; max-height: 84vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+        .pm-drill-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.06); gap: 12px; }
+        .pm-drill-eyebrow { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10.5px; color: #94a3b8; font-weight: 600; margin-bottom: 4px; }
+        .pm-drill-title { font-size: 17px; font-weight: 700; color: #e5e7eb; letter-spacing: -0.01em; }
+        .pm-drill-close { background: transparent; border: none; color: #94a3b8; font-size: 26px; cursor: pointer; line-height: 1; padding: 0 4px; }
+        .pm-drill-close:hover { color: #f87171; }
+        .pm-drill-body { padding: 12px 12px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .pm-drill-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; gap: 12px; }
+        .pm-drill-row:hover { background: rgba(139,92,246,0.08); }
+        .pm-drill-main { min-width: 0; flex: 1; }
+        .pm-drill-link { color: #e5e7eb; font-weight: 600; font-size: 13px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .pm-drill-link:hover { color: #a78bfa; text-decoration: underline; }
+        .pm-drill-meta { color: #94a3b8; font-size: 11px; margin-top: 3px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+        .pm-drill-side { text-align: right; font-family: ui-monospace, "SF Mono", Consolas, monospace; color: #cbd5e1; font-size: 12px; white-space: nowrap; }
+        .pm-drill-sub { color: #6b7280; font-size: 10.5px; margin-top: 2px; }
+        .pm-drill-empty { color: #6b7280; text-align: center; padding: 40px; font-style: italic; }
+
         #view-planejamento-metas .pm-note { margin-top: 24px; padding: 16px 20px; background: rgba(139, 92, 246, 0.05); border-left: 3px solid #8b5cf6; border-radius: 6px; font-size: 12.5px; color: #94a3b8; line-height: 1.65; }
         #view-planejamento-metas .pm-note strong { color: #e5e7eb; font-weight: 600; }
         #view-planejamento-metas .pm-note ul { margin: 8px 0 8px 0; padding-left: 18px; }
@@ -6862,6 +6884,19 @@
                 <section class="pm-totals" id="pmTotals" style="display:none;"></section>
 
                 <section class="pm-benchmark" id="pmBenchmark" style="display:none;"></section>
+
+                <div id="pmDrilldownModal" class="pm-drill-modal" style="display:none;" onclick="if(event.target===this)closePmDrilldown()">
+                    <div class="pm-drill-card">
+                        <div class="pm-drill-head">
+                            <div>
+                                <div class="pm-drill-eyebrow" id="pmDrillEyebrow">—</div>
+                                <div class="pm-drill-title" id="pmDrillTitle">—</div>
+                            </div>
+                            <button class="pm-drill-close" onclick="closePmDrilldown()">×</button>
+                        </div>
+                        <div class="pm-drill-body" id="pmDrillBody"></div>
+                    </div>
+                </div>
 
                 <div class="pm-note">
                     <strong>Como as taxas foram calculadas:</strong>
@@ -18052,9 +18087,16 @@ function pmComputeRealizado(team) {
         return canon && teamSdrs.includes(canon);
     };
 
+    // Guarda detalhes por stage pra drilldown (clique no realizado)
+    const details = { lead: [], mql: [], sal: [], sql: [], opo: [], go: [] };
+
     // GO — bate com Oportunidades Ganhas (sec1) filtrado por funil do time
     let go = 0;
-    try { go = won.filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length; }
+    try {
+        const goList = won.filter(d => commercialFilter(d) && inMonth(d.FinishDate));
+        go = goList.length;
+        details.go = goList;
+    }
     catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
     // OPO — regra unificada (bate com Propostas Enviadas sec5).
@@ -18063,14 +18105,18 @@ function pmComputeRealizado(team) {
     let opo = 0;
     try {
         const opoSet = new Set();
+        const opoList = [];
         allD.forEach(d => {
             if (!commercialFilter(d)) return;
-            if (inMonth(gPropDate(d))) { opoSet.add(d.Id); return; }
+            let match = false;
+            if (inMonth(gPropDate(d))) match = true;
             const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
-            if (hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) { opoSet.add(d.Id); return; }
-            if (gHasPropSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
+            if (!match && hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) match = true;
+            if (!match && gHasPropSent(d) && inMonth(d.LastUpdateDate)) match = true;
+            if (match && !opoSet.has(d.Id)) { opoSet.add(d.Id); opoList.push(d); }
         });
         opo = opoSet.size;
+        details.opo = opoList;
     } catch (e) { console.warn('[pm] OPO falhou:', team.name, e.message); }
 
     // Task pertence ao time se: SDR canonical do time OU deal no pipeline do time.
@@ -18088,29 +18134,31 @@ function pmComputeRealizado(team) {
     // com o mesmo cliente, sao 3 SALs de trabalho.
     let sal = 0;
     try {
-        const salSet = new Set();
+        const salList = [];
         meetings.forEach(t => {
             if (!nrm(t.Title).includes('reuniao agendada')) return;
             if (!inMonth(t.CreateDate)) return;
             if (!isTeamTask(t)) return;
-            salSet.add(t.Id);
+            salList.push({ ...t, __sdr: taskSdrCanon(t), __deal: t.DealId ? dealsIdx[t.DealId] : null });
         });
-        sal = salSet.size;
+        sal = salList.length;
+        details.sal = salList;
     } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
 
     // SQL — reunioes REALIZADAS (Finished=true) no mes atribuidas ao time
     let sql = 0;
     try {
-        const sqlSet = new Set();
+        const sqlList = [];
         meetings.forEach(t => {
             if (!nrm(t.Title).includes('reuniao realizada')) return;
             if (t.Finished !== true) return;
             const refDate = t.FinishDate || t.DateTime;
             if (!inMonth(refDate)) return;
             if (!isTeamTask(t)) return;
-            sqlSet.add(t.Id);
+            sqlList.push({ ...t, __sdr: taskSdrCanon(t), __deal: t.DealId ? dealsIdx[t.DealId] : null });
         });
-        sql = sqlSet.size;
+        sql = sqlList.length;
+        details.sql = sqlList;
     } catch (e) { console.warn('[pm] SQL falhou:', team.name, e.message); }
 
     // MQL e LEAD só fazem sentido pra Novos Negocios (Farmer/Sankhya são base morna/parceria, sem topo de funil próprio)
@@ -18128,12 +18176,14 @@ function pmComputeRealizado(team) {
                 return NN_SDR_TOKENS.some(s => name.includes(s));
             };
             const mqlSet = new Set();
+            const mqlList = [];
             allD.forEach(d => {
                 if (!inMonth(d.CreateDate)) return;
                 if (!isNnSdrCreator(d.CreatorId) && !meetingFilter(d)) return;
-                mqlSet.add(d.Id);
+                if (!mqlSet.has(d.Id)) { mqlSet.add(d.Id); mqlList.push(d); }
             });
             mql = mqlSet.size;
+            details.mql = mqlList;
         } catch (e) { console.warn('[pm] MQL Novos falhou:', e.message); mql = 0; }
 
         // LEAD = max(RD Station total, MQL Ploomes)
@@ -18144,6 +18194,9 @@ function pmComputeRealizado(team) {
     }
 
     console.log(`[pm] realizado END ${team.name}: LEAD=${lead} MQL=${mql} SAL=${sal} SQL=${sql} OPO=${opo} GO=${go}`);
+    // Cache global dos detalhes por time+stage pra drilldown ao clicar
+    window._pmRealizadoDetail = window._pmRealizadoDetail || {};
+    window._pmRealizadoDetail[team.id] = details;
     return { lead, mql, sal, sql, opo, go };
 }
 
@@ -18164,6 +18217,91 @@ function pmComputeFunnel(inputs, metaTotal) {
 // SaaStr, Bridge Group). Ordem: Lead->MQL, MQL->SAL, SAL->SQL, SQL->OPO, OPO->GO.
 // Mantem meta e ticket iguais aos configurados; recalcula o funil so trocando as taxas.
 const PM_BENCHMARK = { r1: 45, r2: 45, r3: 60, r4: 45, r5: 30 };
+
+// Drilldown: abre modal listando os deals/tasks que compoem o realizado do stage
+function showPmRealizadoDrilldown(teamId, stageKey) {
+    const team = (typeof PM_TEAMS !== 'undefined' ? PM_TEAMS : []).find(t => t.id === teamId);
+    const detail = window._pmRealizadoDetail?.[teamId]?.[stageKey] || [];
+    const stage = PM_STAGES.find(s => s.key === stageKey);
+    if (!team || !stage) return;
+
+    const modal = document.getElementById('pmDrilldownModal');
+    document.getElementById('pmDrillEyebrow').textContent = `${team.name} · ${stage.label} · ${stage.desc}`;
+    document.getElementById('pmDrillTitle').textContent = `${detail.length} ${stage.label === 'GO' ? 'negócios ganhos' : stage.label === 'OPO' ? 'propostas' : stage.label === 'SAL' ? 'reuniões agendadas' : stage.label === 'SQL' ? 'reuniões realizadas' : stage.label === 'MQL' ? 'MQLs' : 'itens'} no mês`;
+
+    const body = document.getElementById('pmDrillBody');
+    if (detail.length === 0) {
+        body.innerHTML = '<div class="pm-drill-empty">Sem itens pra listar.</div>';
+        modal.style.display = 'flex';
+        return;
+    }
+
+    const fmt = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+    const fmtShort = (n) => {
+        n = Number(n || 0);
+        if (n >= 1000) return 'R$ ' + (n/1000).toFixed(n >= 10000 ? 0 : 1).replace('.', ',') + 'k';
+        return fmt(n);
+    };
+    const fmtDate = (iso) => {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return '—'; }
+    };
+    const gMRR = (d) => (typeof getMRR === 'function') ? getMRR(d) : 0;
+    const gSetup = (d) => (typeof getSetup === 'function') ? getSetup(d) : 0;
+    const gOwner = (d) => (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
+    const gPipe = (d) => d.Pipeline?.Name || '';
+
+    // Ordenacao e coluna variam por stage
+    const isTaskStage = stageKey === 'sal' || stageKey === 'sql';
+
+    if (isTaskStage) {
+        // Tasks (reunioes agendadas/realizadas)
+        const rows = detail.slice().sort((a, b) => {
+            const da = new Date(a.CreateDate || a.DateTime || 0).getTime();
+            const db = new Date(b.CreateDate || b.DateTime || 0).getTime();
+            return db - da;
+        }).map(t => {
+            const deal = t.__deal;
+            const dealTitle = deal ? (deal.Title || '(sem título)') : '(sem deal vinculado)';
+            const dealUrl = deal ? `https://app.ploomes.com/Deals/${deal.Id}` : null;
+            const sdr = t.__sdr || '—';
+            const refDate = stageKey === 'sql' ? (t.FinishDate || t.DateTime) : (t.CreateDate || t.DateTime);
+            return `<div class="pm-drill-row">
+                <div class="pm-drill-main">
+                    ${dealUrl ? `<a href="${dealUrl}" target="_blank" class="pm-drill-link">${dealTitle.replace(/</g, '&lt;')}</a>` : `<span>${dealTitle.replace(/</g, '&lt;')}</span>`}
+                    <div class="pm-drill-meta">SDR: <b>${sdr}</b> · ${deal ? gPipe(deal) : ''}</div>
+                </div>
+                <div class="pm-drill-side">${fmtDate(refDate)}</div>
+            </div>`;
+        }).join('');
+        body.innerHTML = rows;
+    } else {
+        // Deals (MQL, OPO, GO)
+        const rows = detail.slice().sort((a, b) => gMRR(b) - gMRR(a)).map(d => {
+            const title = (d.Title || '(sem título)').replace(/</g, '&lt;');
+            const url = `https://app.ploomes.com/Deals/${d.Id}`;
+            const mrr = gMRR(d);
+            const setup = gSetup(d);
+            const owner = gOwner(d) || '—';
+            const stagePipe = `${gPipe(d)} · ${d.Stage?.Name || '—'}`;
+            return `<div class="pm-drill-row">
+                <div class="pm-drill-main">
+                    <a href="${url}" target="_blank" class="pm-drill-link">${title}</a>
+                    <div class="pm-drill-meta">${owner.split(' ')[0]} · ${stagePipe}</div>
+                </div>
+                <div class="pm-drill-side">${fmtShort(mrr)} MRR<div class="pm-drill-sub">+ ${fmtShort(setup)} Setup</div></div>
+            </div>`;
+        }).join('');
+        body.innerHTML = rows;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closePmDrilldown() {
+    const m = document.getElementById('pmDrilldownModal');
+    if (m) m.style.display = 'none';
+}
 
 function pmRenderBenchmark(results, metaTotal) {
     const el = document.getElementById('pmBenchmark');
@@ -18277,7 +18415,8 @@ function pmUpdateCalculations() {
             const row = c?.closest('.pm-funnel-row');
             const cReal = document.getElementById(`pmCountReal-${team.id}-${s.key}`);
             const bReal = document.getElementById(`pmBarReal-${team.id}-${s.key}`);
-            if (row) row.classList.remove('pm-realized-low', 'pm-realized-mid', 'pm-realized-good', 'pm-realized-neutral');
+            if (row) row.classList.remove('pm-realized-low', 'pm-realized-mid', 'pm-realized-good', 'pm-realized-neutral', 'pm-clickable');
+            if (row) { row.onclick = null; row.style.cursor = ''; }
             if (realizado && realizado[s.key] != null) {
                 const real = realizado[s.key];
                 const meta = stages[s.key] || 0;
@@ -18295,6 +18434,14 @@ function pmUpdateCalculations() {
                         else if (pct >= 30) row.classList.add('pm-realized-mid');
                         else row.classList.add('pm-realized-low');
                     }
+                }
+                // Clique na linha abre drilldown quando ha algo pra mostrar
+                const detail = window._pmRealizadoDetail?.[team.id]?.[s.key];
+                if (row && real > 0 && detail && detail.length > 0) {
+                    row.classList.add('pm-clickable');
+                    row.style.cursor = 'pointer';
+                    row.title = `Ver os ${real} ${s.label.toLowerCase()} do ${team.name}`;
+                    row.onclick = () => showPmRealizadoDrilldown(team.id, s.key);
                 }
             } else {
                 if (cReal) cReal.textContent = '—';
