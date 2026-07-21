@@ -18186,25 +18186,32 @@ function pmRenderBenchmark(results, metaTotal) {
             const stageLabel = PM_STAGES.find(s => s.key === key)?.label || key.toUpperCase();
             const benchVal = bench.stages[key];
             const realVal = r.stages[key];
-            const delta = realVal - benchVal;
-            const deltaPct = realVal > 0 ? Math.round((delta / realVal) * 100) : 0;
+            // Comparacao explicita: quanto MENOS/MAIS o benchmark exige vs o cenario atual
+            //   diff > 0 => benchmark PIOR (exige mais volume que o atual) => vermelho
+            //   diff < 0 => benchmark MELHOR (exige menos volume que o atual) => verde
+            const diff = benchVal - realVal;
+            const diffPct = realVal > 0 ? Math.round((diff / realVal) * 100) : 0;
             let deltaLabel = '';
+            let deltaTitle = '';
             let deltaClass = 'same';
-            if (delta > 0) {
-                // Real precisa mais que o benchmark => benchmark alivia
-                deltaLabel = `−${pmFmtInt(delta)} (${deltaPct}%)`;
+            if (diff < 0) {
+                // benchmark exige menos => o time precisaria de menos volume
+                deltaLabel = `↓ ${Math.abs(diffPct)}%`;
+                deltaTitle = `${Math.abs(diff)} a menos que hoje (${realVal} → ${benchVal})`;
                 deltaClass = 'down';
-            } else if (delta < 0) {
-                deltaLabel = `+${pmFmtInt(-delta)}`;
+            } else if (diff > 0) {
+                deltaLabel = `↑ ${diffPct}%`;
+                deltaTitle = `${diff} a mais que hoje (${realVal} → ${benchVal})`;
                 deltaClass = 'up';
             } else {
                 deltaLabel = '=';
+                deltaTitle = 'Igual ao cenario atual';
             }
             return `<div class="pmb-row ${key === 'go' ? 'go' : ''}">
                 <div class="pmb-stage">${stageLabel}</div>
                 <div class="pmb-stage" style="text-transform:none;font-weight:500;color:#cbd5e1;">${PM_STAGES.find(s => s.key === key)?.desc || ''}</div>
                 <div class="pmb-value">${pmFmtInt(benchVal)}</div>
-                <div class="pmb-delta ${deltaClass}" title="Diferenca vs cenario atual">${deltaLabel}</div>
+                <div class="pmb-delta ${deltaClass}" title="${deltaTitle}">${deltaLabel}</div>
             </div>`;
         }).join('');
 
@@ -18236,7 +18243,7 @@ function pmRenderBenchmark(results, metaTotal) {
             </div>
             <div class="pmb-taxes">${bmTaxes}</div>
         </div>
-        <p class="pmb-sub">Meta e ticket médio mantidos. Recalcula o funil reverso trocando só as taxas de conversão pelas de referência de mercado (Winning by Design / Bridge Group / SaaStr). O verde à direita mostra quanto o volume cairia se atingíssemos essas conversões.</p>
+        <p class="pmb-sub">Meta e ticket médio mantidos. Recalcula o funil reverso trocando só as taxas de conversão pelas de referência de mercado (Winning by Design / Bridge Group / SaaStr). À direita, cada linha mostra <span style="color:#4ade80;font-weight:700;">↓ verde</span> quando o volume no benchmark é <b>menor</b> que o atual (bom — o time trabalharia menos) e <span style="color:#f87171;font-weight:700;">↑ vermelho</span> quando é <b>maior</b> (o time precisaria de mais). Passe o mouse pra ver os números absolutos.</p>
         <div class="pmb-grid">${rows}</div>
     `;
 }
@@ -19808,11 +19815,9 @@ function renderForecast() {
         </div>
     `).join('');
 
-    // Totais consolidados (chão do mês = S1+S2; total = todas as 4 semanas)
+    // Total consolidado (todas as 4 semanas somadas)
     const totalGeralMrr   = WEEKS.reduce((s, w) => s + kpis[w.key].mrr, 0);
     const totalGeralSetup = WEEKS.reduce((s, w) => s + kpis[w.key].setup, 0);
-    const chaoMrr   = kpis['Semana 1'].mrr   + kpis['Semana 2'].mrr;
-    const chaoSetup = kpis['Semana 1'].setup + kpis['Semana 2'].setup;
 
     document.getElementById('fcTotalsGrid').innerHTML = `
         <div class="fc-total-group">
@@ -19828,20 +19833,6 @@ function renderForecast() {
                 </div>
             </div>
             <div class="fc-total-subtitle">Todas as semanas somadas</div>
-        </div>
-        <div class="fc-total-group">
-            <div class="fc-total-title">Chão do mês (S1 + S2)</div>
-            <div class="fc-total-pair">
-                <div class="fc-total-card">
-                    <div class="fc-total-value">R$ ${formatMoney(chaoMrr)}</div>
-                    <div class="fc-total-label">MRR (S1 + S2)</div>
-                </div>
-                <div class="fc-total-card">
-                    <div class="fc-total-value">R$ ${formatMoney(chaoSetup)}</div>
-                    <div class="fc-total-label">Setup (S1 + S2)</div>
-                </div>
-            </div>
-            <div class="fc-total-subtitle">Sem contar S3 e S4 — só o que a 1ª metade do mês entrega</div>
         </div>
     `;
 
