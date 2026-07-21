@@ -445,6 +445,7 @@ async function refreshOne(key, url) {
 // "quando o marcador foi aplicado pela primeira vez", mantemos um cache no Redis com
 // o MIN (menor data ja vista) por dealId. Uma vez guardado, so aceita valor MAIS ANTIGO.
 const FIELD_MARCADOR_DATE = 'deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A';
+const TAG_PROPOSTA_GERADA_ID = 60146563;
 const REDIS_KEY_FIRST_MARKER = 'firstMarkerDates';
 let firstMarkerCache = {}; // { dealId: 'YYYY-MM-DDTHH:mm:ss' }
 let firstMarkerCacheLoaded = false;
@@ -466,14 +467,28 @@ loadFirstMarkerCache();
 async function updateFirstMarkerDates(deals) {
     if (!firstMarkerCacheLoaded) await loadFirstMarkerCache();
     let updated = 0;
+    const nowISO = new Date().toISOString();
     (deals || []).forEach(d => {
-        if (!d?.Id || !Array.isArray(d.OtherProperties)) return;
-        const prop = d.OtherProperties.find(p => (p.FieldKey || '').toLowerCase() === FIELD_MARCADOR_DATE.toLowerCase());
-        if (!prop?.DateTimeValue) return;
+        if (!d?.Id) return;
+        // Fonte 1: campo Data Marcador (D7ED2D45) — preenchido pela Automacao do Ploomes
+        let candidate = null;
+        if (Array.isArray(d.OtherProperties)) {
+            const prop = d.OtherProperties.find(p => (p.FieldKey || '').toLowerCase() === FIELD_MARCADOR_DATE.toLowerCase());
+            if (prop?.DateTimeValue) candidate = prop.DateTimeValue;
+        }
+        // Fonte 2: Tag "Proposta Gerada" (60146563) aplicada mas sem D7ED2D45 preenchido
+        // (Automacao nao rodou pra esse deal, ou marcador foi aplicado manualmente).
+        // Usa "hoje" como proxy — data em que o backend viu a Tag pela primeira vez.
+        // Uma vez guardado, nao muda mais (MIN historico protege).
+        if (!candidate && Array.isArray(d.Tags)) {
+            const hasTag = d.Tags.some(t => t.TagId === TAG_PROPOSTA_GERADA_ID);
+            if (hasTag) candidate = nowISO;
+        }
+        if (!candidate) return;
+
         const current = firstMarkerCache[d.Id];
-        // Guarda se: (a) nunca vimos esse deal antes OU (b) o valor atual e MAIS ANTIGO que o guardado
-        if (!current || new Date(prop.DateTimeValue) < new Date(current)) {
-            firstMarkerCache[d.Id] = prop.DateTimeValue;
+        if (!current || new Date(candidate) < new Date(current)) {
+            firstMarkerCache[d.Id] = candidate;
             updated++;
         }
     });
