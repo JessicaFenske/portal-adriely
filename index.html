@@ -3336,11 +3336,46 @@
         .fc-lista-pipeline .fc-lista-title { color: #fcd34d; }
         .fc-lista-subtotal { font-size: 12px; font-weight: 600; color: #94a3b8; font-family: ui-monospace, "SF Mono", Consolas, monospace; text-align: right; }
         .fc-lista-body { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow-y: auto; }
-        .fc-lista-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 7px 10px; background: rgba(255,255,255,0.025); border-radius: 6px; align-items: center; font-size: 12px; cursor: pointer; transition: background 0.15s; }
+        .fc-lista-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.025); border-radius: 6px; align-items: center; font-size: 12px; transition: background 0.15s; }
         .fc-lista-item:hover { background: rgba(255,255,255,0.06); }
-        .fc-lista-item-title { color: #e5e7eb; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fc-lista-item-main { min-width: 0; }
+        .fc-lista-item-title { color: #e5e7eb; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+        .fc-lista-item-meta { color: #94a3b8; font-size: 11px; margin-top: 2px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+        .fc-lista-val { color: #cbd5e1; }
         .fc-lista-item-value { color: #94a3b8; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 11px; white-space: nowrap; text-align: right; }
         .fc-lista-empty { color: #6b7280; font-style: italic; text-align: center; padding: 20px 10px; font-size: 12px; }
+        .fc-lista-item-actions { display: flex; gap: 4px; }
+        .fc-lista-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.15s; }
+        .fc-lista-btn:hover { background: rgba(139,92,246,0.2); color: #a78bfa; border-color: rgba(139,92,246,0.35); }
+        .fc-lista-btn-danger:hover { background: rgba(239,68,68,0.18); color: #fca5a5; border-color: rgba(239,68,68,0.35); }
+        .fc-lista-item-link { color: #94a3b8; text-decoration: none; font-size: 11px; padding: 0 4px; }
+        .fc-lista-item-link:hover { color: #a78bfa; }
+        .fc-lista-manual-tag { background: rgba(139,92,246,0.18); color: #c4b5fd; border-radius: 4px; padding: 1px 6px; font-size: 9px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+        .fc-lista-actions { display: flex; gap: 6px; }
+        .fc-lista-add-btn { background: rgba(34,197,94,0.14); color: #86efac; border: 1px solid rgba(34,197,94,0.3); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .fc-lista-add-btn:hover { background: rgba(34,197,94,0.25); color: #bbf7d0; }
+        .fc-lista-pipeline .fc-lista-add-btn { background: rgba(245,158,11,0.14); color: #fcd34d; border-color: rgba(245,158,11,0.3); }
+        .fc-lista-pipeline .fc-lista-add-btn:hover { background: rgba(245,158,11,0.25); color: #fde68a; }
+        .fc-lista-subtotal-row { margin-bottom: 10px; }
+
+        /* Modal editor Forecast */
+        .fc-edit-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .fc-edit-modal-card { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; width: 100%; max-width: 480px; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+        .fc-edit-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .fc-edit-modal-title { font-size: 15px; font-weight: 700; color: #e5e7eb; }
+        .fc-edit-modal-close { background: transparent; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; }
+        .fc-edit-modal-close:hover { color: #f87171; }
+        .fc-edit-modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+        .fc-edit-modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .fc-edit-label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: #94a3b8; font-weight: 600; flex: 1; text-transform: uppercase; letter-spacing: 0.04em; }
+        .fc-edit-label input, .fc-edit-label select { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 9px 11px; color: #e5e7eb; font-size: 13px; font-family: inherit; text-transform: none; letter-spacing: normal; }
+        .fc-edit-label input:focus, .fc-edit-label select:focus { outline: none; border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.06); }
+        .fc-edit-label input:disabled { opacity: 0.55; cursor: not-allowed; }
+        .fc-edit-row { display: flex; gap: 10px; }
+        .fc-edit-btn-primary { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 7px; padding: 9px 18px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .fc-edit-btn-primary:hover { filter: brightness(1.1); }
+        .fc-edit-btn-secondary { background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .fc-edit-btn-secondary:hover { background: rgba(255,255,255,0.08); color: #e5e7eb; }
 
         .fc-chart-container {
             background: rgba(26, 26, 46, 0.7);
@@ -6599,16 +6634,69 @@
                     <div class="fc-lista-card fc-lista-garantido">
                         <div class="fc-lista-head">
                             <div class="fc-lista-title">✅ Forecast Garantido</div>
-                            <div class="fc-lista-subtotal" id="fcListaGarantidoSubtotal">—</div>
+                            <div class="fc-lista-actions">
+                                <button class="fc-lista-add-btn" onclick="openFcAddModal('garantido')">+ Adicionar</button>
+                            </div>
                         </div>
+                        <div class="fc-lista-subtotal-row"><span class="fc-lista-subtotal" id="fcListaGarantidoSubtotal">—</span></div>
                         <div class="fc-lista-body" id="fcListaGarantido"></div>
                     </div>
                     <div class="fc-lista-card fc-lista-pipeline">
                         <div class="fc-lista-head">
                             <div class="fc-lista-title">🔥 Pipeline · chance de entrar</div>
-                            <div class="fc-lista-subtotal" id="fcListaPipelineSubtotal">—</div>
+                            <div class="fc-lista-actions">
+                                <button class="fc-lista-add-btn" onclick="openFcAddModal('pipeline')">+ Adicionar</button>
+                            </div>
                         </div>
+                        <div class="fc-lista-subtotal-row"><span class="fc-lista-subtotal" id="fcListaPipelineSubtotal">—</span></div>
                         <div class="fc-lista-body" id="fcListaPipeline"></div>
+                    </div>
+                </div>
+
+                <!-- Modal editor/adicionar OPO -->
+                <div id="fcEditModal" class="fc-edit-modal" style="display:none;" onclick="if(event.target===this)closeFcEditModal()">
+                    <div class="fc-edit-modal-card">
+                        <div class="fc-edit-modal-head">
+                            <div class="fc-edit-modal-title">Editar OPO da lista</div>
+                            <button class="fc-edit-modal-close" onclick="closeFcEditModal()">×</button>
+                        </div>
+                        <div class="fc-edit-modal-body">
+                            <label class="fc-edit-label">Nome / cliente
+                                <input type="text" id="fcEditTitle" placeholder="ex: Cliente XYZ - Módulo Auditoria">
+                            </label>
+                            <label class="fc-edit-label">Vendedor (opcional)
+                                <input type="text" id="fcEditOwner" placeholder="Primeiro nome">
+                            </label>
+                            <div class="fc-edit-row">
+                                <label class="fc-edit-label">MRR (R$)
+                                    <input type="number" id="fcEditMrr" step="100" min="0">
+                                </label>
+                                <label class="fc-edit-label">Setup (R$)
+                                    <input type="number" id="fcEditSetup" step="100" min="0">
+                                </label>
+                            </div>
+                            <div class="fc-edit-row">
+                                <label class="fc-edit-label">Lista
+                                    <select id="fcEditBucket">
+                                        <option value="garantido">✅ Garantido</option>
+                                        <option value="pipeline">🔥 Pipeline chance</option>
+                                    </select>
+                                </label>
+                                <label class="fc-edit-label">Semana
+                                    <select id="fcEditSemana">
+                                        <option value="">— sem semana —</option>
+                                        <option value="Semana 1">Semana 1 (base)</option>
+                                        <option value="Semana 2">Semana 2 (provável)</option>
+                                        <option value="Semana 3">Semana 3 (esperado)</option>
+                                        <option value="Semana 4">Semana 4 (teto)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="fc-edit-modal-foot">
+                            <button class="fc-edit-btn-secondary" onclick="closeFcEditModal()">Cancelar</button>
+                            <button class="fc-edit-btn-primary" onclick="saveFcItemEditor()">Salvar</button>
+                        </div>
                     </div>
                 </div>
 
@@ -19022,6 +19110,47 @@ function getFcOverride(dealId, field) {
     const val = localStorage.getItem(`forecast_override_${dealId}_${field}`);
     return val !== null ? parseFloat(val) : null;
 }
+function setFcOverride(dealId, field, value) {
+    const k = `forecast_override_${dealId}_${field}`;
+    if (value === null || value === undefined || value === '') localStorage.removeItem(k);
+    else localStorage.setItem(k, String(value));
+}
+
+// Listas Forecast (Garantido / Pipeline): excluir, mover de semana, itens manuais
+function isFcListExcluded(dealId) {
+    return localStorage.getItem(`fc_list_excluded_${dealId}`) === '1';
+}
+function setFcListExcluded(dealId, val) {
+    const k = `fc_list_excluded_${dealId}`;
+    if (val) localStorage.setItem(k, '1'); else localStorage.removeItem(k);
+}
+function getFcListSemana(dealId) {
+    return localStorage.getItem(`fc_list_semana_${dealId}`) || null;
+}
+function setFcListSemana(dealId, semana) {
+    const k = `fc_list_semana_${dealId}`;
+    if (semana) localStorage.setItem(k, semana); else localStorage.removeItem(k);
+}
+function getFcManualItems() {
+    try { return JSON.parse(localStorage.getItem('fc_manual_items') || '[]'); }
+    catch { return []; }
+}
+function saveFcManualItems(arr) {
+    localStorage.setItem('fc_manual_items', JSON.stringify(arr || []));
+}
+function addFcManualItem(item) {
+    const arr = getFcManualItems();
+    arr.push({ ...item, id: `manual_${Date.now()}_${Math.floor(Math.random()*1000)}` });
+    saveFcManualItems(arr);
+}
+function removeFcManualItem(id) {
+    saveFcManualItems(getFcManualItems().filter(x => x.id !== id));
+}
+function updateFcManualItem(id, patch) {
+    const arr = getFcManualItems();
+    const i = arr.findIndex(x => x.id === id);
+    if (i >= 0) { arr[i] = { ...arr[i], ...patch }; saveFcManualItems(arr); }
+}
 
 function setFcPeriod(preset, btnEl) {
     document.querySelectorAll('.fc-period-btn').forEach(b => b.classList.remove('active'));
@@ -19177,7 +19306,11 @@ function resetFcOverride(dealId) {
 //   Garantido = deal em pipeline de vendas com Forecast preenchido (Semana 1/2/3/4)
 //   Pipeline chance = deal aberto em stage avancado (Reconhecimento/Consideracao/Formalizacao/Aprovado)
 //                     sem Forecast preenchido
-function renderFcListas() {
+// getFcListasData: retorna as listas Garantido + Pipeline chance ja com overrides
+// aplicados (excluidos removidos, MRR/Setup/Semana editados, itens manuais anexados).
+// Fonte unica usada por renderFcListas E pelas somas semanais do renderForecast,
+// garantindo consistencia entre lista e KPIs.
+function getFcListasData() {
     const FORECAST_MAP = {
         'Semana 1': 'S1', 'Semana 2': 'S2', 'Semana 3': 'S3', 'Semana 4': 'S4',
         'Pessimista': 'S1', 'Realista': 'S2', 'Otimista': 'S3'
@@ -19197,23 +19330,71 @@ function renderFcListas() {
         if (d?.Id && !seen.has(d.Id)) { seen.add(d.Id); allDeals.push(d); }
     });
 
-    // Garantido: aberto, sales pipeline, Forecast preenchido
+    // Normaliza um deal do Ploomes para o shape usado nas listas (ja com overrides aplicados)
+    const toRow = (d) => {
+        const semanaOv = getFcListSemana(d.Id);
+        const rawFc = getFc(d);
+        const semanaNormalizada = semanaOv || (rawFc ? normalizeScenario(rawFc) : null);
+        const mrrOv = getFcOverride(d.Id, 'mrr');
+        const setupOv = getFcOverride(d.Id, 'setup');
+        return {
+            id: d.Id,
+            manualId: null,
+            title: d.Title || '',
+            owner: (d.Owner?.Name || '').split(' ')[0],
+            url: `https://app.ploomes.com/Deals/${d.Id}`,
+            mrr: mrrOv !== null ? mrrOv : getMRR(d),
+            setup: setupOv !== null ? setupOv : getSetup(d),
+            semana: semanaNormalizada,
+            hasMrrOverride: mrrOv !== null,
+            hasSetupOverride: setupOv !== null,
+            hasSemanaOverride: !!semanaOv,
+            isManual: false
+        };
+    };
+
+    // Garantido: aberto + sales + tem Semana (via forecast prop OU via override manual de semana)
     const garantido = allDeals.filter(d => {
         if (d.StatusId !== 1) return false;
         if (!isSales(d)) return false;
+        if (isFcListExcluded(d.Id)) return false;
+        const semanaOv = getFcListSemana(d.Id);
+        if (semanaOv) return true;
         const fc = getFc(d);
         return fc && FORECAST_MAP[fc];
-    }).sort((a, b) => getMRR(b) - getMRR(a));
+    }).map(toRow);
 
-    // Pipeline chance: aberto, sales pipeline, stage avancado, SEM Forecast
+    // Pipeline chance: aberto + sales + stage avancado + SEM Semana (nem prop nem override)
     const pipeline = allDeals.filter(d => {
         if (d.StatusId !== 1) return false;
         if (!isSales(d)) return false;
+        if (isFcListExcluded(d.Id)) return false;
+        if (getFcListSemana(d.Id)) return false;
         const fc = getFc(d);
         if (fc && FORECAST_MAP[fc]) return false;
         const stageName = d.Stage?.Name || '';
         return stageAvancado.test(stageName);
-    }).sort((a, b) => getMRR(b) - getMRR(a));
+    }).map(toRow);
+
+    // Anexa itens manuais (bucket = 'garantido' entra no Garantido; 'pipeline' entra no Pipeline)
+    getFcManualItems().forEach(m => {
+        const row = {
+            id: m.id, manualId: m.id, title: m.title, owner: m.owner || '',
+            url: null, mrr: Number(m.mrr) || 0, setup: Number(m.setup) || 0,
+            semana: m.semana || null, hasMrrOverride: false, hasSetupOverride: false,
+            hasSemanaOverride: false, isManual: true
+        };
+        if (m.bucket === 'garantido') garantido.push(row);
+        else pipeline.push(row);
+    });
+
+    garantido.sort((a, b) => b.mrr - a.mrr);
+    pipeline.sort((a, b) => b.mrr - a.mrr);
+    return { garantido, pipeline };
+}
+
+function renderFcListas() {
+    const { garantido, pipeline } = getFcListasData();
 
     const fmt = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
     const fmtShort = (n) => {
@@ -19222,34 +19403,139 @@ function renderFcListas() {
         return fmt(n);
     };
 
-    const renderItems = (deals, showBadge) => {
-        if (deals.length === 0) return '<div class="fc-lista-empty">Nenhuma OPO no momento.</div>';
+    const semanaBadge = (semana) => {
+        if (!semana) return '<span class="badge badge-pipeline-default">Sem semana</span>';
+        if (semana === 'Semana 1') return '<span class="badge badge-semana-1">Semana 1</span>';
+        if (semana === 'Semana 2') return '<span class="badge badge-semana-2">Semana 2</span>';
+        if (semana === 'Semana 3') return '<span class="badge badge-semana-3">Semana 3</span>';
+        if (semana === 'Semana 4') return '<span class="badge badge-semana-4">Semana 4</span>';
+        return `<span class="badge badge-pipeline-default">${semana}</span>`;
+    };
+
+    const renderItems = (deals, bucket) => {
+        if (deals.length === 0) return '<div class="fc-lista-empty">Nenhuma OPO no momento. Use <b>+ Adicionar</b> para incluir manualmente.</div>';
         return deals.map(d => {
-            const mrr = getMRR(d);
-            const setup = getSetup(d);
-            const title = (d.Title || '').replace(/</g, '&lt;');
-            const badge = showBadge ? (getScenarioBadge ? getScenarioBadge(getFc(d)) : '') : '';
-            const owner = (d.Owner?.Name || '').split(' ')[0];
-            const url = `https://app.ploomes.com/Deals/${d.Id}`;
-            return `<div class="fc-lista-item" onclick="window.open('${url}', '_blank')" title="${title} — ${owner}">
-                <div class="fc-lista-item-title">${title}${badge ? ' ' + badge : ''}</div>
-                <div class="fc-lista-item-value">${fmtShort(mrr)} + ${fmtShort(setup)}</div>
+            const title = (d.title || '').replace(/</g, '&lt;');
+            const badge = bucket === 'garantido' ? semanaBadge(d.semana) : '';
+            const idAttr = d.isManual ? `data-manual-id="${d.manualId}"` : `data-deal-id="${d.id}"`;
+            const openBtn = d.url
+                ? `<a class="fc-lista-item-link" href="${d.url}" target="_blank" title="Abrir no Ploomes">↗</a>`
+                : '';
+            const manualBadge = d.isManual ? '<span class="fc-lista-manual-tag" title="Adicionado manualmente">manual</span>' : '';
+            return `<div class="fc-lista-item" ${idAttr}>
+                <div class="fc-lista-item-main">
+                    <div class="fc-lista-item-title">${title}${manualBadge} ${badge} ${openBtn}</div>
+                    <div class="fc-lista-item-meta">${d.owner ? d.owner + ' · ' : ''}<span class="fc-lista-val">${fmtShort(d.mrr)} MRR</span> + <span class="fc-lista-val">${fmtShort(d.setup)} Setup</span></div>
+                </div>
+                <div class="fc-lista-item-actions">
+                    <button class="fc-lista-btn" title="Editar valores e semana" onclick="openFcItemEditor('${bucket}', ${d.isManual ? "'" + d.manualId + "'" : d.id}, ${d.isManual})">✎</button>
+                    <button class="fc-lista-btn fc-lista-btn-danger" title="${d.isManual ? 'Remover item manual' : 'Excluir da lista'}" onclick="deleteFcItem('${bucket}', ${d.isManual ? "'" + d.manualId + "'" : d.id}, ${d.isManual})">×</button>
+                </div>
             </div>`;
         }).join('');
     };
 
     const gEl = document.getElementById('fcListaGarantido');
     const pEl = document.getElementById('fcListaPipeline');
-    if (gEl) gEl.innerHTML = renderItems(garantido, true);
-    if (pEl) pEl.innerHTML = renderItems(pipeline, false);
+    if (gEl) gEl.innerHTML = renderItems(garantido, 'garantido');
+    if (pEl) pEl.innerHTML = renderItems(pipeline, 'pipeline');
 
-    // Subtotais
-    const sumMrr = (arr) => arr.reduce((s, d) => s + getMRR(d), 0);
-    const sumSetup = (arr) => arr.reduce((s, d) => s + getSetup(d), 0);
+    const sumMrr = (arr) => arr.reduce((s, d) => s + Number(d.mrr || 0), 0);
+    const sumSetup = (arr) => arr.reduce((s, d) => s + Number(d.setup || 0), 0);
     const gSub = document.getElementById('fcListaGarantidoSubtotal');
     const pSub = document.getElementById('fcListaPipelineSubtotal');
     if (gSub) gSub.textContent = `${garantido.length} OPOs · MRR ${fmtShort(sumMrr(garantido))} · Setup ${fmtShort(sumSetup(garantido))}`;
     if (pSub) pSub.textContent = `${pipeline.length} OPOs · MRR ${fmtShort(sumMrr(pipeline))} · Setup ${fmtShort(sumSetup(pipeline))}`;
+}
+
+// ----- Handlers das listas Forecast -----
+function deleteFcItem(bucket, id, isManual) {
+    if (isManual) {
+        removeFcManualItem(id);
+    } else {
+        if (!confirm('Excluir esta OPO da lista? Não altera o Ploomes, só remove da visão.')) return;
+        setFcListExcluded(id, true);
+    }
+    renderForecast();
+}
+
+function openFcItemEditor(bucket, id, isManual) {
+    let title = '', mrr = 0, setup = 0, semana = '', owner = '';
+    if (isManual) {
+        const item = getFcManualItems().find(x => x.id === id);
+        if (!item) return;
+        title = item.title; mrr = item.mrr; setup = item.setup; semana = item.semana || ''; owner = item.owner || '';
+    } else {
+        const { garantido, pipeline } = getFcListasData();
+        const row = [...garantido, ...pipeline].find(x => x.id === id);
+        if (!row) return;
+        title = row.title; mrr = row.mrr; setup = row.setup; semana = row.semana || ''; owner = row.owner;
+    }
+    _fcEditorContext = { bucket, id, isManual };
+    document.getElementById('fcEditTitle').value = title;
+    document.getElementById('fcEditTitle').disabled = !isManual;
+    document.getElementById('fcEditOwner').value = owner;
+    document.getElementById('fcEditOwner').disabled = !isManual;
+    document.getElementById('fcEditMrr').value = mrr;
+    document.getElementById('fcEditSetup').value = setup;
+    document.getElementById('fcEditSemana').value = semana || (bucket === 'garantido' ? 'Semana 3' : '');
+    document.getElementById('fcEditBucket').value = bucket;
+    document.getElementById('fcEditModal').style.display = 'flex';
+}
+
+function openFcAddModal(bucket) {
+    _fcEditorContext = { bucket, id: null, isManual: true, isNew: true };
+    document.getElementById('fcEditTitle').value = '';
+    document.getElementById('fcEditTitle').disabled = false;
+    document.getElementById('fcEditOwner').value = '';
+    document.getElementById('fcEditOwner').disabled = false;
+    document.getElementById('fcEditMrr').value = '';
+    document.getElementById('fcEditSetup').value = '';
+    document.getElementById('fcEditSemana').value = bucket === 'garantido' ? 'Semana 3' : '';
+    document.getElementById('fcEditBucket').value = bucket;
+    document.getElementById('fcEditModal').style.display = 'flex';
+}
+
+function closeFcEditModal() {
+    document.getElementById('fcEditModal').style.display = 'none';
+    _fcEditorContext = null;
+}
+
+let _fcEditorContext = null;
+function saveFcItemEditor() {
+    if (!_fcEditorContext) return;
+    const title = document.getElementById('fcEditTitle').value.trim();
+    const owner = document.getElementById('fcEditOwner').value.trim();
+    const mrr = parseFloat(document.getElementById('fcEditMrr').value) || 0;
+    const setup = parseFloat(document.getElementById('fcEditSetup').value) || 0;
+    const semana = document.getElementById('fcEditSemana').value || null;
+    const bucket = document.getElementById('fcEditBucket').value || _fcEditorContext.bucket;
+
+    if (_fcEditorContext.isNew) {
+        if (!title) { alert('Preencha o nome da OPO.'); return; }
+        addFcManualItem({ title, owner, mrr, setup, semana: bucket === 'garantido' ? (semana || 'Semana 3') : (semana || null), bucket });
+    } else if (_fcEditorContext.isManual) {
+        updateFcManualItem(_fcEditorContext.id, {
+            title, owner, mrr, setup,
+            semana: bucket === 'garantido' ? (semana || 'Semana 3') : (semana || null),
+            bucket
+        });
+    } else {
+        // Deal real: override MRR/Setup + semana (se mudou de bucket, seta semana; se foi pra pipeline, apaga semana override)
+        setFcOverride(_fcEditorContext.id, 'mrr', mrr);
+        setFcOverride(_fcEditorContext.id, 'setup', setup);
+        if (bucket === 'garantido') {
+            setFcListSemana(_fcEditorContext.id, semana || 'Semana 3');
+        } else {
+            // Move para pipeline: excluir da lista Garantido apagando override de semana
+            // Mas isso deixaria a semana original do Ploomes intacta — para forçar sair do Garantido
+            // sem alterar Ploomes, marcamos excluído.
+            setFcListSemana(_fcEditorContext.id, null);
+            setFcListExcluded(_fcEditorContext.id, true);
+        }
+    }
+    closeFcEditModal();
+    renderForecast();
 }
 
 // Cenários agora representam SEMANAS do mês (S1=base garantida, S4=teto/upside).
@@ -19304,7 +19590,27 @@ function renderForecast() {
     ];
     const kpis = {};
     WEEKS.forEach(w => { kpis[w.key] = { mrr: 0, setup: 0 }; });
+
+    // KPIs semanais = uniao da lista Garantido (aplicando overrides e itens manuais)
+    // com o filtro de periodo do relatorio. A lista Garantido sempre entra nas somas
+    // (independe de closeDate), o filtro de periodo so afeta o restante do relatorio.
+    try {
+        const { garantido } = getFcListasData();
+        garantido.forEach(row => {
+            const s = row.semana;
+            if (s && kpis[s]) {
+                kpis[s].mrr += Number(row.mrr) || 0;
+                kpis[s].setup += Number(row.setup) || 0;
+            }
+        });
+    } catch (e) { console.warn('[fc] KPIs semanais garantidos:', e); }
+
+    // Aditivo: se algum deal filtrado tem forecast preenchido e NAO esta em Garantido
+    // (StatusId != 1 ou fora dos sales pipelines), soma no mesmo bucket. Cobre casos legados.
+    const garantidoIds = new Set();
+    try { getFcListasData().garantido.forEach(r => garantidoIds.add(String(r.id))); } catch (e) {}
     filtered.forEach(d => {
+        if (garantidoIds.has(String(d.id))) return;
         const s = d.forecast;
         if (kpis[s]) {
             kpis[s].mrr += getFcMrr(d);
