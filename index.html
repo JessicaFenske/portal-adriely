@@ -17804,63 +17804,81 @@ function pmReadInputs(teamId) {
 // Retorna { lead, mql, sal, sql, opo, go } — null quando estagio nao e trackeado.
 // Retorna null completo se caches nao estao populados ainda (evita mostrar 0 falso).
 function pmComputeRealizado(team) {
-    // Guard: precisa dos caches globais carregados. Se estiver undefined, sinaliza pra
-    // o caller esperar (evita "0" falso quando dashboard ainda esta hidratando).
-    if (typeof wonDeals === 'undefined' || typeof dashOpenDeals === 'undefined' || typeof dashMeetings === 'undefined') {
-        return null;
-    }
-    if (typeof getPipelineName !== 'function' || typeof getMRR !== 'function' || typeof norm !== 'function') {
-        return null;
-    }
+    const won  = (typeof wonDeals !== 'undefined' && wonDeals) || [];
+    const lost = (typeof lostDeals !== 'undefined' && lostDeals) || [];
+    const open = (typeof dashOpenDeals !== 'undefined' && dashOpenDeals) || [];
+    const meetings = (typeof dashMeetings !== 'undefined' && dashMeetings) || [];
+
+    console.log(`[pm] realizado START ${team.name} · won=${won.length} lost=${lost.length} open=${open.length} meetings=${meetings.length}`);
+
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
     const inMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart && t <= monthEnd; };
-    const commercialFilter = d => (team.commercialPipelines || []).includes(getPipelineName(d));
-    const meetingFilter = d => (team.meetingPipelines || []).includes(getPipelineName(d));
-    const allD = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
+
+    // Fallback local pra funcoes globais (se por alguma razao nao estiverem no escopo)
+    const gPipe = (d) => (typeof getPipelineName === 'function' ? getPipelineName(d) : (d.Pipeline?.Name || ''));
+    const gMRR = (d) => (typeof getMRR === 'function' ? getMRR(d) : 0);
+    const gSetup = (d) => (typeof getSetup === 'function' ? getSetup(d) : 0);
+    const gPropDate = (d) => (typeof getProposalDate === 'function' ? getProposalDate(d) : null);
+    const gHasPropSent = (d) => (typeof hasProposalSent === 'function' ? hasProposalSent(d) : false);
+    const nrm = (s) => (typeof norm === 'function' ? norm(s) : String(s||'').toLowerCase());
+
+    const commercialFilter = d => (team.commercialPipelines || []).includes(gPipe(d));
+    const meetingFilter = d => (team.meetingPipelines || []).includes(gPipe(d));
+    const allD = [...won, ...lost, ...open];
     const dealsIdx = {}; allD.forEach(d => { if (d?.Id) dealsIdx[d.Id] = d; });
 
-    // GO: deals ganhos no mes (commercial pipeline)
-    const go = (wonDeals || []).filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length;
+    // GO
+    let go = 0;
+    try { go = won.filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length; }
+    catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
-    // OPO: propostas enviadas no mes — regra unificada
-    const opoSet = new Set();
-    allD.forEach(d => {
-        if (!commercialFilter(d)) return;
-        if (inMonth(typeof getProposalDate === 'function' ? getProposalDate(d) : null)) { opoSet.add(d.Id); return; }
-        const hasValue = getMRR(d) > 0 || (typeof getSetup === 'function' ? getSetup(d) : 0) > 0;
-        if (hasValue && inMonth(d.CreateDate)) { opoSet.add(d.Id); return; }
-        if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
-    });
-    const opo = opoSet.size;
+    // OPO — regra unificada
+    let opo = 0;
+    try {
+        const opoSet = new Set();
+        allD.forEach(d => {
+            if (!commercialFilter(d)) return;
+            if (inMonth(gPropDate(d))) { opoSet.add(d.Id); return; }
+            const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
+            if (hasValue && inMonth(d.CreateDate)) { opoSet.add(d.Id); return; }
+            if (gHasPropSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
+        });
+        opo = opoSet.size;
+    } catch (e) { console.warn('[pm] OPO falhou:', team.name, e.message); }
 
-    // SQL: reunioes realizadas do time no mes (dedup por deal)
-    const sqlSet = new Set();
-    (dashMeetings || []).forEach(t => {
-        if (!norm(t.Title).includes('reuniao realizada')) return;
-        if (t.Finished !== true) return;
-        const refDate = t.FinishDate || t.DateTime;
-        if (!inMonth(refDate)) return;
-        const deal = t.DealId ? dealsIdx[t.DealId] : null;
-        if (!deal || !meetingFilter(deal)) return;
-        sqlSet.add(t.DealId || ('t' + t.Id));
-    });
-    const sql = sqlSet.size;
+    // SQL — reunioes realizadas do time no mes
+    let sql = 0;
+    try {
+        const sqlSet = new Set();
+        meetings.forEach(t => {
+            if (!nrm(t.Title).includes('reuniao realizada')) return;
+            if (t.Finished !== true) return;
+            const refDate = t.FinishDate || t.DateTime;
+            if (!inMonth(refDate)) return;
+            const deal = t.DealId ? dealsIdx[t.DealId] : null;
+            if (!deal || !meetingFilter(deal)) return;
+            sqlSet.add(t.DealId || ('t' + t.Id));
+        });
+        sql = sqlSet.size;
+    } catch (e) { console.warn('[pm] SQL falhou:', team.name, e.message); }
 
-    // SAL: reunioes agendadas do time no mes (por CreateDate da task)
-    const salSet = new Set();
-    (dashMeetings || []).forEach(t => {
-        if (!norm(t.Title).includes('reuniao agendada')) return;
-        if (!inMonth(t.CreateDate)) return;
-        const deal = t.DealId ? dealsIdx[t.DealId] : null;
-        if (!deal || !meetingFilter(deal)) return;
-        salSet.add(t.DealId || ('t' + t.Id));
-    });
-    const sal = salSet.size;
+    // SAL — reunioes agendadas do time no mes
+    let sal = 0;
+    try {
+        const salSet = new Set();
+        meetings.forEach(t => {
+            if (!nrm(t.Title).includes('reuniao agendada')) return;
+            if (!inMonth(t.CreateDate)) return;
+            const deal = t.DealId ? dealsIdx[t.DealId] : null;
+            if (!deal || !meetingFilter(deal)) return;
+            salSet.add(t.DealId || ('t' + t.Id));
+        });
+        sal = salSet.size;
+    } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
 
-    // MQL e Lead: nao trackeamos ainda por time (dependem de RD por canal + atribuicao)
-    console.log(`[pm] realizado ${team.name}: SAL=${sal} SQL=${sql} OPO=${opo} GO=${go} · dealsScanned=${allD.length} meetingsScanned=${(dashMeetings||[]).length}`);
+    console.log(`[pm] realizado END ${team.name}: SAL=${sal} SQL=${sql} OPO=${opo} GO=${go}`);
     return { lead: null, mql: null, sal, sql, opo, go };
 }
 
