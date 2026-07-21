@@ -19720,7 +19720,20 @@ function getFcListasData() {
         return fc && FORECAST_MAP[fc];
     }).map(toRow);
 
-    // Pipeline chance: aberto + sales + stage avancado + SEM Semana (nem prop nem override)
+    // Pipeline chance: whitelist manual da lista de forecast que a Jessica leva pros
+    // diretores. So aparecem deals cujo Title contem um dos termos abaixo (busca
+    // case-insensitive, sem acento). Reduz o ruido de 200 OPOs automáticas para os
+    // ~10 negocios curados na call de forecast.
+    const PIPELINE_WHITELIST = [
+        'hoya', 'cofermeta', 'transmog', 'base quimica', 'artvinco', 'rvb malhas',
+        'bioinstinto', 'ponto duplo', 'itabaiana', 'unimed campinas', 'terrinha'
+    ];
+    const nrm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const matchesWhitelist = (title) => {
+        const t = nrm(title);
+        return PIPELINE_WHITELIST.some(w => t.includes(w));
+    };
+
     const pipeline = allDeals.filter(d => {
         if (d.StatusId !== 1) return false;
         if (!isSales(d)) return false;
@@ -19728,8 +19741,7 @@ function getFcListasData() {
         if (getFcListSemana(d.Id)) return false;
         const fc = getFc(d);
         if (fc && FORECAST_MAP[fc]) return false;
-        const stageName = d.Stage?.Name || '';
-        return stageAvancado.test(stageName);
+        return matchesWhitelist(d.Title || '');
     }).map(toRow);
 
     // Anexa itens manuais (bucket = 'garantido' entra no Garantido; 'pipeline' entra no Pipeline)
