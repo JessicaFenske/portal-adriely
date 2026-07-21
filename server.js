@@ -2187,6 +2187,48 @@ const server = http.createServer(async (req, res) => {
         return res.end(text);
     }
 
+    // GET /api/ploomes/changelog-test?dealId=605003834
+    // Endpoint experimental — testa se `logs-api.ploomes.com` aceita a mesma User-Key
+    // do backend e devolve o payload bruto (com Old/NewObject) pra inspecao.
+    // Se funcionar, viabiliza o cache de "quando o marcador Proposta Gerada foi
+    // aplicado" via ChangeLog auditavel (nao via campo custom preenchido manualmente).
+    if (urlPath === '/api/ploomes/changelog-test' && req.method === 'GET') {
+        const user = getCurrentUser(req);
+        if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const urlObj = new URL(req.url, `https://${req.headers.host}`);
+        const dealId = urlObj.searchParams.get('dealId') || '';
+        try {
+            const results = {};
+            const attempts = [
+                { name: 'list-filter-item', url: `https://logs-api.ploomes.com/api/ChangeLog?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${encodeURIComponent(dealId)}&%24top=20&%24orderby=DateTime%20desc` },
+                { name: 'list-filter-item-account', url: `https://logs-api.ploomes.com/api/ChangeLog?%24filter=EntityId%20eq%202%20and%20ItemId%20eq%20${encodeURIComponent(dealId)}&%24top=20&%24orderby=DateTime%20desc&AccountId=6003045` },
+                { name: 'no-odata', url: `https://logs-api.ploomes.com/api/ChangeLog?EntityId=2&ItemId=${encodeURIComponent(dealId)}` }
+            ];
+            for (const at of attempts) {
+                try {
+                    const r = await new Promise((resolve, reject) => {
+                        const req2 = https.request(at.url, {
+                            method: 'GET',
+                            headers: {
+                                'User-Key': API_KEY,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
+                        }, resp => {
+                            let data = '';
+                            resp.on('data', c => data += c);
+                            resp.on('end', () => resolve({ status: resp.statusCode, body: data.slice(0, 4000) }));
+                        });
+                        req2.on('error', reject);
+                        req2.end();
+                    });
+                    results[at.name] = r;
+                } catch (e) { results[at.name] = { error: e.message }; }
+            }
+            return jsonReply(res, 200, { dealId, results });
+        } catch (e) { return jsonReply(res, 500, { error: e.message }); }
+    }
+
     // Resumo semanal de forecast — texto plano pronto pra colar no e-mail/Slack pra diretoria.
     // Abre no browser (autenticado por cookie), Ctrl+A/Ctrl+C, cola. Zero dev tools.
     // GET /api/ploomes/forecast-report[?names=Maqtron|Fortlev|...] — se names vier,
