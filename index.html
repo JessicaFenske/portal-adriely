@@ -1562,6 +1562,8 @@
         #view-planejamento-metas .pm-funnel-row.pm-realized-good .pm-count-real { color: #4ade80; }
         #view-planejamento-metas .pm-funnel-row.pm-realized-mid .pm-count-real { color: #fbbf24; }
         #view-planejamento-metas .pm-funnel-row.pm-realized-low .pm-count-real { color: #f87171; }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-neutral .pm-count-real { color: #cbd5e1; }
+        #view-planejamento-metas .pm-funnel-row.pm-realized-neutral { background: #1f2233; }
         #view-planejamento-metas .pm-funnel-row .pm-stage { position: relative; z-index: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
         #view-planejamento-metas .pm-funnel-row .pm-stage-desc { position: relative; z-index: 1; font-size: 10.5px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #view-planejamento-metas .pm-funnel-row .pm-count { position: relative; z-index: 1; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: #e5e7eb; text-align: right; min-width: 56px; }
@@ -17770,11 +17772,14 @@ function pmComputeRealRates(team, periodDays) {
 }
 
 function pmBuildTeamCard(team, real, saved, metaTotal) {
-    // Meta absoluta do time: prioridade goalAbs (novo, editável) > mix legado > default
+    // Meta absoluta do time: prioridade goalAbs (novo, editavel) > mix legado > default.
+    // 0/vazio/null caem no default do time — sem meta => sem funil reverso, e ai o realizado
+    // fica sem contexto (fica todo vermelho). Aplicar default resolve o zerado inicial.
     let teamMrr;
-    if (saved.goalAbs !== null && saved.goalAbs !== undefined && saved.goalAbs !== '') {
-        teamMrr = Number(saved.goalAbs);
-    } else if (saved.mix !== null && saved.mix !== undefined && saved.mix !== '') {
+    const goalAbsN = Number(saved.goalAbs);
+    if (Number.isFinite(goalAbsN) && goalAbsN > 0) {
+        teamMrr = goalAbsN;
+    } else if (saved.mix !== null && saved.mix !== undefined && saved.mix !== '' && Number(saved.mix) > 0) {
         teamMrr = (Number(saved.mix) / 100) * metaTotal;
     } else {
         teamMrr = (team.defaults.mix / 100) * metaTotal;
@@ -18012,7 +18017,9 @@ function pmComputeRealizado(team) {
         return !!(deal && meetingFilter(deal));
     };
 
-    // SAL — reunioes AGENDADAS no mes atribuidas ao time
+    // SAL — reunioes AGENDADAS no mes atribuidas ao time. Conta por TASK
+    // (nao dedup por deal) pra refletir volume real do SDR: se agendou 3 reunioes
+    // com o mesmo cliente, sao 3 SALs de trabalho.
     let sal = 0;
     try {
         const salSet = new Set();
@@ -18020,7 +18027,7 @@ function pmComputeRealizado(team) {
             if (!nrm(t.Title).includes('reuniao agendada')) return;
             if (!inMonth(t.CreateDate)) return;
             if (!isTeamTask(t)) return;
-            salSet.add(t.DealId || ('t' + t.Id));
+            salSet.add(t.Id);
         });
         sal = salSet.size;
     } catch (e) { console.warn('[pm] SAL falhou:', team.name, e.message); }
@@ -18035,7 +18042,7 @@ function pmComputeRealizado(team) {
             const refDate = t.FinishDate || t.DateTime;
             if (!inMonth(refDate)) return;
             if (!isTeamTask(t)) return;
-            sqlSet.add(t.DealId || ('t' + t.Id));
+            sqlSet.add(t.Id);
         });
         sql = sqlSet.size;
     } catch (e) { console.warn('[pm] SQL falhou:', team.name, e.message); }
@@ -18116,17 +18123,24 @@ function pmUpdateCalculations() {
             const row = c?.closest('.pm-funnel-row');
             const cReal = document.getElementById(`pmCountReal-${team.id}-${s.key}`);
             const bReal = document.getElementById(`pmBarReal-${team.id}-${s.key}`);
-            if (row) row.classList.remove('pm-realized-low', 'pm-realized-mid', 'pm-realized-good');
+            if (row) row.classList.remove('pm-realized-low', 'pm-realized-mid', 'pm-realized-good', 'pm-realized-neutral');
             if (realizado && realizado[s.key] != null) {
                 const real = realizado[s.key];
                 const meta = stages[s.key] || 0;
-                const pct = meta > 0 ? Math.round((real / meta) * 100) : 0;
-                if (cReal) cReal.textContent = `${pmFmtInt(real)} · ${pct}%`;
-                if (bReal) bReal.style.width = Math.min(100, (maxCount > 0 ? (real / maxCount) * 100 : 0)) + '%';
-                if (row) {
-                    if (pct >= 60) row.classList.add('pm-realized-good');
-                    else if (pct >= 30) row.classList.add('pm-realized-mid');
-                    else row.classList.add('pm-realized-low');
+                // Sem meta => neutro (nao pinta vermelho, so mostra o realizado)
+                if (meta <= 0) {
+                    if (cReal) cReal.textContent = pmFmtInt(real);
+                    if (bReal) bReal.style.width = '0%';
+                    if (row) row.classList.add('pm-realized-neutral');
+                } else {
+                    const pct = Math.round((real / meta) * 100);
+                    if (cReal) cReal.textContent = `${pmFmtInt(real)} · ${pct}%`;
+                    if (bReal) bReal.style.width = Math.min(100, (maxCount > 0 ? (real / maxCount) * 100 : 0)) + '%';
+                    if (row) {
+                        if (pct >= 60) row.classList.add('pm-realized-good');
+                        else if (pct >= 30) row.classList.add('pm-realized-mid');
+                        else row.classList.add('pm-realized-low');
+                    }
                 }
             } else {
                 if (cReal) cReal.textContent = '—';
