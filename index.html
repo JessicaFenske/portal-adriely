@@ -8939,19 +8939,29 @@ function getProposalDate(deal) {
     //    Usa o "Data Marcador" como referência da data
     return getMarcadorPropostaDate(deal);
 }
-// Lê marcadores customizados pra detectar "Proposta Gerada"
-// Procura em OtherProperties qualquer prop com ObjectValueName/StringValue = "Proposta Gerada"
-// e captura a Data Marcador correspondente
+// Data Marcador do Ploomes — FieldKey descoberto via inspecao (2026-07-21):
+// deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A eh gravado automaticamente quando o
+// marcador "Proposta Gerada" e ativado. A OData do Ploomes NAO retorna FieldName
+// legivel — so FieldKey (GUID). Busca antiga por FieldName nunca casava.
+const FIELD_MARCADOR_DATE = 'deal_D7ED2D45-3C8B-479E-B0B0-F8CB8E053E5A';
+
+// Le a data em que o marcador "Proposta Gerada" foi ativado. Se o campo Data
+// Marcador tem valor, o marcador foi ativado em algum momento — retorna a data.
+// Sem essa data, presume que nao houve marcador (mesmo que outra prop tenha
+// ObjectValueName "proposta gerada" — nesses casos falta a data pra usar).
 function getMarcadorPropostaDate(deal) {
     const props = deal?.OtherProperties || [];
     if (!props.length) return null;
+    // 1) Fonte primaria: FieldKey nativo do "Data Marcador"
+    const dataMarcadorProp = props.find(p => (p.FieldKey || '').toLowerCase() === FIELD_MARCADOR_DATE.toLowerCase());
+    if (dataMarcadorProp?.DateTimeValue) return dataMarcadorProp.DateTimeValue;
+    // 2) Fallback legado: busca por FieldName + ObjectValueName (nunca casa hoje
+    //    mas mantido por seguranca caso o Ploomes mude a API no futuro)
     let hasMarcador = false;
     let dataMarcador = null;
     for (const p of props) {
         const val = (p.ObjectValueName || p.StringValue || '').toLowerCase().trim();
-        if (val.includes('proposta gerada') || val.includes('proposta enviada')) {
-            hasMarcador = true;
-        }
+        if (val.includes('proposta gerada') || val.includes('proposta enviada')) hasMarcador = true;
         const fn = (p.FieldName || '').toLowerCase();
         if ((fn.includes('data') && fn.includes('marcador')) || fn === 'data do marcador') {
             if (p.DateTimeValue) dataMarcador = p.DateTimeValue;
@@ -8962,6 +8972,9 @@ function getMarcadorPropostaDate(deal) {
 // Retorna true se o deal tem qualquer sinal de proposta enviada
 // (data ou marcador), independente de a data estar preenchida
 function hasProposalSent(deal) {
+    // Cobre: (a) Data Proposta Enviada nativa; (b) Data Marcador preenchida
+    // (getProposalDate cai no marcador quando (a) esta vazia); (c) fallback
+    // legado por ObjectValueName/StringValue caso o Ploomes exponha o texto.
     if (getProposalDate(deal)) return true;
     const props = deal?.OtherProperties || [];
     for (const p of props) {
@@ -18201,8 +18214,11 @@ function pmComputeRealizado(team) {
 
     // OPO tem 2 medidas complementares:
     //  - opo (regra unificada): tudo que teve movimentacao de valor no mes (a+b+c) — pipeline health
-    //  - opoMarcador: so quem tem o campo "Data Proposta Enviada" preenchido OU o marcador
-    //    "Proposta Gerada" ativo (a+c). Mede compliance de registro no Ploomes.
+    //  - opoMarcador: estoque total no funil de deals com marcador "Proposta Gerada" ativo
+    //    OU campo "Data Proposta Enviada" preenchido — SEM filtro de data. Mede quantas
+    //    propostas estao vivas no pipeline (mesmo que geradas em meses anteriores).
+    //    O Ploomes nao expoe data de insercao do marcador de forma confiavel, entao usar
+    //    estoque total e mais util que tentar aproximar "marcador do mes" via LastUpdate.
     let opo = 0;
     let opoMarcador = 0;
     try {
@@ -18215,18 +18231,15 @@ function pmComputeRealizado(team) {
             const hasPropDate = inMonth(gPropDate(d));
             const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
             const hasValueMove = hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate));
-            // Marcador tolerante: se o deal tem o marcador Proposta Gerada ativo E foi
-            // criado OU tocado no mes, conta. Sem esse OR, deals cujo marcador foi
-            // inserido mas ninguem editou o deal depois nao apareciam.
-            const hasMarcador = gHasPropSent(d) && (inMonth(d.LastUpdateDate) || inMonth(d.CreateDate));
+            const hasMarcadorMonth = gHasPropSent(d) && (inMonth(d.LastUpdateDate) || inMonth(d.CreateDate));
 
-            // OPO regra unificada
-            if ((hasPropDate || hasValueMove || hasMarcador) && !opoSet.has(d.Id)) {
+            // OPO regra unificada — mantem restricao temporal (mes)
+            if ((hasPropDate || hasValueMove || hasMarcadorMonth) && !opoSet.has(d.Id)) {
                 opoSet.add(d.Id);
                 opoList.push(d);
             }
-            // OPO com marcador oficial
-            if ((hasPropDate || hasMarcador) && !marcadorSet.has(d.Id)) {
+            // OPO com marcador — estoque no funil, sem restricao de data
+            if (gHasPropSent(d) && !marcadorSet.has(d.Id)) {
                 marcadorSet.add(d.Id);
                 marcadorList.push(d);
             }
@@ -18578,7 +18591,7 @@ function pmUpdateCalculations() {
                 // registrado no Ploomes (indicador de compliance).
                 let extraSuffix = '';
                 if (s.key === 'opo' && realizado.opoMarcador != null) {
-                    extraSuffix = ` <span class="pm-count-marcador" title="Deals com Data Proposta Enviada preenchida OU marcador Proposta Gerada — proxy de compliance">${pmFmtInt(realizado.opoMarcador)} c/ marcador</span>`;
+                    extraSuffix = ` <span class="pm-count-marcador" title="Estoque total no funil de deals com marcador Proposta Gerada OU Data Proposta Enviada — sem restrição de data. Mede quantas propostas estão vivas no pipeline.">${pmFmtInt(realizado.opoMarcador)} no funil</span>`;
                 }
                 // Sem meta => neutro (nao pinta vermelho, so mostra o realizado)
                 if (meta <= 0) {
