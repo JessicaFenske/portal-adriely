@@ -11079,14 +11079,11 @@ function _cpRenderMarketingCockpit(me, _opts) {
     //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no mes) - captura deal antigo
     //       que teve valor preenchido/atualizado essa semana (proposta gerada agora)
     //   (c) fallback: tem marcador de proposta E LastUpdate no mes
-    //   (d) stage em Consideracao+ - deal ja passou pra proposta por definicao
-    const stageAvHall = /considera|aprovad|formaliz|negoci/i;
     const monthOpos = allDeals.filter(d => {
         if (inMonth(getProposalDate(d))) return true;
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
         if (hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) return true;
         if (hasProposalSent(d) && inMonth(d.LastUpdateDate)) return true;
-        if (stageAvHall.test(d.Stage?.Name || '') && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate))) return true;
         return false;
     });
 
@@ -12816,7 +12813,6 @@ function _cpRenderSdrAdvanced(ctx) {
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
         if (hasValue && (inRange(d.CreateDate, w) || inRange(d.LastUpdateDate, w))) return true;
         if (hasProposalSent(d) && inRange(d.LastUpdateDate, w)) return true;
-        if (/considera|aprovad|formaliz|negoci/i.test(d.Stage?.Name || '') && (inRange(d.CreateDate, w) || inRange(d.LastUpdateDate, w))) return true;
         return false;
     }).length);
 
@@ -14132,10 +14128,7 @@ function renderSection5() {
     //   (b) MRR ou Setup > 0 E (CreateDate OU LastUpdate no periodo) - captura deal antigo
     //       cujo valor foi preenchido/atualizado nessa janela
     //   (c) marcador de proposta + LastUpdate no periodo (fallback)
-    //   (d) stage em Consideracao+ (aprovado/formalizacao/negociacao) - deal ja passou de
-    //       Reconhecimento, entao ja e proposta por definicao
     const inR = (dt) => dt && inPeriodSection(dt, sp.start, sp.end);
-    const stageAvR = /considera|aprovad|formaliz|negoci/i;
     const proposalDeals = allD.filter(d => {
         if (!isSalesPipeline(d)) return false;
         if (!ownerMatchesGlobal(d)) return false;
@@ -14143,7 +14136,6 @@ function renderSection5() {
         const hasValue = (getMRR(d) > 0) || (getSetup(d) > 0);
         if (hasValue && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
         if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inR(d.LastUpdateDate)) return true;
-        if (stageAvR.test(d.Stage?.Name || '') && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
         return false;
     });
     window._sec5_deals = proposalDeals;
@@ -17630,14 +17622,11 @@ function pmComputeRealRates(team, periodDays) {
         const gMRR2 = (d) => (typeof getMRR === 'function') ? getMRR(d) : 0;
         const gSetup2 = (d) => (typeof getSetup === 'function') ? getSetup(d) : 0;
         const inR = (dt) => { if (!dt) return false; const t = new Date(dt); return t >= cutoff && t <= endPeriod; };
-        const stageAvOp = /considera|aprovad|formaliz|negoci/i;
         const isProposta = (d) => {
             if (inR(gPropDate2(d))) return true;
             // (b) tolerante: valor preenchido no deal (novo ou editado) dentro do periodo
             if ((gMRR2(d) > 0 || gSetup2(d) > 0) && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
             if (gHasProp2(d) && inR(d.LastUpdateDate)) return true;
-            // (d) deal ja em stage Consideracao+ - por definicao ja e proposta
-            if (stageAvOp.test(d.Stage?.Name || '') && (inR(d.CreateDate) || inR(d.LastUpdateDate))) return true;
             return false;
         };
         const propostasSet = new Set();
@@ -18124,12 +18113,9 @@ function pmComputeRealizado(team) {
     catch (e) { console.warn('[pm] GO falhou:', team.name, e.message); }
 
     // OPO tem 2 medidas complementares:
-    //  - opo (regra unificada): tudo que teve movimentacao de valor no mes (a+b+c+d) — pipeline health
-    //  - opoMarcador: proposta enviada de fato — campo Data Proposta OU marcador Proposta Gerada
-    //    OU deal em stage Consideracao+ (a+c+d, sem b). Regra do time: qualquer deal que passou
-    //    pra Consideracao ja e proposta, mesmo sem o campo/marcador preenchido no Ploomes.
-    const stageAvancadoRe = /considera|aprovad|formaliz|negoci/i;
-    const isAdvancedStage = (d) => stageAvancadoRe.test(d.Stage?.Name || '');
+    //  - opo (regra unificada): tudo que teve movimentacao de valor no mes (a+b+c) — pipeline health
+    //  - opoMarcador: so quem tem o campo "Data Proposta Enviada" preenchido OU o marcador
+    //    "Proposta Gerada" ativo (a+c). Mede compliance de registro no Ploomes.
     let opo = 0;
     let opoMarcador = 0;
     try {
@@ -18143,16 +18129,14 @@ function pmComputeRealizado(team) {
             const hasValue = gMRR(d) > 0 || gSetup(d) > 0;
             const hasValueMove = hasValue && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate));
             const hasMarcador = gHasPropSent(d) && inMonth(d.LastUpdateDate);
-            // (d) Stage avancado - deal ja passou de Reconhecimento
-            const hasStage = isAdvancedStage(d) && (inMonth(d.CreateDate) || inMonth(d.LastUpdateDate));
 
             // OPO regra unificada
-            if ((hasPropDate || hasValueMove || hasMarcador || hasStage) && !opoSet.has(d.Id)) {
+            if ((hasPropDate || hasValueMove || hasMarcador) && !opoSet.has(d.Id)) {
                 opoSet.add(d.Id);
                 opoList.push(d);
             }
-            // OPO com marcador oficial OU stage avancado (proposta de fato)
-            if ((hasPropDate || hasMarcador || hasStage) && !marcadorSet.has(d.Id)) {
+            // OPO com marcador oficial
+            if ((hasPropDate || hasMarcador) && !marcadorSet.has(d.Id)) {
                 marcadorSet.add(d.Id);
                 marcadorList.push(d);
             }
