@@ -17525,8 +17525,37 @@ function pmComputeRealRates(team, periodDays) {
         const cR = countAtOrAfter(reconhec[1]);
         const cC = countAtOrAfter(consid[1]);
         if (cR > 0) sqlToOpo = (cC / cR) * 100;
-        if (cC > 0) opoToGo = (wonCount / cC) * 100;
     }
+
+    // OPO -> GO usa a REGRA UNIFICADA de propostas (mesma sec5 / Hall / PM):
+    //   (a) Data Proposta Enviada no periodo OU
+    //   (b) MRR/Setup > 0 com CreateDate no periodo OU
+    //   (c) marcador "Proposta Gerada" com LastUpdate no periodo
+    // opoToGo = quantas dessas propostas fecharam won / total de propostas do periodo.
+    // Diferente do cumulativo por etapa: mede a taxa real das PROPOSTAS ENVIADAS
+    // que viraram deal ganho — foto executiva ("das OPOs no periodo, quantas fecharam?").
+    try {
+        const gPropDate2 = (d) => (typeof getProposalDate === 'function') ? getProposalDate(d) : null;
+        const gHasProp2 = (d) => (typeof hasProposalSent === 'function') ? hasProposalSent(d) : false;
+        const gMRR2 = (d) => (typeof getMRR === 'function') ? getMRR(d) : 0;
+        const gSetup2 = (d) => (typeof getSetup === 'function') ? getSetup(d) : 0;
+        const inR = (dt) => { if (!dt) return false; const t = new Date(dt); return t >= cutoff && t <= endPeriod; };
+        const isProposta = (d) => {
+            if (inR(gPropDate2(d))) return true;
+            if ((gMRR2(d) > 0 || gSetup2(d) > 0) && inR(d.CreateDate)) return true;
+            if (gHasProp2(d) && inR(d.LastUpdateDate)) return true;
+            return false;
+        };
+        const propostasSet = new Set();
+        [...won, ...lost, ...open].forEach(d => {
+            if (!pMatch(d)) return;
+            if (isProposta(d)) propostasSet.add(d.Id);
+        });
+        if (propostasSet.size > 0) {
+            const wonComProposta = won.filter(d => propostasSet.has(d.Id)).length;
+            opoToGo = (wonComProposta / propostasSet.size) * 100;
+        }
+    } catch (e) { console.warn('[pm] opoToGo (regra unificada) falhou:', team.name, e.message); }
 
     // SAL → SQL: agendadas vs realizadas do time no período
     // Replica lógica sec7Times (renderSection7Times) com 4 fontes: tasks agendadas +
