@@ -8932,11 +8932,12 @@ function getEffectiveSdr(deal) {
     return '';
 }
 function getProposalDate(deal) {
-    // 1) Campo nativo de Data Proposta Enviada
-    const p = getOtherProp_dash(deal.OtherProperties, FIELD_PROPOSAL_DATE);
-    if (p?.DateTimeValue) return p.DateTimeValue;
-    // 2) Fallback: marcador "Proposta Gerada" (autogerado pelo Ploomes em alguns deals)
-    //    Usa o "Data Marcador" como referência da data
+    // Regra do time: sempre a data em que o marcador "Proposta Gerada" foi aplicado
+    // pela PRIMEIRA VEZ. Usa exclusivamente o campo Data Marcador (D7ED2D45), gravado
+    // pela Automacao do Ploomes quando o marcador e aplicado. Ignora o campo nativo
+    // Data Proposta Enviada (12C64ECD) porque ele e digitavel manualmente e sujeito
+    // a preenchimento retroativo/errado — o que fazia deals antigos (Honda,
+    // Volkswagen) aparecerem em julho.
     return getMarcadorPropostaDate(deal);
 }
 // Data Marcador do Ploomes — FieldKey descoberto via inspecao (2026-07-21):
