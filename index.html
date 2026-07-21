@@ -1603,9 +1603,13 @@
         #view-planejamento-metas .pmb-card[data-team="sk"] .pmb-card-title { color: #fbbf24; }
         #view-planejamento-metas .pmb-card-meta { font-size: 10.5px; color: #94a3b8; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
         #view-planejamento-metas .pmb-rows { display: flex; flex-direction: column; gap: 4px; }
-        #view-planejamento-metas .pmb-row { display: grid; grid-template-columns: 42px 1fr auto auto; gap: 8px; align-items: center; padding: 7px 10px; background: #252838; border-radius: 7px; font-size: 12px; }
+        #view-planejamento-metas .pmb-row { display: grid; grid-template-columns: 42px 1fr auto auto auto; gap: 8px; align-items: center; padding: 7px 10px; background: #252838; border-radius: 7px; font-size: 12px; }
         #view-planejamento-metas .pmb-stage { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
         #view-planejamento-metas .pmb-value { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 17px; font-weight: 700; color: #e5e7eb; text-align: right; }
+        #view-planejamento-metas .pmb-taxa { display: flex; gap: 3px; align-items: baseline; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; background: rgba(0,0,0,0.28); border-radius: 5px; white-space: nowrap; }
+        #view-planejamento-metas .pmb-taxa-real { color: #cbd5e1; }
+        #view-planejamento-metas .pmb-taxa-arrow { font-weight: 700; }
+        #view-planejamento-metas .pmb-taxa-bench { color: #94a3b8; }
         #view-planejamento-metas .pmb-delta { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 10px; font-weight: 700; text-align: right; padding-left: 6px; white-space: nowrap; }
         #view-planejamento-metas .pmb-delta.down { color: #4ade80; }
         #view-planejamento-metas .pmb-delta.up { color: #f87171; }
@@ -18307,6 +18311,11 @@ function pmRenderBenchmark(results, metaTotal) {
     const el = document.getElementById('pmBenchmark');
     if (!el) return;
 
+    // Mapeia stage -> taxa que "produz" o volume dessa etapa no funil reverso
+    // (a taxa aplicada entre esta etapa e a proxima abaixo dela).
+    const STAGE_RATE_KEY = { lead: 'r1', mql: 'r2', sal: 'r3', sql: 'r4', opo: 'r5' };
+    const RATE_LABEL = { r1: 'Lead→MQL', r2: 'MQL→SAL', r3: 'SAL→SQL', r4: 'SQL→OPO', r5: 'OPO→GO' };
+
     const rows = results.map(r => {
         const team = r.team;
         // Recalcula com meta/ticket atuais + taxas benchmark
@@ -18316,6 +18325,8 @@ function pmRenderBenchmark(results, metaTotal) {
         inputs.ticket = Number(ticketEl?.value) || 0;
         if (!(inputs.ticket > 0)) return null;
         const bench = pmComputeFunnel(inputs, metaTotal);
+        // Le taxas reais do card atual (sao read-only, armazenadas em card.dataset.rN)
+        const realInputs = (typeof pmReadInputs === 'function') ? pmReadInputs(team.id) : {};
 
         // Para Farmer/Sankhya, esconde LEAD/MQL (nao trackeamos topo do funil desses times)
         const showStages = team.id === 'nn' ? ['lead','mql','sal','sql','opo','go'] : ['sal','sql','opo','go'];
@@ -18333,7 +18344,6 @@ function pmRenderBenchmark(results, metaTotal) {
             let deltaTitle = '';
             let deltaClass = 'same';
             if (diff < 0) {
-                // benchmark exige menos => o time precisaria de menos volume
                 deltaLabel = `↓ ${Math.abs(diffPct)}%`;
                 deltaTitle = `${Math.abs(diff)} a menos que hoje (${realVal} → ${benchVal})`;
                 deltaClass = 'down';
@@ -18345,10 +18355,28 @@ function pmRenderBenchmark(results, metaTotal) {
                 deltaLabel = '=';
                 deltaTitle = 'Igual ao cenario atual';
             }
+
+            // Coluna Taxa: mostra a taxa atual -> taxa bench da transicao que produz este volume
+            const rateKey = STAGE_RATE_KEY[key];
+            let taxaHtml = '';
+            if (rateKey) {
+                const rActual = realInputs[rateKey] || 0;
+                const rBench = PM_BENCHMARK[rateKey];
+                let arrow = '→';
+                let arrowColor = '#64748b';
+                if (rActual > rBench) { arrow = '↓'; arrowColor = '#f87171'; }  // taxa do time piora no bench
+                else if (rActual < rBench) { arrow = '↑'; arrowColor = '#4ade80'; }  // taxa do time melhora no bench
+                taxaHtml = `<div class="pmb-taxa" title="${RATE_LABEL[rateKey]}: sua taxa atual vs benchmark"><span class="pmb-taxa-real">${rActual}%</span><span class="pmb-taxa-arrow" style="color:${arrowColor};">${arrow}</span><span class="pmb-taxa-bench">${rBench}%</span></div>`;
+            } else {
+                // GO — sem taxa (ticket define). Mostra o ticket pra dar contexto.
+                taxaHtml = `<div class="pmb-taxa" title="Ticket medio usado nesta linha"><span class="pmb-taxa-real" style="color:#64748b;">Ticket ${pmFmtMoneyShort(inputs.ticket)}</span></div>`;
+            }
+
             return `<div class="pmb-row ${key === 'go' ? 'go' : ''}">
                 <div class="pmb-stage">${stageLabel}</div>
                 <div class="pmb-stage" style="text-transform:none;font-weight:500;color:#cbd5e1;">${PM_STAGES.find(s => s.key === key)?.desc || ''}</div>
                 <div class="pmb-value">${pmFmtInt(benchVal)}</div>
+                ${taxaHtml}
                 <div class="pmb-delta ${deltaClass}" title="${deltaTitle}">${deltaLabel}</div>
             </div>`;
         }).join('');
