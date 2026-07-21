@@ -18849,16 +18849,26 @@ function getContactCargo(d) {
     }
     return '';
 }
-// Detecta cargo de decisão (heurística pt-BR + termos comuns em inglês).
+// Detecta cargo qualificado como MQL (decisor OU profissional de TI).
 // Inclui:
-//   PT-BR: presidente/VP, diretor, gerente, gestor (senior BR), head, coordenador,
-//          supervisor, sócio/fundador/proprietário/dono, líder, chefe, superintendente
-//   EN:    CEO/CTO/CFO/COO/CMO/CRO/CIO, president, manager, director, head, lead,
-//          chief, founder, owner, principal
+//   PT-BR: presidente/VP, diretor, gerente, gestor, head, coordenador, supervisor,
+//          sócio/fundador/proprietário/dono, líder, chefe, superintendente
+//   EN:    CEO/CxO, president, manager, director, head, lead, chief, founder,
+//          owner, principal
+//   TI:    TI, tecnologia, tech, informática, sistemas, desenvolvedor/developer/dev,
+//          programador, arquiteto, engenheiro de software/sistemas/dados, devops,
+//          SRE, DBA, product owner/PO, data engineer/analyst/scientist/architect.
+//          Profissionais de TI sao implementadores/influenciadores de compra SaaS.
 function isCargoDecisao(cargo) {
     if (!cargo) return false;
     const c = cargo.toLowerCase();
-    return /\b(ceo|cto|cfo|coo|cmo|cro|cio|presidente|president|vice[\s-]?presidente|vp|diretor|director|gerente|gestor|manager|head|coordenador|coord|supervisor|founder|fundador|s[oó]cio|owner|proprietário|proprietario|dono|líder|lider|lead|chefe|chief|superintendente|principal)\b/.test(c);
+    // (a) Cargos de decisao (coordenador+)
+    if (/\b(ceo|cto|cfo|coo|cmo|cro|cio|presidente|president|vice[\s-]?presidente|vp|diretor|director|gerente|gestor|manager|head|coordenador|coord|supervisor|founder|fundador|s[oó]cio|owner|proprietário|proprietario|dono|líder|lider|lead|chefe|chief|superintendente|principal)\b/.test(c)) return true;
+    // (b) Profissionais de TI (mesmo em nivel tecnico)
+    if (/\b(ti|tecnologia|tech|informatica|informática|sistemas|desenvolvedor|developer|dev|programador|arquiteto|devops|sre|dba|product owner|po)\b/.test(c)) return true;
+    if (/\b(data|software)\s+(engineer|analyst|scientist|architect)\b/.test(c)) return true;
+    if (/\bengenheiro\s+de\s+(software|sistemas|dados)\b/.test(c)) return true;
+    return false;
 }
 
 function showDrilldown(title, deals, columns, type) {
