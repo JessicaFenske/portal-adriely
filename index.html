@@ -763,6 +763,8 @@
             white-space: nowrap;
         }
         .sec1-chip.ipca .sec1-chip-value { color: #c084fc; }
+        .sec1-chip.ticket .sec1-chip-value { color: #22d3ee; }
+        .sec1-chip.ticket .sec1-chip-label { color: #7dd3fc; }
         .sec1-chip.total {
             background: rgba(108,63,181,0.10);
             border-color: rgba(108,63,181,0.30);
@@ -9183,6 +9185,8 @@ function renderSection1() {
     const totalIPCA = ipcaDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalSetupWon = regularDeals.reduce((s, d) => s + getSetup(d), 0);
     const totalFaturado = totalMRRRegular + totalSetupWon;
+    // Ticket medio MRR novo (sem IPCA) — soma MRR regular / qtd de negocios regulares
+    const ticketMedio = regularDeals.length > 0 ? totalMRRRegular / regularDeals.length : 0;
     // Label do período pra subtítulo do hero
     const periodKey = (document.getElementById('periodSec1') || {}).value || 'thisMonth';
     const periodLabels = {
@@ -9212,6 +9216,10 @@ function renderSection1() {
                 <div class="sec1-chip">
                     <div class="sec1-chip-label">Setup (one-time)</div>
                     <div class="sec1-chip-value">R$ ${formatMoney(totalSetupWon)}</div>
+                </div>
+                <div class="sec1-chip ticket" title="MRR novo dividido pela quantidade de negócios regulares (IPCA fora)">
+                    <div class="sec1-chip-label">Ticket médio</div>
+                    <div class="sec1-chip-value">R$ ${formatMoney(ticketMedio)}</div>
                 </div>
                 <div class="sec1-chip total">
                     <div class="sec1-chip-label">Total faturado</div>
