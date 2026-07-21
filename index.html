@@ -9104,13 +9104,15 @@ function renderSection1() {
     const pf = document.getElementById('wonPipelineFilter').value;
     const deals = filteredWon(pf, sp);
     window._sec1_data = deals;
-    // Separa MRR regular do MRR IPCA (reajuste de clientes existentes)
+    // Separa MRR regular do MRR IPCA (reajuste automatico, nao e venda nova).
+    // IPCA fica exibido no chip informativo, mas fora da contagem de negocios,
+    // do Setup e do Total faturado — la e so venda nova.
     const ipcaDeals = deals.filter(d => getPipelineName(d) === 'Farmer IPCA');
     const regularDeals = deals.filter(d => getPipelineName(d) !== 'Farmer IPCA');
     const totalMRRRegular = regularDeals.reduce((s, d) => s + getMRR(d), 0);
     const totalIPCA = ipcaDeals.reduce((s, d) => s + getMRR(d), 0);
-    const totalSetupWon = deals.reduce((s, d) => s + getSetup(d), 0);
-    const totalFaturado = totalMRRRegular + totalIPCA + totalSetupWon;
+    const totalSetupWon = regularDeals.reduce((s, d) => s + getSetup(d), 0);
+    const totalFaturado = totalMRRRegular + totalSetupWon;
     // Label do período pra subtítulo do hero
     const periodKey = (document.getElementById('periodSec1') || {}).value || 'thisMonth';
     const periodLabels = {
@@ -9130,7 +9132,7 @@ function renderSection1() {
             <div class="sec1-hero-main">
                 <span class="sec1-hero-eyebrow"><span class="dot"></span>MRR novo fechado ${periodLabel}</span>
                 <div class="sec1-hero-value">R$ ${formatMoney(totalMRRRegular)}</div>
-                <div class="sec1-hero-sub">${deals.length} negócio${deals.length === 1 ? '' : 's'} fechado${deals.length === 1 ? '' : 's'} · receita recorrente que entra todo mês</div>
+                <div class="sec1-hero-sub">${regularDeals.length} negócio${regularDeals.length === 1 ? '' : 's'} fechado${regularDeals.length === 1 ? '' : 's'}${ipcaDeals.length > 0 ? ` <span style="color:#94a3b8;">· ${ipcaDeals.length} reajuste${ipcaDeals.length === 1 ? '' : 's'} IPCA (fora da conta)</span>` : ''} · receita recorrente que entra todo mês</div>
             </div>
             <div class="sec1-hero-chips">
                 <div class="sec1-chip ipca">
