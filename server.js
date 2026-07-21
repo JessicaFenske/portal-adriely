@@ -2030,9 +2030,40 @@ const server = http.createServer(async (req, res) => {
     // PPT de forecast — gerado server-side com dados frescos do cache Ploomes.
     // Abre no browser autenticado, faz download automatico do .pptx.
     // GET /api/ploomes/forecast-ppt?since=YYYY-MM-DD (default: 7 dias atras)
+    // GET /api/ploomes/forecast-ppt?debug=1 — retorna JSON com contagens (nao gera PPT)
     if (urlPath === '/api/ploomes/forecast-ppt' && req.method === 'GET') {
         const user = getCurrentUser(req);
         if (!user) return jsonReply(res, 401, { error: 'not authenticated' });
+        const urlObjDbg = new URL(req.url, `https://${req.headers.host}`);
+        if (urlObjDbg.searchParams.get('debug') === '1') {
+            return jsonReply(res, 200, {
+                cache_status: {
+                    won: (responseCache.won?.data?.value || []).length,
+                    lost: (responseCache.lost?.data?.value || []).length,
+                    open: (responseCache.open?.data?.value || []).length,
+                    forecast: (responseCache.forecast?.data?.value || []).length,
+                    meetings: (responseCache.meetings?.data?.value || []).length,
+                    users: (responseCache.users?.data?.value || []).length
+                },
+                last_refresh: {
+                    won: responseCache.won?.timestamp,
+                    open: responseCache.open?.timestamp,
+                    forecast: responseCache.forecast?.timestamp
+                },
+                errors: {
+                    won: responseCache.won?.error,
+                    open: responseCache.open?.error,
+                    forecast: responseCache.forecast?.error,
+                    meetings: responseCache.meetings?.error
+                },
+                sample_won_deal: (responseCache.won?.data?.value || [])[0] ? {
+                    id: responseCache.won.data.value[0].Id,
+                    title: responseCache.won.data.value[0].Title,
+                    pipeline: responseCache.won.data.value[0].Pipeline?.Name,
+                    hasOtherProperties: (responseCache.won.data.value[0].OtherProperties || []).length
+                } : null
+            });
+        }
         try {
             const { generateForecastPpt } = require('./ppt-forecast');
             const urlObj = new URL(req.url, `https://${req.headers.host}`);
