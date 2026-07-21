@@ -18829,10 +18829,17 @@ function exportToExcel(data, columns, filename) {
 
 // Helper: extrai cargo do contato do deal (Ploomes JobTitle nativo + fallback custom fields)
 function getContactCargo(d) {
+    // Fonte principal (Ploomes): Deal.Person.Role.Name — Person eh a pessoa
+    // de contato do deal (PersonId), Contact eh a empresa. RoleId aponta pra
+    // uma tabela de Roles; expand=Role resolve o Name.
+    if (d?.Person?.Role?.Name) return String(d.Person.Role.Name).trim();
+    if (d?.Person?.JobTitle) return String(d.Person.JobTitle).trim();
+    // Fallbacks legados (caso o backend nao expanda Person em algum endpoint)
     const c = d.Contact;
     if (!c) return '';
     if (c.JobTitle) return String(c.JobTitle).trim();
-    if (c.Role) return String(c.Role).trim();
+    if (typeof c.Role === 'string' && c.Role) return c.Role.trim();
+    if (c.Role?.Name) return String(c.Role.Name).trim();
     const props = c.OtherProperties || [];
     for (const p of props) {
         const fn = (p.FieldName || '').toLowerCase();
