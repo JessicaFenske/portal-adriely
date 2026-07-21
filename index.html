@@ -17678,7 +17678,10 @@ function pmBuildTeamCard(team, real, saved, metaTotal) {
     }
     // Ticket sempre pré-preenchido com o real do dashboard (ignora saved.ticket antigo).
     // Continua editável, mas ao recarregar a view volta pro real. Fallback 2000 se sem amostra.
-    const ticket = real.ticket > 0 ? Math.round(real.ticket) : 2000;
+    // Override por time (planejamento acordado com liderança) — Farmer usa R$ 2.500 em vez do real (~R$ 7k)
+    // porque a base atual tem tickets muito grandes que enviesam o cálculo do funil reverso.
+    const TICKET_OVERRIDES = { fm: 2500 };
+    const ticket = TICKET_OVERRIDES[team.id] || (real.ticket > 0 ? Math.round(real.ticket) : 2000);
     // Taxas de conversão NÃO são editáveis — evita erro humano. Usa REAL do dashboard
     // quando disponível, senão fallback pros defaults do time (chutes calibrados).
     // Se real for 0 (ex: Farmer SAL→SQL sem compliance), também usa default pra evitar
@@ -17799,15 +17802,24 @@ function pmReadInputs(teamId) {
 
 // Conta o que ja foi realizado ate hoje pra um time (mes corrente).
 // Retorna { lead, mql, sal, sql, opo, go } — null quando estagio nao e trackeado.
+// Retorna null completo se caches nao estao populados ainda (evita mostrar 0 falso).
 function pmComputeRealizado(team) {
+    // Guard: precisa dos caches globais carregados. Se estiver undefined, sinaliza pra
+    // o caller esperar (evita "0" falso quando dashboard ainda esta hidratando).
+    if (typeof wonDeals === 'undefined' || typeof dashOpenDeals === 'undefined' || typeof dashMeetings === 'undefined') {
+        return null;
+    }
+    if (typeof getPipelineName !== 'function' || typeof getMRR !== 'function' || typeof norm !== 'function') {
+        return null;
+    }
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59).getTime();
     const inMonth = (iso) => { if (!iso) return false; const t = new Date(iso).getTime(); return t >= monthStart && t <= monthEnd; };
-    const commercialFilter = d => team.commercialPipelines.includes(getPipelineName(d));
-    const meetingFilter = d => team.meetingPipelines.includes(getPipelineName(d));
+    const commercialFilter = d => (team.commercialPipelines || []).includes(getPipelineName(d));
+    const meetingFilter = d => (team.meetingPipelines || []).includes(getPipelineName(d));
     const allD = [...(wonDeals || []), ...(lostDeals || []), ...(dashOpenDeals || [])];
-    const dealsIdx = {}; allD.forEach(d => { dealsIdx[d.Id] = d; });
+    const dealsIdx = {}; allD.forEach(d => { if (d?.Id) dealsIdx[d.Id] = d; });
 
     // GO: deals ganhos no mes (commercial pipeline)
     const go = (wonDeals || []).filter(d => commercialFilter(d) && inMonth(d.FinishDate)).length;
@@ -17816,9 +17828,8 @@ function pmComputeRealizado(team) {
     const opoSet = new Set();
     allD.forEach(d => {
         if (!commercialFilter(d)) return;
-        if (inMonth(getProposalDate(d))) { opoSet.add(d.Id); return; }
-        const hasValue = (typeof getMRR === 'function' ? getMRR(d) : 0) > 0
-                      || (typeof getSetup === 'function' ? getSetup(d) : 0) > 0;
+        if (inMonth(typeof getProposalDate === 'function' ? getProposalDate(d) : null)) { opoSet.add(d.Id); return; }
+        const hasValue = getMRR(d) > 0 || (typeof getSetup === 'function' ? getSetup(d) : 0) > 0;
         if (hasValue && inMonth(d.CreateDate)) { opoSet.add(d.Id); return; }
         if (typeof hasProposalSent === 'function' && hasProposalSent(d) && inMonth(d.LastUpdateDate)) { opoSet.add(d.Id); return; }
     });
@@ -17831,7 +17842,7 @@ function pmComputeRealizado(team) {
         if (t.Finished !== true) return;
         const refDate = t.FinishDate || t.DateTime;
         if (!inMonth(refDate)) return;
-        const deal = dealsIdx[t.DealId];
+        const deal = t.DealId ? dealsIdx[t.DealId] : null;
         if (!deal || !meetingFilter(deal)) return;
         sqlSet.add(t.DealId || ('t' + t.Id));
     });
@@ -17842,13 +17853,14 @@ function pmComputeRealizado(team) {
     (dashMeetings || []).forEach(t => {
         if (!norm(t.Title).includes('reuniao agendada')) return;
         if (!inMonth(t.CreateDate)) return;
-        const deal = dealsIdx[t.DealId];
+        const deal = t.DealId ? dealsIdx[t.DealId] : null;
         if (!deal || !meetingFilter(deal)) return;
         salSet.add(t.DealId || ('t' + t.Id));
     });
     const sal = salSet.size;
 
     // MQL e Lead: nao trackeamos ainda por time (dependem de RD por canal + atribuicao)
+    console.log(`[pm] realizado ${team.name}: SAL=${sal} SQL=${sql} OPO=${opo} GO=${go} · dealsScanned=${allD.length} meetingsScanned=${(dashMeetings||[]).length}`);
     return { lead: null, mql: null, sal, sql, opo, go };
 }
 
