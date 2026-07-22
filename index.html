@@ -12120,6 +12120,27 @@ function _cpImpersonateAsSdr(sdrName) {
 // State do filtro de busca — reusa entre renders
 let _cpSdrLeadsState = { search: '', status: 'aberto', category: null };
 
+// Marca manual de "atuei hoje" — permite o SDR tirar lead do Top mesmo sem ter
+// registrado a interacao no Ploomes ainda (o registro pode demorar; a lista precisa
+// avancar). Reset natural: chave e por dia, entao amanha volta pra zero.
+function _sdrAtuadoKey() {
+    const d = new Date();
+    return `sdr_leads_atuados_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function _sdrAtuadosHoje() {
+    try { return JSON.parse(localStorage.getItem(_sdrAtuadoKey()) || '[]'); } catch { return []; }
+}
+function _sdrIsAtuado(dealId) { return _sdrAtuadosHoje().includes(String(dealId)); }
+function _sdrToggleAtuado(dealId, canonicalSdr) {
+    const list = _sdrAtuadosHoje();
+    const id = String(dealId);
+    const idx = list.indexOf(id);
+    if (idx >= 0) list.splice(idx, 1); else list.push(id);
+    try { localStorage.setItem(_sdrAtuadoKey(), JSON.stringify(list)); } catch (e) {}
+    // Re-render pra o lead sair (ou voltar) do Top imediatamente
+    if (typeof _cpRenderSdrCockpit === 'function' && canonicalSdr) _cpRenderSdrCockpit(canonicalSdr);
+}
+
 // Score de temperatura por lead — usado pra priorizar "Top leads pra hoje".
 // Combina sinais de urgência + fit + prontidão pra fechar.
 function _sdrLeadScore(deal, cats) {
@@ -12939,18 +12960,22 @@ function _cpRenderSdrCockpit(canonicalSdr) {
         const cats = _sdrLeadCategoriesOfDeal(d, nowTop);
         return { deal: d, cats, score: _sdrLeadScore(d, cats), reason: _sdrLeadTopReason(d, cats) };
     })
-    // Exclui leads ja tocados hoje: apos SDR registrar interacao/reuniao no Ploomes,
-    // o lead vira "Retomado hoje" e sai do Top no proximo refresh do cache. Isso da
-    // rotatividade — a lista sempre mostra os proximos 5 que faltam atuar.
-    .filter(x => !x.cats.includes('retomado_hoje'))
+    // Exclui leads:
+    //  1. Ja tocados hoje via interacao/reuniao registrada no Ploomes (categoria retomado_hoje)
+    //  2. Marcados manualmente como "atuei" no proprio dashboard (checkbox — persiste em localStorage por dia)
+    .filter(x => !x.cats.includes('retomado_hoje') && !_sdrIsAtuado(x.deal.Id))
     .filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
     let topLeadsHtml = '';
     if (scored.length > 0) {
+        const atuadosCount = _sdrAtuadosHoje().length;
+        const atuadosBadge = atuadosCount > 0
+            ? `<span style="margin-left:8px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:700;">✓ ${atuadosCount} atuado${atuadosCount === 1 ? '' : 's'} hoje</span>`
+            : '';
         topLeadsHtml = `
-            <div class="cp-topleads-head" style="margin:18px 0 10px;display:flex;justify-content:space-between;align-items:baseline;">
-                <div style="font-size:13px;font-weight:700;color:#fbbf24;">🔥 Top leads pra pegar hoje</div>
-                <div style="font-size:11px;color:#94a3b8;">Ordenados por temperatura: urgência + fit + prontidão pra fechar</div>
+            <div class="cp-topleads-head" style="margin:18px 0 10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+                <div style="font-size:13px;font-weight:700;color:#fbbf24;">🔥 Top leads pra pegar hoje ${atuadosBadge}</div>
+                <div style="font-size:11px;color:#94a3b8;">Marque ✓ quando concluir · reset diário</div>
             </div>
             <div class="cp-topleads-list" style="display:flex;flex-direction:column;gap:6px;">
                 ${scored.map(x => {
@@ -12964,7 +12989,12 @@ function _cpRenderSdrCockpit(canonicalSdr) {
                     const btnTel  = cleanPhone ? `<a class="sdrlead-btn tel" style="padding:4px 8px;font-size:11px;" href="tel:+${cleanPhone}">📞</a>` : '';
                     const btnMail = email ? `<a class="sdrlead-btn mail" style="padding:4px 8px;font-size:11px;" href="mailto:${email}">✉️</a>` : '';
                     const btnPl   = `<a class="sdrlead-btn ploomes" style="padding:4px 8px;font-size:11px;" href="${url}" target="_blank">↗</a>`;
-                    return `<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.15);border-radius:8px;">
+                    const sdrArg = canonicalSdr.replace(/'/g, "\\'");
+                    const chkTip = 'Concluí a atuação neste lead hoje (some do Top até amanhã)';
+                    return `<div style="display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.15);border-radius:8px;">
+                        <label style="display:flex;align-items:center;cursor:pointer;" title="${chkTip}">
+                            <input type="checkbox" onchange="_sdrToggleAtuado(${d.Id}, '${sdrArg}')" style="width:16px;height:16px;cursor:pointer;accent-color:#4ade80;">
+                        </label>
                         <div style="font-family:ui-monospace,monospace;font-size:14px;font-weight:800;color:#fbbf24;min-width:32px;text-align:center;">${x.score}</div>
                         <div style="min-width:0;">
                             <div style="font-size:12.5px;font-weight:600;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="${url}" target="_blank" style="color:inherit;text-decoration:none;">${title}</a>${person ? ` · <span style="color:#94a3b8;font-weight:400;">${person}</span>` : ''}</div>
