@@ -12312,7 +12312,7 @@ function _sdrLeadCardHtml(deal) {
     const cargo = (typeof getContactCargo === 'function') ? getContactCargo(deal) : '';
     const stage = deal.Stage?.Name || 'Sem etapa';
     const pipe = deal.Pipeline?.Name || '';
-    const url = `https://app10.ploomes.com/Deals/${deal.Id}`;
+    const url = `https://app10.ploomes.com/deal/${deal.Id}`;
     const title = (deal.Title || '(sem título)').replace(/</g, '&lt;');
     const cleanPhone = _sdrLeadCleanPhone(phone);
 
