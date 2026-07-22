@@ -4225,6 +4225,20 @@
         .sdrlead-search:focus { outline: none; border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.04); }
         .sdrlead-filter { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 7px 12px; color: #f1f5f9; font-size: 12px; cursor: pointer; }
 
+        /* Boxes de categoria de urgência (Fase 2 — clicáveis) */
+        .sdrlead-catgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
+        @media (max-width: 720px) { .sdrlead-catgrid { grid-template-columns: repeat(2, 1fr); } }
+        .sdrlead-catbox { display: flex; gap: 10px; align-items: center; padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid var(--catcolor, #94a3b8); border-radius: 10px; cursor: pointer; color: #cbd5e1; text-align: left; transition: all 0.15s; font-family: inherit; }
+        .sdrlead-catbox:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); border-left-color: var(--catcolor); transform: translateY(-1px); }
+        .sdrlead-catbox.active { background: rgba(139,92,246,0.10); border-color: rgba(139,92,246,0.4); border-left-color: var(--catcolor); box-shadow: 0 0 0 1px rgba(139,92,246,0.2); }
+        .sdrlead-catbox-icon { font-size: 22px; line-height: 1; }
+        .sdrlead-catbox-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .sdrlead-catbox-n { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: var(--catcolor); line-height: 1.1; }
+        .sdrlead-catbox-label { font-size: 11.5px; font-weight: 700; color: #f1f5f9; margin-top: 2px; }
+        .sdrlead-catbox-sub { font-size: 10.5px; color: #6b7280; }
+        .sdrlead-catclear { align-self: flex-start; margin-top: 8px; background: rgba(139,92,246,0.14); border: 1px solid rgba(139,92,246,0.3); color: #c4b5fd; border-radius: 6px; padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+        .sdrlead-catclear:hover { background: rgba(139,92,246,0.22); }
+
         /* Foco da semana — 3 ações */
         .cp-focus-card {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(26, 26, 46, 0.9));
@@ -12104,7 +12118,63 @@ function _cpImpersonateAsSdr(sdrName) {
 // Ploomes). Aparece pros 5 SDRs (Adriely, Gui, Samira, Agnes, Maja).
 
 // State do filtro de busca — reusa entre renders
-let _cpSdrLeadsState = { search: '', status: 'aberto' };
+let _cpSdrLeadsState = { search: '', status: 'aberto', category: null };
+
+// Categorias de urgência (4 boxes acima da lista):
+//   sla_quebrado    — mais de 7d sem contato (interaction ou meeting)
+//   estagnado       — mais de 30d sem mudança (LastUpdateDate como proxy)
+//   decisor_reuniao — cargo decisor + reunião agendada futura pendente
+//   retomado_hoje   — última atividade (interaction/meeting) foi hoje
+function _sdrLeadCategoriesOfDeal(deal, refDate) {
+    const cats = [];
+    if (deal.StatusId !== 1) return cats; // só faz sentido pra abertos
+    const now = refDate || new Date();
+    const dayMs = 86400000;
+
+    // Última atividade: max(interactions + meetings do deal)
+    let lastAct = null;
+    (dashInteractions || []).forEach(it => {
+        if (it.DealId === deal.Id && it.Date) {
+            const d = new Date(it.Date);
+            if (!lastAct || d > lastAct) lastAct = d;
+        }
+    });
+    (dashMeetings || []).forEach(t => {
+        if (t.DealId !== deal.Id) return;
+        const d = new Date(t.FinishDate || t.DateTime || t.CreateDate || 0);
+        if (isNaN(d)) return;
+        if (!lastAct || d > lastAct) lastAct = d;
+    });
+
+    // Retomado hoje
+    if (lastAct) {
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (lastAct >= todayStart) cats.push('retomado_hoje');
+    }
+
+    // SLA quebrado (>7d sem contato) — só se NÃO foi retomado hoje
+    const daysSinceAct = lastAct ? (now - lastAct) / dayMs : (deal.CreateDate ? (now - new Date(deal.CreateDate)) / dayMs : 999);
+    if (daysSinceAct > 7 && !cats.includes('retomado_hoje')) cats.push('sla_quebrado');
+
+    // Estagnado (>30d sem update no deal — proxy de mudança de estágio)
+    const daysSinceUpd = deal.LastUpdateDate ? (now - new Date(deal.LastUpdateDate)) / dayMs : 999;
+    if (daysSinceUpd > 30) cats.push('estagnado');
+
+    // Decisor + reunião agendada futura pendente
+    const isDecisor = typeof getContactCargo === 'function' && typeof isCargoDecisao === 'function'
+        && isCargoDecisao(getContactCargo(deal));
+    if (isDecisor) {
+        const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const hasReuniaoFutura = (dashMeetings || []).some(t =>
+            t.DealId === deal.Id
+            && norm(t.Title).includes('reuniao agendada')
+            && t.Finished !== true
+            && t.DateTime && new Date(t.DateTime) >= now
+        );
+        if (hasReuniaoFutura) cats.push('decisor_reuniao');
+    }
+    return cats;
+}
 
 // Extrai numero limpo pra wa.me / tel: (so digitos, com codigo pais se possivel)
 function _sdrLeadCleanPhone(phone) {
@@ -12252,13 +12322,24 @@ function _cpRenderSdrLeads(canonicalSdr) {
         return getCanonicalSdrName(owner) === canonicalSdr;
     });
 
-    // Aplica filtros (search + status)
+    // Calcula categorias de cada deal (uma vez, reusa)
+    const now = new Date();
+    const dealCats = new Map(); // dealId -> array de categorias
+    myDeals.forEach(d => dealCats.set(d.Id, _sdrLeadCategoriesOfDeal(d, now)));
+
+    // Contadores por categoria (usados nos 4 boxes)
+    const catCount = { sla_quebrado: 0, estagnado: 0, decisor_reuniao: 0, retomado_hoje: 0 };
+    dealCats.forEach(cats => cats.forEach(c => { if (catCount[c] !== undefined) catCount[c]++; }));
+
+    // Aplica filtros (search + status + category)
     const search = _cpSdrLeadsState.search.trim().toLowerCase();
     const status = _cpSdrLeadsState.status;
+    const category = _cpSdrLeadsState.category;
     const filtered = myDeals.filter(d => {
         if (status === 'aberto' && d.StatusId !== 1) return false;
         if (status === 'ganho' && d.StatusId !== 2) return false;
         if (status === 'perdido' && d.StatusId !== 3) return false;
+        if (category && !(dealCats.get(d.Id) || []).includes(category)) return false;
         if (search) {
             const hay = [d.Title, d.Contact?.Name, d.Person?.Name, d.ContactName, d.PersonName]
                 .filter(Boolean).join(' ').toLowerCase();
@@ -12274,17 +12355,53 @@ function _cpRenderSdrLeads(canonicalSdr) {
         return db - da;
     });
 
+    // Renderiza os 4 boxes de categoria (clicáveis, quick-filter)
+    const CAT_META = [
+        { key: 'sla_quebrado',    icon: '🔴', label: 'SLA quebrado',   sub: '>7d sem contato',       color: '#f87171' },
+        { key: 'estagnado',       icon: '🟠', label: 'Estagnado',       sub: '>30d na mesma etapa',   color: '#fb923c' },
+        { key: 'decisor_reuniao', icon: '🟢', label: 'Decisor + reunião', sub: 'pronto pra fechar',   color: '#4ade80' },
+        { key: 'retomado_hoje',   icon: '⚡', label: 'Retomado hoje',   sub: 'atividade agora',       color: '#fbbf24' }
+    ];
+    const boxesHtml = CAT_META.map(m => {
+        const active = _cpSdrLeadsState.category === m.key;
+        const n = catCount[m.key] || 0;
+        return `<button class="sdrlead-catbox ${active ? 'active' : ''}" data-cat="${m.key}" style="--catcolor:${m.color};">
+            <div class="sdrlead-catbox-icon">${m.icon}</div>
+            <div class="sdrlead-catbox-body">
+                <div class="sdrlead-catbox-n">${n}</div>
+                <div class="sdrlead-catbox-label">${m.label}</div>
+                <div class="sdrlead-catbox-sub">${m.sub}</div>
+            </div>
+        </button>`;
+    }).join('');
+    const clearBtn = _cpSdrLeadsState.category
+        ? `<button class="sdrlead-catclear" onclick="_cpSdrLeadsState.category=null; _cpRenderSdrLeads('${canonicalSdr.replace(/'/g, "\\'")}')">✕ Limpar filtro de categoria</button>` : '';
+
     // Renderiza filtros
     filtersEl.innerHTML = `
-        <input type="search" id="cpSdrLeadsSearch" class="sdrlead-search" placeholder="🔍 Buscar por título, empresa ou pessoa..." value="${_cpSdrLeadsState.search.replace(/"/g, '&quot;')}">
-        <select id="cpSdrLeadsStatus" class="sdrlead-filter">
-            <option value="aberto"${status === 'aberto' ? ' selected' : ''}>Abertos</option>
-            <option value="ganho"${status === 'ganho' ? ' selected' : ''}>Ganhos</option>
-            <option value="perdido"${status === 'perdido' ? ' selected' : ''}>Perdidos</option>
-            <option value="todos"${status === 'todos' ? ' selected' : ''}>Todos</option>
-        </select>
-        <div style="align-self:center;color:#94a3b8;font-size:11.5px;font-family:ui-monospace,monospace;">${filtered.length} / ${myDeals.length} lead${myDeals.length === 1 ? '' : 's'}</div>
+        <div class="sdrlead-catgrid">${boxesHtml}</div>
+        ${clearBtn}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;width:100%;">
+            <input type="search" id="cpSdrLeadsSearch" class="sdrlead-search" placeholder="🔍 Buscar por título, empresa ou pessoa..." value="${_cpSdrLeadsState.search.replace(/"/g, '&quot;')}">
+            <select id="cpSdrLeadsStatus" class="sdrlead-filter">
+                <option value="aberto"${status === 'aberto' ? ' selected' : ''}>Abertos</option>
+                <option value="ganho"${status === 'ganho' ? ' selected' : ''}>Ganhos</option>
+                <option value="perdido"${status === 'perdido' ? ' selected' : ''}>Perdidos</option>
+                <option value="todos"${status === 'todos' ? ' selected' : ''}>Todos</option>
+            </select>
+            <div style="align-self:center;color:#94a3b8;font-size:11.5px;font-family:ui-monospace,monospace;">${filtered.length} / ${myDeals.length} lead${myDeals.length === 1 ? '' : 's'}</div>
+        </div>
     `;
+    // Wire clique nos boxes de categoria
+    filtersEl.querySelectorAll('.sdrlead-catbox').forEach(btn => {
+        btn.onclick = () => {
+            const cat = btn.getAttribute('data-cat');
+            _cpSdrLeadsState.category = (_cpSdrLeadsState.category === cat) ? null : cat;
+            // Se ativou categoria, força status=todos (senao SLA quebrado nunca aparece em ganhos/perdidos)
+            if (_cpSdrLeadsState.category) _cpSdrLeadsState.status = 'aberto';
+            _cpRenderSdrLeads(canonicalSdr);
+        };
+    });
     // Wire filtros (debounce simples)
     let _cpSdrLeadsSearchTO;
     document.getElementById('cpSdrLeadsSearch').oninput = (e) => {
