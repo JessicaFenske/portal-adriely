@@ -12423,10 +12423,19 @@ function _cpRenderSdrLeads(canonicalSdr) {
         _cpRenderSdrLeads(canonicalSdr);
     };
 
+    // Sem categoria selecionada: mostra so os 4 boxes (a lista fica oculta).
+    // Force o SDR a escolher uma pasta pra ver leads — evita rolar lista imensa.
+    wrapper.style.display = 'block';
+    if (!category) {
+        listEl.innerHTML = `<div style="color:#94a3b8;padding:30px 20px;text-align:center;font-size:13px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;margin-top:10px;">
+            👆 Clique em uma das <b>categorias acima</b> pra ver os leads que precisam de atenção agora.
+        </div>`;
+        return;
+    }
+
     // Render lista (limita a 40 pra nao travar; se buscar, filtra tudo)
     const LIMIT = 40;
     const shown = filtered.slice(0, LIMIT);
-    wrapper.style.display = 'block';
     if (shown.length === 0) {
         listEl.innerHTML = `<div style="color:#94a3b8;padding:20px;text-align:center;font-size:13px;">Nenhum lead encontrado com esses filtros.</div>`;
         return;
