@@ -12504,15 +12504,21 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
         return;
     }
 
-    // Pega deals criados pela Adriely — exclui:
+    // Pega deals do funil da Adriely — considera Adriely como OWNER (nao Creator),
+    // porque muitos deals do funil dela foram criados por Automacao/RD Station.
+    // Fallback: se Owner nao bate, aceita se Creator for Adriely (cascade).
+    // Exclui:
     //   - Perdidos (StatusId 3): so lead ativo importa pra outbound
     //   - Pipeline "Funil de Vendas": ja migrou pra vendedor, nao e mais lead pra abordar
     const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
     const dealsAdriely = all.filter(d => {
-        if (!adrielyIds.includes(Number(d.CreatorId))) return false;
         if (d.StatusId === 3) return false;
         if ((d.Pipeline?.Name || '') === 'Funil de Vendas') return false;
-        return true;
+        const ownerName = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
+        const ownerCanon = (typeof getCanonicalSdrName === 'function') ? getCanonicalSdrName(ownerName) : '';
+        if (ownerCanon === 'Adriely') return true;
+        if (adrielyIds.includes(Number(d.CreatorId))) return true; // fallback
+        return false;
     });
 
     // Filtra os que têm cargo decisor via getContactCargo + isCargoDecisao
