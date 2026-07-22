@@ -12315,9 +12315,16 @@ function _cpRenderSdrLeads(canonicalSdr) {
     if (!wrapper || !listEl || !filtersEl) return;
     if (!canonicalSdr) { wrapper.style.display = 'none'; return; }
 
-    // Deals atribuidos ao SDR: owner canonical bate com canonicalSdr
+    // Deals atribuidos ao SDR: owner canonical bate com canonicalSdr.
+    // Exclui deals em pipeline/stage de "Descarte" — nao sao leads pra abordar.
+    const isDescarte = (d) => {
+        const p = String(d.Pipeline?.Name || '').toLowerCase();
+        const s = String(d.Stage?.Name || '').toLowerCase();
+        return p.includes('descarte') || s.includes('descarte');
+    };
     const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
     const myDeals = all.filter(d => {
+        if (isDescarte(d)) return false;
         const owner = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
         return getCanonicalSdrName(owner) === canonicalSdr;
     });
