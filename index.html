@@ -12554,7 +12554,7 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return '—'; } };
 
     const rows = decisores.map(d => {
-        const url = `https://app10.ploomes.com/Deals/${d.Id}`;
+        const url = `https://app10.ploomes.com/deal/${d.Id}`;
         const personName = (d.Person?.Name || d.PersonName || '(sem pessoa)').substring(0, 35);
         const cargo = getContactCargo(d);
         const empresa = (d.Contact?.Name || d.ContactName || '(sem empresa)').substring(0, 35);
@@ -12957,7 +12957,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
                     const d = x.deal;
                     const { email, phone, personName } = _sdrLeadContact(d);
                     const cleanPhone = _sdrLeadCleanPhone(phone);
-                    const url = `https://app10.ploomes.com/Deals/${d.Id}`;
+                    const url = `https://app10.ploomes.com/deal/${d.Id}`;
                     const title = (d.Title || '(sem título)').substring(0, 55).replace(/</g, '&lt;');
                     const person = (personName || '').substring(0, 30).replace(/</g, '&lt;');
                     const btnWA   = cleanPhone ? `<a class="sdrlead-btn wa" style="padding:4px 8px;font-size:11px;" href="https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi ' + (personName.split(' ')[0] || '') + ', tudo bem?')}" target="_blank">💚</a>` : '';
