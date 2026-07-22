@@ -12503,10 +12503,12 @@ function _cpRenderSdrLeads(canonicalSdr) {
         + (filtered.length > LIMIT ? `<div style="color:#6b7280;text-align:center;padding:12px;font-size:11.5px;font-style:italic;">Mostrando ${LIMIT} de ${filtered.length} · use a busca pra filtrar</div>` : '');
 }
 
-// Seção exclusiva do cockpit da Samira: lista os leads inbound qualificados pela
-// Adriely (deals cujo CreatorId é da Adriely) cuja pessoa de contato (d.Person)
-// tem cargo de decisão (Coordenador+/TI). Ajuda a Samira a priorizar quais
-// pegar pra outbound consultivo.
+// State próprio dos boxes de categoria da lista Samira · Leads Adriely
+let _cpSamiraAdrielyState = { category: null };
+
+// Seção exclusiva do cockpit da Samira: lista os leads da Adriely (Owner) cuja
+// pessoa de contato tem cargo de decisão (Coordenador+/TI). Organiza os leads
+// pelos 4 boxes de urgência iguais aos de "Meus Leads".
 function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     const wrapper = document.getElementById('cpSamiraAdrielyLeads');
     const listEl = document.getElementById('cpSamiraAdrielyList');
@@ -12514,23 +12516,13 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     // Só ativa pra Samira
     if (canonicalSdr !== 'Samira Cristina') { wrapper.style.display = 'none'; return; }
 
-    // Identifica Adriely no dashUsersById (pega o Id do user Adriely)
+    // Identifica Adriely no dashUsersById (fallback pro CreatorId)
     const usersById = (typeof dashUsersById !== 'undefined' && dashUsersById) || {};
     const adrielyIds = Object.entries(usersById)
         .filter(([_, name]) => (name || '').toLowerCase().includes('adriely'))
         .map(([id]) => Number(id));
-    if (adrielyIds.length === 0) {
-        wrapper.style.display = 'block';
-        listEl.innerHTML = `<div style="color:#94a3b8;padding:14px;font-size:12px;">Não encontrei usuário Adriely no cache do Ploomes. Recarregue depois que o dashboard terminar de carregar.</div>`;
-        return;
-    }
 
-    // Pega deals do funil da Adriely — considera Adriely como OWNER (nao Creator),
-    // porque muitos deals do funil dela foram criados por Automacao/RD Station.
-    // Fallback: se Owner nao bate, aceita se Creator for Adriely (cascade).
-    // Exclui:
-    //   - Perdidos (StatusId 3): so lead ativo importa pra outbound
-    //   - Pipeline "Funil de Vendas": ja migrou pra vendedor, nao e mais lead pra abordar
+    // Pega deals do funil da Adriely (Owner canonical) — exclui perdidos e Funil de Vendas
     const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
     const dealsAdriely = all.filter(d => {
         if (d.StatusId === 3) return false;
@@ -12538,11 +12530,11 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
         const ownerName = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
         const ownerCanon = (typeof getCanonicalSdrName === 'function') ? getCanonicalSdrName(ownerName) : '';
         if (ownerCanon === 'Adriely') return true;
-        if (adrielyIds.includes(Number(d.CreatorId))) return true; // fallback
+        if (adrielyIds.includes(Number(d.CreatorId))) return true;
         return false;
     });
 
-    // Filtra os que têm cargo decisor via getContactCargo + isCargoDecisao
+    // Só decisores
     const decisores = dealsAdriely.filter(d => {
         if (typeof getContactCargo !== 'function' || typeof isCargoDecisao !== 'function') return false;
         return isCargoDecisao(getContactCargo(d));
@@ -12553,18 +12545,93 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     const comCargo = dealsAdriely.filter(d => typeof getContactCargo === 'function' && getContactCargo(d)).length;
     const semCargoNota = dealsAdriely.length - comCargo;
 
+    // Calcula categorias por deal (mesma lógica dos boxes de Meus Leads)
+    const nowSA = new Date();
+    const dealCats = new Map();
+    decisores.forEach(d => dealCats.set(d.Id, _sdrLeadCategoriesOfDeal(d, nowSA)));
+    const catCount = { sla_quebrado: 0, estagnado: 0, decisor_reuniao: 0, retomado_hoje: 0 };
+    dealCats.forEach(cats => cats.forEach(c => { if (catCount[c] !== undefined) catCount[c]++; }));
+
     wrapper.style.display = 'block';
 
-    if (decisores.length === 0) {
-        listEl.innerHTML = `<div style="color:#94a3b8;padding:14px;font-size:12px;">
-            Nenhum deal da Adriely com cargo de decisão identificado no momento.<br>
-            <span style="color:#6b7280;font-size:11px;">Total de deals da Adriely: ${total} · com cargo preenchido: ${comCargo} · sem cargo: ${semCargoNota}</span>
-        </div>`;
+    // Renderiza header + 4 boxes de categoria
+    const CAT_META = [
+        { key: 'sla_quebrado',    icon: '🔴', label: 'SLA quebrado',    sub: '>7d sem contato',      color: '#f87171' },
+        { key: 'estagnado',       icon: '🟠', label: 'Estagnado',        sub: '>30d na mesma etapa',  color: '#fb923c' },
+        { key: 'decisor_reuniao', icon: '🟢', label: 'Decisor + reunião', sub: 'pronto pra fechar',   color: '#4ade80' },
+        { key: 'retomado_hoje',   icon: '⚡', label: 'Retomado hoje',    sub: 'atividade agora',      color: '#fbbf24' }
+    ];
+    const activeCat = _cpSamiraAdrielyState.category;
+    const boxesHtml = CAT_META.map(m => {
+        const active = activeCat === m.key;
+        const n = catCount[m.key] || 0;
+        return `<button class="sdrlead-catbox ${active ? 'active' : ''}" data-satl-cat="${m.key}" style="--catcolor:${m.color};">
+            <div class="sdrlead-catbox-icon">${m.icon}</div>
+            <div class="sdrlead-catbox-body">
+                <div class="sdrlead-catbox-n">${n}</div>
+                <div class="sdrlead-catbox-label">${m.label}</div>
+                <div class="sdrlead-catbox-sub">${m.sub}</div>
+            </div>
+        </button>`;
+    }).join('');
+
+    const clearBtn = activeCat
+        ? `<button class="sdrlead-catclear" onclick="_cpSamiraAdrielyState.category=null; _cpRenderSamiraAdrielyLeads('Samira Cristina')">✕ Limpar filtro de categoria</button>`
+        : '';
+
+    const statsHtml = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:11.5px;">
+            <div style="background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.3);border-radius:6px;padding:5px 10px;color:#c4b5fd;">
+                <b>${decisores.length}</b> com cargo decisor
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:5px 10px;color:#94a3b8;">
+                ${total} deals no total da Adriely · ${comCargo} c/ cargo · ${semCargoNota} sem cargo
+            </div>
+        </div>
+    `;
+
+    const headerHtml = `
+        ${statsHtml}
+        <div class="sdrlead-catgrid">${boxesHtml}</div>
+        ${clearBtn}
+    `;
+
+    // Sem categoria: mostra só os boxes + placeholder
+    if (!activeCat) {
+        listEl.innerHTML = `${headerHtml}
+            <div style="color:#94a3b8;padding:30px 20px;text-align:center;font-size:13px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;margin-top:14px;">
+                👆 Clique em uma <b>categoria acima</b> pra ver os leads da Adriely priorizados por urgência.
+            </div>`;
+        // Wire clique nos boxes
+        listEl.querySelectorAll('.sdrlead-catbox').forEach(btn => {
+            btn.onclick = () => {
+                _cpSamiraAdrielyState.category = btn.getAttribute('data-satl-cat');
+                _cpRenderSamiraAdrielyLeads('Samira Cristina');
+            };
+        });
+        return;
+    }
+
+    // Filtra por categoria
+    const filtered = decisores.filter(d => (dealCats.get(d.Id) || []).includes(activeCat));
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `${headerHtml}
+            <div style="color:#94a3b8;padding:20px;text-align:center;font-size:13px;margin-top:14px;">
+                Nenhum lead da Adriely nesta categoria no momento.
+            </div>`;
+        listEl.querySelectorAll('.sdrlead-catbox').forEach(btn => {
+            btn.onclick = () => {
+                const c = btn.getAttribute('data-satl-cat');
+                _cpSamiraAdrielyState.category = (_cpSamiraAdrielyState.category === c) ? null : c;
+                _cpRenderSamiraAdrielyLeads('Samira Cristina');
+            };
+        });
         return;
     }
 
     // Ordena por prioridade: aberto primeiro, dentro do aberto por CreateDate desc
-    decisores.sort((a, b) => {
+    filtered.sort((a, b) => {
         const sa = a.StatusId === 1 ? 0 : 1;
         const sb = b.StatusId === 1 ? 0 : 1;
         if (sa !== sb) return sa - sb;
@@ -12574,7 +12641,7 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     const statusLabel = (s) => s === 1 ? '<span style="color:#4ade80;">● Aberto</span>' : s === 2 ? '<span style="color:#60a5fa;">● Ganho</span>' : '<span style="color:#94a3b8;">● Perdido</span>';
     const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return '—'; } };
 
-    const rows = decisores.map(d => {
+    const rows = filtered.map(d => {
         const url = `https://app10.ploomes.com/deal/${d.Id}`;
         const personName = (d.Person?.Name || d.PersonName || '(sem pessoa)').substring(0, 35);
         const cargo = getContactCargo(d);
@@ -12599,16 +12666,17 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
     }).join('');
 
     listEl.innerHTML = `
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:11.5px;">
-            <div style="background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.3);border-radius:6px;padding:5px 10px;color:#c4b5fd;">
-                <b>${decisores.length}</b> com cargo decisor
-            </div>
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:5px 10px;color:#94a3b8;">
-                ${total} deals no total da Adriely · ${comCargo} c/ cargo · ${semCargoNota} sem cargo
-            </div>
-        </div>
-        ${rows}
+        ${headerHtml}
+        <div style="margin-top:14px;">${rows}</div>
     `;
+    // Wire clique nos boxes de categoria
+    listEl.querySelectorAll('.sdrlead-catbox').forEach(btn => {
+        btn.onclick = () => {
+            const c = btn.getAttribute('data-satl-cat');
+            _cpSamiraAdrielyState.category = (_cpSamiraAdrielyState.category === c) ? null : c;
+            _cpRenderSamiraAdrielyLeads('Samira Cristina');
+        };
+    });
 }
 
 function _cpRenderSdrCockpit(canonicalSdr) {
