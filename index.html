@@ -12932,7 +12932,12 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     const scored = dealsMeus.map(d => {
         const cats = _sdrLeadCategoriesOfDeal(d, nowTop);
         return { deal: d, cats, score: _sdrLeadScore(d, cats), reason: _sdrLeadTopReason(d, cats) };
-    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+    })
+    // Exclui leads ja tocados hoje: apos SDR registrar interacao/reuniao no Ploomes,
+    // o lead vira "Retomado hoje" e sai do Top no proximo refresh do cache. Isso da
+    // rotatividade — a lista sempre mostra os proximos 5 que faltam atuar.
+    .filter(x => !x.cats.includes('retomado_hoje'))
+    .filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
     let topLeadsHtml = '';
     if (scored.length > 0) {
