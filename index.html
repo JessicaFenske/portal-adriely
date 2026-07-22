@@ -12120,6 +12120,44 @@ function _cpImpersonateAsSdr(sdrName) {
 // State do filtro de busca — reusa entre renders
 let _cpSdrLeadsState = { search: '', status: 'aberto', category: null };
 
+// Score de temperatura por lead — usado pra priorizar "Top leads pra hoje".
+// Combina sinais de urgência + fit + prontidão pra fechar.
+function _sdrLeadScore(deal, cats) {
+    if (deal.StatusId !== 1) return 0;
+    let s = 0;
+    if (cats.includes('decisor_reuniao')) s += 100; // pronto pra fechar
+    if (cats.includes('retomado_hoje')) s += 60;    // esquentou, dar continuidade
+    if (cats.includes('sla_quebrado')) s += 45;     // urgente
+    if (cats.includes('estagnado')) s += 25;        // precisa mexer
+    // Cargo decisor (fora de reunião marcada)
+    const cargo = typeof getContactCargo === 'function' ? getContactCargo(deal) : '';
+    const isDecisor = cargo && typeof isCargoDecisao === 'function' && isCargoDecisao(cargo);
+    if (isDecisor && !cats.includes('decisor_reuniao')) s += 40;
+    // MRR/Setup preenchido — valor conhecido, mais fácil qualificar
+    const mrr = typeof getMRR === 'function' ? getMRR(deal) : 0;
+    const setup = typeof getSetup === 'function' ? getSetup(deal) : 0;
+    if (mrr > 0 || setup > 0) s += 15;
+    // Estágio avançado — mais perto de fechar
+    const stage = (deal.Stage?.Name || '').toLowerCase();
+    if (/aprovad|formaliz|negoci/.test(stage)) s += 20;
+    else if (/considera|proposta/.test(stage)) s += 12;
+    else if (/reconhec/.test(stage)) s += 5;
+    return s;
+}
+
+function _sdrLeadTopReason(deal, cats) {
+    // Motivo mais forte pra explicar por que este lead entrou no Top
+    if (cats.includes('decisor_reuniao')) return '🟢 Decisor + reunião marcada';
+    if (cats.includes('retomado_hoje')) return '⚡ Atividade hoje — dar continuidade';
+    if (cats.includes('sla_quebrado')) return '🔴 SLA quebrado — sem contato há >7d';
+    const cargo = typeof getContactCargo === 'function' ? getContactCargo(deal) : '';
+    if (cargo && typeof isCargoDecisao === 'function' && isCargoDecisao(cargo)) return `🎯 Cargo decisor · ${cargo}`;
+    if (cats.includes('estagnado')) return '🟠 Estagnado >30d — mover ou descartar';
+    const stage = (deal.Stage?.Name || '').toLowerCase();
+    if (/aprovad|formaliz|negoci/.test(stage)) return '🔥 Estágio avançado — foco em fechar';
+    return '📋 Em qualificação';
+}
+
 // Categorias de urgência (4 boxes acima da lista):
 //   sla_quebrado    — mais de 7d sem contato (interaction ou meeting)
 //   estagnado       — mais de 30d sem mudança (LastUpdateDate como proxy)
@@ -12871,7 +12909,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
             color: '#fb923c'
         });
     }
-    document.getElementById('cpFocusActions').innerHTML = focusActions.slice(0, 3).map((a, i) => `
+    const focusActionsHtml = focusActions.slice(0, 3).map((a, i) => `
         <div class="cp-action" style="border-left:3px solid ${a.color};">
             <div class="cp-action-num">${i + 1}</div>
             <div class="cp-action-body">
@@ -12880,6 +12918,54 @@ function _cpRenderSdrCockpit(canonicalSdr) {
             </div>
         </div>
     `).join('');
+
+    // ===== Top leads pra hoje (score de temperatura) =====
+    // Pega deals abertos do SDR (owner canonical bate), calcula score de temperatura,
+    // pega top 5. Cada linha compacta com motivo + botoes rapidos.
+    const nowTop = new Date();
+    const dealsMeus = [...(dashOpenDeals || [])].filter(d => {
+        if ((d.Pipeline?.Name || '').toLowerCase().includes('descarte')) return false;
+        if ((d.Stage?.Name || '').toLowerCase().includes('descarte')) return false;
+        const owner = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
+        return getCanonicalSdrName(owner) === canonicalSdr;
+    });
+    const scored = dealsMeus.map(d => {
+        const cats = _sdrLeadCategoriesOfDeal(d, nowTop);
+        return { deal: d, cats, score: _sdrLeadScore(d, cats), reason: _sdrLeadTopReason(d, cats) };
+    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+
+    let topLeadsHtml = '';
+    if (scored.length > 0) {
+        topLeadsHtml = `
+            <div class="cp-topleads-head" style="margin:18px 0 10px;display:flex;justify-content:space-between;align-items:baseline;">
+                <div style="font-size:13px;font-weight:700;color:#fbbf24;">🔥 Top leads pra pegar hoje</div>
+                <div style="font-size:11px;color:#94a3b8;">Ordenados por temperatura: urgência + fit + prontidão pra fechar</div>
+            </div>
+            <div class="cp-topleads-list" style="display:flex;flex-direction:column;gap:6px;">
+                ${scored.map(x => {
+                    const d = x.deal;
+                    const { email, phone, personName } = _sdrLeadContact(d);
+                    const cleanPhone = _sdrLeadCleanPhone(phone);
+                    const url = `https://app10.ploomes.com/Deals/${d.Id}`;
+                    const title = (d.Title || '(sem título)').substring(0, 55).replace(/</g, '&lt;');
+                    const person = (personName || '').substring(0, 30).replace(/</g, '&lt;');
+                    const btnWA   = cleanPhone ? `<a class="sdrlead-btn wa" style="padding:4px 8px;font-size:11px;" href="https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi ' + (personName.split(' ')[0] || '') + ', tudo bem?')}" target="_blank">💚</a>` : '';
+                    const btnTel  = cleanPhone ? `<a class="sdrlead-btn tel" style="padding:4px 8px;font-size:11px;" href="tel:+${cleanPhone}">📞</a>` : '';
+                    const btnMail = email ? `<a class="sdrlead-btn mail" style="padding:4px 8px;font-size:11px;" href="mailto:${email}">✉️</a>` : '';
+                    const btnPl   = `<a class="sdrlead-btn ploomes" style="padding:4px 8px;font-size:11px;" href="${url}" target="_blank">↗</a>`;
+                    return `<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.15);border-radius:8px;">
+                        <div style="font-family:ui-monospace,monospace;font-size:14px;font-weight:800;color:#fbbf24;min-width:32px;text-align:center;">${x.score}</div>
+                        <div style="min-width:0;">
+                            <div style="font-size:12.5px;font-weight:600;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="${url}" target="_blank" style="color:inherit;text-decoration:none;">${title}</a>${person ? ` · <span style="color:#94a3b8;font-weight:400;">${person}</span>` : ''}</div>
+                            <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">${x.reason}</div>
+                        </div>
+                        <div style="display:flex;gap:4px;">${btnWA}${btnTel}${btnMail}${btnPl}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+    document.getElementById('cpFocusActions').innerHTML = focusActionsHtml + topLeadsHtml;
 
     // ===== Coluna esquerda: Compliance pendente (deals concretos) =====
     _setH('.cp-risk .cp-card-header h3', '<span class="cp-icon">⚠️</span> Compliance pendente');
