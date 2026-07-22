@@ -527,7 +527,7 @@ async function refreshAll() {
     // Contact.Origin é fallback quando deal.Origin tá vazio (alguns deals não herdam)
     // Person = pessoa de contato do deal (PersonId), separada de Contact (que e a empresa).
     // O Cargo fica em Person.Role.Name (FK pra tabela de Roles do Ploomes).
-    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State),OtherProperties,Origin),Person($expand=Role),Owner,Stage,Pipeline,OtherProperties,Origin';
+    const dealExpand = '$expand=Contact($expand=Phones,City($expand=State),OtherProperties,Origin),Person($expand=Role,Phones),Owner,Stage,Pipeline,OtherProperties,Origin';
     const forecastFilter = "OtherProperties/any(o: o/FieldKey eq 'deal_7F644269-46FE-4486-AD12-BEFA9C7E27BC')";
     const stateFilter = "OtherProperties/any(o: o/FieldKey eq 'contact_486DE9AD-FCFE-4A7B-8B56-DA5AB3D55848')";
 

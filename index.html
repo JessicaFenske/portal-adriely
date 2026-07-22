@@ -4183,6 +4183,48 @@
         .cp-card-header .cp-icon { font-size: 18px; }
         .cp-card-sub { font-size: 12.5px; color: #94a3b8; line-height: 1.4; }
 
+        /* Cards do "Meus Leads" (Cockpit SDR Fase 1) */
+        .sdrlead-card { background: #1e2233; border: 1px solid #2d3244; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: start; transition: border-color 0.15s; }
+        .sdrlead-card:hover { border-color: #475569; }
+        .sdrlead-main { min-width: 0; }
+        .sdrlead-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .sdrlead-title { color: #f1f5f9; font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sdrlead-title a { color: inherit; text-decoration: none; }
+        .sdrlead-title a:hover { color: #a78bfa; text-decoration: underline; }
+        .sdrlead-stage { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: rgba(139,92,246,0.16); color: #c4b5fd; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+        .sdrlead-meta { font-size: 12px; color: #94a3b8; margin-bottom: 10px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+        .sdrlead-meta b { color: #cbd5e1; }
+        .sdrlead-cargo { color: #a78bfa; font-weight: 600; }
+        .sdrlead-counters { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .sdrlead-counter { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 8px; border-radius: 5px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; }
+        .sdrlead-counter b { color: #f1f5f9; font-family: ui-monospace, monospace; }
+        .sdrlead-counter.zero { opacity: 0.4; }
+        .sdrlead-counter.wa { color: #4ade80; border-color: rgba(74,222,128,0.25); background: rgba(74,222,128,0.06); }
+        .sdrlead-counter.mail { color: #60a5fa; border-color: rgba(96,165,250,0.25); background: rgba(96,165,250,0.06); }
+        .sdrlead-counter.call { color: #fbbf24; border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.06); }
+        .sdrlead-counter.meet { color: #c4b5fd; border-color: rgba(196,181,253,0.25); background: rgba(196,181,253,0.06); }
+        .sdrlead-timeline { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .sdrlead-tl-item { display: grid; grid-template-columns: 80px 22px 1fr; gap: 8px; align-items: baseline; font-size: 11.5px; color: #cbd5e1; }
+        .sdrlead-tl-date { color: #6b7280; font-family: ui-monospace, monospace; font-size: 10.5px; text-align: right; }
+        .sdrlead-tl-icon { font-size: 13px; text-align: center; }
+        .sdrlead-tl-text { color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sdrlead-tl-empty { color: #6b7280; font-size: 11.5px; padding: 6px 0; font-style: italic; }
+        .sdrlead-actions { display: flex; flex-direction: column; gap: 6px; min-width: 108px; }
+        .sdrlead-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; text-decoration: none; border: 1px solid transparent; text-align: center; justify-content: center; transition: filter 0.15s; }
+        .sdrlead-btn:hover { filter: brightness(1.15); }
+        .sdrlead-btn.wa { background: rgba(37,211,102,0.18); color: #86efac; border-color: rgba(37,211,102,0.35); }
+        .sdrlead-btn.mail { background: rgba(96,165,250,0.16); color: #93c5fd; border-color: rgba(96,165,250,0.35); }
+        .sdrlead-btn.tel { background: rgba(251,191,36,0.16); color: #fbbf24; border-color: rgba(251,191,36,0.35); }
+        .sdrlead-btn.ploomes { background: rgba(139,92,246,0.16); color: #c4b5fd; border-color: rgba(139,92,246,0.35); }
+        .sdrlead-btn.disabled { opacity: 0.35; pointer-events: none; }
+        @media (max-width: 640px) {
+            .sdrlead-card { grid-template-columns: 1fr; }
+            .sdrlead-actions { flex-direction: row; flex-wrap: wrap; min-width: auto; }
+        }
+        .sdrlead-search { flex: 1; min-width: 200px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 7px 12px; color: #f1f5f9; font-size: 12px; }
+        .sdrlead-search:focus { outline: none; border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.04); }
+        .sdrlead-filter { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 7px 12px; color: #f1f5f9; font-size: 12px; cursor: pointer; }
+
         /* Foco da semana — 3 ações */
         .cp-focus-card {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(26, 26, 46, 0.9));
@@ -5379,6 +5421,18 @@
                             <div class="cp-card-sub">Padrões de vitória, gaps de qualificação e oportunidades — baseado no seu histórico</div>
                         </div>
                         <div class="cp-insights-grid" id="cpInsightsGrid"></div>
+                    </div>
+
+                    <!-- ============ SDR · Meus Leads Priorizados (Fase 1) ============ -->
+                    <div id="cpSdrLeads" style="display:none;">
+                        <div class="cp-insights-card" style="margin-top:18px;">
+                            <div class="cp-card-header">
+                                <h2><span class="cp-icon">📇</span> Meus Leads — cockpit por card</h2>
+                                <div class="cp-card-sub">Timeline consolidada + contato + ações rápidas por lead — evita ficar navegando no Ploomes</div>
+                            </div>
+                            <div id="cpSdrLeadsFilters" style="padding:8px 4px 12px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+                            <div id="cpSdrLeadsList" style="padding:4px;"></div>
+                        </div>
                     </div>
 
                     <!-- ============ SAMIRA · leads da Adriely com cargo de decisão ============ -->
@@ -12044,6 +12098,219 @@ function _cpImpersonateAsSdr(sdrName) {
 // Detecta SDR logado e renderiza visão personalizada com foco em ação diária:
 // agenda do dia, compliance gaps, cards devolvidos, próximas reuniões, KPIs e
 // coaching SPIN qualificador. Reusa os containers do view-cockpit.
+// ==================== Cockpit SDR · Meus Leads (Fase 1) ====================
+// Renderiza cards consolidados por deal: timeline unificada de interacoes/reunioes,
+// contadores por canal, dados de contato visiveis, acoes rapidas (WhatsApp/mail/tel/
+// Ploomes). Aparece pros 5 SDRs (Adriely, Gui, Samira, Agnes, Maja).
+
+// State do filtro de busca — reusa entre renders
+let _cpSdrLeadsState = { search: '', status: 'aberto' };
+
+// Extrai numero limpo pra wa.me / tel: (so digitos, com codigo pais se possivel)
+function _sdrLeadCleanPhone(phone) {
+    if (!phone) return null;
+    let d = String(phone).replace(/[^\d]/g, '');
+    if (!d) return null;
+    // Se comeca com 0, remove. Se nao tem codigo pais e tem 10-11 digitos, adiciona 55.
+    if (d.startsWith('0')) d = d.slice(1);
+    if (d.length >= 10 && d.length <= 11 && !d.startsWith('55')) d = '55' + d;
+    return d;
+}
+
+// Pega email/telefone do Person (pessoa de contato) com fallback pra Contact (empresa)
+function _sdrLeadContact(d) {
+    const person = d?.Person;
+    const contact = d?.Contact;
+    const email = person?.Email || contact?.Email || '';
+    const phones = (person?.Phones && person.Phones.length ? person.Phones : (contact?.Phones || []));
+    const phone = phones[0]?.PhoneNumber || '';
+    return { email, phone, personName: person?.Name || d?.PersonName || '', empresaName: contact?.Name || d?.ContactName || '' };
+}
+
+// Conta interacoes por canal (WhatsApp / E-mail / Ligação) — usa InteractionType.Name
+function _sdrLeadCounters(dealId) {
+    const ints = (dashInteractions || []).filter(it => it.DealId === dealId);
+    const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    let wa = 0, mail = 0, call = 0, other = 0;
+    ints.forEach(it => {
+        const n = norm(it.InteractionType?.Name || '');
+        if (n.includes('whats')) wa++;
+        else if (n.includes('mail') || n.includes('email') || n === 'e-mail') mail++;
+        else if (n.includes('liga') || n.includes('call') || n.includes('telefone')) call++;
+        else other++;
+    });
+    // Reunioes agendadas + realizadas do deal (tasks)
+    const meets = (dashMeetings || []).filter(t => t.DealId === dealId);
+    const nrm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const meetAg = meets.filter(t => nrm(t.Title).includes('reuniao agendada')).length;
+    const meetRz = meets.filter(t => nrm(t.Title).includes('reuniao realizada') && t.Finished === true).length;
+    return { wa, mail, call, other, meetAg, meetRz };
+}
+
+// Timeline unificada: merge de interactions + meetings + criacao. Ordena desc.
+function _sdrLeadTimeline(deal, limit) {
+    const events = [];
+    const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    (dashInteractions || []).filter(it => it.DealId === deal.Id).forEach(it => {
+        const t = norm(it.InteractionType?.Name || '');
+        let icon = '💬';
+        if (t.includes('whats')) icon = '💚';
+        else if (t.includes('mail') || t.includes('email')) icon = '✉️';
+        else if (t.includes('liga') || t.includes('call') || t.includes('telefone')) icon = '📞';
+        else if (t.includes('reuniao')) icon = '🤝';
+        events.push({
+            date: it.Date,
+            icon,
+            text: (it.Content || it.InteractionType?.Name || 'Interação').substring(0, 90).replace(/\s+/g, ' ').trim()
+        });
+    });
+    (dashMeetings || []).filter(m => m.DealId === deal.Id).forEach(m => {
+        const isAg = norm(m.Title).includes('reuniao agendada');
+        const isRz = norm(m.Title).includes('reuniao realizada');
+        if (isAg) events.push({ date: m.CreateDate, icon: '📅', text: `Reunião agendada · ${new Date(m.DateTime).toLocaleDateString('pt-BR')}` });
+        if (isRz && m.Finished === true) events.push({ date: m.FinishDate || m.DateTime, icon: '✅', text: 'Reunião realizada' });
+    });
+    if (deal.CreateDate) events.push({ date: deal.CreateDate, icon: '🌱', text: 'Deal criado' });
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return events.slice(0, limit || 4);
+}
+
+// Renderiza um card do lead
+function _sdrLeadCardHtml(deal) {
+    const { email, phone, personName, empresaName } = _sdrLeadContact(deal);
+    const c = _sdrLeadCounters(deal.Id);
+    const timeline = _sdrLeadTimeline(deal, 4);
+    const cargo = (typeof getContactCargo === 'function') ? getContactCargo(deal) : '';
+    const stage = deal.Stage?.Name || 'Sem etapa';
+    const pipe = deal.Pipeline?.Name || '';
+    const url = `https://app10.ploomes.com/Deals/${deal.Id}`;
+    const title = (deal.Title || '(sem título)').replace(/</g, '&lt;');
+    const cleanPhone = _sdrLeadCleanPhone(phone);
+
+    // Acoes rapidas — cinza (disabled) se nao ha destino
+    const btnWA   = cleanPhone ? `<a class="sdrlead-btn wa" href="https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi ' + (personName.split(' ')[0] || '') + ', tudo bem?')}" target="_blank">💚 WhatsApp</a>` : `<span class="sdrlead-btn wa disabled">💚 sem tel</span>`;
+    const btnMail = email ? `<a class="sdrlead-btn mail" href="mailto:${email}">✉️ E-mail</a>` : `<span class="sdrlead-btn mail disabled">✉️ sem email</span>`;
+    const btnTel  = cleanPhone ? `<a class="sdrlead-btn tel" href="tel:+${cleanPhone}">📞 Ligar</a>` : `<span class="sdrlead-btn tel disabled">📞 sem tel</span>`;
+    const btnPloomes = `<a class="sdrlead-btn ploomes" href="${url}" target="_blank">↗ Ploomes</a>`;
+
+    const countersHtml = [
+        { cls: 'wa', icon: '💚', label: 'WA', n: c.wa },
+        { cls: 'mail', icon: '✉️', label: 'Mail', n: c.mail },
+        { cls: 'call', icon: '📞', label: 'Call', n: c.call },
+        { cls: 'meet', icon: '📅', label: 'Ag', n: c.meetAg },
+        { cls: 'meet', icon: '✅', label: 'Rz', n: c.meetRz }
+    ].map(x => `<span class="sdrlead-counter ${x.cls}${x.n === 0 ? ' zero' : ''}">${x.icon} <b>${x.n}</b> ${x.label}</span>`).join('');
+
+    const tlHtml = timeline.length === 0
+        ? `<div class="sdrlead-tl-empty">Sem histórico registrado ainda</div>`
+        : timeline.map(ev => {
+            const dt = ev.date ? new Date(ev.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—';
+            return `<div class="sdrlead-tl-item"><div class="sdrlead-tl-date">${dt}</div><div class="sdrlead-tl-icon">${ev.icon}</div><div class="sdrlead-tl-text">${(ev.text || '').replace(/</g, '&lt;')}</div></div>`;
+        }).join('');
+
+    const contactLine = [
+        personName ? `<b>${personName.replace(/</g, '&lt;')}</b>` : '',
+        cargo ? `<span class="sdrlead-cargo">${cargo.replace(/</g, '&lt;')}</span>` : '',
+        empresaName && empresaName !== personName ? empresaName.replace(/</g, '&lt;') : ''
+    ].filter(Boolean).join(' · ');
+
+    const contactDetails = [
+        email ? `📧 ${email}` : '',
+        phone ? `📱 ${phone}` : ''
+    ].filter(Boolean).join(' &nbsp;·&nbsp; ') || '<i style="color:#6b7280;">Sem contato preenchido no Person</i>';
+
+    return `<div class="sdrlead-card" data-deal-id="${deal.Id}">
+        <div class="sdrlead-main">
+            <div class="sdrlead-head">
+                <div class="sdrlead-title"><a href="${url}" target="_blank">${title}</a></div>
+                <div class="sdrlead-stage">${stage}</div>
+            </div>
+            <div class="sdrlead-meta">${contactLine || '<i>Sem pessoa vinculada</i>'} <br>${contactDetails} <br><span style="color:#6b7280;">${pipe}</span></div>
+            <div class="sdrlead-counters">${countersHtml}</div>
+            <div class="sdrlead-timeline">${tlHtml}</div>
+        </div>
+        <div class="sdrlead-actions">
+            ${btnWA}
+            ${btnMail}
+            ${btnTel}
+            ${btnPloomes}
+        </div>
+    </div>`;
+}
+
+function _cpRenderSdrLeads(canonicalSdr) {
+    const wrapper = document.getElementById('cpSdrLeads');
+    const listEl = document.getElementById('cpSdrLeadsList');
+    const filtersEl = document.getElementById('cpSdrLeadsFilters');
+    if (!wrapper || !listEl || !filtersEl) return;
+    if (!canonicalSdr) { wrapper.style.display = 'none'; return; }
+
+    // Deals atribuidos ao SDR: owner canonical bate com canonicalSdr
+    const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
+    const myDeals = all.filter(d => {
+        const owner = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
+        return getCanonicalSdrName(owner) === canonicalSdr;
+    });
+
+    // Aplica filtros (search + status)
+    const search = _cpSdrLeadsState.search.trim().toLowerCase();
+    const status = _cpSdrLeadsState.status;
+    const filtered = myDeals.filter(d => {
+        if (status === 'aberto' && d.StatusId !== 1) return false;
+        if (status === 'ganho' && d.StatusId !== 2) return false;
+        if (status === 'perdido' && d.StatusId !== 3) return false;
+        if (search) {
+            const hay = [d.Title, d.Contact?.Name, d.Person?.Name, d.ContactName, d.PersonName]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!hay.includes(search)) return false;
+        }
+        return true;
+    });
+
+    // Ordena: abertos por LastUpdateDate desc, ganhos/perdidos por FinishDate desc
+    filtered.sort((a, b) => {
+        const da = new Date(a.LastUpdateDate || a.CreateDate || 0).getTime();
+        const db = new Date(b.LastUpdateDate || b.CreateDate || 0).getTime();
+        return db - da;
+    });
+
+    // Renderiza filtros
+    filtersEl.innerHTML = `
+        <input type="search" id="cpSdrLeadsSearch" class="sdrlead-search" placeholder="🔍 Buscar por título, empresa ou pessoa..." value="${_cpSdrLeadsState.search.replace(/"/g, '&quot;')}">
+        <select id="cpSdrLeadsStatus" class="sdrlead-filter">
+            <option value="aberto"${status === 'aberto' ? ' selected' : ''}>Abertos</option>
+            <option value="ganho"${status === 'ganho' ? ' selected' : ''}>Ganhos</option>
+            <option value="perdido"${status === 'perdido' ? ' selected' : ''}>Perdidos</option>
+            <option value="todos"${status === 'todos' ? ' selected' : ''}>Todos</option>
+        </select>
+        <div style="align-self:center;color:#94a3b8;font-size:11.5px;font-family:ui-monospace,monospace;">${filtered.length} / ${myDeals.length} lead${myDeals.length === 1 ? '' : 's'}</div>
+    `;
+    // Wire filtros (debounce simples)
+    let _cpSdrLeadsSearchTO;
+    document.getElementById('cpSdrLeadsSearch').oninput = (e) => {
+        clearTimeout(_cpSdrLeadsSearchTO);
+        _cpSdrLeadsSearchTO = setTimeout(() => {
+            _cpSdrLeadsState.search = e.target.value || '';
+            _cpRenderSdrLeads(canonicalSdr);
+        }, 250);
+    };
+    document.getElementById('cpSdrLeadsStatus').onchange = (e) => {
+        _cpSdrLeadsState.status = e.target.value;
+        _cpRenderSdrLeads(canonicalSdr);
+    };
+
+    // Render lista (limita a 40 pra nao travar; se buscar, filtra tudo)
+    const LIMIT = 40;
+    const shown = filtered.slice(0, LIMIT);
+    wrapper.style.display = 'block';
+    if (shown.length === 0) {
+        listEl.innerHTML = `<div style="color:#94a3b8;padding:20px;text-align:center;font-size:13px;">Nenhum lead encontrado com esses filtros.</div>`;
+        return;
+    }
+    listEl.innerHTML = shown.map(d => _sdrLeadCardHtml(d)).join('')
+        + (filtered.length > LIMIT ? `<div style="color:#6b7280;text-align:center;padding:12px;font-size:11.5px;font-style:italic;">Mostrando ${LIMIT} de ${filtered.length} · use a busca pra filtrar</div>` : '');
+}
+
 // Seção exclusiva do cockpit da Samira: lista os leads inbound qualificados pela
 // Adriely (deals cujo CreatorId é da Adriely) cuja pessoa de contato (d.Person)
 // tem cargo de decisão (Coordenador+/TI). Ajuda a Samira a priorizar quais
@@ -12148,6 +12415,8 @@ function _cpRenderSdrCockpit(canonicalSdr) {
     // Mostra coaching SDR de volta (marketing esconde)
     const _coachSdr = document.querySelector('.cp-coaching-card');
     if (_coachSdr) _coachSdr.style.display = '';
+    // Fase 1: Meus Leads (todos os SDRs) — timeline + contatos + ações rápidas
+    try { _cpRenderSdrLeads(canonicalSdr); } catch (e) { console.warn('[cp] sdr leads:', e); }
     // Seção específica pra Samira: leads da Adriely com cargo decisor
     try { _cpRenderSamiraAdrielyLeads(canonicalSdr); } catch (e) { console.warn('[cp] samira leads:', e); }
     const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
