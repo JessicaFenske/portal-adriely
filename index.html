@@ -12120,25 +12120,50 @@ function _cpImpersonateAsSdr(sdrName) {
 // State do filtro de busca — reusa entre renders
 let _cpSdrLeadsState = { search: '', status: 'aberto', category: null };
 
-// Marca manual de "atuei hoje" — permite o SDR tirar lead do Top mesmo sem ter
-// registrado a interacao no Ploomes ainda (o registro pode demorar; a lista precisa
-// avancar). Reset natural: chave e por dia, entao amanha volta pra zero.
-function _sdrAtuadoKey() {
-    const d = new Date();
-    return `sdr_leads_atuados_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// Marca manual "estou controlando este lead — não me lembre mais" — persiste
+// INDEFINIDO no localStorage. So sai quando:
+//  (a) SDR clicar de novo pra desmarcar (toggle), OU
+//  (b) o deal fechar (Won/Lost) — garbage collection automatico
+// Nao limpa quando o Ploomes mostra atividade posterior — se a SDR ja atuou, faz
+// ainda mais sentido manter escondido. Se o lead virar SLA quebrado dnovo dias
+// depois com nova atividade, ela pode desmarcar manualmente e reavaliar.
+const SDR_ATUADOS_KEY = 'sdr_leads_atuados_v2';
+function _sdrAtuadosMap() {
+    try { return JSON.parse(localStorage.getItem(SDR_ATUADOS_KEY) || '{}'); } catch { return {}; }
 }
+function _sdrSaveAtuados(map) {
+    try { localStorage.setItem(SDR_ATUADOS_KEY, JSON.stringify(map)); } catch (e) {}
+}
+// Retorna dealIds marcados HOJE (mesmo dia local) — pra badge do header
 function _sdrAtuadosHoje() {
-    try { return JSON.parse(localStorage.getItem(_sdrAtuadoKey()) || '[]'); } catch { return []; }
+    const map = _sdrAtuadosMap();
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Object.entries(map)
+        .filter(([_, ts]) => { try { return new Date(ts) >= todayStart; } catch { return false; } })
+        .map(([id]) => id);
 }
-function _sdrIsAtuado(dealId) { return _sdrAtuadosHoje().includes(String(dealId)); }
+function _sdrIsAtuado(dealId) {
+    const map = _sdrAtuadosMap();
+    return !!map[String(dealId)];
+}
 function _sdrToggleAtuado(dealId, canonicalSdr) {
-    const list = _sdrAtuadosHoje();
+    const map = _sdrAtuadosMap();
     const id = String(dealId);
-    const idx = list.indexOf(id);
-    if (idx >= 0) list.splice(idx, 1); else list.push(id);
-    try { localStorage.setItem(_sdrAtuadoKey(), JSON.stringify(list)); } catch (e) {}
+    if (map[id]) delete map[id];
+    else map[id] = new Date().toISOString();
+    _sdrSaveAtuados(map);
     // Re-render pra o lead sair (ou voltar) do Top imediatamente
     if (typeof _cpRenderSdrCockpit === 'function' && canonicalSdr) _cpRenderSdrCockpit(canonicalSdr);
+}
+// Garbage collection: limpa entries de deals que ja fecharam (Won/Lost) — nao
+// aparecem mais no Top de qualquer forma; evita o localStorage crescer eterno.
+function _sdrAtuadosGC() {
+    const map = _sdrAtuadosMap();
+    let removed = 0;
+    const closedIds = new Set([...(wonDeals || []), ...(lostDeals || [])].map(d => String(d.Id)));
+    Object.keys(map).forEach(id => { if (closedIds.has(id)) { delete map[id]; removed++; } });
+    if (removed > 0) _sdrSaveAtuados(map);
 }
 
 // Score de temperatura por lead — usado pra priorizar "Top leads pra hoje".
