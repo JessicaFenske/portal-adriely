@@ -19703,17 +19703,19 @@ function exportToExcel(data, columns, filename) {
 }
 
 // Export CSV — pra sistemas que aceitam CSV mas nao Excel (ex: Leads per Hour).
-// Formato: virgula como separador, aspas em campos com virgula/aspas/quebra,
-// BOM UTF-8 pra acentos abrirem certo no Excel.
-function exportToCSV(data, columns, filename) {
+// Aspas em campos com o separador/aspas/quebra de linha. BOM UTF-8 pra Excel BR
+// reconhecer acentos ao abrir.
+function exportToCSV(data, columns, filename, separator) {
+    const sep = separator || ',';
+    // Regex de escape depende do separador escolhido
+    const escRe = new RegExp('[\\"\\n\\r' + sep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ']');
     const esc = (v) => {
         const s = String(v == null ? '' : v);
-        // Se tem virgula, aspa dupla, quebra de linha ou ponto-e-virgula, envolve em aspas duplas
-        if (/[",;\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        if (escRe.test(s)) return '"' + s.replace(/"/g, '""') + '"';
         return s;
     };
-    const header = columns.map(c => esc(c.header)).join(',');
-    const rows = data.map(row => columns.map(c => esc(c.getValue(row))).join(','));
+    const header = columns.map(c => esc(c.header)).join(sep);
+    const rows = data.map(row => columns.map(c => esc(c.getValue(row))).join(sep));
     const csv = [header, ...rows].join('\r\n');
     // BOM UTF-8 (0xEF 0xBB 0xBF) pra Excel BR reconhecer acentos
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -20068,13 +20070,33 @@ function exportSection6ParaLPH() {
         const ok = confirm(`${completos.length} de ${total} deals estão completos e vão pra planilha.\n${excluidos} foram excluídos por faltar algum dado (nome/email/telefone/cargo).\n\nContinuar?`);
         if (!ok) return;
     }
+    // Template LPH: nome;email;cargo;telefone;linkedin;empresa;linkedin empresa;website;setor;cidade;estado
+    // Separador ";" (ponto-e-virgula). Colunas nao disponiveis no Ploomes ficam vazias.
+    const empresaName = (d) => d.Contact?.Name || '';
+    const cidade      = (d) => d.Contact?.City?.Name || '';
+    const estado      = (d) => d.Contact?.City?.State?.Name || d.Contact?.City?.State?.Short || '';
+    // Setor tenta LineOfBusiness se disponivel no Contact (nao vem por default no expand)
+    const setor = (d) => {
+        const lobId = d.Contact?.LineOfBusinessId;
+        if (lobId && typeof segmentsByIdGlobal !== 'undefined' && segmentsByIdGlobal[lobId]) {
+            return segmentsByIdGlobal[lobId];
+        }
+        return '';
+    };
+
     exportToCSV(completos, [
-        { header: 'Nome',     getValue: personName },
-        { header: 'E-mail',   getValue: contactEmail },
-        { header: 'Telefone', getValue: contactPhone },
-        { header: 'Cargo',    getValue: contactCargo },
-        { header: 'Empresa',  getValue: d => d.Contact?.Name || '' }
-    ], 'lph_leads_perdidos');
+        { header: 'nome',              getValue: personName },
+        { header: 'email',             getValue: contactEmail },
+        { header: 'cargo',             getValue: contactCargo },
+        { header: 'telefone',          getValue: contactPhone },
+        { header: 'linkedin',          getValue: () => '' },
+        { header: 'empresa',           getValue: empresaName },
+        { header: 'linkedin empresa',  getValue: () => '' },
+        { header: 'website',           getValue: () => '' },
+        { header: 'setor',             getValue: setor },
+        { header: 'cidade',            getValue: cidade },
+        { header: 'estado',            getValue: estado }
+    ], 'lph_leads_perdidos', ';');
 }
 // === Investigar deals (auditoria de Realizadas) ===
 function openInvestigateModal() {
