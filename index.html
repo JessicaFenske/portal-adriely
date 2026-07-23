@@ -19981,11 +19981,13 @@ function exportSection6() {
         if (canonical) sdrByDeal.set(it.DealId, canonical);
     });
 
+    // Prioriza Person (pessoa de contato) sobre Contact (empresa) — no Ploomes
+    // a empresa raramente tem email/tel; a pessoa sim.
     const contactPhone = (d) => {
-        const phones = d.Contact?.Phones || [];
-        return phones.map(p => p.PhoneNumber || '').filter(Boolean).join(' / ');
+        const pPhones = d.Person?.Phones && d.Person.Phones.length ? d.Person.Phones : (d.Contact?.Phones || []);
+        return pPhones.map(p => p.PhoneNumber || '').filter(Boolean).join(' / ');
     };
-    const contactEmail = (d) => d.Contact?.Email || '';
+    const contactEmail = (d) => d.Person?.Email || d.Contact?.Email || '';
     const fmtDate = (iso) => {
         if (!iso) return '';
         try { return new Date(iso).toLocaleDateString('pt-BR'); } catch { return ''; }
