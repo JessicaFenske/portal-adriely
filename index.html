@@ -12120,13 +12120,13 @@ function _cpImpersonateAsSdr(sdrName) {
 // State do filtro de busca — reusa entre renders
 let _cpSdrLeadsState = { search: '', status: 'aberto', category: null };
 
-// Marca manual "estou controlando este lead — não me lembre mais" — persiste
-// INDEFINIDO no localStorage. So sai quando:
+// Marca manual "atuei" — escondido do Top ate:
 //  (a) SDR clicar de novo pra desmarcar (toggle), OU
-//  (b) o deal fechar (Won/Lost) — garbage collection automatico
-// Nao limpa quando o Ploomes mostra atividade posterior — se a SDR ja atuou, faz
-// ainda mais sentido manter escondido. Se o lead virar SLA quebrado dnovo dias
-// depois com nova atividade, ela pode desmarcar manualmente e reavaliar.
+//  (b) Ploomes registrar interaction/meeting DEPOIS do timestamp do check
+//      → check e' limpo. O lead continua fora do Top pelo filtro "retomado_hoje"
+//      (categoria que ja filtra atividade recente). Se >7d sem nova atividade,
+//      volta a ser SLA quebrado e reaparece no Top pra ela ser lembrada.
+//  (c) deal fechar (Won/Lost) — garbage collection automatico
 const SDR_ATUADOS_KEY = 'sdr_leads_atuados_v2';
 function _sdrAtuadosMap() {
     try { return JSON.parse(localStorage.getItem(SDR_ATUADOS_KEY) || '{}'); } catch { return {}; }
@@ -12143,9 +12143,40 @@ function _sdrAtuadosHoje() {
         .filter(([_, ts]) => { try { return new Date(ts) >= todayStart; } catch { return false; } })
         .map(([id]) => id);
 }
+// Ultima atividade registrada no Ploomes pro deal (interaction + meeting)
+function _sdrLastActOfDeal(dealId) {
+    const id = Number(dealId);
+    let lastAct = null;
+    (dashInteractions || []).forEach(it => {
+        if (it.DealId === id && it.Date) {
+            const d = new Date(it.Date);
+            if (!lastAct || d > lastAct) lastAct = d;
+        }
+    });
+    (dashMeetings || []).forEach(t => {
+        if (t.DealId !== id) return;
+        const d = new Date(t.FinishDate || t.DateTime || t.CreateDate || 0);
+        if (isNaN(d)) return;
+        if (!lastAct || d > lastAct) lastAct = d;
+    });
+    return lastAct;
+}
 function _sdrIsAtuado(dealId) {
     const map = _sdrAtuadosMap();
-    return !!map[String(dealId)];
+    const ts = map[String(dealId)];
+    if (!ts) return false;
+    // Autolimpeza: se Ploomes tem atividade DEPOIS do check, SDR ja registrou
+    // — limpa o check. O lead continua fora do Top pelo filtro "retomado_hoje"
+    // (categoria que ja exclui atividade recente). Se >7d passarem sem atividade
+    // nova, vira SLA quebrado de novo e reaparece no Top pra reavaliacao.
+    const checkTime = new Date(ts);
+    const lastAct = _sdrLastActOfDeal(dealId);
+    if (lastAct && lastAct >= checkTime) {
+        delete map[String(dealId)];
+        _sdrSaveAtuados(map);
+        return false;
+    }
+    return true;
 }
 function _sdrToggleAtuado(dealId, canonicalSdr) {
     const map = _sdrAtuadosMap();
