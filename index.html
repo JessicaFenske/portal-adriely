@@ -6197,6 +6197,7 @@
                         <div class="chart-container"><canvas id="chartLostSeller"></canvas></div>
                         <button class="table-toggle" onclick="toggleTable('tableLostSeller')">Mostrar/ocultar tabela</button>
                         <button class="export-btn" style="margin-top:12px;margin-left:8px;" onclick="exportSection6()">&#128229; Exportar Excel</button>
+                        <button class="export-btn" style="margin-top:12px;margin-left:8px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);" onclick="exportSection6ParaLPH()" title="Só leads com Nome + E-mail + Telefone + Cargo preenchidos — pronto pra subir na Leads per Hour">&#128228; Exportar pra LPH</button>
                         <div class="collapsible-table" id="tableLostSeller"><table><thead><tr>
                             <th class="rank-num">#</th><th>Vendedor</th><th>Perdidos</th><th>MRR</th><th>Setup</th>
                         </tr></thead><tbody id="tbodyLostSeller"></tbody></table></div>
@@ -19993,12 +19994,16 @@ function exportSection6() {
         try { return new Date(iso).toLocaleDateString('pt-BR'); } catch { return ''; }
     };
 
+    // Nome vem do Person (pessoa) — nao do Contact (empresa) que ja e coluna "Empresa"
+    const personName = (d) => d.Person?.Name || d.PersonName || '';
+
     exportToExcel(deals, [
-        { header: 'Negócio',       getValue: d => d.Title || '' },
-        { header: 'Contato',       getValue: d => d.Contact?.Name || '' },
-        { header: 'Telefone',      getValue: d => contactPhone(d) },
+        { header: 'Nome',          getValue: d => personName(d) },
         { header: 'E-mail',        getValue: d => contactEmail(d) },
+        { header: 'Telefone',      getValue: d => contactPhone(d) },
         { header: 'Cargo',         getValue: d => typeof getContactCargo === 'function' ? getContactCargo(d) : '' },
+        { header: 'Empresa',       getValue: d => d.Contact?.Name || '' },
+        { header: 'Negócio',       getValue: d => d.Title || '' },
         { header: 'Etapa (na perda)', getValue: d => d.Stage?.Name || '' },
         { header: 'Motivo',        getValue: d => d.LossReason?.Name || '' },
         { header: 'MRR',           getValue: d => getMRR(d) || 0 },
@@ -20008,6 +20013,44 @@ function exportSection6() {
         { header: 'SDR que agendou', getValue: d => sdrByDeal.get(d.Id) || '' },
         { header: 'Link Ploomes',  getValue: d => 'https://app10.ploomes.com/deal/' + d.Id }
     ], 'perdidos_detalhado');
+}
+
+// Exporta so leads completos (nome, email, telefone, cargo) — pronto pra subir
+// na Leads per Hour sem editar. Aplica os mesmos filtros do sec6.
+function exportSection6ParaLPH() {
+    const deals = window._sec6_data || [];
+    const personName = (d) => d.Person?.Name || d.PersonName || '';
+    const contactPhone = (d) => {
+        const pPhones = d.Person?.Phones && d.Person.Phones.length ? d.Person.Phones : (d.Contact?.Phones || []);
+        return pPhones.map(p => p.PhoneNumber || '').filter(Boolean).join(' / ');
+    };
+    const contactEmail = (d) => d.Person?.Email || d.Contact?.Email || '';
+    const contactCargo = (d) => typeof getContactCargo === 'function' ? getContactCargo(d) : '';
+
+    // Filtra so os que tem os 4 campos preenchidos
+    const completos = deals.filter(d =>
+        personName(d).trim() &&
+        contactEmail(d).trim() &&
+        contactPhone(d).trim() &&
+        contactCargo(d).trim()
+    );
+    const total = deals.length;
+    if (completos.length === 0) {
+        alert(`Nenhum deal completo (com Nome + E-mail + Telefone + Cargo) nos ${total} da lista atual.\n\nAjuste os filtros ou preencha os dados no Ploomes.`);
+        return;
+    }
+    if (completos.length < total) {
+        const excluidos = total - completos.length;
+        const ok = confirm(`${completos.length} de ${total} deals estão completos e vão pra planilha.\n${excluidos} foram excluídos por faltar algum dado (nome/email/telefone/cargo).\n\nContinuar?`);
+        if (!ok) return;
+    }
+    exportToExcel(completos, [
+        { header: 'Nome',     getValue: personName },
+        { header: 'E-mail',   getValue: contactEmail },
+        { header: 'Telefone', getValue: contactPhone },
+        { header: 'Cargo',    getValue: contactCargo },
+        { header: 'Empresa',  getValue: d => d.Contact?.Name || '' }
+    ], 'lph_leads_perdidos');
 }
 // === Investigar deals (auditoria de Realizadas) ===
 function openInvestigateModal() {
