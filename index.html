@@ -12579,11 +12579,15 @@ function _cpRenderSamiraAdrielyLeads(canonicalSdr) {
         .filter(([_, name]) => (name || '').toLowerCase().includes('adriely'))
         .map(([id]) => Number(id));
 
-    // Pega deals do funil da Adriely (Owner canonical) — exclui perdidos e Funil de Vendas
+    // Pega deals do funil da Adriely (Owner canonical) — exclui:
+    //   - Perdidos (StatusId 3)
+    //   - Pipeline "Funil de Vendas" (ja migrou pra vendedor)
+    //   - Stage "Leads Quentes" (Adriely ja esta tratando, nao e pra Samira pegar)
     const all = [...(dashOpenDeals || []), ...(wonDeals || []), ...(lostDeals || [])];
     const dealsAdriely = all.filter(d => {
         if (d.StatusId === 3) return false;
         if ((d.Pipeline?.Name || '') === 'Funil de Vendas') return false;
+        if ((d.Stage?.Name || '').toLowerCase().includes('leads quentes')) return false;
         const ownerName = (typeof getOwnerName === 'function') ? getOwnerName(d) : (d.Owner?.Name || '');
         const ownerCanon = (typeof getCanonicalSdrName === 'function') ? getCanonicalSdrName(ownerName) : '';
         if (ownerCanon === 'Adriely') return true;
