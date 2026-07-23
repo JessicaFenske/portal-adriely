@@ -19702,6 +19702,30 @@ function exportToExcel(data, columns, filename) {
     XLSX.writeFile(wb, filename + '.xlsx');
 }
 
+// Export CSV — pra sistemas que aceitam CSV mas nao Excel (ex: Leads per Hour).
+// Formato: virgula como separador, aspas em campos com virgula/aspas/quebra,
+// BOM UTF-8 pra acentos abrirem certo no Excel.
+function exportToCSV(data, columns, filename) {
+    const esc = (v) => {
+        const s = String(v == null ? '' : v);
+        // Se tem virgula, aspa dupla, quebra de linha ou ponto-e-virgula, envolve em aspas duplas
+        if (/[",;\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    };
+    const header = columns.map(c => esc(c.header)).join(',');
+    const rows = data.map(row => columns.map(c => esc(c.getValue(row))).join(','));
+    const csv = [header, ...rows].join('\r\n');
+    // BOM UTF-8 (0xEF 0xBB 0xBF) pra Excel BR reconhecer acentos
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
 // Helper: extrai cargo do contato do deal (Ploomes JobTitle nativo + fallback custom fields)
 function getContactCargo(d) {
     // Fonte principal (Ploomes): Deal.Person.Role.Name — Person eh a pessoa
@@ -20044,7 +20068,7 @@ function exportSection6ParaLPH() {
         const ok = confirm(`${completos.length} de ${total} deals estão completos e vão pra planilha.\n${excluidos} foram excluídos por faltar algum dado (nome/email/telefone/cargo).\n\nContinuar?`);
         if (!ok) return;
     }
-    exportToExcel(completos, [
+    exportToCSV(completos, [
         { header: 'Nome',     getValue: personName },
         { header: 'E-mail',   getValue: contactEmail },
         { header: 'Telefone', getValue: contactPhone },
