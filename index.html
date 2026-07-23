@@ -12343,7 +12343,8 @@ function _sdrLeadCardHtml(deal) {
 
     // Acoes rapidas — cinza (disabled) se nao ha destino
     const btnWA   = cleanPhone ? `<a class="sdrlead-btn wa" href="https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi ' + (personName.split(' ')[0] || '') + ', tudo bem?')}" target="_blank">💚 WhatsApp</a>` : `<span class="sdrlead-btn wa disabled">💚 sem tel</span>`;
-    const btnMail = email ? `<a class="sdrlead-btn mail" href="mailto:${email}">✉️ E-mail</a>` : `<span class="sdrlead-btn mail disabled">✉️ sem email</span>`;
+    const gmailUrl = email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}` : null;
+    const btnMail = gmailUrl ? `<a class="sdrlead-btn mail" href="${gmailUrl}" target="_blank" rel="noopener">✉️ E-mail</a>` : `<span class="sdrlead-btn mail disabled">✉️ sem email</span>`;
     const btnTel  = cleanPhone ? `<a class="sdrlead-btn tel" href="tel:+${cleanPhone}">📞 Ligar</a>` : `<span class="sdrlead-btn tel disabled">📞 sem tel</span>`;
     const btnPloomes = `<a class="sdrlead-btn ploomes" href="${url}" target="_blank">↗ Ploomes</a>`;
 
@@ -13080,7 +13081,7 @@ function _cpRenderSdrCockpit(canonicalSdr) {
                     const person = (personName || '').substring(0, 30).replace(/</g, '&lt;');
                     const btnWA   = cleanPhone ? `<a class="sdrlead-btn wa" style="padding:4px 8px;font-size:11px;" href="https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi ' + (personName.split(' ')[0] || '') + ', tudo bem?')}" target="_blank">💚</a>` : '';
                     const btnTel  = cleanPhone ? `<a class="sdrlead-btn tel" style="padding:4px 8px;font-size:11px;" href="tel:+${cleanPhone}">📞</a>` : '';
-                    const btnMail = email ? `<a class="sdrlead-btn mail" style="padding:4px 8px;font-size:11px;" href="mailto:${email}">✉️</a>` : '';
+                    const btnMail = email ? `<a class="sdrlead-btn mail" style="padding:4px 8px;font-size:11px;" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}" target="_blank" rel="noopener">✉️</a>` : '';
                     const btnPl   = `<a class="sdrlead-btn ploomes" style="padding:4px 8px;font-size:11px;" href="${url}" target="_blank">↗</a>`;
                     const sdrArg = canonicalSdr.replace(/'/g, "\\'");
                     const chkTip = 'Concluí a atuação neste lead hoje (some do Top até amanhã)';
