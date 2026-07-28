@@ -18292,11 +18292,37 @@ function showStageDrilldown(pipelineName, stageName) {
 // Como CollaboratingUsers não está no cache, usamos CreatorId de tasks/interactions como sinal.
 function _seFindThiagoId() {
     if (typeof dashUsersById !== 'object' || !dashUsersById) return null;
+    // 1a passada: nome completo Thiago + Ramos
     for (const [id, name] of Object.entries(dashUsersById)) {
         const n = String(name || '').toLowerCase();
         if (n.includes('thiago') && n.includes('ramos')) return String(id);
     }
+    // 2a passada: apenas Thiago (caso o Ramos nao esteja no cadastro)
+    for (const [id, name] of Object.entries(dashUsersById)) {
+        const n = String(name || '').toLowerCase();
+        if (n.includes('thiago')) return String(id);
+    }
     return null;
+}
+function _seCandidatosThiago() {
+    if (typeof dashUsersById !== 'object' || !dashUsersById) return [];
+    const out = [];
+    for (const [id, name] of Object.entries(dashUsersById)) {
+        const n = String(name || '').toLowerCase();
+        if (n.includes('thiago') || n.includes('ramos') || n.includes('engineer') || n.includes('engenheiro')) {
+            out.push({ id, name });
+        }
+    }
+    return out;
+}
+function _seDiagAtividades(thiagoId) {
+    const tasks = (typeof dashMeetings !== 'undefined' ? dashMeetings : []);
+    const inters = (typeof dashInteractions !== 'undefined' ? dashInteractions : []);
+    const tByCreator = tasks.filter(t => String(t.CreatorId) === thiagoId).length;
+    const tByOwner = tasks.filter(t => String(t.OwnerId) === thiagoId).length;
+    const iByCreator = inters.filter(t => String(t.CreatorId) === thiagoId).length;
+    const iByOwner = inters.filter(t => String(t.OwnerId) === thiagoId).length;
+    return { totalTasks: tasks.length, totalInter: inters.length, tByCreator, tByOwner, iByCreator, iByOwner };
 }
 
 function _seCollectDealsWithThiago(cutoffDate) {
@@ -18354,12 +18380,28 @@ function renderSecSalesEngineer() {
     }
     const { thiagoId, deals, activityMap } = _seCollectDealsWithThiago(cutoff);
     if (!thiagoId) {
-        hero.innerHTML = '<strong style="color:#f87171;">Thiago Ramos não encontrado na base de usuários.</strong> Verifique se o usuário está ativo no Ploomes.';
+        const cand = _seCandidatosThiago();
+        const candHtml = cand.length
+            ? `<div style="margin-top:8px;font-size:12px;opacity:.85;">Candidatos parecidos encontrados no cache de usuários:<br>${cand.map(c => `• <code>${_esc(c.name)}</code> (id ${_esc(c.id)})`).join('<br>')}</div>`
+            : `<div style="margin-top:8px;font-size:12px;opacity:.75;">Nenhum usuário com "thiago", "ramos", "engineer" ou "engenheiro" no nome. Verifique cadastro no Ploomes.</div>`;
+        hero.innerHTML = `<strong style="color:#f87171;">Thiago Ramos não encontrado na base de usuários.</strong>${candHtml}`;
         container.innerHTML = '';
         return;
     }
     if (!deals.length) {
-        hero.innerHTML = `<strong style="color:#e2e8f0;">Nenhum deal com participação do Thiago Ramos no período selecionado.</strong><br><span style="opacity:.75;">Sinal usado: tasks e interactions criadas ou de posse do Thiago.</span>`;
+        const thiagoName = dashUsersById[thiagoId] || '(sem nome)';
+        const diag = _seDiagAtividades(thiagoId);
+        hero.innerHTML = `
+            <div><strong style="color:#e2e8f0;">Nenhum deal com participação do Thiago Ramos no período selecionado.</strong></div>
+            <div style="margin-top:10px;font-size:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);padding:10px 12px;border-radius:8px;">
+                <div style="font-weight:600;color:#c4b5fd;margin-bottom:6px;">Diagnóstico</div>
+                <div>Usuário identificado: <code>${_esc(thiagoName)}</code> (id ${_esc(thiagoId)})</div>
+                <div>Cache: <strong>${diag.totalTasks}</strong> tasks · <strong>${diag.totalInter}</strong> interactions</div>
+                <div>Do Thiago — tasks: <strong>${diag.tByCreator}</strong> como criador / <strong>${diag.tByOwner}</strong> como owner</div>
+                <div>Do Thiago — interactions: <strong>${diag.iByCreator}</strong> como criador / <strong>${diag.iByOwner}</strong> como owner</div>
+                <div style="margin-top:8px;opacity:.8;">Se estes números estão em 0, o Thiago não aparece como Creator/Owner de tasks/interactions no cache — provavelmente participa dos deals apenas como <em>CollaboratingUser</em> (que não está no cache backend hoje). Nesse caso preciso expandir CollaboratingUsers no server.js.</div>
+            </div>
+        `;
         container.innerHTML = '';
         return;
     }
