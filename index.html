@@ -18302,15 +18302,18 @@ function _seFindThiagoId() {
 function _seCollectDealsWithThiago(cutoffDate) {
     const thiagoId = _seFindThiagoId();
     if (!thiagoId) return { thiagoId: null, deals: [], activityMap: new Map() };
-    const activityMap = new Map(); // dealId -> { last: Date, tasks: n, interactions: n }
+    const activityMap = new Map(); // dealId -> { first: Date, last: Date, tasks, interactions }
     const bump = (dealId, when, kind) => {
         if (!dealId) return;
         const d = when ? new Date(when) : null;
         if (d && cutoffDate && d < cutoffDate) return;
         const key = String(dealId);
-        const cur = activityMap.get(key) || { last: null, tasks: 0, interactions: 0 };
+        const cur = activityMap.get(key) || { first: null, last: null, tasks: 0, interactions: 0 };
         if (kind === 'task') cur.tasks++; else cur.interactions++;
-        if (d && (!cur.last || d > cur.last)) cur.last = d;
+        if (d) {
+            if (!cur.first || d < cur.first) cur.first = d;
+            if (!cur.last  || d > cur.last)  cur.last  = d;
+        }
         activityMap.set(key, cur);
     };
     (typeof dashMeetings !== 'undefined' ? dashMeetings : []).forEach(t => {
@@ -18361,10 +18364,13 @@ function renderSecSalesEngineer() {
         return;
     }
     // Métricas de topo
-    const totalMrr = deals.reduce((s,d) => s + (Number(d.Amount) || 0), 0);
-    const wonCount = deals.filter(d => d.StatusId === 2 || d.Status === 'Won').length;
+    const _mrr = (d) => (typeof getMRR === 'function' ? getMRR(d) : (Number(d.Amount) || 0));
+    const _stp = (d) => (typeof getSetup === 'function' ? getSetup(d) : 0);
+    const totalMrr = deals.reduce((s,d) => s + _mrr(d), 0);
+    const totalSetup = deals.reduce((s,d) => s + _stp(d), 0);
+    const wonCount = deals.filter(d => d.StatusId === 2).length;
     const openCount = deals.filter(d => !d.FinishDate && d.StatusId !== 2 && d.StatusId !== 3).length;
-    const lostCount = deals.filter(d => d.StatusId === 3 || d.Status === 'Lost').length;
+    const lostCount = deals.filter(d => d.StatusId === 3).length;
     hero.innerHTML = `
         <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:center;">
             <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">Deals com apoio</div><div style="font-size:26px;font-weight:700;color:#c4b5fd;">${deals.length}</div></div>
@@ -18372,37 +18378,51 @@ function renderSecSalesEngineer() {
             <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">Ganhos</div><div style="font-size:22px;font-weight:600;color:#34d399;">${wonCount}</div></div>
             <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">Perdidos</div><div style="font-size:22px;font-weight:600;color:#f87171;">${lostCount}</div></div>
             <div style="margin-left:auto;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">MRR envolvido</div><div style="font-size:22px;font-weight:600;color:#38bdf8;">${_money(totalMrr)}</div></div>
+            <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">Setup envolvido</div><div style="font-size:22px;font-weight:600;color:#fbbf24;">${_money(totalSetup)}</div></div>
         </div>
         <div style="margin-top:10px;font-size:11.5px;opacity:.7;">Sinal de participação: tasks / interactions do Thiago no deal. CollaboratingUsers do Ploomes ainda não está no cache.</div>
     `;
-    // Ordena: em aberto primeiro, depois por atividade mais recente
+    // Ordena: em aberto primeiro, depois pela data que veio pro Thiago (mais recente primeiro)
     const statusRank = d => (d.StatusId === 2 || d.StatusId === 3 ? 1 : 0);
     deals.sort((a,b) => {
         const sa = statusRank(a), sb = statusRank(b);
         if (sa !== sb) return sa - sb;
-        const la = activityMap.get(String(a.Id))?.last?.getTime() || 0;
-        const lb = activityMap.get(String(b.Id))?.last?.getTime() || 0;
-        return lb - la;
+        const fa = activityMap.get(String(a.Id))?.first?.getTime() || 0;
+        const fb = activityMap.get(String(b.Id))?.first?.getTime() || 0;
+        return fb - fa;
     });
+    // Data prevista de fechamento (custom field D9FC0805D...) — fallback via OtherProperties
+    const FIELD_CLOSE_DATE_KEY = 'deal_9FC0805D-E23C-47B0-A182-8350B724F096';
+    const _closeExpected = (d) => {
+        const arr = d.OtherProperties || [];
+        const p = arr.find(x => x && x.FieldKey === FIELD_CLOSE_DATE_KEY);
+        return p ? (p.DateTimeValue || p.DateValue || null) : null;
+    };
+    const _fmtDate = (v) => { if (!v) return '-'; try { return new Date(v).toLocaleDateString('pt-BR'); } catch(e) { return '-'; } };
     const rows = deals.map(d => {
         const act = activityMap.get(String(d.Id)) || {};
         const ownerName = (d.Owner && d.Owner.Name) || dashUsersById[d.OwnerId] || '-';
         const stage = (d.Stage && d.Stage.Name) || '-';
         const pipeline = (d.Pipeline && d.Pipeline.Name) || '-';
         const contact = (d.Contact && d.Contact.Name) || d.ContactName || '-';
-        const mrr = Number(d.Amount) || 0;
+        const mrr = _mrr(d), setup = _stp(d);
         let statusBadge = '<span style="background:rgba(56,189,248,0.15);color:#38bdf8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Em aberto</span>';
-        if (d.StatusId === 2) statusBadge = '<span style="background:rgba(52,211,153,0.15);color:#34d399;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Ganho</span>';
-        else if (d.StatusId === 3) statusBadge = '<span style="background:rgba(248,113,113,0.15);color:#f87171;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Perdido</span>';
-        const lastAct = act.last ? act.last.toLocaleDateString('pt-BR') : '-';
+        let closeDate = _closeExpected(d);
+        let closeLabel = 'previsto';
+        if (d.StatusId === 2) { statusBadge = '<span style="background:rgba(52,211,153,0.15);color:#34d399;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Ganho</span>'; closeDate = d.FinishDate || closeDate; closeLabel = 'fechado'; }
+        else if (d.StatusId === 3) { statusBadge = '<span style="background:rgba(248,113,113,0.15);color:#f87171;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Perdido</span>'; closeDate = d.FinishDate || closeDate; closeLabel = 'perdido em'; }
+        const desdeThiago = act.first ? act.first.toLocaleDateString('pt-BR') : '-';
+        const ultimaAtiv = act.last ? act.last.toLocaleDateString('pt-BR') : '-';
+        const closeCell = closeDate ? `${_fmtDate(closeDate)}<div style="font-size:10px;opacity:.6;">${closeLabel}</div>` : '<span style="opacity:.5;">-</span>';
         const ploomesUrl = `https://app2.ploomes.com/deal/${d.Id}`;
         return `<tr style="border-bottom:1px solid rgba(148,163,184,0.1);">
             <td style="padding:10px 8px;"><a href="${ploomesUrl}" target="_blank" rel="noopener" style="color:#c4b5fd;text-decoration:none;font-weight:600;">${_esc(d.Title || `Deal ${d.Id}`)}</a><div style="font-size:11px;opacity:.65;margin-top:2px;">${_esc(contact)}</div></td>
             <td style="padding:10px 8px;color:#e2e8f0;">${_esc(ownerName)}</td>
             <td style="padding:10px 8px;color:#94a3b8;font-size:12px;">${_esc(pipeline)} · ${_esc(stage)}</td>
             <td style="padding:10px 8px;text-align:right;color:#38bdf8;font-weight:600;">${_money(mrr)}</td>
-            <td style="padding:10px 8px;text-align:center;font-size:12px;color:#cbd5e1;">${act.tasks || 0}t / ${act.interactions || 0}i</td>
-            <td style="padding:10px 8px;color:#94a3b8;font-size:12px;">${lastAct}</td>
+            <td style="padding:10px 8px;text-align:right;color:#fbbf24;font-weight:600;">${_money(setup)}</td>
+            <td style="padding:10px 8px;color:#e2e8f0;font-size:12px;">${desdeThiago}<div style="font-size:10px;opacity:.6;">${act.tasks || 0}t · ${act.interactions || 0}i · última ${ultimaAtiv}</div></td>
+            <td style="padding:10px 8px;color:#cbd5e1;font-size:12px;">${closeCell}</td>
             <td style="padding:10px 8px;">${statusBadge}</td>
         </tr>`;
     }).join('');
@@ -18412,8 +18432,9 @@ function renderSecSalesEngineer() {
             <th style="padding:10px 8px;text-align:left;">Vendedor</th>
             <th style="padding:10px 8px;text-align:left;">Funil · Etapa</th>
             <th style="padding:10px 8px;text-align:right;">MRR</th>
-            <th style="padding:10px 8px;text-align:center;">Atividades Thiago</th>
-            <th style="padding:10px 8px;text-align:left;">Última atividade</th>
+            <th style="padding:10px 8px;text-align:right;">Setup</th>
+            <th style="padding:10px 8px;text-align:left;">Desde (Thiago)</th>
+            <th style="padding:10px 8px;text-align:left;">Data fechamento</th>
             <th style="padding:10px 8px;text-align:left;">Status</th>
         </tr></thead>
         <tbody>${rows}</tbody>
