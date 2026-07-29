@@ -1487,6 +1487,81 @@
         }
         #mktMetaGapBlock .mgap-team-focus .body strong { color: #fff; }
 
+        /* ==================== INSIGHTS REVENUE/MKT PERFORMANCE ==================== */
+        #mktInsightsBlock { margin: 18px 0 24px; display: grid; gap: 16px; }
+        #mktInsightsBlock .mi-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        #mktInsightsBlock .mi-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 1000px) { #mktInsightsBlock .mi-grid-2, #mktInsightsBlock .mi-grid-3 { grid-template-columns: 1fr; } }
+        #mktInsightsBlock .mi-card {
+            background: linear-gradient(180deg, rgba(30,27,58,0.55) 0%, rgba(17,19,32,0.55) 100%);
+            border: 1px solid rgba(139,92,246,0.18); border-radius: 12px; padding: 18px 20px;
+        }
+        #mktInsightsBlock .mi-eyebrow {
+            font-size: 10.5px; letter-spacing: 0.14em; color: #a78bfa; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;
+        }
+        #mktInsightsBlock .mi-title { font-size: 17px; font-weight: 700; color: #f1f5f9; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+        #mktInsightsBlock .mi-sub { color: #94a3b8; font-size: 12px; margin-bottom: 14px; }
+        /* Conversion rate table */
+        #mktInsightsBlock .mi-conv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        @media (max-width: 900px) { #mktInsightsBlock .mi-conv { grid-template-columns: repeat(2, 1fr); } }
+        #mktInsightsBlock .mi-conv-cell {
+            background: rgba(15,17,28,0.6); border: 1px solid rgba(148,163,184,0.12); border-radius: 10px; padding: 12px;
+            position: relative; overflow: hidden;
+        }
+        #mktInsightsBlock .mi-conv-cell::before {
+            content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#3b82f6;
+        }
+        #mktInsightsBlock .mi-conv-cell.ok::before { background:#4ade80; }
+        #mktInsightsBlock .mi-conv-cell.mid::before { background:#facc15; }
+        #mktInsightsBlock .mi-conv-cell.warn::before { background:#f87171; }
+        #mktInsightsBlock .mi-conv-arrow { font-size: 10px; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        #mktInsightsBlock .mi-conv-pct { font-size: 28px; font-weight: 700; font-family: ui-monospace, 'SF Mono', monospace; line-height: 1.05; }
+        #mktInsightsBlock .mi-conv-pct.ok { color: #4ade80; } #mktInsightsBlock .mi-conv-pct.mid { color: #facc15; } #mktInsightsBlock .mi-conv-pct.warn { color: #f87171; }
+        #mktInsightsBlock .mi-conv-ctx { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+        #mktInsightsBlock .mi-conv-bench { font-size: 10.5px; color: #64748b; margin-top: 2px; }
+        /* Velocity */
+        #mktInsightsBlock .mi-vel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        @media (max-width: 900px) { #mktInsightsBlock .mi-vel { grid-template-columns: repeat(2, 1fr); } }
+        #mktInsightsBlock .mi-vel-cell {
+            background: rgba(15,17,28,0.6); border: 1px solid rgba(148,163,184,0.12); border-radius: 10px; padding: 12px;
+        }
+        #mktInsightsBlock .mi-vel-stage { font-size: 10.5px; color: #a78bfa; letter-spacing: 0.08em; font-weight: 600; text-transform: uppercase; }
+        #mktInsightsBlock .mi-vel-days { font-size: 26px; font-weight: 700; font-family: ui-monospace, monospace; color: #f1f5f9; line-height: 1.15; }
+        #mktInsightsBlock .mi-vel-days .unit { font-size: 12px; color: #94a3b8; margin-left: 4px; font-weight: 400; font-family: inherit; }
+        #mktInsightsBlock .mi-vel-note { font-size: 11px; color: #64748b; margin-top: 2px; }
+        /* Origem tabela */
+        #mktInsightsBlock table.mi-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        #mktInsightsBlock table.mi-tbl th { text-align: left; color: #94a3b8; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid rgba(148,163,184,0.15); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+        #mktInsightsBlock table.mi-tbl th.num { text-align: right; }
+        #mktInsightsBlock table.mi-tbl td { padding: 8px 10px; border-bottom: 1px solid rgba(148,163,184,0.06); color: #e5e7eb; }
+        #mktInsightsBlock table.mi-tbl td.num { text-align: right; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+        #mktInsightsBlock table.mi-tbl td.name { color: #f1f5f9; font-weight: 600; }
+        #mktInsightsBlock table.mi-tbl td.money { color: #38bdf8; }
+        #mktInsightsBlock table.mi-tbl td.win { color: #4ade80; font-weight: 600; }
+        #mktInsightsBlock table.mi-tbl tr:hover td { background: rgba(139,92,246,0.05); }
+        /* Forecast */
+        #mktInsightsBlock .mi-forecast-hero {
+            display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; padding: 8px 0 14px;
+        }
+        @media (max-width: 900px) { #mktInsightsBlock .mi-forecast-hero { grid-template-columns: 1fr; text-align: center; } }
+        #mktInsightsBlock .mi-forecast-big { font-size: 36px; font-weight: 700; font-family: ui-monospace, monospace; line-height: 1.1; }
+        #mktInsightsBlock .mi-forecast-big.ok { color: #4ade80; } #mktInsightsBlock .mi-forecast-big.mid { color: #facc15; } #mktInsightsBlock .mi-forecast-big.warn { color: #f87171; }
+        #mktInsightsBlock .mi-forecast-scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        @media (max-width: 700px) { #mktInsightsBlock .mi-forecast-scenarios { grid-template-columns: 1fr; } }
+        #mktInsightsBlock .mi-forecast-scenario {
+            background: rgba(15,17,28,0.6); border: 1px solid rgba(148,163,184,0.12); border-radius: 8px; padding: 10px 12px;
+        }
+        #mktInsightsBlock .mi-forecast-scenario .lbl { font-size: 10px; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+        #mktInsightsBlock .mi-forecast-scenario .val { font-size: 18px; font-weight: 700; font-family: ui-monospace, monospace; color: #f1f5f9; }
+        #mktInsightsBlock .mi-forecast-scenario .val.ok { color: #4ade80; } #mktInsightsBlock .mi-forecast-scenario .val.warn { color: #f87171; }
+        /* SLA alerts */
+        #mktInsightsBlock .mi-alert {
+            background: rgba(248,113,113,0.08); border-left: 3px solid #f87171; padding: 10px 14px; border-radius: 6px; margin-top: 10px;
+        }
+        #mktInsightsBlock .mi-alert.ok { background: rgba(74,222,128,0.06); border-left-color: #4ade80; }
+        #mktInsightsBlock .mi-alert .t { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
+        #mktInsightsBlock .mi-alert .b { font-size: 11.5px; color: #cbd5e1; line-height: 1.5; }
+
         /* ==================== VIEW: PLANEJAMENTO DE METAS ==================== */
         #view-planejamento-metas { font-variant-numeric: tabular-nums; }
         #view-planejamento-metas .pm-container { max-width: 1240px; margin: 0 auto; padding: 8px 4px 60px; }
@@ -7048,6 +7123,9 @@
 
             <!-- Hero: Meta MRR do mês vs geração de demanda (funil operativo) -->
             <div id="mktMetaGapBlock" style="display:none;"></div>
+
+            <!-- Insights Revenue/MKT Performance: conversão · velocity · origem × ganho · forecast -->
+            <div id="mktInsightsBlock" style="display:none;"></div>
 
             <div class="mql-filters-bar">
                 <select id="mktFilterPeriod" class="mql-filter">
@@ -24022,73 +24100,90 @@ function mktComputeFlowMrr(range) {
     }, 0);
 }
 
-// Reuniões AGENDADAS em deals de pipeline NN no range (task ou interaction).
+// === DEFINIÇÕES DO FUNIL (validadas 2026-07-29 pela Jessica) ===
+// LEAD:     capturado via RD, Ads, LPH (antes de virar oportunidade)
+// MQL:      tudo que virou contato no Ploomes no período
+// REUNIÃO:  qualquer atividade de reunião (concluída ou não, agendada ou realizada)
+// OPO:      deal com marcador "Proposta Gerada" aplicado no período (D7ED2D45 ou Tag 60146563 via cache firstMarkerDates)
+// GANHO:    deal com FinishDate no período (StatusId=2)
+
+// Origens de captação (mídia paga + orgânico + LPH). Match case-insensitive por 'includes'.
+const MKT_LEAD_ORIGINS = [
+    'rd station', 'rdstation', 'rd',
+    'meta ads', 'facebook ads', 'facebook',
+    'linkedin ads', 'linkedin',
+    'google ads', 'adwords',
+    'leads per hour', 'lph'
+];
+function _mktIsLeadOrigin(originName) {
+    const n = (originName || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (!n) return false;
+    return MKT_LEAD_ORIGINS.some(o => n.includes(o));
+}
+
+// LEAD: pessoa criada no período com Origin de captação (RD/Ads/LPH)
+// Sem filtro de pipeline — leads são anteriores à qualificação em funil.
+function mktNnLeadsInRange(range) {
+    return (mqlAllRawPeople || []).filter(p => {
+        if (!inMktRange(p.CreateDate, range)) return false;
+        return _mktIsLeadOrigin(p.Origin?.Name);
+    }).length;
+}
+
+// MQL: TODA pessoa criada no Ploomes no período (independente de origem, cargo, pipeline)
+// "Tudo que foi pro Ploomes" — a base bruta contra qual comparar Lead capturado.
+function mktNnMqlsInRange(range) {
+    return (mqlAllRawPeople || []).filter(p => inMktRange(p.CreateDate, range)).length;
+}
+
+// REUNIÕES: qualquer atividade de reunião (task type Reunião + variações no title, OU
+// interaction do tipo Reunião) que caiu no período — DateTime, FinishDate ou CreateDate.
+// Sem filtro de pipeline. Sem filtro "agendada" — conta reunião concluída OU não.
 function mktNnMeetings(range) {
-    if (typeof ensureDealsIndex === 'function') ensureDealsIndex();
-    const dealMatches = dealId => {
-        const d = window._dashOpenDealsById?.[dealId];
-        return d && NN_MEETING_PIPELINES.includes(getPipelineName(d));
-    };
-    const seen = new Set();
     const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const seenDeals = new Set();
     (window.dashMeetings || []).forEach(t => {
-        if (!t.DealId || seen.has(t.DealId)) return;
-        if (!norm(t.Title || '').includes('reuniao agendada')) return;
+        if (!t.DealId || seenDeals.has(t.DealId)) return;
+        const title = norm(t.Title || '');
+        const type  = norm(t.TypeName || t.Type?.Name || '');
+        // "reuni" pega Reunião/Reuniao/reuniao agendada/reuniao realizada/reunião online etc.
+        if (!title.includes('reuni') && !type.includes('reuni')) return;
         const dtIn = inMktRange(t.DateTime, range);
         const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
         const cdIn = t.CreateDate && inMktRange(t.CreateDate, range);
         if (!dtIn && !fdIn && !cdIn) return;
-        if (!dealMatches(t.DealId)) return;
-        seen.add(t.DealId);
+        seenDeals.add(t.DealId);
     });
     (window.dashInteractions || []).forEach(it => {
-        if (!it.DealId || seen.has(it.DealId)) return;
-        if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
+        if (!it.DealId || seenDeals.has(it.DealId)) return;
+        // _intIsReuniaoType já verifica InteractionType.Name inclui "reuniao"
+        if (typeof _intIsReuniaoType !== 'function' || !_intIsReuniaoType(it)) return;
         if (!inMktRange(it.Date, range)) return;
-        if (!dealMatches(it.DealId)) return;
-        seen.add(it.DealId);
+        seenDeals.add(it.DealId);
     });
-    return seen.size;
+    return seenDeals.size;
 }
 
-// Propostas NN: deal com Data Proposta no range + pipeline NN
+// OPO: deal com marcador "Proposta Gerada" aplicado no período (regra unificada).
+// getProposalDate consulta cache firstMarkerDates (MIN histórico + fallback Tag 60146563)
+// e depois campo Data Marcador (D7ED2D45). Sem filtro de pipeline.
 function mktNnProposals(range) {
     const all = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
     const seen = new Set();
     all.forEach(d => {
         if (seen.has(d.Id)) return;
-        if (getPipelineName(d) !== NN_COMMERCIAL_PIPELINE) return;
-        const propDate = (d.OtherProperties || []).find(op => op.FieldKey === PROP_DATE_FIELD_KEY)?.DateTimeValue;
+        const propDate = typeof getProposalDate === 'function' ? getProposalDate(d) : null;
         if (!propDate || !inMktRange(propDate, range)) return;
         seen.add(d.Id);
     });
     return seen.size;
 }
 
-// Ganhos NN: FinishDate no range + pipeline NN
+// GANHOS: FinishDate no range + pipeline NN (mantido — meta é de NN)
 function mktNnWins(range) {
     return (window.wonDeals || []).filter(d =>
         d.FinishDate && inMktRange(d.FinishDate, range) && getPipelineName(d) === NN_COMMERCIAL_PIPELINE
     ).length;
-}
-
-// Leads NN: contatos criados no range que passam mktIsNnLead
-function mktNnLeadsInRange(range) {
-    return (mqlAllPeople || []).filter(p => inMktRange(p.CreateDate, range) && mktIsNnLead(p)).length;
-}
-
-// MQLs NN: contatos criados no range que passam mktIsNnLead + companyHasActiveDeal
-// exclusion (mesmo critério da aba MQLs — evita duplicação de empresa)
-function mktNnMqlsInRange(range) {
-    return (mqlAllPeople || []).filter(p => {
-        if (!inMktRange(p.CreateDate, range)) return false;
-        if (!mktIsNnLead(p)) return false;
-        const companyDeals = (mqlAllDealsLookup || {})[p.CompanyId] || [];
-        const companyHasActiveDeal = companyDeals.some(d =>
-            d.StatusId === 1 && (typeof isSankhyaPipeline === 'function' ? !isSankhyaPipeline(d.Pipeline?.Name) : true)
-        );
-        return !companyHasActiveDeal;
-    }).length;
 }
 
 // Pace do mês corrente: dia atual / total dias do mês (linear).
@@ -24129,12 +24224,14 @@ function renderMktMetaGap(range, realized) {
     const fmtRk = (v) => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
 
     // Funil operativo — cell por etapa
+    // LEAD  = RD + Ads + LPH (Origin de captação) · MQL = tudo no Ploomes · REUNIÃO = qualquer atividade
+    // OPO   = marcador Proposta Gerada aplicado no período · GANHO = fechado no período
     const cellsData = [
-        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR') },
-        { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR') },
-        { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'SAL — agendadas' },
-        { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'propostas enviadas' },
-        { key: 'go',   label: 'GANHOS',   needed: agg.totals.gos,   current: realized.gos,    fmt: (v) => Math.round(v).toLocaleString('pt-BR') }
+        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'RD · Ads · LPH' },
+        { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'tudo no Ploomes' },
+        { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'qualquer atividade' },
+        { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'proposta gerada' },
+        { key: 'go',   label: 'GANHOS',   needed: agg.totals.gos,   current: realized.gos,    fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'fechados no mês' }
     ];
 
     const cellsHtml = cellsData.map(c => {
@@ -24214,6 +24311,245 @@ function renderMktMetaGap(range, realized) {
     `;
 }
 
+// =============================================================================
+// INSIGHTS REVENUE / MKT PERFORMANCE — bloco estratégico abaixo do funil operativo
+// =============================================================================
+function renderMktInsights(range, r) {
+    const box = document.getElementById('mktInsightsBlock');
+    if (!box) return;
+    box.style.display = '';
+
+    const fmtR   = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    const fmtRk  = (v) => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
+    const pctSafe = (n, d) => d > 0 ? (n / d) * 100 : 0;
+
+    // ---------- 1. CONVERSION RATES entre etapas ----------
+    // Benchmarks SaaS B2B (referência de mercado — valores conservadores)
+    const BENCH = { l2m: 30, m2s: 20, s2o: 50, o2g: 25 };
+    const cr = [
+        { arrow: 'LEAD → MQL', pct: pctSafe(r.mqls, r.leads),  bench: BENCH.l2m, num: r.mqls, den: r.leads },
+        { arrow: 'MQL → REUN', pct: pctSafe(r.sals, r.mqls),   bench: BENCH.m2s, num: r.sals, den: r.mqls },
+        { arrow: 'REUN → OPO', pct: pctSafe(r.opos, r.sals),   bench: BENCH.s2o, num: r.opos, den: r.sals },
+        { arrow: 'OPO → GO',   pct: pctSafe(r.gos,  r.opos),   bench: BENCH.o2g, num: r.gos,  den: r.opos }
+    ];
+    const convHtml = cr.map(c => {
+        const ratio = c.bench > 0 ? c.pct / c.bench : 1;
+        const cls = ratio >= 1 ? 'ok' : ratio >= 0.7 ? 'mid' : 'warn';
+        const gapTxt = c.bench > 0
+            ? (c.pct >= c.bench
+                ? `✓ ${(c.pct - c.bench).toFixed(0)}pp acima do benchmark`
+                : `▼ ${(c.bench - c.pct).toFixed(0)}pp abaixo do benchmark`)
+            : '—';
+        return `<div class="mi-conv-cell ${cls}">
+            <div class="mi-conv-arrow">${c.arrow}</div>
+            <div class="mi-conv-pct ${cls}">${c.pct.toFixed(1)}<span style="font-size:14px;opacity:.65;">%</span></div>
+            <div class="mi-conv-ctx">${c.num.toLocaleString('pt-BR')} de ${c.den.toLocaleString('pt-BR')}</div>
+            <div class="mi-conv-bench">bench SaaS B2B · ${c.bench}% · ${gapTxt}</div>
+        </div>`;
+    }).join('');
+
+    // ---------- 2. VELOCITY do funil (dias médios entre etapas) ----------
+    // Amostra: deals ganhos + perdidos que têm as datas necessárias
+    const closedDeals = [...(window.wonDeals || []), ...(window.lostDeals || [])];
+    const velAcc = { l2m: [], m2s: [], s2o: [], o2g: [] };
+    const _first = (d, field) => (d.OtherProperties || []).find(p => p.FieldKey === field);
+    closedDeals.forEach(d => {
+        const create = d.CreateDate ? new Date(d.CreateDate).getTime() : null;
+        const finish = d.FinishDate ? new Date(d.FinishDate).getTime() : null;
+        const propDate = typeof getProposalDate === 'function' ? getProposalDate(d) : null;
+        const propTs = propDate ? new Date(propDate).getTime() : null;
+        // 1ª reunião do deal: task ou interaction de reunião mais antiga
+        let meetTs = null;
+        (window.dashMeetings || []).forEach(t => {
+            if (t.DealId !== d.Id) return;
+            const title = (t.Title || '').toLowerCase();
+            const type  = (t.TypeName || t.Type?.Name || '').toLowerCase();
+            if (!title.includes('reuni') && !type.includes('reuni')) return;
+            const ts = t.DateTime ? new Date(t.DateTime).getTime() : (t.CreateDate ? new Date(t.CreateDate).getTime() : null);
+            if (ts && (!meetTs || ts < meetTs)) meetTs = ts;
+        });
+        (window.dashInteractions || []).forEach(it => {
+            if (it.DealId !== d.Id) return;
+            if (typeof _intIsReuniaoType === 'function' && !_intIsReuniaoType(it)) return;
+            const ts = it.Date ? new Date(it.Date).getTime() : null;
+            if (ts && (!meetTs || ts < meetTs)) meetTs = ts;
+        });
+        const DAY = 86400000;
+        if (create && meetTs && meetTs > create) velAcc.m2s.push((meetTs - create) / DAY);
+        if (meetTs && propTs && propTs > meetTs) velAcc.s2o.push((propTs - meetTs) / DAY);
+        if (propTs && finish && finish > propTs && d.StatusId === 2) velAcc.o2g.push((finish - propTs) / DAY);
+    });
+    const avg = arr => arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null;
+    const vels = [
+        { stage: 'LEAD → MQL',  days: null, note: 'automatizado (RD/Ads → CRM)' },
+        { stage: 'MQL → REUN',  days: avg(velAcc.m2s), note: 'agilidade da pré-venda' },
+        { stage: 'REUN → OPO',  days: avg(velAcc.s2o), note: 'qualificação + geração de proposta' },
+        { stage: 'OPO → GANHO', days: avg(velAcc.o2g), note: 'follow-up comercial' }
+    ];
+    const velHtml = vels.map(v => `<div class="mi-vel-cell">
+        <div class="mi-vel-stage">${v.stage}</div>
+        <div class="mi-vel-days">${v.days == null ? '—' : v.days.toFixed(1)}<span class="unit">${v.days == null ? '' : 'dias'}</span></div>
+        <div class="mi-vel-note">${v.note}</div>
+    </div>`).join('');
+    const totalCycle = vels.filter(v => v.days != null).reduce((s,v) => s + v.days, 0);
+
+    // ---------- 3. ORIGEM × GANHO (matriz de canal por resultado) ----------
+    // Deals cuja Contact.Origin.Name bate com origens de captação — agrupa por origem
+    const _origLabel = (name) => {
+        const n = (name || '').toLowerCase();
+        if (n.includes('rd') || n.includes('rdstation')) return 'RD Station';
+        if (n.includes('meta') || n.includes('facebook')) return 'Meta Ads';
+        if (n.includes('linkedin')) return 'LinkedIn Ads';
+        if (n.includes('google') || n.includes('adwords')) return 'Google Ads';
+        if (n.includes('leads per hour') || n.includes('lph')) return 'Leads per Hour';
+        return name || '(sem origem)';
+    };
+    const originAgg = {};
+    const _bumpOrigin = (d) => {
+        const rawOrigin = d.Contact?.Origin?.Name || d.Origin?.Name || '';
+        if (!_mktIsLeadOrigin(rawOrigin)) return;
+        const key = _origLabel(rawOrigin);
+        if (!originAgg[key]) originAgg[key] = { deals: 0, wons: 0, mrr: 0, timeToClose: [] };
+        originAgg[key].deals++;
+        if (d.StatusId === 2) {
+            originAgg[key].wons++;
+            const mrr = typeof getMRR === 'function' ? getMRR(d) : 0;
+            originAgg[key].mrr += mrr;
+            if (d.CreateDate && d.FinishDate) {
+                originAgg[key].timeToClose.push((new Date(d.FinishDate) - new Date(d.CreateDate)) / 86400000);
+            }
+        }
+    };
+    (window.wonDeals || []).forEach(d => { if (d.FinishDate && inMktRange(d.FinishDate, range)) _bumpOrigin(d); });
+    (window.lostDeals || []).forEach(d => { if (d.FinishDate && inMktRange(d.FinishDate, range)) _bumpOrigin(d); });
+    (window.dashOpenDeals || []).forEach(d => { if (d.CreateDate && inMktRange(d.CreateDate, range)) _bumpOrigin(d); });
+    const originRows = Object.entries(originAgg)
+        .map(([name, a]) => ({ name, ...a, winRate: a.deals > 0 ? (a.wons / a.deals) * 100 : 0, avgClose: a.timeToClose.length ? a.timeToClose.reduce((s,v)=>s+v,0)/a.timeToClose.length : null }))
+        .sort((a, b) => b.mrr - a.mrr);
+    const origHtml = originRows.length === 0
+        ? `<div style="padding:20px;text-align:center;color:#64748b;font-size:12.5px;">Sem deals com Origin de captação no período. <br><span style="opacity:.7;">Padronize as origens do RD/Ads/LPH nos deals do Ploomes pra ativar esta análise.</span></div>`
+        : `<table class="mi-tbl"><thead><tr>
+            <th>Origem</th><th class="num">Deals</th><th class="num">Ganhos</th><th class="num">Win rate</th><th class="num">MRR ganho</th><th class="num">Ticket médio</th><th class="num">Ciclo médio</th>
+        </tr></thead><tbody>
+        ${originRows.map(o => `<tr>
+            <td class="name">${o.name}</td>
+            <td class="num">${o.deals}</td>
+            <td class="num win">${o.wons}</td>
+            <td class="num">${o.winRate.toFixed(1)}%</td>
+            <td class="num money">${o.mrr > 0 ? fmtR(o.mrr) : '—'}</td>
+            <td class="num money">${o.wons > 0 ? fmtR(o.mrr / o.wons) : '—'}</td>
+            <td class="num">${o.avgClose == null ? '—' : o.avgClose.toFixed(0) + 'd'}</td>
+        </tr>`).join('')}
+        </tbody></table>`;
+
+    // ---------- 4. FORECAST — projeção até fim do mês ----------
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const lastOfMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
+    const isThisMonth = range?.start === firstOfMonth && range?.end && Math.abs(range.end - lastOfMonth) < 3600 * 1000;
+    let forecastHtml = '';
+    if (isThisMonth) {
+        const dayOfMonth = now.getDate();
+        const totalDays  = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const paceMul    = totalDays / Math.max(1, dayOfMonth);
+        // Realista: projeta MRR atual proporcionalmente até fim do mês
+        const projRealista = r.mrr * paceMul;
+        // Otimista: OPOs abertas × win rate histórico × ticket médio
+        const winRateHist = closedDeals.length > 0
+            ? closedDeals.filter(d => d.StatusId === 2).length / closedDeals.length
+            : 0.25;
+        const ticketMedioHist = (window.wonDeals || []).length > 0
+            ? (window.wonDeals.reduce((s,d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0) / window.wonDeals.length)
+            : 3000;
+        const openOpos = (window.dashOpenDeals || []).filter(d => {
+            const propDate = typeof getProposalDate === 'function' ? getProposalDate(d) : null;
+            return !!propDate && getPipelineName(d) === NN_COMMERCIAL_PIPELINE;
+        }).length;
+        const projOtimista = r.mrr + (openOpos * winRateHist * ticketMedioHist);
+        // Pessimista: só o que já fechou + 50% do ritmo restante
+        const projPessimista = r.mrr + (r.mrr / Math.max(1, dayOfMonth)) * (totalDays - dayOfMonth) * 0.5;
+
+        const metaTotal = (typeof mktComputeMetaAggregate === 'function' ? mktComputeMetaAggregate().metaTotal : 200000);
+        const gap = metaTotal - projRealista;
+        const heroCls = gap <= 0 ? 'ok' : gap <= metaTotal * 0.15 ? 'mid' : 'warn';
+        const heroMsg = gap <= 0
+            ? `✓ Projeção acima da meta — ${fmtR(-gap)} de folga`
+            : `▼ Gap projetado · ${fmtR(gap)} pra bater a meta`;
+        forecastHtml = `<div class="mi-forecast-hero">
+            <div>
+                <div class="mi-eyebrow">Projeção de fechamento</div>
+                <div class="mi-forecast-big ${heroCls}">${fmtR(projRealista)}</div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${heroMsg}</div>
+            </div>
+            <div style="font-size:11.5px;color:#94a3b8;line-height:1.55;padding:0 12px;">
+                Baseado em <strong style="color:#e5e7eb;">pace linear</strong> (${dayOfMonth}/${totalDays} dias) sobre MRR realizado.<br>
+                <strong style="color:#e5e7eb;">${openOpos}</strong> OPOs abertas × <strong style="color:#e5e7eb;">${(winRateHist*100).toFixed(0)}%</strong> win rate histórico × <strong style="color:#e5e7eb;">${fmtRk(ticketMedioHist)}</strong> ticket = <strong style="color:#4ade80;">${fmtR(openOpos * winRateHist * ticketMedioHist)}</strong> potencial extra.
+            </div>
+        </div>
+        <div class="mi-forecast-scenarios">
+            <div class="mi-forecast-scenario"><div class="lbl">🔴 Pessimista</div><div class="val warn">${fmtR(projPessimista)}</div><div style="font-size:10.5px;color:#94a3b8;">se pace cair 50%</div></div>
+            <div class="mi-forecast-scenario"><div class="lbl">🟡 Realista</div><div class="val">${fmtR(projRealista)}</div><div style="font-size:10.5px;color:#94a3b8;">pace atual mantido</div></div>
+            <div class="mi-forecast-scenario"><div class="lbl">🟢 Otimista</div><div class="val ok">${fmtR(projOtimista)}</div><div style="font-size:10.5px;color:#94a3b8;">todas OPOs no win rate hist.</div></div>
+        </div>`;
+    } else {
+        forecastHtml = `<div style="padding:20px;text-align:center;color:#64748b;font-size:12.5px;">Projeção só disponível quando o filtro é <strong>Este mês</strong>.</div>`;
+    }
+
+    // ---------- 5. GARGALO + SLA ALERT ----------
+    const worstStage = cr.map(c => ({ ...c, ratio: c.bench > 0 ? c.pct / c.bench : 1 })).sort((a,b) => a.ratio - b.ratio)[0];
+    let bottleneckHtml = '';
+    if (worstStage && worstStage.ratio < 0.7) {
+        const suggestions = {
+            'LEAD → MQL': 'Origens sem qualidade. Reveja campanhas com pior conversão e desligue as que não geram MQL.',
+            'MQL → REUN': 'Pré-vendas com dificuldade de agendar. Cadência de contato, script e SLA de primeiro toque.',
+            'REUN → OPO': 'Qualificação frágil. Reuniões acontecem mas não geram proposta — revisar critérios BANT/MEDDIC.',
+            'OPO → GO':   'Propostas enviadas não fecham. Objeções, precificação, ou follow-up insuficiente.'
+        };
+        bottleneckHtml = `<div class="mi-alert">
+            <div class="t">⚠️ Gargalo do funil: ${worstStage.arrow} · ${worstStage.pct.toFixed(1)}% vs bench ${worstStage.bench}%</div>
+            <div class="b">${suggestions[worstStage.arrow]}</div>
+        </div>`;
+    } else if (worstStage && worstStage.ratio >= 1) {
+        bottleneckHtml = `<div class="mi-alert ok">
+            <div class="t">✓ Funil saudável — todas as etapas acima do benchmark SaaS B2B</div>
+            <div class="b">Melhor conversão: ${worstStage.arrow} está ${worstStage.pct.toFixed(1)}% vs bench ${worstStage.bench}%. Foco em escalar topo do funil sem perder conversão.</div>
+        </div>`;
+    }
+
+    // ---------- MONTAGEM ----------
+    box.innerHTML = `
+        <div class="mi-card">
+            <div class="mi-eyebrow">CONVERSÃO ENTRE ETAPAS · vs benchmark SaaS B2B</div>
+            <div class="mi-title">Onde a conversão está segurando o funil</div>
+            <div class="mi-sub">Compara sua taxa entre cada etapa com o benchmark de mercado. Verde = igual ou melhor · amarelo = 70-99% do bench · vermelho = abaixo de 70%.</div>
+            <div class="mi-conv">${convHtml}</div>
+            ${bottleneckHtml}
+        </div>
+
+        <div class="mi-grid-2">
+            <div class="mi-card">
+                <div class="mi-eyebrow">VELOCITY DO FUNIL · média em dias</div>
+                <div class="mi-title">Quanto tempo leva pra passar de uma etapa pra próxima</div>
+                <div class="mi-sub">Amostra: deals fechados (ganhos e perdidos). ${totalCycle > 0 ? `Ciclo médio total observado: <strong style="color:#f1f5f9;">${totalCycle.toFixed(0)} dias</strong> de MQL até fechamento.` : ''}</div>
+                <div class="mi-vel">${velHtml}</div>
+            </div>
+            <div class="mi-card">
+                <div class="mi-eyebrow">FORECAST · MRR até fim do mês</div>
+                <div class="mi-title">Onde vamos parar se nada mudar</div>
+                <div class="mi-sub">Três cenários baseados em pace atual, win rate histórico e ticket médio.</div>
+                ${forecastHtml}
+            </div>
+        </div>
+
+        <div class="mi-card">
+            <div class="mi-eyebrow">ORIGEM × RESULTADO · ROI por canal de captação</div>
+            <div class="mi-title">Qual canal está trazendo receita de verdade</div>
+            <div class="mi-sub">Deals com Origin de captação (RD/Ads/LPH) no período. Compare win rate, ticket médio e ciclo pra decidir onde reinvestir orçamento.</div>
+            ${origHtml}
+        </div>
+    `;
+}
+
 function renderMarketing(range, rd) {
     const enriched = buildEnrichedMqls(range);
     const totalLeads = rd.count;
@@ -24226,14 +24562,16 @@ function renderMarketing(range, rd) {
 
     // Hero Meta do mês — foco em NOVOS NEGÓCIOS (máquina crítica de MKT + PV + Vendas).
     // Todos os números filtrados pra pipeline 'Funil de Vendas' + SDR Inbound/Outbound.
-    renderMktMetaGap(range, {
+    const realizedFunnel = {
         leads: mktNnLeadsInRange(range),
         mqls:  mktNnMqlsInRange(range),
         sals:  mktNnMeetings(range),
         opos:  mktNnProposals(range),
         gos:   mktNnWins(range),
         mrr:   mktComputeFlowMrr(range)
-    });
+    };
+    renderMktMetaGap(range, realizedFunnel);
+    try { renderMktInsights(range, realizedFunnel); } catch (e) { console.warn('[mkt insights]', e); }
 
     // === FLOW: reuniões REALIZADAS no período (qualquer safra de lead) ===
     // Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate caiu no período E houve
