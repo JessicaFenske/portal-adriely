@@ -1562,6 +1562,99 @@
         #mktInsightsBlock .mi-alert .t { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
         #mktInsightsBlock .mi-alert .b { font-size: 11.5px; color: #cbd5e1; line-height: 1.5; }
 
+        /* ==================== SMART ACTIONS · comando executivo ==================== */
+        #mktSmartActionsBlock { margin: 4px 0 18px; display: grid; gap: 14px; }
+        #mktSmartActionsBlock .sa-kpi-row {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+        }
+        @media (max-width: 1000px) { #mktSmartActionsBlock .sa-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+        #mktSmartActionsBlock .sa-kpi {
+            background: linear-gradient(180deg, rgba(30,27,58,0.6) 0%, rgba(17,19,32,0.6) 100%);
+            border: 1px solid rgba(139,92,246,0.18); border-radius: 10px; padding: 12px 14px;
+            position: relative; overflow: hidden;
+        }
+        #mktSmartActionsBlock .sa-kpi::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #8b5cf6;
+        }
+        #mktSmartActionsBlock .sa-kpi.ok::before { background: #4ade80; }
+        #mktSmartActionsBlock .sa-kpi.mid::before { background: #facc15; }
+        #mktSmartActionsBlock .sa-kpi.warn::before { background: #f87171; }
+        #mktSmartActionsBlock .sa-kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; font-weight: 600; }
+        #mktSmartActionsBlock .sa-kpi-val { font-size: 26px; font-weight: 700; font-family: ui-monospace, monospace; color: #f1f5f9; line-height: 1.1; margin-top: 2px; }
+        #mktSmartActionsBlock .sa-kpi-val.money { color: #38bdf8; }
+        #mktSmartActionsBlock .sa-kpi-delta { font-size: 11px; margin-top: 2px; font-weight: 600; }
+        #mktSmartActionsBlock .sa-kpi-delta.up { color: #4ade80; }
+        #mktSmartActionsBlock .sa-kpi-delta.down { color: #f87171; }
+        #mktSmartActionsBlock .sa-kpi-delta.flat { color: #64748b; }
+        #mktSmartActionsBlock .sa-kpi-prev { font-size: 10.5px; color: #64748b; margin-top: 1px; }
+        /* Financial impact */
+        #mktSmartActionsBlock .sa-impact {
+            background: linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(74,222,128,0.06) 100%);
+            border: 1px solid rgba(56,189,248,0.25); border-radius: 12px; padding: 16px 20px;
+            display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center;
+        }
+        @media (max-width: 900px) { #mktSmartActionsBlock .sa-impact { grid-template-columns: 1fr; text-align: center; } }
+        #mktSmartActionsBlock .sa-impact .icn { font-size: 32px; }
+        #mktSmartActionsBlock .sa-impact .msg { font-size: 13.5px; color: #e5e7eb; line-height: 1.5; }
+        #mktSmartActionsBlock .sa-impact .msg strong { color: #38bdf8; font-weight: 700; }
+        #mktSmartActionsBlock .sa-impact .val {
+            font-size: 32px; font-weight: 700; color: #4ade80; font-family: ui-monospace, monospace; line-height: 1;
+        }
+        #mktSmartActionsBlock .sa-impact .val .lbl { display: block; font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-family: system-ui, sans-serif; margin-top: 4px; }
+        /* Priority queue */
+        #mktSmartActionsBlock .sa-queue-title {
+            font-size: 15px; font-weight: 700; color: #f1f5f9; margin: 4px 0 2px; display: flex; align-items: center; gap: 8px;
+        }
+        #mktSmartActionsBlock .sa-queue-sub { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+        #mktSmartActionsBlock .sa-queue-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+        }
+        @media (max-width: 1100px) { #mktSmartActionsBlock .sa-queue-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px)  { #mktSmartActionsBlock .sa-queue-grid { grid-template-columns: 1fr; } }
+        #mktSmartActionsBlock .sa-q-card {
+            background: rgba(15,17,28,0.7); border: 1px solid rgba(148,163,184,0.15); border-radius: 10px; padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        #mktSmartActionsBlock .sa-q-card .cnt {
+            font-size: 32px; font-weight: 700; font-family: ui-monospace, monospace; line-height: 1;
+        }
+        #mktSmartActionsBlock .sa-q-card .cnt.warn { color: #f87171; }
+        #mktSmartActionsBlock .sa-q-card .cnt.mid  { color: #facc15; }
+        #mktSmartActionsBlock .sa-q-card .cnt.ok   { color: #4ade80; }
+        #mktSmartActionsBlock .sa-q-card .lbl { font-size: 12px; color: #f1f5f9; font-weight: 700; }
+        #mktSmartActionsBlock .sa-q-card .desc { font-size: 11px; color: #94a3b8; line-height: 1.45; }
+        #mktSmartActionsBlock .sa-q-card ul { list-style: none; padding: 0; margin: 4px 0 0; font-size: 11.5px; }
+        #mktSmartActionsBlock .sa-q-card ul li { padding: 3px 0; border-top: 1px dashed rgba(148,163,184,0.15); color: #e5e7eb; }
+        #mktSmartActionsBlock .sa-q-card ul li a { color: #a78bfa; text-decoration: none; font-weight: 600; }
+        #mktSmartActionsBlock .sa-q-card ul li a:hover { text-decoration: underline; }
+        #mktSmartActionsBlock .sa-q-card ul li .aux { color: #94a3b8; font-size: 10.5px; }
+
+        /* Deep diagnosis */
+        #mktDeepDiagBlock { margin: 8px 0 24px; display: grid; gap: 16px; }
+        #mktDeepDiagBlock .dd-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 1000px) { #mktDeepDiagBlock .dd-grid-2 { grid-template-columns: 1fr; } }
+        #mktDeepDiagBlock .dd-card {
+            background: linear-gradient(180deg, rgba(30,27,58,0.55) 0%, rgba(17,19,32,0.55) 100%);
+            border: 1px solid rgba(139,92,246,0.18); border-radius: 12px; padding: 18px 20px;
+        }
+        #mktDeepDiagBlock .dd-eyebrow { font-size: 10.5px; letter-spacing: 0.14em; color: #a78bfa; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+        #mktDeepDiagBlock .dd-title { font-size: 17px; font-weight: 700; color: #f1f5f9; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+        #mktDeepDiagBlock .dd-sub { color: #94a3b8; font-size: 12px; margin-bottom: 14px; }
+        #mktDeepDiagBlock table.dd-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        #mktDeepDiagBlock table.dd-tbl th { text-align: left; color: #94a3b8; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid rgba(148,163,184,0.15); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+        #mktDeepDiagBlock table.dd-tbl th.num { text-align: right; }
+        #mktDeepDiagBlock table.dd-tbl td { padding: 8px 10px; border-bottom: 1px solid rgba(148,163,184,0.06); color: #e5e7eb; }
+        #mktDeepDiagBlock table.dd-tbl td.num { text-align: right; font-family: ui-monospace, monospace; }
+        #mktDeepDiagBlock table.dd-tbl td.name { color: #f1f5f9; font-weight: 600; }
+        #mktDeepDiagBlock table.dd-tbl td.warn { color: #f87171; }
+        #mktDeepDiagBlock .dd-bar-wrap {
+            display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: center; padding: 6px 0;
+        }
+        #mktDeepDiagBlock .dd-bar-lbl { font-size: 12px; color: #e5e7eb; }
+        #mktDeepDiagBlock .dd-bar { height: 8px; background: rgba(148,163,184,0.1); border-radius: 4px; overflow: hidden; }
+        #mktDeepDiagBlock .dd-bar-fill { height: 100%; background: linear-gradient(90deg, #f87171, #fbbf24); }
+        #mktDeepDiagBlock .dd-bar-val { font-size: 12px; color: #f1f5f9; font-weight: 600; font-family: ui-monospace, monospace; min-width: 60px; text-align: right; }
+
         /* ==================== VIEW: PLANEJAMENTO DE METAS ==================== */
         #view-planejamento-metas { font-variant-numeric: tabular-nums; }
         #view-planejamento-metas .pm-container { max-width: 1240px; margin: 0 auto; padding: 8px 4px 60px; }
@@ -7121,11 +7214,17 @@
             <!-- Tab content: Performance -->
             <div id="mktTabPerf">
 
+            <!-- Executive command center: delta vs periodo anterior + impacto financeiro + fila de acao -->
+            <div id="mktSmartActionsBlock" style="display:none;"></div>
+
             <!-- Hero: Meta MRR do mês vs geração de demanda (funil operativo) -->
             <div id="mktMetaGapBlock" style="display:none;"></div>
 
             <!-- Insights Revenue/MKT Performance: conversão · velocity · origem × ganho · forecast -->
             <div id="mktInsightsBlock" style="display:none;"></div>
+
+            <!-- Analise de perdidos + deals presos (bloco de diagnostico profundo) -->
+            <div id="mktDeepDiagBlock" style="display:none;"></div>
 
             <div class="mql-filters-bar">
                 <select id="mktFilterPeriod" class="mql-filter">
@@ -24189,15 +24288,24 @@ function mktNnWins(range) {
 // Pace do mês corrente: dia atual / total dias do mês (linear).
 // Retorna 1 quando o range selecionado NÃO é o mês corrente (comparação sem pace).
 function mktMonthPace(range) {
+    // Range da view MKT usa .from/.to (Date), NAO .start/.end (bug historico corrigido 2026-07-29)
+    if (!range?.from) return 1;
     const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
-    if (range?.start !== firstOfMonth || (range?.end && Math.abs(range.end - lastOfMonth) > 3600 * 1000)) {
-        return 1;
-    }
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (range.from.getTime() !== firstOfMonth.getTime()) return 1;
     const day = now.getDate();
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     return day / lastDay;
+}
+
+// Retorna range do periodo IMEDIATAMENTE ANTERIOR com mesma duracao. Usado pra deltas.
+function mktPreviousRange(range) {
+    if (!range?.from || !range?.to) return null;
+    const durationMs = range.to.getTime() - range.from.getTime();
+    return {
+        from: new Date(range.from.getTime() - durationMs - 1),
+        to: new Date(range.from.getTime() - 1)
+    };
 }
 
 function renderMktMetaGap(range, realized) {
@@ -24308,6 +24416,309 @@ function renderMktMetaGap(range, realized) {
         <div class="mgap-funnel-grid">${cellsHtml}</div>
 
         ${focusHtml}
+    `;
+}
+
+// =============================================================================
+// SMART ACTIONS · comando executivo — deltas vs periodo anterior, impacto financeiro
+// do gargalo e fila de acao com deals concretos que exigem intervencao hoje
+// =============================================================================
+function renderMktSmartActions(range, r) {
+    const box = document.getElementById('mktSmartActionsBlock');
+    if (!box) return;
+    box.style.display = '';
+
+    const fmtR  = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    const fmtRk = (v) => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
+
+    // --- Delta vs periodo anterior comparavel ---
+    const prev = mktPreviousRange(range);
+    const rPrev = prev ? {
+        leads: mktNnLeadsInRange(prev),
+        mqls:  mktNnMqlsInRange(prev),
+        sals:  mktNnMeetings(prev),
+        opos:  mktNnProposals(prev),
+        gos:   mktNnWins(prev),
+        mrr:   mktComputeFlowMrr(prev)
+    } : null;
+    const _delta = (cur, prv) => {
+        if (!prv || prv === 0) return { pct: null, cls: 'flat', txt: cur > 0 ? 'novo' : '—' };
+        const d = ((cur - prv) / prv) * 100;
+        if (Math.abs(d) < 3) return { pct: d, cls: 'flat', txt: '≈ estável' };
+        return { pct: d, cls: d > 0 ? 'up' : 'down', txt: (d > 0 ? '↑ ' : '↓ ') + Math.abs(d).toFixed(0) + '%' };
+    };
+    const kpis = [
+        { lbl: 'LEADS',    val: r.leads.toLocaleString('pt-BR'),      prev: rPrev?.leads, cur: r.leads,  money: false, tone: 'ok' },
+        { lbl: 'MQLS',     val: r.mqls.toLocaleString('pt-BR'),       prev: rPrev?.mqls,  cur: r.mqls,   money: false, tone: 'ok' },
+        { lbl: 'REUNIÕES', val: r.sals.toLocaleString('pt-BR'),       prev: rPrev?.sals,  cur: r.sals,   money: false, tone: 'mid' },
+        { lbl: 'OPOS',     val: r.opos.toLocaleString('pt-BR'),       prev: rPrev?.opos,  cur: r.opos,   money: false, tone: 'mid' },
+        { lbl: 'MRR GANHO', val: fmtRk(r.mrr),                          prev: rPrev?.mrr,   cur: r.mrr,    money: true,  tone: 'ok' }
+    ];
+    const kpiHtml = kpis.map(k => {
+        const d = _delta(k.cur, k.prev);
+        const prevTxt = k.prev != null ? (k.money ? fmtRk(k.prev) : k.prev.toLocaleString('pt-BR')) : '—';
+        return `<div class="sa-kpi ${k.tone}">
+            <div class="sa-kpi-label">${k.lbl}</div>
+            <div class="sa-kpi-val ${k.money?'money':''}">${k.val}</div>
+            <div class="sa-kpi-delta ${d.cls}">${d.txt}</div>
+            <div class="sa-kpi-prev">vs período anterior · ${prevTxt}</div>
+        </div>`;
+    }).join('');
+
+    // --- Impacto financeiro do gargalo ---
+    // Se melhorar a conversao da pior etapa ate o benchmark, quanto de MRR extra vem?
+    const BENCH = { l2m: 30, m2s: 20, s2o: 50, o2g: 25 };
+    const ticketMedio = (window.wonDeals || []).length > 0
+        ? (window.wonDeals.reduce((s,d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0) / window.wonDeals.length)
+        : 3000;
+    const _pct = (n, d) => d > 0 ? (n / d) * 100 : 0;
+    const etapas = [
+        { arrow: 'LEAD → MQL', den: r.leads, num: r.mqls, pct: _pct(r.mqls, r.leads), bench: BENCH.l2m, extraFn: b => (r.leads * b / 100 - r.mqls) * (BENCH.m2s/100) * (BENCH.s2o/100) * (BENCH.o2g/100) * ticketMedio },
+        { arrow: 'MQL → REUN', den: r.mqls,  num: r.sals, pct: _pct(r.sals, r.mqls),  bench: BENCH.m2s, extraFn: b => (r.mqls  * b / 100 - r.sals) * (BENCH.s2o/100) * (BENCH.o2g/100) * ticketMedio },
+        { arrow: 'REUN → OPO', den: r.sals,  num: r.opos, pct: _pct(r.opos, r.sals),  bench: BENCH.s2o, extraFn: b => (r.sals  * b / 100 - r.opos) * (BENCH.o2g/100) * ticketMedio },
+        { arrow: 'OPO → GO',   den: r.opos,  num: r.gos,  pct: _pct(r.gos,  r.opos),  bench: BENCH.o2g, extraFn: b => (r.opos  * b / 100 - r.gos)  * ticketMedio }
+    ];
+    const gargalos = etapas
+        .filter(e => e.den > 0 && e.pct < e.bench)
+        .map(e => ({ ...e, extra: Math.max(0, e.extraFn(e.bench)) }))
+        .sort((a,b) => b.extra - a.extra);
+    let impactHtml = '';
+    if (gargalos.length > 0) {
+        const g = gargalos[0];
+        impactHtml = `<div class="sa-impact">
+            <div class="icn">💰</div>
+            <div class="msg">
+                Se você levar a conversão de <strong>${g.arrow}</strong> dos atuais <strong>${g.pct.toFixed(1)}%</strong> pro benchmark <strong>${g.bench}%</strong>,
+                sua projeção de MRR aumenta em torno de:<br>
+                <span style="font-size:11.5px;color:#94a3b8;">Base: ticket médio histórico ${fmtRk(ticketMedio)} × conversão em cascata das etapas seguintes</span>
+            </div>
+            <div class="val">+${fmtRk(g.extra)}<span class="lbl">impacto potencial</span></div>
+        </div>`;
+    } else if (etapas.some(e => e.den > 0)) {
+        impactHtml = `<div class="sa-impact" style="background:linear-gradient(135deg,rgba(74,222,128,0.08),rgba(56,189,248,0.06));border-color:rgba(74,222,128,0.3);">
+            <div class="icn">✓</div>
+            <div class="msg">
+                Todas as etapas do funil estão no benchmark ou acima. Agora o jogo é <strong>escalar volume no topo</strong> sem sacrificar essa conversão.
+            </div>
+            <div class="val" style="color:#4ade80;font-size:20px;">🚀<span class="lbl">funil saudável</span></div>
+        </div>`;
+    }
+
+    // --- Fila de ação prioritária: 4 categorias de deals que exigem intervencao ---
+    const DAY = 86400000;
+    const now = Date.now();
+    const openDeals = (window.dashOpenDeals || []).filter(d => getPipelineName(d) === NN_COMMERCIAL_PIPELINE);
+
+    // Ultima atividade por deal (task ou interaction mais recente)
+    const _lastActivity = (dealId) => {
+        let latest = 0;
+        (window.dashMeetings || []).forEach(t => {
+            if (t.DealId !== dealId) return;
+            const ts = t.LastUpdateDate ? new Date(t.LastUpdateDate).getTime() : (t.CreateDate ? new Date(t.CreateDate).getTime() : 0);
+            if (ts > latest) latest = ts;
+        });
+        (window.dashInteractions || []).forEach(it => {
+            if (it.DealId !== dealId) return;
+            const ts = it.Date ? new Date(it.Date).getTime() : 0;
+            if (ts > latest) latest = ts;
+        });
+        return latest;
+    };
+
+    // 1. MQLs sem primeiro toque ha > 48h (deal aberto criado ha >2 dias sem NENHUMA atividade)
+    const mqlsSemToque = openDeals.filter(d => {
+        if (!d.CreateDate) return false;
+        const age = (now - new Date(d.CreateDate).getTime()) / DAY;
+        if (age < 2 || age > 30) return false;
+        return _lastActivity(d.Id) === 0;
+    }).sort((a,b) => new Date(a.CreateDate) - new Date(b.CreateDate));
+
+    // 2. OPOs sem follow-up ha > 5 dias
+    const opoStale = openDeals.filter(d => {
+        const propDate = typeof getProposalDate === 'function' ? getProposalDate(d) : null;
+        if (!propDate) return false;
+        const last = _lastActivity(d.Id);
+        if (!last) return true;
+        return (now - last) / DAY > 5;
+    }).sort((a,b) => (_lastActivity(a.Id) || 0) - (_lastActivity(b.Id) || 0));
+
+    // 3. Deals de alto valor (MRR > R$5k) sem próxima atividade agendada
+    const _hasScheduled = (dealId) => (window.dashMeetings || []).some(t => t.DealId === dealId && t.DateTime && new Date(t.DateTime).getTime() > now && !t.FinishDate);
+    const dealsQuentes = openDeals.filter(d => {
+        const mrr = typeof getMRR === 'function' ? getMRR(d) : 0;
+        return mrr >= 5000 && !_hasScheduled(d.Id);
+    }).sort((a,b) => (typeof getMRR === 'function' ? getMRR(b) : 0) - (typeof getMRR === 'function' ? getMRR(a) : 0));
+
+    // 4. Deals presos numa etapa (tempo em stage atual > 2× ciclo medio do funil)
+    const cicloMedio = 30; // referencia B2B; poderia calcular real
+    const dealsPresos = openDeals.filter(d => {
+        if (!d.LastUpdateDate) return false;
+        const age = (now - new Date(d.LastUpdateDate).getTime()) / DAY;
+        return age > cicloMedio * 2;
+    }).sort((a,b) => new Date(a.LastUpdateDate) - new Date(b.LastUpdateDate));
+
+    const _dealRow = (d, meta) => {
+        const url = 'https://app2.ploomes.com/deal/' + d.Id;
+        const owner = d.Owner?.Name || 'sem owner';
+        const title = (d.Title || 'Deal ' + d.Id).slice(0, 40);
+        return `<li><a href="${url}" target="_blank" rel="noopener">${title}</a> <span class="aux">· ${owner} · ${meta}</span></li>`;
+    };
+    const _fmtDaysAgo = (ts) => ts ? Math.floor((now - ts) / DAY) + 'd' : 'nunca';
+
+    const cardsHtml = `
+        <div class="sa-q-card">
+            <div class="cnt ${mqlsSemToque.length > 5 ? 'warn' : mqlsSemToque.length > 0 ? 'mid' : 'ok'}">${mqlsSemToque.length}</div>
+            <div class="lbl">⚡ MQLs sem primeiro toque</div>
+            <div class="desc">Deals abertos criados há mais de 48h sem nenhuma atividade. SLA de topo do funil.</div>
+            ${mqlsSemToque.length > 0 ? `<ul>${mqlsSemToque.slice(0,3).map(d => _dealRow(d, 'criado há ' + Math.floor((now - new Date(d.CreateDate).getTime()) / DAY) + 'd')).join('')}</ul>` : ''}
+        </div>
+        <div class="sa-q-card">
+            <div class="cnt ${opoStale.length > 5 ? 'warn' : opoStale.length > 0 ? 'mid' : 'ok'}">${opoStale.length}</div>
+            <div class="lbl">📄 OPOs sem follow-up</div>
+            <div class="desc">Propostas geradas sem interação há mais de 5 dias. Cliente esfriando.</div>
+            ${opoStale.length > 0 ? `<ul>${opoStale.slice(0,3).map(d => _dealRow(d, 'sem toque há ' + _fmtDaysAgo(_lastActivity(d.Id)))).join('')}</ul>` : ''}
+        </div>
+        <div class="sa-q-card">
+            <div class="cnt ${dealsQuentes.length > 3 ? 'warn' : dealsQuentes.length > 0 ? 'mid' : 'ok'}">${dealsQuentes.length}</div>
+            <div class="lbl">🔥 Deals ≥R$5k sem agenda</div>
+            <div class="desc">Alto valor em aberto sem próxima atividade marcada. Risco de esquecimento.</div>
+            ${dealsQuentes.length > 0 ? `<ul>${dealsQuentes.slice(0,3).map(d => _dealRow(d, fmtRk(getMRR(d)))).join('')}</ul>` : ''}
+        </div>
+        <div class="sa-q-card">
+            <div class="cnt ${dealsPresos.length > 5 ? 'warn' : dealsPresos.length > 0 ? 'mid' : 'ok'}">${dealsPresos.length}</div>
+            <div class="lbl">🐌 Deals presos > 60d</div>
+            <div class="desc">Sem update há mais de 2× o ciclo médio. Decidir: reativar ou descartar.</div>
+            ${dealsPresos.length > 0 ? `<ul>${dealsPresos.slice(0,3).map(d => _dealRow(d, 'sem update há ' + Math.floor((now - new Date(d.LastUpdateDate).getTime()) / DAY) + 'd')).join('')}</ul>` : ''}
+        </div>
+    `;
+
+    box.innerHTML = `
+        <div class="sa-kpi-row">${kpiHtml}</div>
+        ${impactHtml}
+        <div>
+            <div class="sa-queue-title">🎯 Fila de ação prioritária</div>
+            <div class="sa-queue-sub">Deals do funil de NN que exigem intervenção hoje. Cada card lista os 3 mais urgentes — clique pra abrir no Ploomes.</div>
+            <div class="sa-queue-grid">${cardsHtml}</div>
+        </div>
+    `;
+}
+
+// =============================================================================
+// DEEP DIAGNOSIS · analise de perdidos + concentração de risco no pipeline
+// =============================================================================
+function renderMktDeepDiag(range, r) {
+    const box = document.getElementById('mktDeepDiagBlock');
+    if (!box) return;
+    box.style.display = '';
+    const fmtR  = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    const fmtRk = (v) => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
+
+    // --- 1. Analise de perdidos no periodo (NN) ---
+    const lostInRange = (window.lostDeals || []).filter(d =>
+        d.FinishDate && inMktRange(d.FinishDate, range) && getPipelineName(d) === NN_COMMERCIAL_PIPELINE
+    );
+    const totalLostValor = lostInRange.reduce((s,d) => s + (typeof getMRR === 'function' ? getMRR(d) : 0), 0);
+    const wonInRange = (window.wonDeals || []).filter(d =>
+        d.FinishDate && inMktRange(d.FinishDate, range) && getPipelineName(d) === NN_COMMERCIAL_PIPELINE
+    );
+    const winRate = (wonInRange.length + lostInRange.length) > 0 ? wonInRange.length / (wonInRange.length + lostInRange.length) : 0;
+
+    const reasonAgg = {};
+    lostInRange.forEach(d => {
+        const r2 = d.LossReason?.Name || '(sem motivo registrado)';
+        if (!reasonAgg[r2]) reasonAgg[r2] = { count: 0, mrrPerdido: 0 };
+        reasonAgg[r2].count++;
+        reasonAgg[r2].mrrPerdido += typeof getMRR === 'function' ? getMRR(d) : 0;
+    });
+    const reasonRows = Object.entries(reasonAgg)
+        .map(([name, a]) => ({ name, ...a, pct: (a.count / lostInRange.length) * 100 }))
+        .sort((a,b) => b.count - a.count);
+    const topReason = reasonRows[0];
+
+    let perdidosHtml;
+    if (lostInRange.length === 0) {
+        perdidosHtml = `<div style="padding:20px;text-align:center;color:#4ade80;font-size:13px;">✓ Sem deals perdidos no período.</div>`;
+    } else {
+        perdidosHtml = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
+                <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Perdidos no período</div>
+                    <div style="font-size:22px;font-weight:700;color:#f87171;font-family:ui-monospace,monospace;">${lostInRange.length} deals · ${fmtR(totalLostValor)}</div>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Win rate: ${(winRate*100).toFixed(0)}% (${wonInRange.length} ganhos vs ${lostInRange.length} perdidos)</div>
+                </div>
+                <div style="background:rgba(250,204,21,0.06);border:1px solid rgba(250,204,21,0.2);border-radius:8px;padding:10px 14px;">
+                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Motivo #1 de perda</div>
+                    <div style="font-size:16px;font-weight:700;color:#facc15;line-height:1.2;">${topReason ? topReason.name : '—'}</div>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${topReason ? `${topReason.count} deals (${topReason.pct.toFixed(0)}%) · ${fmtR(topReason.mrrPerdido)} de MRR não capturado` : ''}</div>
+                </div>
+            </div>
+            ${reasonRows.slice(0, 6).map(r2 => {
+                const barPct = topReason ? (r2.count / topReason.count) * 100 : 0;
+                return `<div class="dd-bar-wrap">
+                    <div class="dd-bar-lbl" title="${r2.name}">${r2.name.length > 24 ? r2.name.slice(0,24)+'…' : r2.name}</div>
+                    <div class="dd-bar"><div class="dd-bar-fill" style="width:${barPct}%"></div></div>
+                    <div class="dd-bar-val">${r2.count} · ${fmtRk(r2.mrrPerdido)}</div>
+                </div>`;
+            }).join('')}
+        `;
+    }
+
+    // --- 2. Concentração de risco no pipeline aberto (top 5 deals) ---
+    const openNN = (window.dashOpenDeals || []).filter(d => getPipelineName(d) === NN_COMMERCIAL_PIPELINE)
+        .map(d => ({ d, mrr: typeof getMRR === 'function' ? getMRR(d) : 0 }))
+        .filter(x => x.mrr > 0)
+        .sort((a,b) => b.mrr - a.mrr);
+    const totalPipe = openNN.reduce((s,x) => s + x.mrr, 0);
+    const top5Sum = openNN.slice(0, 5).reduce((s,x) => s + x.mrr, 0);
+    const top5Pct = totalPipe > 0 ? (top5Sum / totalPipe) * 100 : 0;
+    let concentracaoHtml;
+    if (openNN.length === 0) {
+        concentracaoHtml = `<div style="padding:20px;text-align:center;color:#64748b;font-size:13px;">Sem deals abertos com MRR informado.</div>`;
+    } else {
+        const alertCls = top5Pct > 70 ? '#f87171' : top5Pct > 50 ? '#facc15' : '#4ade80';
+        const alertMsg = top5Pct > 70
+            ? 'Concentração alta — se um top deal cair, o mês pode ir junto. Diversifique o pipeline urgente.'
+            : top5Pct > 50
+            ? 'Concentração moderada — atenção aos top deals. Ideal < 50% em 5 deals.'
+            : 'Pipeline diversificado — risco distribuído. Boa saúde estrutural.';
+        concentracaoHtml = `
+            <div style="background:rgba(15,17,28,0.6);border:1px solid rgba(148,163,184,0.15);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+                    <div>
+                        <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Top 5 vs pipeline total</div>
+                        <div style="font-size:26px;font-weight:700;color:${alertCls};font-family:ui-monospace,monospace;">${top5Pct.toFixed(0)}%</div>
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;text-align:right;">${fmtRk(top5Sum)} de ${fmtRk(totalPipe)}<br>em ${openNN.length} deals abertos</div>
+                </div>
+                <div style="font-size:11.5px;color:#cbd5e1;margin-top:8px;line-height:1.5;">${alertMsg}</div>
+            </div>
+            <table class="dd-tbl"><thead><tr>
+                <th>Top deals (por MRR)</th><th class="num">MRR</th><th class="num">Owner</th>
+            </tr></thead><tbody>
+            ${openNN.slice(0, 5).map(x => `<tr>
+                <td class="name"><a href="https://app2.ploomes.com/deal/${x.d.Id}" target="_blank" rel="noopener" style="color:#a78bfa;text-decoration:none;">${(x.d.Title || 'Deal ' + x.d.Id).slice(0, 42)}</a></td>
+                <td class="num" style="color:#38bdf8;">${fmtR(x.mrr)}</td>
+                <td class="num" style="color:#94a3b8;">${(x.d.Owner?.Name || '—').split(' ')[0]}</td>
+            </tr>`).join('')}
+            </tbody></table>
+        `;
+    }
+
+    box.innerHTML = `
+        <div class="dd-grid-2">
+            <div class="dd-card">
+                <div class="dd-eyebrow">DIAGNÓSTICO DE PERDAS · onde o funil está sangrando</div>
+                <div class="dd-title">Por que o time está perdendo</div>
+                <div class="dd-sub">Deals de NN encerrados como perda no período. Foco no motivo #1 pra atacar a raiz do problema.</div>
+                ${perdidosHtml}
+            </div>
+            <div class="dd-card">
+                <div class="dd-eyebrow">CONCENTRAÇÃO DE RISCO · pipeline aberto</div>
+                <div class="dd-title">Quantos ovos na mesma cesta</div>
+                <div class="dd-sub">% do pipeline em aberto concentrado nos 5 maiores deals. Alto = risco de mês se um cair; Baixo = risco distribuído.</div>
+                ${concentracaoHtml}
+            </div>
+        </div>
     `;
 }
 
@@ -24444,9 +24855,8 @@ function renderMktInsights(range, r) {
 
     // ---------- 4. FORECAST — projeção até fim do mês ----------
     const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const lastOfMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
-    const isThisMonth = range?.start === firstOfMonth && range?.end && Math.abs(range.end - lastOfMonth) < 3600 * 1000;
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const isThisMonth = range?.from && range.from.getTime() === firstOfMonth.getTime();
     let forecastHtml = '';
     if (isThisMonth) {
         const dayOfMonth = now.getDate();
@@ -24570,8 +24980,10 @@ function renderMarketing(range, rd) {
         gos:   mktNnWins(range),
         mrr:   mktComputeFlowMrr(range)
     };
+    try { renderMktSmartActions(range, realizedFunnel); } catch (e) { console.warn('[mkt smart actions]', e); }
     renderMktMetaGap(range, realizedFunnel);
     try { renderMktInsights(range, realizedFunnel); } catch (e) { console.warn('[mkt insights]', e); }
+    try { renderMktDeepDiag(range, realizedFunnel); } catch (e) { console.warn('[mkt deep diag]', e); }
 
     // === FLOW: reuniões REALIZADAS no período (qualquer safra de lead) ===
     // Conta tasks "Reuniao Agendada" cujo DateTime OU EndDate caiu no período E houve
