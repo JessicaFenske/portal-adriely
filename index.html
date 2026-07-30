@@ -24199,8 +24199,9 @@ function mktComputeFlowMrr(range) {
     }, 0);
 }
 
-// === DEFINIÇÕES DO FUNIL (validadas 2026-07-29 pela Jessica) ===
-// LEAD:     capturado via RD, Ads, LPH (antes de virar oportunidade)
+// === DEFINIÇÕES DO FUNIL (validadas 2026-07-29 pela Jessica; ampliada 2026-07-30) ===
+// LEAD:     capturado via RD/Ads/LPH + cadastros manuais (qualquer pessoa criada
+//           por humano ou integração de captação, excluindo Farmer/sistema/cliente)
 // MQL:      tudo que virou contato no Ploomes no período
 // REUNIÃO:  qualquer atividade de reunião (concluída ou não, agendada ou realizada)
 // OPO:      deal com marcador "Proposta Gerada" aplicado no período (D7ED2D45 ou Tag 60146563 via cache firstMarkerDates)
@@ -24220,12 +24221,23 @@ function _mktIsLeadOrigin(originName) {
     return MKT_LEAD_ORIGINS.some(o => n.includes(o));
 }
 
-// LEAD: pessoa criada no período com Origin de captação (RD/Ads/LPH)
-// Sem filtro de pipeline — leads são anteriores à qualificação em funil.
+// LEAD: pessoa criada no periodo por captacao (RD/Ads/LPH) OU cadastro manual.
+// Considera manual = criada por humano do Lincros, excluindo:
+//   - Farmer (Adriely, Bruno, etc — renovacoes nao sao lead novo)
+//   - Sistema (integracoes internas automaticas)
+//   - Cliente Lincros (email do proprio dominio)
+// Origins de captacao SEMPRE contam mesmo se creator for sistema (integracao RD/Ads).
 function mktNnLeadsInRange(range) {
     return (mqlAllRawPeople || []).filter(p => {
         if (!inMktRange(p.CreateDate, range)) return false;
-        return _mktIsLeadOrigin(p.Origin?.Name);
+        // Filtro base: nao contar cliente conhecido (evita ruido de dominio Lincros)
+        if (typeof isClientEmail === 'function' && isClientEmail(p.Email)) return false;
+        // Se veio de origem de captacao (RD/Ads/LPH), conta direto
+        if (_mktIsLeadOrigin(p.Origin?.Name)) return true;
+        // Cadastro manual: criado por humano do Lincros, nao Farmer nao sistema
+        const byFarmer = typeof isCreatedByFarmer === 'function' && isCreatedByFarmer(p);
+        const bySystem = typeof isCreatedBySystem === 'function' && isCreatedBySystem(p);
+        return !byFarmer && !bySystem;
     }).length;
 }
 
@@ -24335,7 +24347,7 @@ function renderMktMetaGap(range, realized) {
     // LEAD  = RD + Ads + LPH (Origin de captação) · MQL = tudo no Ploomes · REUNIÃO = qualquer atividade
     // OPO   = marcador Proposta Gerada aplicado no período · GANHO = fechado no período
     const cellsData = [
-        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'RD · Ads · LPH' },
+        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'RD · Ads · LPH · manual' },
         { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'tudo no Ploomes' },
         { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'qualquer atividade' },
         { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'proposta gerada' },
