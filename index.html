@@ -24277,24 +24277,12 @@ function mktComputeLeadsFullPipeline(range) {
     };
 }
 
-// LEAD: pessoa criada no periodo por captacao (RD/Ads/LPH) OU cadastro manual.
-// Considera manual = criada por humano do Lincros, excluindo:
-//   - Farmer (Adriely, Bruno, etc — renovacoes nao sao lead novo)
-//   - Sistema (integracoes internas automaticas)
-//   - Cliente Lincros (email do proprio dominio)
-// Origins de captacao SEMPRE contam mesmo se creator for sistema (integracao RD/Ads).
+// LEAD (topo do funil): TODA pessoa criada no Ploomes no periodo — mesma base
+// que MQL. Lead precisa ser >= MQL sempre (topo do funil = universo maior).
+// A diferenca real do Lead pra MQL vem do REPRESADO no RD (leads que nao
+// chegaram no Ploomes ainda) — somado no mktComputeLeadsFullPipeline.
 function mktNnLeadsInRange(range) {
-    return (mqlAllRawPeople || []).filter(p => {
-        if (!inMktRange(p.CreateDate, range)) return false;
-        // Filtro base: nao contar cliente conhecido (evita ruido de dominio Lincros)
-        if (typeof isClientEmail === 'function' && isClientEmail(p.Email)) return false;
-        // Se veio de origem de captacao (RD/Ads/LPH), conta direto
-        if (_mktIsLeadOrigin(p.Origin?.Name)) return true;
-        // Cadastro manual: criado por humano do Lincros, nao Farmer nao sistema
-        const byFarmer = typeof isCreatedByFarmer === 'function' && isCreatedByFarmer(p);
-        const bySystem = typeof isCreatedBySystem === 'function' && isCreatedBySystem(p);
-        return !byFarmer && !bySystem;
-    }).length;
+    return (mqlAllRawPeople || []).filter(p => inMktRange(p.CreateDate, range)).length;
 }
 
 // MQL: TODA pessoa criada no Ploomes no período (independente de origem, cargo, pipeline)
