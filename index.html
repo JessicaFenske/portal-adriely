@@ -20513,103 +20513,294 @@ function exportSection6ParaLPH() {
 }
 
 // =============================================================================
-// EXPORT LEADS · view MKT Performance (Ploomes + RD represado)
+// EXPORT MKT PERFORMANCE · Excel + LPH pra cada categoria (Leads, MQLs, Reunioes, OPOs, Ganhos)
 // =============================================================================
-function _mktBuildLeadsExportList() {
-    // Ploomes: pessoas criadas no range com dados enriquecidos
+
+// Helper: extrai dados de contato/empresa de um deal do Ploomes
+function _mktExtractDealContact(d) {
+    const person = d.Person || {};
+    const contact = d.Contact || {};
+    const phones = (person.Phones && person.Phones.length ? person.Phones : (contact.Phones || []))
+        .map(ph => ph.PhoneNumber || '').filter(Boolean).join(' / ');
+    return {
+        nome: person.Name || contact.PersonName || '',
+        email: (person.Email || contact.Email || '').toLowerCase().trim(),
+        telefone: phones,
+        cargo: (typeof getContactCargo === 'function' ? getContactCargo(d) : (person.Role?.Name || '')) || '',
+        empresa: contact.Name || d.ContactName || '',
+        cidade: contact.City?.Name || '',
+        estado: contact.City?.State?.Name || contact.City?.State?.Short || '',
+        origem: (contact.Origin?.Name || d.Origin?.Name || '')
+    };
+}
+
+// Constroi lista de registros por categoria
+function _mktBuildExportList(categoria) {
     const range = typeof getMktPeriodRange === 'function' ? getMktPeriodRange() : null;
-    if (!range) return { rows: [], range: null };
+    if (!range) return { rows: [], categoria, range: null };
     const rows = [];
-    // Ploomes contatos
-    (mqlAllRawPeople || []).forEach(p => {
-        if (!inMktRange(p.CreateDate, range)) return;
-        const phones = (p.Phones || []).map(ph => ph.PhoneNumber || '').filter(Boolean).join(' / ');
-        rows.push({
-            fonte: 'Ploomes',
-            nome: p.Name || '',
-            email: (p.Email || '').toLowerCase().trim(),
-            telefone: phones,
-            cargo: p.Role?.Name || '',
-            empresa: p.Company?.Name || p.CompanyName || '',
-            cidade: p.City?.Name || '',
-            estado: p.City?.State?.Name || p.City?.State?.Short || '',
-            origem: p.Origin?.Name || '',
-            criadoEm: p.CreateDate || ''
-        });
-    });
-    // RD represados (que NAO estao no Ploomes por email)
-    const rd = window._rdMonthlyLeadsCache;
-    if (rd && Array.isArray(rd.contacts)) {
-        const ploomesEmails = new Set(rows.map(r => r.email).filter(Boolean));
-        rd.contacts.forEach(c => {
-            const email = (c.email || '').toLowerCase().trim();
-            if (!email || ploomesEmails.has(email)) return;
+
+    if (categoria === 'leads') {
+        // Ploomes + RD represado (mesma logica do card LEADS)
+        (mqlAllRawPeople || []).forEach(p => {
+            if (!inMktRange(p.CreateDate, range)) return;
+            const phones = (p.Phones || []).map(ph => ph.PhoneNumber || '').filter(Boolean).join(' / ');
             rows.push({
-                fonte: 'RD represado',
-                nome: c.name || '',
-                email,
-                telefone: '',
-                cargo: '',
-                empresa: '',
-                cidade: '',
-                estado: '',
-                origem: 'RD Station',
-                criadoEm: c.created_at || ''
+                fonte: 'Ploomes',
+                nome: p.Name || '',
+                email: (p.Email || '').toLowerCase().trim(),
+                telefone: phones,
+                cargo: p.Role?.Name || '',
+                empresa: p.Company?.Name || p.CompanyName || '',
+                cidade: p.City?.Name || '',
+                estado: p.City?.State?.Name || p.City?.State?.Short || '',
+                origem: p.Origin?.Name || '',
+                criadoEm: p.CreateDate || ''
+            });
+        });
+        const rd = window._rdMonthlyLeadsCache;
+        if (rd && Array.isArray(rd.contacts)) {
+            const ploomesEmails = new Set(rows.map(r => r.email).filter(Boolean));
+            rd.contacts.forEach(c => {
+                const email = (c.email || '').toLowerCase().trim();
+                if (!email || ploomesEmails.has(email)) return;
+                rows.push({ fonte: 'RD represado', nome: c.name || '', email, telefone: '', cargo: '', empresa: '', cidade: '', estado: '', origem: 'RD Station', criadoEm: c.created_at || '' });
+            });
+        }
+    }
+
+    else if (categoria === 'mqls') {
+        // Todas as pessoas criadas no Ploomes no periodo
+        (mqlAllRawPeople || []).forEach(p => {
+            if (!inMktRange(p.CreateDate, range)) return;
+            const phones = (p.Phones || []).map(ph => ph.PhoneNumber || '').filter(Boolean).join(' / ');
+            rows.push({
+                fonte: 'Ploomes',
+                nome: p.Name || '',
+                email: (p.Email || '').toLowerCase().trim(),
+                telefone: phones,
+                cargo: p.Role?.Name || '',
+                empresa: p.Company?.Name || p.CompanyName || '',
+                cidade: p.City?.Name || '',
+                estado: p.City?.State?.Name || p.City?.State?.Short || '',
+                origem: p.Origin?.Name || '',
+                criadoEm: p.CreateDate || ''
             });
         });
     }
-    return { rows, range };
+
+    else if (categoria === 'reunioes') {
+        // Deals que tiveram atividade de reuniao no periodo
+        const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const dealMap = new Map(); // dealId -> deal
+        const allDeals = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
+        allDeals.forEach(d => dealMap.set(d.Id, d));
+        const seen = new Set();
+        (window.dashMeetings || []).forEach(t => {
+            if (!t.DealId || seen.has(t.DealId)) return;
+            const title = norm(t.Title || '');
+            const type  = norm(t.TypeName || t.Type?.Name || '');
+            if (!title.includes('reuni') && !type.includes('reuni')) return;
+            const dtIn = inMktRange(t.DateTime, range);
+            const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
+            const cdIn = t.CreateDate && inMktRange(t.CreateDate, range);
+            if (!dtIn && !fdIn && !cdIn) return;
+            seen.add(t.DealId);
+            const d = dealMap.get(t.DealId);
+            if (!d) return;
+            const ct = _mktExtractDealContact(d);
+            rows.push({
+                fonte: 'Ploomes',
+                dealId: d.Id,
+                dealTitle: d.Title || '',
+                nome: ct.nome, email: ct.email, telefone: ct.telefone, cargo: ct.cargo,
+                empresa: ct.empresa, cidade: ct.cidade, estado: ct.estado, origem: ct.origem,
+                pipeline: d.Pipeline?.Name || '',
+                stage: d.Stage?.Name || '',
+                dataReuniao: t.DateTime || t.FinishDate || t.CreateDate || '',
+                statusReuniao: t.FinishDate ? 'Concluida' : 'Agendada'
+            });
+        });
+        (window.dashInteractions || []).forEach(it => {
+            if (!it.DealId || seen.has(it.DealId)) return;
+            if (typeof _intIsReuniaoType !== 'function' || !_intIsReuniaoType(it)) return;
+            if (!inMktRange(it.Date, range)) return;
+            seen.add(it.DealId);
+            const d = dealMap.get(it.DealId);
+            if (!d) return;
+            const ct = _mktExtractDealContact(d);
+            rows.push({
+                fonte: 'Ploomes',
+                dealId: d.Id,
+                dealTitle: d.Title || '',
+                nome: ct.nome, email: ct.email, telefone: ct.telefone, cargo: ct.cargo,
+                empresa: ct.empresa, cidade: ct.cidade, estado: ct.estado, origem: ct.origem,
+                pipeline: d.Pipeline?.Name || '',
+                stage: d.Stage?.Name || '',
+                dataReuniao: it.Date || '',
+                statusReuniao: 'Interaction'
+            });
+        });
+    }
+
+    else if (categoria === 'opos') {
+        // Deals com marcador Proposta Gerada aplicado no periodo
+        const allDeals = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
+        const seen = new Set();
+        allDeals.forEach(d => {
+            if (seen.has(d.Id)) return;
+            const propDate = typeof getProposalDate === 'function' ? getProposalDate(d) : null;
+            if (!propDate || !inMktRange(propDate, range)) return;
+            seen.add(d.Id);
+            const ct = _mktExtractDealContact(d);
+            const mrr = typeof getMRR === 'function' ? getMRR(d) : 0;
+            const setup = typeof getSetup === 'function' ? getSetup(d) : 0;
+            const status = d.StatusId === 2 ? 'Ganho' : d.StatusId === 3 ? 'Perdido' : 'Em aberto';
+            rows.push({
+                fonte: 'Ploomes',
+                dealId: d.Id,
+                dealTitle: d.Title || '',
+                nome: ct.nome, email: ct.email, telefone: ct.telefone, cargo: ct.cargo,
+                empresa: ct.empresa, cidade: ct.cidade, estado: ct.estado, origem: ct.origem,
+                pipeline: d.Pipeline?.Name || '',
+                stage: d.Stage?.Name || '',
+                owner: d.Owner?.Name || '',
+                mrr, setup, status,
+                dataProposta: propDate,
+                dataFechamento: d.FinishDate || ''
+            });
+        });
+    }
+
+    else if (categoria === 'ganhos') {
+        // Deals ganhos com FinishDate no periodo
+        (window.wonDeals || []).forEach(d => {
+            if (!d.FinishDate || !inMktRange(d.FinishDate, range)) return;
+            const ct = _mktExtractDealContact(d);
+            const mrr = typeof getMRR === 'function' ? getMRR(d) : 0;
+            const setup = typeof getSetup === 'function' ? getSetup(d) : 0;
+            rows.push({
+                fonte: 'Ploomes',
+                dealId: d.Id,
+                dealTitle: d.Title || '',
+                nome: ct.nome, email: ct.email, telefone: ct.telefone, cargo: ct.cargo,
+                empresa: ct.empresa, cidade: ct.cidade, estado: ct.estado, origem: ct.origem,
+                pipeline: d.Pipeline?.Name || '',
+                owner: d.Owner?.Name || '',
+                mrr, setup, total: mrr + setup,
+                dataFechamento: d.FinishDate
+            });
+        });
+    }
+
+    return { rows, categoria, range };
 }
 
-// Excel amplo: todos os leads com fonte + colunas ricas
-function exportMktLeadsExcel() {
-    const { rows, range } = _mktBuildLeadsExportList();
+// Dispatcher publico chamado pelos botoes do card
+function exportMktCategoria(categoria, formato) {
+    const { rows } = _mktBuildExportList(categoria);
     if (!rows.length) {
-        alert('Nenhum lead no período selecionado.');
+        alert('Nenhum registro no período selecionado pra ' + categoria + '.');
         return;
     }
     const fmtDate = (iso) => { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pt-BR'); } catch(e) { return iso; } };
-    exportToCSV(rows, [
-        { header: 'Fonte',      getValue: r => r.fonte },
-        { header: 'Nome',       getValue: r => r.nome },
-        { header: 'Email',      getValue: r => r.email },
-        { header: 'Telefone',   getValue: r => r.telefone },
-        { header: 'Cargo',      getValue: r => r.cargo },
-        { header: 'Empresa',    getValue: r => r.empresa },
-        { header: 'Cidade',     getValue: r => r.cidade },
-        { header: 'Estado',     getValue: r => r.estado },
-        { header: 'Origem',     getValue: r => r.origem },
-        { header: 'Criado em',  getValue: r => fmtDate(r.criadoEm) }
-    ], 'leads_mkt_completos', ',');
-}
+    const fmtR   = (v) => (v > 0 ? 'R$ ' + Math.round(v).toLocaleString('pt-BR') : '');
 
-// Template LPH: 11 colunas separador ";" — filtra so quem tem nome+email+telefone+cargo
-function exportMktLeadsLPH() {
-    const { rows } = _mktBuildLeadsExportList();
-    const total = rows.length;
-    const completos = rows.filter(r => r.nome.trim() && r.email.trim() && r.telefone.trim() && r.cargo.trim());
-    if (!completos.length) {
-        alert(`Nenhum lead com Nome + Email + Telefone + Cargo preenchidos entre os ${total} do periodo.\n\nOs leads represados do RD nao tem esses dados — precisam ser enriquecidos antes.`);
+    if (formato === 'lph') {
+        // Filtro LPH: nome+email+telefone+cargo preenchidos
+        const total = rows.length;
+        const completos = rows.filter(r => (r.nome||'').trim() && (r.email||'').trim() && (r.telefone||'').trim() && (r.cargo||'').trim());
+        if (!completos.length) {
+            alert(`Nenhum registro com Nome + Email + Telefone + Cargo preenchidos entre os ${total} do periodo.\n\nRegistros incompletos precisam ser enriquecidos antes.`);
+            return;
+        }
+        if (completos.length < total) {
+            const excluidos = total - completos.length;
+            const ok = confirm(`${completos.length} de ${total} registros estão completos e vão pra planilha.\n${excluidos} foram excluídos por faltar algum dado (nome/email/telefone/cargo).\n\nContinuar?`);
+            if (!ok) return;
+        }
+        exportToCSV(completos, [
+            { header: 'nome',              getValue: r => r.nome },
+            { header: 'email',             getValue: r => r.email },
+            { header: 'cargo',             getValue: r => r.cargo },
+            { header: 'telefone',          getValue: r => r.telefone },
+            { header: 'linkedin',          getValue: () => '' },
+            { header: 'empresa',           getValue: r => r.empresa },
+            { header: 'linkedin empresa',  getValue: () => '' },
+            { header: 'website',           getValue: () => '' },
+            { header: 'setor',             getValue: () => '' },
+            { header: 'cidade',            getValue: r => r.cidade },
+            { header: 'estado',            getValue: r => r.estado }
+        ], `lph_${categoria}`, ';');
         return;
     }
-    if (completos.length < total) {
-        const excluidos = total - completos.length;
-        const ok = confirm(`${completos.length} de ${total} leads estão completos e vão pra planilha.\n${excluidos} foram excluídos por faltar algum dado (nome/email/telefone/cargo — geralmente represados do RD).\n\nContinuar?`);
-        if (!ok) return;
+
+    // formato === 'excel' (CSV amplo) — colunas variam por categoria
+    let columns;
+    if (categoria === 'leads' || categoria === 'mqls') {
+        columns = [
+            { header: 'Fonte',     getValue: r => r.fonte },
+            { header: 'Nome',      getValue: r => r.nome },
+            { header: 'Email',     getValue: r => r.email },
+            { header: 'Telefone',  getValue: r => r.telefone },
+            { header: 'Cargo',     getValue: r => r.cargo },
+            { header: 'Empresa',   getValue: r => r.empresa },
+            { header: 'Cidade',    getValue: r => r.cidade },
+            { header: 'Estado',    getValue: r => r.estado },
+            { header: 'Origem',    getValue: r => r.origem },
+            { header: 'Criado em', getValue: r => fmtDate(r.criadoEm) }
+        ];
+    } else if (categoria === 'reunioes') {
+        columns = [
+            { header: 'Deal',           getValue: r => r.dealTitle },
+            { header: 'Empresa',        getValue: r => r.empresa },
+            { header: 'Nome contato',   getValue: r => r.nome },
+            { header: 'Email',          getValue: r => r.email },
+            { header: 'Telefone',       getValue: r => r.telefone },
+            { header: 'Cargo',          getValue: r => r.cargo },
+            { header: 'Pipeline',       getValue: r => r.pipeline },
+            { header: 'Etapa',          getValue: r => r.stage },
+            { header: 'Origem',         getValue: r => r.origem },
+            { header: 'Cidade',         getValue: r => r.cidade },
+            { header: 'Estado',         getValue: r => r.estado },
+            { header: 'Data reunião',   getValue: r => fmtDate(r.dataReuniao) },
+            { header: 'Status',         getValue: r => r.statusReuniao }
+        ];
+    } else if (categoria === 'opos') {
+        columns = [
+            { header: 'Deal',              getValue: r => r.dealTitle },
+            { header: 'Empresa',           getValue: r => r.empresa },
+            { header: 'Nome contato',      getValue: r => r.nome },
+            { header: 'Email',             getValue: r => r.email },
+            { header: 'Telefone',          getValue: r => r.telefone },
+            { header: 'Cargo',             getValue: r => r.cargo },
+            { header: 'Pipeline',          getValue: r => r.pipeline },
+            { header: 'Etapa',             getValue: r => r.stage },
+            { header: 'Vendedor',          getValue: r => r.owner },
+            { header: 'MRR',               getValue: r => fmtR(r.mrr) },
+            { header: 'Setup',             getValue: r => fmtR(r.setup) },
+            { header: 'Status',            getValue: r => r.status },
+            { header: 'Data proposta',     getValue: r => fmtDate(r.dataProposta) },
+            { header: 'Data fechamento',   getValue: r => fmtDate(r.dataFechamento) }
+        ];
+    } else if (categoria === 'ganhos') {
+        columns = [
+            { header: 'Deal',              getValue: r => r.dealTitle },
+            { header: 'Empresa',           getValue: r => r.empresa },
+            { header: 'Nome contato',      getValue: r => r.nome },
+            { header: 'Email',             getValue: r => r.email },
+            { header: 'Telefone',          getValue: r => r.telefone },
+            { header: 'Cargo',             getValue: r => r.cargo },
+            { header: 'Pipeline',          getValue: r => r.pipeline },
+            { header: 'Vendedor',          getValue: r => r.owner },
+            { header: 'MRR',               getValue: r => fmtR(r.mrr) },
+            { header: 'Setup',             getValue: r => fmtR(r.setup) },
+            { header: 'Total',             getValue: r => fmtR(r.total) },
+            { header: 'Origem',            getValue: r => r.origem },
+            { header: 'Data fechamento',   getValue: r => fmtDate(r.dataFechamento) }
+        ];
     }
-    exportToCSV(completos, [
-        { header: 'nome',              getValue: r => r.nome },
-        { header: 'email',             getValue: r => r.email },
-        { header: 'cargo',             getValue: r => r.cargo },
-        { header: 'telefone',          getValue: r => r.telefone },
-        { header: 'linkedin',          getValue: () => '' },
-        { header: 'empresa',           getValue: r => r.empresa },
-        { header: 'linkedin empresa',  getValue: () => '' },
-        { header: 'website',           getValue: () => '' },
-        { header: 'setor',             getValue: () => '' },
-        { header: 'cidade',            getValue: r => r.cidade },
-        { header: 'estado',            getValue: r => r.estado }
-    ], 'lph_leads_mkt', ';');
+    exportToCSV(rows, columns, `mkt_${categoria}`, ',');
 }
 // === Investigar deals (auditoria de Realizadas) ===
 function openInvestigateModal() {
@@ -24631,19 +24822,20 @@ function renderMktSmartActions(range, r) {
         leadSublabel = `<div class="sa-kpi-breakdown" style="color:#64748b;font-size:10.5px;">carregando RD Station...</div>`;
     }
 
-    // Botoes de exportacao dentro do card LEADS
-    const leadExportBtns = `<div class="sa-kpi-exports">
-        <button type="button" onclick="exportMktLeadsExcel()" class="sa-exp-btn" title="Todos os leads do periodo com dados completos (Excel/CSV)">📊 Excel</button>
-        <button type="button" onclick="exportMktLeadsLPH()" class="sa-exp-btn primary" title="Formato template LPH · so leads com nome+email+telefone+cargo">📤 LPH</button>
+    // Botoes de exportacao pra cada KPI. Excel = dados amplos, LPH = template LPH.
+    // MRR GANHO nao tem LPH (nao faz sentido — deal ganho ja e cliente, nao vai pra cadencia).
+    const _exportBtns = (categoria, includeLPH = true) => `<div class="sa-kpi-exports">
+        <button type="button" onclick="exportMktCategoria('${categoria}','excel')" class="sa-exp-btn" title="CSV amplo com todos os registros do periodo">📊 Excel</button>
+        ${includeLPH ? `<button type="button" onclick="exportMktCategoria('${categoria}','lph')" class="sa-exp-btn primary" title="Formato LPH · so registros com nome+email+telefone+cargo">📤 LPH</button>` : ''}
     </div>`;
-    const leadExtra = leadSublabel + leadExportBtns;
+    const leadExtra = leadSublabel + _exportBtns('leads');
 
     const kpis = [
         { lbl: 'LEADS',    val: r.leads.toLocaleString('pt-BR'),      prev: rPrev?.leads, cur: r.leads,  money: false, tone: 'ok',  extra: leadExtra },
-        { lbl: 'MQLS',     val: r.mqls.toLocaleString('pt-BR'),       prev: rPrev?.mqls,  cur: r.mqls,   money: false, tone: 'ok' },
-        { lbl: 'REUNIÕES', val: r.sals.toLocaleString('pt-BR'),       prev: rPrev?.sals,  cur: r.sals,   money: false, tone: 'mid' },
-        { lbl: 'OPOS',     val: r.opos.toLocaleString('pt-BR'),       prev: rPrev?.opos,  cur: r.opos,   money: false, tone: 'mid' },
-        { lbl: 'MRR GANHO', val: fmtRk(r.mrr),                          prev: rPrev?.mrr,   cur: r.mrr,    money: true,  tone: 'ok' }
+        { lbl: 'MQLS',     val: r.mqls.toLocaleString('pt-BR'),       prev: rPrev?.mqls,  cur: r.mqls,   money: false, tone: 'ok',  extra: _exportBtns('mqls') },
+        { lbl: 'REUNIÕES', val: r.sals.toLocaleString('pt-BR'),       prev: rPrev?.sals,  cur: r.sals,   money: false, tone: 'mid', extra: _exportBtns('reunioes') },
+        { lbl: 'OPOS',     val: r.opos.toLocaleString('pt-BR'),       prev: rPrev?.opos,  cur: r.opos,   money: false, tone: 'mid', extra: _exportBtns('opos') },
+        { lbl: 'MRR GANHO', val: fmtRk(r.mrr),                          prev: rPrev?.mrr,   cur: r.mrr,    money: true,  tone: 'ok',  extra: _exportBtns('ganhos', false) }
     ];
     const kpiHtml = kpis.map(k => {
         const d = _delta(k.cur, k.prev);
