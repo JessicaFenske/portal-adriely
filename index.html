@@ -20705,21 +20705,18 @@ function _mktBuildExportList(categoria) {
     }
 
     else if (categoria === 'reunioes') {
-        // Deals que tiveram atividade de reuniao no periodo
+        // Deals com "Reuniao Agendada" no periodo · MESMA regra estrita da pre-vendas
         const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        const dealMap = new Map(); // dealId -> deal
+        const dealMap = new Map();
         const allDeals = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
         allDeals.forEach(d => dealMap.set(d.Id, d));
         const seen = new Set();
         (window.dashMeetings || []).forEach(t => {
             if (!t.DealId || seen.has(t.DealId)) return;
-            const title = norm(t.Title || '');
-            const type  = norm(t.TypeName || t.Type?.Name || '');
-            if (!title.includes('reuni') && !type.includes('reuni')) return;
+            if (!norm(t.Title || '').includes('reuniao agendada')) return;
             const dtIn = inMktRange(t.DateTime, range);
-            const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
             const cdIn = t.CreateDate && inMktRange(t.CreateDate, range);
-            if (!dtIn && !fdIn && !cdIn) return;
+            if (!dtIn && !cdIn) return;
             seen.add(t.DealId);
             const d = dealMap.get(t.DealId);
             if (!d) return;
@@ -20732,13 +20729,13 @@ function _mktBuildExportList(categoria) {
                 empresa: ct.empresa, cidade: ct.cidade, estado: ct.estado, origem: ct.origem,
                 pipeline: d.Pipeline?.Name || '',
                 stage: d.Stage?.Name || '',
-                dataReuniao: t.DateTime || t.FinishDate || t.CreateDate || '',
+                dataReuniao: t.DateTime || t.CreateDate || '',
                 statusReuniao: t.FinishDate ? 'Concluida' : 'Agendada'
             });
         });
         (window.dashInteractions || []).forEach(it => {
             if (!it.DealId || seen.has(it.DealId)) return;
-            if (typeof _intIsReuniaoType !== 'function' || !_intIsReuniaoType(it)) return;
+            if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
             if (!inMktRange(it.Date, range)) return;
             seen.add(it.DealId);
             const d = dealMap.get(it.DealId);
@@ -20753,7 +20750,7 @@ function _mktBuildExportList(categoria) {
                 pipeline: d.Pipeline?.Name || '',
                 stage: d.Stage?.Name || '',
                 dataReuniao: it.Date || '',
-                statusReuniao: 'Interaction'
+                statusReuniao: 'Agendada (interaction)'
             });
         });
     }
@@ -24710,37 +24707,38 @@ function mktNnMqlsInRange(range) {
     return (mqlAllRawPeople || []).filter(p => inMktRange(p.CreateDate, range)).length;
 }
 
-// REUNIÕES: qualquer atividade de reunião (task type Reunião + variações no title, OU
-// interaction do tipo Reunião) que caiu no período — DateTime, FinishDate ou CreateDate.
-// Sem filtro de pipeline. Sem filtro "agendada" — conta reunião concluída OU não.
+// REUNIÕES = "Reunião Agendada" (mesma regra estrita usada em Pré-Vendas).
+// Regra unificada:
+//   - Task cujo Title (normalizado sem acento, lowercase) inclua "reuniao agendada"
+//   - OU Interaction que passe em interactionIsReuniaoAgendada (type "reuniao" + content "agendada")
+// Considera task no periodo pela DateTime OU CreateDate; interaction pela Date.
+// Deduplica por DealId (uma reuniao agendada por deal no periodo, mesma regra da pre-vendas).
 function mktNnMeetings(range) {
     const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const seenDeals = new Set();
     (window.dashMeetings || []).forEach(t => {
         if (!t.DealId || seenDeals.has(t.DealId)) return;
-        const title = norm(t.Title || '');
-        const type  = norm(t.TypeName || t.Type?.Name || '');
-        // "reuni" pega Reunião/Reuniao/reuniao agendada/reuniao realizada/reunião online etc.
-        if (!title.includes('reuni') && !type.includes('reuni')) return;
+        if (!norm(t.Title || '').includes('reuniao agendada')) return;
         const dtIn = inMktRange(t.DateTime, range);
-        const fdIn = t.FinishDate && inMktRange(t.FinishDate, range);
         const cdIn = t.CreateDate && inMktRange(t.CreateDate, range);
-        if (!dtIn && !fdIn && !cdIn) return;
+        if (!dtIn && !cdIn) return;
         seenDeals.add(t.DealId);
     });
     (window.dashInteractions || []).forEach(it => {
         if (!it.DealId || seenDeals.has(it.DealId)) return;
-        // _intIsReuniaoType já verifica InteractionType.Name inclui "reuniao"
-        if (typeof _intIsReuniaoType !== 'function' || !_intIsReuniaoType(it)) return;
+        if (typeof interactionIsReuniaoAgendada !== 'function' || !interactionIsReuniaoAgendada(it)) return;
         if (!inMktRange(it.Date, range)) return;
         seenDeals.add(it.DealId);
     });
     return seenDeals.size;
 }
 
-// OPO: deal com marcador "Proposta Gerada" aplicado no período (regra unificada).
-// getProposalDate consulta cache firstMarkerDates (MIN histórico + fallback Tag 60146563)
-// e depois campo Data Marcador (D7ED2D45). Sem filtro de pipeline.
+// OPO = "Proposta Gerada" · MESMA regra unificada da pre-vendas (validada 2026-07-21).
+// getProposalDate retorna EXCLUSIVAMENTE a Data Marcador (D7ED2D45) — gravada pela
+// Automacao do Ploomes na primeira aplicacao do marcador "Proposta Gerada". Cache
+// firstMarkerDates guarda MIN historico + fallback Tag 60146563 pra deals novos que
+// o backend ainda nao processou. Sem hasValue+LastUpdate (removido pra evitar Honda/
+// Volkswagen aparecendo em julho por edicao retroativa). Sem filtro de pipeline.
 function mktNnProposals(range) {
     const all = [...(window.wonDeals || []), ...(window.lostDeals || []), ...(window.dashOpenDeals || [])];
     const seen = new Set();
@@ -24812,8 +24810,8 @@ function renderMktMetaGap(range, realized) {
     const cellsData = [
         { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'Ploomes + represado RD' },
         { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'tudo no Ploomes' },
-        { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'qualquer atividade' },
-        { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'proposta gerada' },
+        { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'reunião agendada' },
+        { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'marcador proposta gerada' },
         { key: 'go',   label: 'GANHOS',   needed: agg.totals.gos,   current: realized.gos,    fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'fechados no mês' }
     ];
 
