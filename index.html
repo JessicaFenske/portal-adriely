@@ -1562,48 +1562,98 @@
         #mktInsightsBlock .mi-alert .t { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
         #mktInsightsBlock .mi-alert .b { font-size: 11.5px; color: #cbd5e1; line-height: 1.5; }
 
-        /* ==================== SMART ACTIONS · comando executivo ==================== */
+        /* ==================== SMART ACTIONS · comando executivo (v2 · design refinado) ==================== */
         #mktSmartActionsBlock { margin: 4px 0 18px; display: grid; gap: 14px; }
         #mktSmartActionsBlock .sa-kpi-row {
             display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
         }
-        @media (max-width: 1000px) { #mktSmartActionsBlock .sa-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 1200px) { #mktSmartActionsBlock .sa-kpi-row { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 700px)  { #mktSmartActionsBlock .sa-kpi-row { grid-template-columns: repeat(2, 1fr); } }
         #mktSmartActionsBlock .sa-kpi {
-            background: linear-gradient(180deg, rgba(30,27,58,0.6) 0%, rgba(17,19,32,0.6) 100%);
-            border: 1px solid rgba(139,92,246,0.18); border-radius: 10px; padding: 12px 14px;
-            position: relative; overflow: hidden;
+            background: linear-gradient(180deg, rgba(30,27,58,0.65) 0%, rgba(17,19,32,0.55) 100%);
+            border: 1px solid rgba(139,92,246,0.15); border-radius: 12px; padding: 14px 16px;
+            position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s;
+            display: flex; flex-direction: column; min-height: 155px;
         }
+        #mktSmartActionsBlock .sa-kpi:hover { border-color: rgba(139,92,246,0.35); }
         #mktSmartActionsBlock .sa-kpi::before {
             content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #8b5cf6;
+            border-radius: 3px 0 0 3px;
         }
-        #mktSmartActionsBlock .sa-kpi.ok::before { background: #4ade80; }
-        #mktSmartActionsBlock .sa-kpi.mid::before { background: #facc15; }
-        #mktSmartActionsBlock .sa-kpi.warn::before { background: #f87171; }
-        #mktSmartActionsBlock .sa-kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; font-weight: 600; }
-        #mktSmartActionsBlock .sa-kpi-val { font-size: 26px; font-weight: 700; font-family: ui-monospace, monospace; color: #f1f5f9; line-height: 1.1; margin-top: 2px; }
+        #mktSmartActionsBlock .sa-kpi.ok::before { background: linear-gradient(180deg, #4ade80, #22c55e); }
+        #mktSmartActionsBlock .sa-kpi.mid::before { background: linear-gradient(180deg, #facc15, #eab308); }
+        #mktSmartActionsBlock .sa-kpi.warn::before { background: linear-gradient(180deg, #f87171, #ef4444); }
+        #mktSmartActionsBlock .sa-kpi.empty::before { background: rgba(148,163,184,0.4); }
+        /* Header do card: label + botões icon-only */
+        #mktSmartActionsBlock .sa-kpi-head {
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 8px;
+        }
+        #mktSmartActionsBlock .sa-kpi-label {
+            font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.12em;
+            color: #94a3b8; font-weight: 700;
+        }
+        /* Numero + delta lado a lado */
+        #mktSmartActionsBlock .sa-kpi-main {
+            display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+        }
+        #mktSmartActionsBlock .sa-kpi-val {
+            font-size: 32px; font-weight: 700; font-family: ui-monospace, 'SF Mono', monospace;
+            color: #f1f5f9; line-height: 1; letter-spacing: -0.02em;
+        }
         #mktSmartActionsBlock .sa-kpi-val.money { color: #38bdf8; }
-        #mktSmartActionsBlock .sa-kpi-delta { font-size: 11px; margin-top: 2px; font-weight: 600; }
-        #mktSmartActionsBlock .sa-kpi-delta.up { color: #4ade80; }
-        #mktSmartActionsBlock .sa-kpi-delta.down { color: #f87171; }
-        #mktSmartActionsBlock .sa-kpi-delta.flat { color: #64748b; }
-        #mktSmartActionsBlock .sa-kpi-prev { font-size: 10.5px; color: #64748b; margin-top: 1px; }
-        #mktSmartActionsBlock .sa-kpi-breakdown {
-            font-size: 11px; color: #cbd5e1; margin-top: 6px; padding-top: 6px;
-            border-top: 1px dashed rgba(148,163,184,0.15); line-height: 1.4;
+        #mktSmartActionsBlock .sa-kpi-val.empty { color: #475569; font-weight: 300; font-size: 40px; }
+        /* Delta como chip pill inline */
+        #mktSmartActionsBlock .sa-kpi-delta {
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: 10.5px; font-weight: 700; padding: 3px 7px; border-radius: 12px;
+            font-family: ui-monospace, monospace;
         }
+        #mktSmartActionsBlock .sa-kpi-delta.up   { color: #4ade80; background: rgba(74,222,128,0.12); }
+        #mktSmartActionsBlock .sa-kpi-delta.down { color: #f87171; background: rgba(248,113,113,0.12); }
+        #mktSmartActionsBlock .sa-kpi-delta.flat { color: #94a3b8; background: rgba(148,163,184,0.1); }
+        #mktSmartActionsBlock .sa-kpi-prev {
+            font-size: 10.5px; color: #64748b; margin-top: 6px;
+        }
+        #mktSmartActionsBlock .sa-kpi-breakdown {
+            font-size: 10.5px; color: #cbd5e1; margin-top: 8px; padding-top: 8px;
+            border-top: 1px dashed rgba(148,163,184,0.12); line-height: 1.5;
+        }
+        /* Botoes de export como icon-only pill no canto superior direito */
         #mktSmartActionsBlock .sa-kpi-exports {
-            display: flex; gap: 6px; margin-top: 8px;
+            display: flex; gap: 4px;
         }
         #mktSmartActionsBlock .sa-exp-btn {
-            background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.2);
-            color: #cbd5e1; font-size: 10.5px; font-weight: 600; padding: 4px 8px;
+            background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.15);
+            color: #94a3b8; font-size: 12px; width: 26px; height: 26px; padding: 0;
             border-radius: 6px; cursor: pointer; transition: all 0.15s;
+            display: inline-flex; align-items: center; justify-content: center;
         }
-        #mktSmartActionsBlock .sa-exp-btn:hover { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #fff; }
+        #mktSmartActionsBlock .sa-exp-btn:hover {
+            background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.45); color: #fff; transform: translateY(-1px);
+        }
         #mktSmartActionsBlock .sa-exp-btn.primary {
-            background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: #8b5cf6; color: #fff;
+            background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(109,40,217,0.2));
+            border-color: rgba(139,92,246,0.4); color: #c4b5fd;
         }
-        #mktSmartActionsBlock .sa-exp-btn.primary:hover { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+        #mktSmartActionsBlock .sa-exp-btn.primary:hover {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff;
+        }
+        /* Empty state pra fila de acao quando tudo e zero */
+        #mktSmartActionsBlock .sa-queue-empty {
+            display: flex; align-items: center; gap: 14px;
+            background: linear-gradient(135deg, rgba(74,222,128,0.05) 0%, rgba(56,189,248,0.04) 100%);
+            border: 1px solid rgba(74,222,128,0.15); border-radius: 12px; padding: 22px 24px;
+        }
+        #mktSmartActionsBlock .sa-queue-empty .icn {
+            width: 44px; height: 44px; border-radius: 50%; background: rgba(74,222,128,0.15);
+            display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+        }
+        #mktSmartActionsBlock .sa-queue-empty .t {
+            font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 3px;
+        }
+        #mktSmartActionsBlock .sa-queue-empty .b {
+            font-size: 12px; color: #94a3b8; line-height: 1.5;
+        }
         /* Financial impact */
         #mktSmartActionsBlock .sa-impact {
             background: linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(74,222,128,0.06) 100%);
@@ -7211,10 +7261,13 @@
 
         <!-- ==================== VIEW: MARKETING (com tabs Performance + MQLs) ==================== -->
         <div id="view-marketing" style="display:none;">
-            <div class="op-header" style="padding-bottom:8px;justify-content:center;text-align:center;">
+            <div class="op-header" style="padding-bottom:12px;justify-content:center;text-align:center;">
                 <div>
-                    <h1>&#128225; Marketing</h1>
-                    <div class="subtitle">Performance + MQLs em um só lugar</div>
+                    <div style="display:inline-flex;align-items:center;gap:10px;justify-content:center;margin-bottom:6px;">
+                        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:inline-flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 14px rgba(139,92,246,0.3);">📡</div>
+                        <h1 style="margin:0;font-weight:700;letter-spacing:-0.02em;">Marketing</h1>
+                    </div>
+                    <div class="subtitle" style="letter-spacing:0.05em;font-size:12.5px;color:#94a3b8;text-transform:uppercase;font-weight:500;">Command Center · Geração de Demanda</div>
                 </div>
             </div>
 
@@ -24822,30 +24875,40 @@ function renderMktSmartActions(range, r) {
         leadSublabel = `<div class="sa-kpi-breakdown" style="color:#64748b;font-size:10.5px;">carregando RD Station...</div>`;
     }
 
-    // Botoes de exportacao pra cada KPI. Excel = dados amplos, LPH = template LPH.
-    // MRR GANHO nao tem LPH (nao faz sentido — deal ganho ja e cliente, nao vai pra cadencia).
+    // Botoes de exportacao icon-only (mais discretos)
+    // MRR GANHO nao tem LPH (nao faz sentido — deal ganho ja e cliente).
     const _exportBtns = (categoria, includeLPH = true) => `<div class="sa-kpi-exports">
-        <button type="button" onclick="exportMktCategoria('${categoria}','excel')" class="sa-exp-btn" title="CSV amplo com todos os registros do periodo">📊 Excel</button>
-        ${includeLPH ? `<button type="button" onclick="exportMktCategoria('${categoria}','lph')" class="sa-exp-btn primary" title="Formato LPH · so registros com nome+email+telefone+cargo">📤 LPH</button>` : ''}
+        <button type="button" onclick="exportMktCategoria('${categoria}','excel')" class="sa-exp-btn" title="Exportar em Excel/CSV">📊</button>
+        ${includeLPH ? `<button type="button" onclick="exportMktCategoria('${categoria}','lph')" class="sa-exp-btn primary" title="Exportar no formato Leads Per Hour (CSV template)">📤</button>` : ''}
     </div>`;
-    const leadExtra = leadSublabel + _exportBtns('leads');
 
     const kpis = [
-        { lbl: 'LEADS',    val: r.leads.toLocaleString('pt-BR'),      prev: rPrev?.leads, cur: r.leads,  money: false, tone: 'ok',  extra: leadExtra },
-        { lbl: 'MQLS',     val: r.mqls.toLocaleString('pt-BR'),       prev: rPrev?.mqls,  cur: r.mqls,   money: false, tone: 'ok',  extra: _exportBtns('mqls') },
-        { lbl: 'REUNIÕES', val: r.sals.toLocaleString('pt-BR'),       prev: rPrev?.sals,  cur: r.sals,   money: false, tone: 'mid', extra: _exportBtns('reunioes') },
-        { lbl: 'OPOS',     val: r.opos.toLocaleString('pt-BR'),       prev: rPrev?.opos,  cur: r.opos,   money: false, tone: 'mid', extra: _exportBtns('opos') },
-        { lbl: 'MRR GANHO', val: fmtRk(r.mrr),                          prev: rPrev?.mrr,   cur: r.mrr,    money: true,  tone: 'ok',  extra: _exportBtns('ganhos', false) }
+        { lbl: 'LEADS',    cur: r.leads, prev: rPrev?.leads, money: false, tone: 'ok',  categoria: 'leads',    breakdown: leadSublabel },
+        { lbl: 'MQLS',     cur: r.mqls,  prev: rPrev?.mqls,  money: false, tone: 'ok',  categoria: 'mqls' },
+        { lbl: 'REUNIÕES', cur: r.sals,  prev: rPrev?.sals,  money: false, tone: 'mid', categoria: 'reunioes' },
+        { lbl: 'OPOS',     cur: r.opos,  prev: rPrev?.opos,  money: false, tone: 'mid', categoria: 'opos' },
+        { lbl: 'MRR GANHO', cur: r.mrr,  prev: rPrev?.mrr,   money: true,  tone: 'ok',  categoria: 'ganhos', noLPH: true }
     ];
     const kpiHtml = kpis.map(k => {
+        const isEmpty = !k.cur || k.cur === 0;
         const d = _delta(k.cur, k.prev);
-        const prevTxt = k.prev != null ? (k.money ? fmtRk(k.prev) : k.prev.toLocaleString('pt-BR')) : '—';
-        return `<div class="sa-kpi ${k.tone}">
-            <div class="sa-kpi-label">${k.lbl}</div>
-            <div class="sa-kpi-val ${k.money?'money':''}">${k.val}</div>
-            <div class="sa-kpi-delta ${d.cls}">${d.txt}</div>
+        const prevTxt = k.prev != null && k.prev !== 0 ? (k.money ? fmtRk(k.prev) : k.prev.toLocaleString('pt-BR')) : '—';
+        const valDisplay = isEmpty ? '—' : (k.money ? fmtRk(k.cur) : k.cur.toLocaleString('pt-BR'));
+        const tone = isEmpty ? 'empty' : k.tone;
+        const deltaHtml = (k.prev == null || (isEmpty && k.prev === 0))
+            ? ''
+            : `<span class="sa-kpi-delta ${d.cls}">${d.txt}</span>`;
+        return `<div class="sa-kpi ${tone}">
+            <div class="sa-kpi-head">
+                <div class="sa-kpi-label">${k.lbl}</div>
+                ${_exportBtns(k.categoria, !k.noLPH)}
+            </div>
+            <div class="sa-kpi-main">
+                <div class="sa-kpi-val ${k.money?'money':''} ${isEmpty?'empty':''}">${valDisplay}</div>
+                ${deltaHtml}
+            </div>
             <div class="sa-kpi-prev">vs período anterior · ${prevTxt}</div>
-            ${k.extra || ''}
+            ${k.breakdown || ''}
         </div>`;
     }).join('');
 
