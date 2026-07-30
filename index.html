@@ -1562,6 +1562,62 @@
         #mktInsightsBlock .mi-alert .t { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
         #mktInsightsBlock .mi-alert .b { font-size: 11.5px; color: #cbd5e1; line-height: 1.5; }
 
+        /* ==================== PERIODO GLOBAL DA VIEW MKT ==================== */
+        .mkt-period-bar {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding: 12px 30px; margin: 0 0 14px;
+            background: linear-gradient(180deg, rgba(30,27,58,0.65) 0%, rgba(17,19,32,0.55) 100%);
+            border-top: 1px solid rgba(139,92,246,0.15);
+            border-bottom: 1px solid rgba(139,92,246,0.15);
+        }
+        .mkt-period-bar .mkt-period-icn {
+            width: 30px; height: 30px; border-radius: 8px;
+            background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(109,40,217,0.25));
+            border: 1px solid rgba(139,92,246,0.35);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 15px;
+        }
+        .mkt-period-bar .mkt-period-label {
+            font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em;
+            color: #a78bfa; font-weight: 700;
+        }
+        .mkt-period-bar .mkt-period-hint {
+            font-size: 11px; color: #64748b; margin-left: auto;
+        }
+        .mkt-period-bar .mkt-period-select,
+        .mkt-period-bar .mkt-period-date {
+            padding: 7px 14px;
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 8px;
+            background: rgba(15,17,28,0.7);
+            color: #f1f5f9; font-size: 13px; font-weight: 600;
+            font-family: inherit; cursor: pointer;
+            transition: all 0.15s;
+            min-width: 170px;
+        }
+        .mkt-period-bar .mkt-period-select:hover,
+        .mkt-period-bar .mkt-period-date:hover {
+            border-color: rgba(139,92,246,0.55);
+            background: rgba(20,20,38,0.85);
+        }
+        .mkt-period-bar .mkt-period-select:focus,
+        .mkt-period-bar .mkt-period-date:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
+        }
+        .mkt-period-bar .mkt-period-refresh {
+            width: 34px; height: 34px; padding: 0; border-radius: 8px;
+            background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.2);
+            color: #cbd5e1; font-size: 14px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .mkt-period-bar .mkt-period-refresh:hover {
+            background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.4);
+            transform: rotate(90deg);
+        }
+
         /* ==================== SMART ACTIONS · comando executivo (v2 · design refinado) ==================== */
         #mktSmartActionsBlock { margin: 4px 0 18px; display: grid; gap: 14px; }
         #mktSmartActionsBlock .sa-kpi-row {
@@ -7284,6 +7340,26 @@
             <!-- Tab content: Performance -->
             <div id="mktTabPerf">
 
+            <!-- Filtro global de período · aplica em TODOS os blocos (Smart Actions, Meta, Insights, Deep Diag) -->
+            <div class="mkt-period-bar">
+                <span class="mkt-period-icn">📅</span>
+                <span class="mkt-period-label">Período</span>
+                <select id="mktFilterPeriod" class="mkt-period-select">
+                    <option value="today">Hoje</option>
+                    <option value="thisWeek">Esta semana</option>
+                    <option value="thisMonth" selected>Este mês</option>
+                    <option value="lastMonth">Mês passado</option>
+                    <option value="30">Últimos 30 dias</option>
+                    <option value="60">Últimos 60 dias</option>
+                    <option value="90">Últimos 90 dias</option>
+                    <option value="custom">Personalizado...</option>
+                </select>
+                <input type="date" id="mktFilterDateFrom" class="mkt-period-date" style="display:none;">
+                <input type="date" id="mktFilterDateTo" class="mkt-period-date" style="display:none;">
+                <button type="button" class="mkt-period-refresh" onclick="loadMarketing()" title="Forçar atualização dos dados">🔄</button>
+                <span class="mkt-period-hint">Aplica em todos os cards, gráficos e análises abaixo</span>
+            </div>
+
             <!-- Executive command center: delta vs periodo anterior + impacto financeiro + fila de acao -->
             <div id="mktSmartActionsBlock" style="display:none;"></div>
 
@@ -7296,21 +7372,7 @@
             <!-- Analise de perdidos + deals presos (bloco de diagnostico profundo) -->
             <div id="mktDeepDiagBlock" style="display:none;"></div>
 
-            <div class="mql-filters-bar">
-                <select id="mktFilterPeriod" class="mql-filter">
-                    <option value="today">Hoje</option>
-                    <option value="thisWeek">Esta semana</option>
-                    <option value="thisMonth" selected>Este mês</option>
-                    <option value="lastMonth">Mês passado</option>
-                    <option value="30">Últimos 30 dias</option>
-                    <option value="60">Últimos 60 dias</option>
-                    <option value="90">Últimos 90 dias</option>
-                    <option value="custom">Personalizado...</option>
-                </select>
-                <input type="date" id="mktFilterDateFrom" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
-                <input type="date" id="mktFilterDateTo" class="mql-filter mql-date-input" style="display:none;min-width:140px;">
-                <button class="mql-refresh-btn" onclick="loadMarketing()">&#128260; Atualizar</button>
-            </div>
+            <!-- Filtro antigo (mql-filters-bar) foi movido pro topo · esta linha ficou como placeholder -->
 
             <div id="mktLoadingArea" class="dash-loading">
                 <div class="spinner"></div>
