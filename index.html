@@ -24442,6 +24442,11 @@ async function loadMarketing() {
             if (window._lastMktInsightsArgs) {
                 renderMktInsights(window._lastMktInsightsArgs);
             }
+            // Ads chegou depois — re-renderiza tudo pra usar rd.total autoritativo
+            // no card LEADS (fonte /platform/analytics/funnel bate 1:1 com dashboard RD)
+            const rangeAds = getMktPeriodRange();
+            const totalLeadsAds = getTotalLeadsInRange(rangeAds);
+            try { renderMarketing(rangeAds, { count: totalLeadsAds }); } catch (e) { console.warn('[mkt] re-render pos-ads:', e); }
         }).catch(e => console.warn('[mkt] ads fetch falhou:', e.message));
     }
 
@@ -24662,32 +24667,53 @@ function _mktIsLeadOrigin(originName) {
 // RD API so retorna mes atual — pra outros periodos so retorna Ploomes.
 function mktComputeLeadsFullPipeline(range) {
     const ploomesTotal = mktNnLeadsInRange(range);
-    const rd = window._rdMonthlyLeadsCache;
-    // Sem dados de RD ainda — retorna so Ploomes
-    if (!rd || !Array.isArray(rd.contacts)) {
-        return { ploomesTotal, rdTotal: null, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false };
-    }
-    // RD so tem dados do mes atual — pra outros ranges nao da pra somar represado
+    const rd = window._rdMonthlyLeadsCache; // lista paginada (usa pra cross com Ploomes)
+    // RD funnel = fonte AUTORITATIVA do total (bate 1:1 com dashboard nativo do RD).
+    // Vem via /api/marketing/ads-summary -> ads.rd.total (endpoint analytics/funnel).
+    const rdFunnelTotal = window._adsCachedSummary?.rd?.total;
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const isThisMonth = range?.from && range.from.getTime() === firstOfMonth.getTime();
-    if (!isThisMonth) {
-        return { ploomesTotal, rdTotal: rd.count || 0, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false, rdRestrictedToCurrentMonth: true };
+
+    // Sem dados do RD ainda — retorna so Ploomes
+    if (!rd || !Array.isArray(rd.contacts)) {
+        return { ploomesTotal, rdTotal: null, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false };
     }
-    // Match por email: quais leads do RD ja viraram contato no Ploomes
+    // RD (funnel + segmentations) so bate no mes atual — pra outros ranges retorna so Ploomes
+    if (!isThisMonth) {
+        return { ploomesTotal, rdTotal: rdFunnelTotal || rd.count || 0, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false, rdRestrictedToCurrentMonth: true };
+    }
+    // Match por email: quais leads do RD (lista paginada) ja viraram contato no Ploomes
     const rdEmails = new Set(rd.contacts.map(c => (c.email || '').toLowerCase().trim()).filter(Boolean));
-    let rdCasados = 0;
+    let rdCasadosPaginated = 0;
     for (const p of (mqlAllRawPeople || [])) {
         const email = (p.Email || '').toLowerCase().trim();
-        if (email && rdEmails.has(email)) rdCasados++;
+        if (email && rdEmails.has(email)) rdCasadosPaginated++;
     }
-    const rdTotal = rd.count || rd.contacts.length;
+    // Total autoritativo do RD: prefere analytics/funnel (bate com dashboard nativo).
+    // Fallback: lista paginada (subestima quando ha mais de 5000 contatos na base).
+    const rdTotal = (typeof rdFunnelTotal === 'number' && rdFunnelTotal > 0)
+        ? rdFunnelTotal
+        : (rd.count || rd.contacts.length);
+    const rdPaginatedTotal = rd.count || rd.contacts.length;
+    // Se estamos usando o funnel (autoritativo) mas a taxa de casamento veio da lista
+    // paginada, extrapolamos a taxa pro total real. Ex: se 331/2380 = 13.9% casaram
+    // e o funnel diz 3309, entao ~460 casaram (estimativa).
+    let rdCasados = rdCasadosPaginated;
+    const usouFunnel = rdTotal === rdFunnelTotal && rdPaginatedTotal > 0 && rdPaginatedTotal !== rdFunnelTotal;
+    if (usouFunnel) {
+        const taxaCasamento = rdCasadosPaginated / rdPaginatedTotal;
+        rdCasados = Math.round(rdTotal * taxaCasamento);
+    }
     const rdRepresados = Math.max(0, rdTotal - rdCasados);
     return {
         ploomesTotal,
         rdTotal,
         rdCasados,
         rdRepresados,
+        rdPaginatedTotal,
+        rdFunnelTotal,
+        usouFunnel,
         totalConsolidado: ploomesTotal + rdRepresados,
         rdDisponivel: true
     };
@@ -24925,9 +24951,14 @@ function renderMktSmartActions(range, r) {
     let leadSublabel;
     if (lb.rdDisponivel && lb.rdTotal != null) {
         // Mes atual + RD chegou: mostra breakdown completo
+        const fonteRd = lb.usouFunnel ? 'analytics/funnel' : 'segmentation paginada';
+        const nota = lb.usouFunnel
+            ? `Fonte RD: <span style="color:#4ade80;">${fonteRd}</span> (bate com dashboard nativo). Casamento com CRM estimado pela taxa da amostra paginada.`
+            : `Fonte RD: <span style="color:#facc15;">${fonteRd}</span> (pode subestimar se base > 5k).`;
         leadSublabel = `<div class="sa-kpi-breakdown">
             <div><span style="color:#a78bfa;">${lb.ploomesTotal.toLocaleString('pt-BR')}</span> Ploomes  ·  <span style="color:#facc15;">+${lb.rdRepresados.toLocaleString('pt-BR')}</span> represado RD</div>
-            <div style="font-size:10px;color:#64748b;margin-top:2px;">RD gerou ${lb.rdTotal.toLocaleString('pt-BR')} · ${lb.rdCasados.toLocaleString('pt-BR')} chegaram no CRM · ${lb.rdRepresados.toLocaleString('pt-BR')} vazaram</div>
+            <div style="font-size:10px;color:#64748b;margin-top:2px;">RD gerou ${lb.rdTotal.toLocaleString('pt-BR')} · ~${lb.rdCasados.toLocaleString('pt-BR')} chegaram no CRM · ${lb.rdRepresados.toLocaleString('pt-BR')} vazaram</div>
+            <div style="font-size:9.5px;color:#4b5568;margin-top:2px;">${nota}</div>
         </div>`;
     } else if (lb.rdRestrictedToCurrentMonth) {
         leadSublabel = `<div class="sa-kpi-breakdown" style="color:#64748b;font-size:10.5px;">só Ploomes · RD API restrita ao mês atual</div>`;
