@@ -1587,6 +1587,10 @@
         #mktSmartActionsBlock .sa-kpi-delta.down { color: #f87171; }
         #mktSmartActionsBlock .sa-kpi-delta.flat { color: #64748b; }
         #mktSmartActionsBlock .sa-kpi-prev { font-size: 10.5px; color: #64748b; margin-top: 1px; }
+        #mktSmartActionsBlock .sa-kpi-breakdown {
+            font-size: 11px; color: #cbd5e1; margin-top: 6px; padding-top: 6px;
+            border-top: 1px dashed rgba(148,163,184,0.15); line-height: 1.4;
+        }
         /* Financial impact */
         #mktSmartActionsBlock .sa-impact {
             background: linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(74,222,128,0.06) 100%);
@@ -23989,6 +23993,18 @@ async function loadMarketing() {
     const range = getMktPeriodRange();
     const totalLeads = getTotalLeadsInRange(range);
 
+    // Aguarda RD ate 2.5s pra ter o breakdown Ploomes+RD represado no primeiro render.
+    // Se demorar mais, renderiza sem RD — quando chegar, re-renderiza automaticamente abaixo.
+    if (typeof _cpFetchRdMonthlyLeads === 'function' && !window._rdMonthlyLeadsCache) {
+        document.getElementById('mktLoadingMsg').textContent = 'Consultando RD Station...';
+        try {
+            await Promise.race([
+                _cpFetchRdMonthlyLeads(false),
+                new Promise(res => setTimeout(res, 2500))
+            ]);
+        } catch (e) { console.warn('[mkt] rd fetch (with timeout):', e.message); }
+    }
+
     renderMarketing(range, { count: totalLeads });
     document.getElementById('mktLoadingArea').style.display = 'none';
     document.getElementById('mktContentArea').style.display = 'block';
@@ -24018,6 +24034,10 @@ async function loadMarketing() {
     if (typeof _cpFetchRdMonthlyLeads === 'function') {
         _cpFetchRdMonthlyLeads(false).then(rdLeads => {
             try { _cpRenderRdVsPloomes(rdLeads, 'mktRdVsPloomes'); } catch (e) { console.warn('[mkt] rd vs ploomes render:', e); }
+            // RD chegou depois do render principal — re-renderiza pra atualizar Leads consolidado
+            const range = getMktPeriodRange();
+            const totalLeads = getTotalLeadsInRange(range);
+            try { renderMarketing(range, { count: totalLeads }); } catch (e) { console.warn('[mkt] re-render pos-rd:', e); }
         }).catch(e => console.warn('[mkt] rd monthly leads fetch falhou:', e.message));
     }
 }
@@ -24221,6 +24241,42 @@ function _mktIsLeadOrigin(originName) {
     return MKT_LEAD_ORIGINS.some(o => n.includes(o));
 }
 
+// LEAD FULL PIPELINE: Ploomes (RD chegou + Ads + LPH + manual) + RD REPRESADO
+// (RD Station tem lead que nao virou contato no Ploomes — vazamento da esteira).
+// RD API so retorna mes atual — pra outros periodos so retorna Ploomes.
+function mktComputeLeadsFullPipeline(range) {
+    const ploomesTotal = mktNnLeadsInRange(range);
+    const rd = window._rdMonthlyLeadsCache;
+    // Sem dados de RD ainda — retorna so Ploomes
+    if (!rd || !Array.isArray(rd.contacts)) {
+        return { ploomesTotal, rdTotal: null, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false };
+    }
+    // RD so tem dados do mes atual — pra outros ranges nao da pra somar represado
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const isThisMonth = range?.from && range.from.getTime() === firstOfMonth.getTime();
+    if (!isThisMonth) {
+        return { ploomesTotal, rdTotal: rd.count || 0, rdCasados: null, rdRepresados: 0, totalConsolidado: ploomesTotal, rdDisponivel: false, rdRestrictedToCurrentMonth: true };
+    }
+    // Match por email: quais leads do RD ja viraram contato no Ploomes
+    const rdEmails = new Set(rd.contacts.map(c => (c.email || '').toLowerCase().trim()).filter(Boolean));
+    let rdCasados = 0;
+    for (const p of (mqlAllRawPeople || [])) {
+        const email = (p.Email || '').toLowerCase().trim();
+        if (email && rdEmails.has(email)) rdCasados++;
+    }
+    const rdTotal = rd.count || rd.contacts.length;
+    const rdRepresados = Math.max(0, rdTotal - rdCasados);
+    return {
+        ploomesTotal,
+        rdTotal,
+        rdCasados,
+        rdRepresados,
+        totalConsolidado: ploomesTotal + rdRepresados,
+        rdDisponivel: true
+    };
+}
+
 // LEAD: pessoa criada no periodo por captacao (RD/Ads/LPH) OU cadastro manual.
 // Considera manual = criada por humano do Lincros, excluindo:
 //   - Farmer (Adriely, Bruno, etc — renovacoes nao sao lead novo)
@@ -24347,7 +24403,7 @@ function renderMktMetaGap(range, realized) {
     // LEAD  = RD + Ads + LPH (Origin de captação) · MQL = tudo no Ploomes · REUNIÃO = qualquer atividade
     // OPO   = marcador Proposta Gerada aplicado no período · GANHO = fechado no período
     const cellsData = [
-        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'RD · Ads · LPH · manual' },
+        { key: 'lead', label: 'LEADS',    needed: agg.totals.leads, current: realized.leads,  fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'Ploomes + represado RD' },
         { key: 'mql',  label: 'MQLS',     needed: agg.totals.mqls,  current: realized.mqls,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'tudo no Ploomes' },
         { key: 'sal',  label: 'REUNIÕES', needed: agg.totals.sals,  current: realized.sals,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'qualquer atividade' },
         { key: 'opo',  label: 'OPOS',     needed: agg.totals.opos,  current: realized.opos,   fmt: (v) => Math.round(v).toLocaleString('pt-BR'), sub: 'proposta gerada' },
@@ -24459,8 +24515,23 @@ function renderMktSmartActions(range, r) {
         if (Math.abs(d) < 3) return { pct: d, cls: 'flat', txt: '≈ estável' };
         return { pct: d, cls: d > 0 ? 'up' : 'down', txt: (d > 0 ? '↑ ' : '↓ ') + Math.abs(d).toFixed(0) + '%' };
     };
+    // Breakdown do Lead consolidado (Ploomes + RD represado)
+    const lb = r.leadsBreakdown || { ploomesTotal: r.leads, rdRepresados: 0, rdCasados: null, rdTotal: null, rdDisponivel: false, rdRestrictedToCurrentMonth: false };
+    let leadSublabel;
+    if (lb.rdDisponivel && lb.rdTotal != null) {
+        // Mes atual + RD chegou: mostra breakdown completo
+        leadSublabel = `<div class="sa-kpi-breakdown">
+            <div><span style="color:#a78bfa;">${lb.ploomesTotal.toLocaleString('pt-BR')}</span> Ploomes  ·  <span style="color:#facc15;">+${lb.rdRepresados.toLocaleString('pt-BR')}</span> represado RD</div>
+            <div style="font-size:10px;color:#64748b;margin-top:2px;">RD gerou ${lb.rdTotal.toLocaleString('pt-BR')} · ${lb.rdCasados.toLocaleString('pt-BR')} chegaram no CRM · ${lb.rdRepresados.toLocaleString('pt-BR')} vazaram</div>
+        </div>`;
+    } else if (lb.rdRestrictedToCurrentMonth) {
+        leadSublabel = `<div class="sa-kpi-breakdown" style="color:#64748b;font-size:10.5px;">só Ploomes · RD API restrita ao mês atual</div>`;
+    } else {
+        leadSublabel = `<div class="sa-kpi-breakdown" style="color:#64748b;font-size:10.5px;">carregando RD Station...</div>`;
+    }
+
     const kpis = [
-        { lbl: 'LEADS',    val: r.leads.toLocaleString('pt-BR'),      prev: rPrev?.leads, cur: r.leads,  money: false, tone: 'ok' },
+        { lbl: 'LEADS',    val: r.leads.toLocaleString('pt-BR'),      prev: rPrev?.leads, cur: r.leads,  money: false, tone: 'ok',  extra: leadSublabel },
         { lbl: 'MQLS',     val: r.mqls.toLocaleString('pt-BR'),       prev: rPrev?.mqls,  cur: r.mqls,   money: false, tone: 'ok' },
         { lbl: 'REUNIÕES', val: r.sals.toLocaleString('pt-BR'),       prev: rPrev?.sals,  cur: r.sals,   money: false, tone: 'mid' },
         { lbl: 'OPOS',     val: r.opos.toLocaleString('pt-BR'),       prev: rPrev?.opos,  cur: r.opos,   money: false, tone: 'mid' },
@@ -24474,6 +24545,7 @@ function renderMktSmartActions(range, r) {
             <div class="sa-kpi-val ${k.money?'money':''}">${k.val}</div>
             <div class="sa-kpi-delta ${d.cls}">${d.txt}</div>
             <div class="sa-kpi-prev">vs período anterior · ${prevTxt}</div>
+            ${k.extra || ''}
         </div>`;
     }).join('');
 
@@ -24983,9 +25055,11 @@ function renderMarketing(range, rd) {
     const revenueWon = enriched.reduce((s, e) => s + e.revenue, 0);
 
     // Hero Meta do mês — foco em NOVOS NEGÓCIOS (máquina crítica de MKT + PV + Vendas).
-    // Todos os números filtrados pra pipeline 'Funil de Vendas' + SDR Inbound/Outbound.
+    // LEADS ampliado: soma Ploomes + RD represado (leads do RD que nao chegaram no Ploomes).
+    const leadsBreakdown = mktComputeLeadsFullPipeline(range);
     const realizedFunnel = {
-        leads: mktNnLeadsInRange(range),
+        leads: leadsBreakdown.totalConsolidado,
+        leadsBreakdown,
         mqls:  mktNnMqlsInRange(range),
         sals:  mktNnMeetings(range),
         opos:  mktNnProposals(range),
