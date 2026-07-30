@@ -5451,6 +5451,340 @@
             .lia-input { font-size: 16px; }
         }
 
+        /* ==================== VIEW: FLUXOS DE INTEGRAÇÃO (editor drag-and-drop) ==================== */
+        #view-fluxos-integracao {
+            --fi-bg:            #0B1220;
+            --fi-bg-elev:       #12192B;
+            --fi-ink:           #E9EDF7;
+            --fi-ink-soft:      #A9B2CC;
+            --fi-ink-mute:      #6B7699;
+            --fi-rule:          #232C48;
+            --fi-primary:       #7C6BFF;
+            --fi-primary-soft:  #5A4CD1;
+            --fi-accent:        #F59E42;
+            --fi-flow:          #5EB3FF;
+            --fi-danger:        #F87171;
+            --fi-serif: 'Charter', 'Bitstream Charter', 'Sitka Text', 'Cambria', Georgia, serif;
+            --fi-sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', Helvetica, Arial, sans-serif;
+            --fi-mono:  ui-monospace, 'Cascadia Code', 'JetBrains Mono', 'Source Code Pro', Menlo, monospace;
+            --fi-step:  0.14em;
+            background: var(--fi-bg);
+            color: var(--fi-ink);
+            font-family: var(--fi-sans);
+            font-size: 15px; line-height: 1.55;
+            min-height: 100vh;
+        }
+        #view-fluxos-integracao * { box-sizing: border-box; }
+        #view-fluxos-integracao ::selection { background: var(--fi-primary); color: #fff; }
+
+        /* Toolbar */
+        #view-fluxos-integracao .fi-toolbar {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 12px 24px;
+            background: color-mix(in srgb, var(--fi-bg) 92%, transparent);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--fi-rule);
+        }
+        #view-fluxos-integracao .fi-toolbar-brand {
+            font-family: var(--fi-serif); font-size: 15px; font-weight: 700;
+            letter-spacing: -0.01em; color: var(--fi-ink);
+            margin-right: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        #view-fluxos-integracao .fi-toolbar-dot { width: 7px; height: 7px; border-radius: 2px; background: var(--fi-primary); }
+        #view-fluxos-integracao .fi-toolbar-sep { flex: 1; }
+        #view-fluxos-integracao .fi-toolbar select,
+        #view-fluxos-integracao .fi-toolbar button {
+            font-family: var(--fi-sans); font-size: 12.5px; font-weight: 500;
+            padding: 7px 12px;
+            border: 1px solid var(--fi-rule);
+            background: var(--fi-bg-elev);
+            color: var(--fi-ink);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #view-fluxos-integracao .fi-toolbar button:hover,
+        #view-fluxos-integracao .fi-toolbar select:hover {
+            border-color: var(--fi-primary);
+            background: color-mix(in srgb, var(--fi-primary) 10%, var(--fi-bg-elev));
+        }
+        #view-fluxos-integracao .fi-toolbar button.fi-primary {
+            background: var(--fi-primary); border-color: var(--fi-primary); color: #fff;
+        }
+        #view-fluxos-integracao .fi-toolbar button.fi-primary:hover { background: var(--fi-primary-soft); }
+        #view-fluxos-integracao .fi-toolbar-hint {
+            font-family: var(--fi-mono); font-size: 10.5px;
+            color: var(--fi-ink-mute); text-transform: uppercase;
+            letter-spacing: var(--fi-step); font-weight: 700; margin-left: 8px;
+        }
+
+        /* Shell */
+        #view-fluxos-integracao .fi-shell {
+            max-width: 1080px; margin: 0 auto;
+            padding: 40px 32px 100px;
+        }
+
+        /* Editable inline */
+        #view-fluxos-integracao [contenteditable]:hover {
+            background: color-mix(in srgb, var(--fi-primary) 6%, transparent);
+            outline: 1px dashed color-mix(in srgb, var(--fi-primary) 40%, transparent);
+            outline-offset: 3px;
+            border-radius: 2px;
+        }
+        #view-fluxos-integracao [contenteditable]:focus {
+            outline: 1px solid var(--fi-primary);
+            outline-offset: 3px;
+            background: color-mix(in srgb, var(--fi-primary) 10%, transparent);
+            border-radius: 2px;
+        }
+        #view-fluxos-integracao [contenteditable]:empty::before {
+            content: attr(data-ph);
+            color: var(--fi-ink-mute); font-style: italic; opacity: 0.6;
+        }
+
+        /* Nav do fluxo */
+        #view-fluxos-integracao .fi-flow-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-bottom: 28px; border-bottom: 1px solid var(--fi-rule);
+            margin-bottom: 44px; gap: 20px; flex-wrap: wrap;
+        }
+        #view-fluxos-integracao .fi-flow-brand {
+            display: flex; align-items: center; gap: 10px;
+            font-family: var(--fi-serif); font-size: 15px; font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        #view-fluxos-integracao .fi-flow-brand .fi-dot {
+            width: 8px; height: 8px; border-radius: 2px; background: var(--fi-primary); cursor: pointer;
+        }
+        #view-fluxos-integracao .fi-flow-brand.cli .fi-dot { background: var(--fi-accent); }
+        #view-fluxos-integracao .fi-flow-brand img { max-height: 32px; max-width: 120px; object-fit: contain; cursor: pointer; }
+        #view-fluxos-integracao .fi-flow-brand .fi-logo-drop {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 4px;
+            border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute); font-size: 12px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        #view-fluxos-integracao .fi-flow-brand .fi-logo-drop:hover { border-color: var(--fi-accent); color: var(--fi-accent); }
+        #view-fluxos-integracao .fi-flow-x { color: var(--fi-ink-mute); font-family: var(--fi-mono); font-size: 13px; }
+
+        #view-fluxos-integracao .fi-eyebrow-row {
+            display: flex; align-items: baseline; gap: 12px;
+            font-family: var(--fi-mono); font-size: 11px;
+            text-transform: uppercase; letter-spacing: var(--fi-step);
+            color: var(--fi-ink-mute); font-weight: 600; margin-bottom: 16px;
+        }
+        #view-fluxos-integracao .fi-swatch {
+            display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--fi-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--fi-primary) 20%, transparent);
+        }
+        #view-fluxos-integracao h1.fi-hero {
+            font-family: var(--fi-serif);
+            font-size: clamp(32px, 4.8vw, 52px);
+            line-height: 1.05; letter-spacing: -0.02em;
+            font-weight: 500; text-wrap: balance;
+            margin: 0 0 18px;
+        }
+        #view-fluxos-integracao h1.fi-hero em { font-style: italic; color: var(--fi-primary); font-weight: 500; }
+        #view-fluxos-integracao .fi-lede {
+            font-family: var(--fi-serif); font-size: 18px; line-height: 1.5;
+            color: var(--fi-ink-soft); max-width: 62ch; text-wrap: balance;
+            margin: 0 0 36px; font-style: italic;
+        }
+
+        /* Atores */
+        #view-fluxos-integracao .fi-actors {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1px; background: var(--fi-rule);
+            border: 1px solid var(--fi-rule);
+            border-radius: 4px; overflow: hidden;
+            margin-bottom: 60px;
+        }
+        @media (max-width: 700px) { #view-fluxos-integracao .fi-actors { grid-template-columns: 1fr; } }
+        #view-fluxos-integracao .fi-actor {
+            background: var(--fi-bg-elev);
+            padding: 18px 20px;
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+        #view-fluxos-integracao .fi-actor-badge {
+            width: 34px; height: 34px; border-radius: 6px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: var(--fi-mono); font-size: 12.5px; font-weight: 700;
+            flex-shrink: 0;
+        }
+        #view-fluxos-integracao .fi-actor.cli .fi-actor-badge { background: color-mix(in srgb, var(--fi-accent) 15%, transparent); color: var(--fi-accent); border: 1px solid color-mix(in srgb, var(--fi-accent) 30%, transparent); }
+        #view-fluxos-integracao .fi-actor.lin .fi-actor-badge { background: color-mix(in srgb, var(--fi-primary) 15%, transparent); color: var(--fi-primary); border: 1px solid color-mix(in srgb, var(--fi-primary) 30%, transparent); }
+        #view-fluxos-integracao .fi-actor.par .fi-actor-badge { background: color-mix(in srgb, var(--fi-flow) 12%, transparent); color: var(--fi-flow); border: 1px solid color-mix(in srgb, var(--fi-flow) 25%, transparent); }
+        #view-fluxos-integracao .fi-actor-role { font-family: var(--fi-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: var(--fi-step); color: var(--fi-ink-mute); font-weight: 700; margin-bottom: 3px; }
+        #view-fluxos-integracao .fi-actor-name { font-family: var(--fi-serif); font-size: 16px; font-weight: 500; color: var(--fi-ink); letter-spacing: -0.01em; }
+        #view-fluxos-integracao .fi-actor-sub { font-size: 12.5px; color: var(--fi-ink-soft); margin-top: 3px; }
+
+        /* Fase */
+        #view-fluxos-integracao .fi-phase { margin-bottom: 56px; position: relative; }
+        #view-fluxos-integracao .fi-phase.dragging { opacity: 0.4; }
+        #view-fluxos-integracao .fi-phase.drag-over { border-top: 2px solid var(--fi-primary); }
+        #view-fluxos-integracao .fi-phase-header {
+            display: grid; grid-template-columns: 28px auto 1fr;
+            align-items: baseline; gap: 16px;
+            padding-bottom: 18px; margin-bottom: 28px;
+            border-bottom: 1px solid var(--fi-rule);
+            position: relative;
+        }
+        #view-fluxos-integracao .fi-drag-handle {
+            color: var(--fi-ink-mute); cursor: grab;
+            font-size: 16px; padding: 4px;
+            opacity: 0; transition: opacity 0.15s; user-select: none;
+        }
+        #view-fluxos-integracao .fi-phase:hover > .fi-phase-header > .fi-drag-handle,
+        #view-fluxos-integracao .fi-step:hover > .fi-step-marker > .fi-drag-handle { opacity: 0.6; }
+        #view-fluxos-integracao .fi-drag-handle:hover { opacity: 1 !important; color: var(--fi-primary); }
+        #view-fluxos-integracao .fi-drag-handle:active { cursor: grabbing; }
+        #view-fluxos-integracao .fi-phase-num {
+            font-family: var(--fi-serif); font-size: 40px; font-weight: 500; font-style: italic;
+            color: var(--fi-primary); line-height: 1; flex-shrink: 0;
+        }
+        #view-fluxos-integracao .fi-phase-title { font-family: var(--fi-serif); font-size: 26px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.1; margin: 0; }
+        #view-fluxos-integracao .fi-phase-desc { font-family: var(--fi-serif); font-style: italic; font-size: 14px; color: var(--fi-ink-soft); margin-top: 4px; max-width: 54ch; }
+        #view-fluxos-integracao .fi-phase-body { min-width: 0; }
+        #view-fluxos-integracao .fi-row-actions {
+            position: absolute; right: 0; top: -2px;
+            display: flex; gap: 4px;
+            opacity: 0; transition: opacity 0.15s;
+        }
+        #view-fluxos-integracao .fi-phase-header:hover .fi-row-actions,
+        #view-fluxos-integracao .fi-step:hover .fi-row-actions { opacity: 1; }
+        #view-fluxos-integracao .fi-btn-x,
+        #view-fluxos-integracao .fi-btn-mini {
+            background: var(--fi-bg-elev); border: 1px solid var(--fi-rule);
+            color: var(--fi-ink-mute); font-size: 11px; padding: 3px 8px;
+            border-radius: 3px; cursor: pointer; font-family: var(--fi-mono);
+        }
+        #view-fluxos-integracao .fi-btn-x:hover { color: var(--fi-danger); border-color: var(--fi-danger); }
+        #view-fluxos-integracao .fi-btn-mini:hover { color: var(--fi-primary); border-color: var(--fi-primary); }
+
+        /* Steps */
+        #view-fluxos-integracao .fi-steps { display: flex; flex-direction: column; }
+        #view-fluxos-integracao .fi-step {
+            display: grid; grid-template-columns: 28px 44px 1fr;
+            gap: 20px; padding: 22px 0;
+            border-bottom: 1px solid var(--fi-rule);
+            position: relative; align-items: start;
+        }
+        #view-fluxos-integracao .fi-step:last-child { border-bottom: none; }
+        #view-fluxos-integracao .fi-step.dragging { opacity: 0.4; }
+        #view-fluxos-integracao .fi-step.drag-over-top { border-top: 2px solid var(--fi-primary); }
+        #view-fluxos-integracao .fi-step.drag-over-bottom { border-bottom: 2px solid var(--fi-primary); }
+        #view-fluxos-integracao .fi-step-marker { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+        #view-fluxos-integracao .fi-step-num {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: var(--fi-bg-elev); border: 1px solid var(--fi-rule);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--fi-mono); font-size: 11.5px; font-weight: 700;
+            color: var(--fi-ink-soft);
+        }
+        #view-fluxos-integracao .fi-step-body {
+            display: grid; grid-template-columns: 1fr auto; gap: 20px;
+            align-items: start; position: relative;
+        }
+        @media (max-width: 720px) { #view-fluxos-integracao .fi-step-body { grid-template-columns: 1fr; } }
+        #view-fluxos-integracao .fi-step-title { font-family: var(--fi-serif); font-size: 19px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 6px; text-wrap: balance; }
+        #view-fluxos-integracao .fi-step-desc { font-size: 14px; line-height: 1.6; color: var(--fi-ink-soft); max-width: 62ch; }
+        #view-fluxos-integracao .fi-step-route {
+            display: flex; align-items: center; gap: 6px;
+            font-family: var(--fi-mono); font-size: 11px;
+            color: var(--fi-ink-mute); margin-top: 12px; flex-wrap: wrap;
+        }
+        #view-fluxos-integracao .fi-step-route select {
+            padding: 3px 7px; border: 1px solid var(--fi-rule); border-radius: 4px;
+            background: var(--fi-bg-elev); color: var(--fi-ink);
+            font-family: var(--fi-mono); font-size: 10px;
+            text-transform: uppercase; letter-spacing: var(--fi-step);
+            font-weight: 700; cursor: pointer;
+        }
+        #view-fluxos-integracao .fi-step-route select:hover { border-color: var(--fi-primary); }
+        #view-fluxos-integracao .fi-step-apis {
+            display: flex; flex-direction: column; gap: 5px;
+            align-items: flex-end; min-width: 240px;
+        }
+        @media (max-width: 720px) { #view-fluxos-integracao .fi-step-apis { align-items: flex-start; min-width: 0; } }
+        #view-fluxos-integracao .fi-step-apis-label { font-family: var(--fi-mono); font-size: 10px; text-transform: uppercase; letter-spacing: var(--fi-step); color: var(--fi-ink-mute); font-weight: 700; margin-bottom: 3px; }
+        #view-fluxos-integracao .fi-api {
+            display: inline-block; font-family: var(--fi-mono); font-size: 12px;
+            background: color-mix(in srgb, var(--fi-accent) 8%, var(--fi-bg-elev));
+            color: var(--fi-accent); padding: 5px 10px; border-radius: 4px;
+            border: 1px solid color-mix(in srgb, var(--fi-accent) 25%, transparent);
+            min-width: 60px; position: relative;
+        }
+        #view-fluxos-integracao .fi-api-x {
+            display: inline-block; margin-left: 6px;
+            color: var(--fi-ink-mute); cursor: pointer;
+            opacity: 0; transition: opacity 0.15s;
+        }
+        #view-fluxos-integracao .fi-api:hover .fi-api-x { opacity: 1; }
+        #view-fluxos-integracao .fi-api-x:hover { color: var(--fi-danger); }
+        #view-fluxos-integracao .fi-add-api {
+            background: transparent; border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute); padding: 4px 8px; border-radius: 4px;
+            font-family: var(--fi-mono); font-size: 11px; cursor: pointer;
+            transition: all 0.15s;
+        }
+        #view-fluxos-integracao .fi-add-api:hover { color: var(--fi-accent); border-color: var(--fi-accent); }
+
+        /* Add buttons */
+        #view-fluxos-integracao .fi-add-slot {
+            display: flex; justify-content: center;
+            padding: 10px 0;
+            opacity: 0; transition: opacity 0.15s;
+        }
+        #view-fluxos-integracao .fi-add-slot:hover,
+        #view-fluxos-integracao .fi-steps:hover .fi-add-slot { opacity: 1; }
+        #view-fluxos-integracao .fi-add-btn {
+            background: var(--fi-bg-elev); border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute); padding: 6px 14px; border-radius: 20px;
+            font-family: var(--fi-mono); font-size: 11px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: var(--fi-step); font-weight: 700;
+            transition: all 0.15s;
+        }
+        #view-fluxos-integracao .fi-add-btn:hover { color: var(--fi-primary); border-color: var(--fi-primary); border-style: solid; }
+        #view-fluxos-integracao .fi-add-phase-container {
+            opacity: 1; padding: 20px 0; text-align: center;
+            border-top: 1px dashed var(--fi-rule); margin-top: 20px;
+        }
+
+        /* Footer */
+        #view-fluxos-integracao .fi-foot {
+            margin-top: 60px; padding-top: 24px;
+            border-top: 1px solid var(--fi-rule);
+            display: flex; justify-content: space-between; align-items: baseline;
+            font-family: var(--fi-mono); font-size: 11px;
+            color: var(--fi-ink-mute); text-transform: uppercase;
+            letter-spacing: var(--fi-step); font-weight: 700;
+            flex-wrap: wrap; gap: 12px;
+        }
+
+        /* Print */
+        @media print {
+            body > *:not(#view-fluxos-integracao) { display: none !important; }
+            #view-fluxos-integracao .fi-toolbar,
+            #view-fluxos-integracao .fi-drag-handle,
+            #view-fluxos-integracao .fi-row-actions,
+            #view-fluxos-integracao .fi-add-slot,
+            #view-fluxos-integracao .fi-add-phase-container,
+            #view-fluxos-integracao .fi-add-api,
+            #view-fluxos-integracao .fi-api-x { display: none !important; }
+            #view-fluxos-integracao {
+                --fi-bg: #FFFFFF !important; --fi-bg-elev: #FAFAFA !important;
+                --fi-ink: #101528 !important; --fi-ink-soft: #4B5573 !important;
+                --fi-ink-mute: #8791AF !important; --fi-rule: #DCE1EC !important;
+            }
+            #view-fluxos-integracao [contenteditable]:hover { outline: none !important; background: none !important; }
+            #view-fluxos-integracao .fi-step-route select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; }
+            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 24px !important; }
+        }
+
     </style>
 </head>
 <body>
@@ -5500,6 +5834,10 @@
             <div class="nav-item" data-view="marketing" onclick="showView('marketing')">
                 <span class="nav-icon" data-svg-icon="megaphone"></span>
                 <span class="nav-label">Marketing</span>
+            </div>
+            <div class="nav-item" data-view="fluxos-integracao" onclick="showView('fluxos-integracao')">
+                <span class="nav-icon" data-svg-icon="layout"></span>
+                <span class="nav-label">Fluxos de integração</span>
             </div>
 
             <!-- Grupo: Pré-vendas -->
@@ -7669,6 +8007,25 @@
             </div>
             </div><!-- /mktTabMqls -->
         </div><!-- /view-marketing -->
+
+        <!-- ==================== VIEW: FLUXOS DE INTEGRAÇÃO ==================== -->
+        <div id="view-fluxos-integracao" style="display:none;">
+            <nav class="fi-toolbar">
+                <div class="fi-toolbar-brand"><span class="fi-toolbar-dot"></span> Editor de Fluxos</div>
+                <span class="fi-toolbar-hint">clique em qualquer texto pra editar · arraste ⋮⋮ pra reordenar</span>
+                <div class="fi-toolbar-sep"></div>
+                <select id="fi-tpl-select" title="Carregar template">
+                    <option value="">— Template —</option>
+                    <option value="bl">Buschle &amp; Lepper</option>
+                    <option value="blank">Em branco</option>
+                </select>
+                <button onclick="fiSaveJSON()">💾 Salvar</button>
+                <button onclick="document.getElementById('fi-load-json').click()">📁 Abrir</button>
+                <input type="file" id="fi-load-json" accept=".json" style="display:none" onchange="fiLoadJSON(event)">
+                <button onclick="window.print()" class="fi-primary">🖨 PDF</button>
+            </nav>
+            <main class="fi-shell" id="fi-shell"></main>
+        </div>
 
         <!-- ==================== VIEW: ANÁLISE DE FUNIL ==================== -->
         <div id="view-analise-funil" style="display:none;">
@@ -26411,6 +26768,397 @@ if (mktPeriodEl) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', loadMarketing);
 });
+
+// ==================== EDITOR DE FLUXOS DE INTEGRAÇÃO ====================
+// Editor visual drag-and-drop pra vendedor montar fluxo pro cliente.
+// Auto-save em localStorage. Print CSS pra exportar PDF via Ctrl+P.
+const FI_LS_KEY = 'fi_current_flow_v1';
+const FI_ROM = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+const fiRom = n => FI_ROM[n] || String(n);
+
+const FI_TEMPLATE_BLANK = {
+    cliente: { nome: 'Nome do Cliente', logo: null },
+    lincrosNome: 'Lincros',
+    selo: 'DOCUMENTAÇÃO TÉCNICA · V1.0',
+    titulo: 'Título do fluxo',
+    subtitulo: 'Descrição curta do que este fluxo cobre.',
+    atores: [
+        { key: 'cli', badge: 'ERP', role: 'Cliente', name: 'Nome do Cliente', sub: 'Sistema do cliente' },
+        { key: 'lin', badge: 'LIN', role: 'Plataforma', name: 'Lincros', sub: 'Cotação · Entregas · Auditoria' },
+        { key: 'par', badge: 'TSP', role: 'Parceira', name: 'Transportadora', sub: 'Confirma coleta · Envia CT-e e fatura' }
+    ],
+    fases: [
+        { titulo: 'Primeira fase', desc: 'Descrição da fase.', steps: [
+            { titulo: 'Primeiro passo', desc: 'O que acontece aqui.', from: 'cli', to: 'lin', apis: ['endpoint/exemplo'] }
+        ]}
+    ],
+    footL: 'Fluxo de Integração · V1.0',
+    footR: 'CLIENTE × LINCROS'
+};
+
+const FI_TEMPLATE_BL = {
+    cliente: { nome: 'Buschle & Lepper', logo: null },
+    lincrosNome: 'Lincros',
+    selo: 'DOCUMENTAÇÃO TÉCNICA · V1.1 · JUL/2026',
+    titulo: 'Do pedido no Dynamics à fatura auditada, <em>em quatro atos.</em>',
+    subtitulo: 'Este documento descreve o fluxo de integração entre o Microsoft Dynamics 365 da Buschle & Lepper e a plataforma Lincros — quatro fases sequenciais, oito passos de dados, quinze endpoints REST.',
+    atores: [
+        { key: 'cli', badge: 'D365', role: 'Cliente', name: 'Buschle & Lepper', sub: 'ERP Microsoft Dynamics 365' },
+        { key: 'lin', badge: 'LIN', role: 'Plataforma', name: 'Lincros', sub: 'Cotação · Entregas · Auditoria' },
+        { key: 'par', badge: 'TSP', role: 'Parceira', name: 'Transportadora', sub: 'Confirma coleta · Envia CT-e e fatura' }
+    ],
+    fases: [
+        { titulo: 'Cotação & ordem de coleta', desc: 'O pedido nasce no ERP, ganha uma pré-nota, e sai da fábrica com a transportadora que oferece o melhor frete.', steps: [
+            { titulo: 'B&L envia o pedido', desc: 'O Dynamics 365 publica o pedido na Lincros de forma assíncrona. A Lincros cria a pré-nota correspondente. Pedidos cancelados no ERP são refletidos pelo endpoint de cancelamento.', from: 'cli', to: 'lin', apis: ['POST · prenota/criarAsync', 'POST · prenota/cancelar'] },
+            { titulo: 'Lincros calcula o frete e devolve a melhor rota', desc: 'O motor de cotação simula frete fracionado e carga lotação/itinerante em paralelo, retornando ao D365 a transportadora vencedora e os componentes de preço.', from: 'cli', to: 'lin', apis: ['POST · prenota/selecao/simulacao'] },
+            { titulo: 'Ordem de coleta é despachada para a transportadora', desc: 'A Lincros gera a ordem de coleta a partir da pré-nota atualizada. O D365 sincroniza pelos três endpoints. A transportadora recebe a ordem e confirma o pick-up.', from: 'lin', to: 'par', apis: ['GET · ordemcoleta/buscarRegistrosParaIntegracao', 'GET · ordemcoleta/recuperarDados', 'POST · ordemcoleta/salvarRetornoOrdemColeta'] }
+        ]},
+        { titulo: 'Emissão fiscal & provisão do frete', desc: 'NF-e do pedido segue para a Lincros; a transportadora emite o CT-e; o D365 provisiona o frete no financeiro.', steps: [
+            { titulo: 'B&L envia o XML da NF-e', desc: 'Ao faturar o pedido, o D365 envia o XML da nota fiscal eletrônica para a Lincros, que vincula à ordem de coleta e prepara a base para o CT-e da transportadora.', from: 'cli', to: 'lin', apis: ['POST · nota/criarAsync', 'POST · nota/cancelar'] },
+            { titulo: 'CT-e é emitido, integrado e provisionado', desc: 'A transportadora emite o CT-e pela carga. A Lincros captura, valida e disponibiliza para o D365. O ERP integra o CT-e e provisiona o frete no financeiro.', from: 'par', to: 'cli', apis: ['GET · cte/buscarRegistrosParaIntegracao', 'GET · cte/recuperarDados', 'POST · cte/salvarRetornoCte'] }
+        ]},
+        { titulo: 'Rastreio & ocorrências de entrega', desc: 'A carga viaja. Ocorrências são capturadas por EDI, tratadas pela Lincros e devolvidas ao ERP em tempo próximo do real.', steps: [
+            { titulo: 'EDI de ocorrências flui para o cliente', desc: 'A transportadora envia EDI de ocorrências. A Lincros normaliza os eventos, aplica regras de negócio e dispara os status para o D365 e canais de acompanhamento.', from: 'par', to: 'cli', apis: ['EDI · Ocorrências de entrega', 'Webhook · status síncrono'] }
+        ]},
+        { titulo: 'Auditoria & contabilização da fatura', desc: 'CT-es e faturas passam pelo motor de auditoria da Lincros antes de virarem obrigação financeira no ERP.', steps: [
+            { titulo: 'Lincros audita CT-e contra tabela e ocorrências', desc: 'Cada CT-e é conferido contra a tabela de frete contratada, os componentes cobrados, os impostos destacados e as ocorrências efetivamente registradas.', from: 'lin', to: 'lin', apis: ['Auditoria automatizada · CT-e'] },
+            { titulo: 'Fatura auditada é integrada ao D365 para contabilização', desc: 'Após a transportadora emitir a fatura, a Lincros a audita contra os CT-es já validados. A fatura aprovada é integrada ao D365 para pagamento.', from: 'par', to: 'cli', apis: ['GET · fatura/buscarRegistrosParaIntegracao', 'GET · fatura/recuperarDados', 'POST · fatura/salvarRetornoFatura'] }
+        ]}
+    ],
+    footL: 'Fluxo Base de Integração · V1.1',
+    footR: 'B&L × LINCROS'
+};
+
+let fiState = null;
+let fiDragging = null;
+let fiInited = false;
+
+function fiEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function fiEscKeepEm(s) { return fiEsc(s).replace(/&lt;em&gt;/g, '<em>').replace(/&lt;\/em&gt;/g, '</em>'); }
+function fiHtmlToText(html) {
+    return html
+        .replace(/<i>|<em>/g, '<em>').replace(/<\/i>|<\/em>/g, '</em>')
+        .replace(/<b>|<strong>/g, '<em>').replace(/<\/b>|<\/strong>/g, '</em>')
+        .replace(/<div>/g, '\n').replace(/<\/div>/g, '')
+        .replace(/<br\s*\/?>/g, '\n').replace(/&nbsp;/g, ' ')
+        .replace(/<(?!\/?em\b)[^>]+>/g, '');
+}
+function fiPlainFromHtml(html) {
+    return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+}
+
+function fiPersist() {
+    try { localStorage.setItem(FI_LS_KEY, JSON.stringify(fiState)); } catch(e) {}
+}
+function fiLoad() {
+    try {
+        const s = localStorage.getItem(FI_LS_KEY);
+        if (s) return JSON.parse(s);
+    } catch(e) {}
+    return null;
+}
+
+function fiRender() {
+    if (!fiState) return;
+    const s = fiState;
+    const shell = document.getElementById('fi-shell');
+    if (!shell) return;
+    const atoresOptions = key => s.atores.map(a =>
+        `<option value="${a.key}" ${a.key === key ? 'selected' : ''}>${fiEsc(a.badge)}</option>`
+    ).join('');
+
+    shell.innerHTML = `
+        <nav class="fi-flow-nav">
+            <div class="fi-flow-brand cli">
+                ${s.cliente.logo
+                    ? `<img src="${s.cliente.logo}" alt="Logo" onclick="fiPickLogo()">`
+                    : `<span class="fi-logo-drop" onclick="fiPickLogo()" title="Clique pra adicionar logo">📎</span>`}
+                <span contenteditable data-ph="Nome do cliente" data-set="cliente.nome">${fiEsc(s.cliente.nome)}</span>
+            </div>
+            <div class="fi-flow-x">×</div>
+            <div class="fi-flow-brand">
+                <span class="fi-dot"></span>
+                <span contenteditable data-ph="Lincros" data-set="lincrosNome">${fiEsc(s.lincrosNome)}</span>
+            </div>
+        </nav>
+        <div class="fi-eyebrow-row">
+            <span class="fi-swatch"></span>
+            <span contenteditable data-ph="Selo/eyebrow" data-set="selo">${fiEsc(s.selo)}</span>
+        </div>
+        <h1 class="fi-hero" contenteditable data-ph="Título do fluxo" data-set="titulo" data-em="1">${fiEscKeepEm(s.titulo)}</h1>
+        <p class="fi-lede" contenteditable data-ph="Subtítulo / lede" data-set="subtitulo">${fiEsc(s.subtitulo)}</p>
+        <div class="fi-actors">
+            ${s.atores.map((a, i) => `
+                <div class="fi-actor ${a.key}">
+                    <span class="fi-actor-badge" contenteditable data-ph="?" data-atk="${i}.badge">${fiEsc(a.badge)}</span>
+                    <div style="min-width:0;">
+                        <div class="fi-actor-role" contenteditable data-atk="${i}.role">${fiEsc(a.role)}</div>
+                        <div class="fi-actor-name" contenteditable data-atk="${i}.name">${fiEsc(a.name)}</div>
+                        <div class="fi-actor-sub" contenteditable data-atk="${i}.sub">${fiEsc(a.sub)}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        ${s.fases.map((f, fi_) => {
+            let stepBase = 0;
+            for (let i = 0; i < fi_; i++) stepBase += s.fases[i].steps.length;
+            return `
+                <section class="fi-phase" draggable="true" data-fi="${fi_}">
+                    <header class="fi-phase-header">
+                        <span class="fi-drag-handle" title="Arrastar fase">⋮⋮</span>
+                        <div class="fi-phase-num">${fiRom(fi_ + 1)}</div>
+                        <div class="fi-phase-body">
+                            <h2 class="fi-phase-title" contenteditable data-ph="Título da fase" data-fk="${fi_}.titulo">${fiEsc(f.titulo)}</h2>
+                            <p class="fi-phase-desc" contenteditable data-ph="Descrição da fase" data-fk="${fi_}.desc">${fiEsc(f.desc)}</p>
+                            <div class="fi-row-actions">
+                                <button class="fi-btn-x" onclick="fiRmFase(${fi_})">× remover fase</button>
+                            </div>
+                        </div>
+                    </header>
+                    <div class="fi-steps" data-fi-steps="${fi_}">
+                        ${f.steps.map((st, si) => `
+                            <article class="fi-step" draggable="true" data-fi="${fi_}" data-si="${si}">
+                                <span class="fi-drag-handle" title="Arrastar passo">⋮⋮</span>
+                                <div class="fi-step-marker">
+                                    <span class="fi-step-num">${String(stepBase + si + 1).padStart(2, '0')}</span>
+                                </div>
+                                <div class="fi-step-body">
+                                    <div>
+                                        <h3 class="fi-step-title" contenteditable data-ph="Título do passo" data-sk="${fi_}.${si}.titulo">${fiEsc(st.titulo)}</h3>
+                                        <p class="fi-step-desc" contenteditable data-ph="Descrição" data-sk="${fi_}.${si}.desc">${fiEsc(st.desc)}</p>
+                                        <div class="fi-step-route">
+                                            <span>De</span>
+                                            <select onchange="fiUpdStepRoute(${fi_}, ${si}, 'from', this.value)">${atoresOptions(st.from)}</select>
+                                            ${st.from === st.to ? '' : `<span>→</span><select onchange="fiUpdStepRoute(${fi_}, ${si}, 'to', this.value)">${atoresOptions(st.to)}</select>`}
+                                            ${st.from === st.to ? `<button class="fi-btn-mini" onclick="fiUnlockTo(${fi_}, ${si})">definir destino</button>` : ''}
+                                        </div>
+                                        <div class="fi-row-actions">
+                                            <button class="fi-btn-x" onclick="fiRmStep(${fi_}, ${si})">× remover passo</button>
+                                        </div>
+                                    </div>
+                                    <div class="fi-step-apis">
+                                        <div class="fi-step-apis-label">${st.apis.length > 1 ? 'Endpoints' : 'Endpoint'}</div>
+                                        ${st.apis.map((api, ai) => `
+                                            <code class="fi-api">
+                                                <span contenteditable data-ak="${fi_}.${si}.${ai}">${fiEsc(api)}</span>
+                                                <span class="fi-api-x" onclick="fiRmApi(${fi_}, ${si}, ${ai})">×</span>
+                                            </code>
+                                        `).join('')}
+                                        <button class="fi-add-api" onclick="fiAddApi(${fi_}, ${si})">+ endpoint</button>
+                                    </div>
+                                </div>
+                            </article>
+                        `).join('')}
+                        <div class="fi-add-slot">
+                            <button class="fi-add-btn" onclick="fiAddStep(${fi_})">+ passo</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }).join('')}
+        <div class="fi-add-phase-container">
+            <button class="fi-add-btn" onclick="fiAddFase()">+ nova fase</button>
+        </div>
+        <footer class="fi-foot">
+            <span contenteditable data-ph="Rodapé esquerda" data-set="footL">${fiEsc(s.footL)}</span>
+            <span contenteditable data-ph="Rodapé direita" data-set="footR">${fiEsc(s.footR)}</span>
+        </footer>
+    `;
+    fiBindEditables();
+    fiBindDragDrop();
+    fiPersist();
+}
+
+function fiBindEditables() {
+    document.querySelectorAll('#view-fluxos-integracao [contenteditable]').forEach(el => {
+        el.addEventListener('blur', () => {
+            const html = el.innerHTML;
+            let finalVal;
+            if (el.dataset.em === '1') {
+                const norm = fiHtmlToText(html);
+                finalVal = norm.replace(/<(?!\/?em\b)[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+            } else {
+                finalVal = fiPlainFromHtml(html);
+            }
+            fiApplyEdit(el, finalVal);
+        });
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !['P','DIV'].includes(el.tagName)) {
+                if (!el.classList.contains('fi-phase-desc') && !el.classList.contains('fi-lede') && !el.classList.contains('fi-step-desc')) {
+                    e.preventDefault(); el.blur();
+                }
+            }
+        });
+    });
+}
+
+function fiApplyEdit(el, val) {
+    if (el.dataset.set) {
+        const path = el.dataset.set.split('.');
+        let ref = fiState;
+        for (let i = 0; i < path.length - 1; i++) ref = ref[path[i]];
+        ref[path[path.length - 1]] = val;
+    } else if (el.dataset.atk) {
+        const [i, campo] = el.dataset.atk.split('.');
+        fiState.atores[+i][campo] = val;
+    } else if (el.dataset.fk) {
+        const [i, campo] = el.dataset.fk.split('.');
+        fiState.fases[+i][campo] = val;
+    } else if (el.dataset.sk) {
+        const [fi_, si, campo] = el.dataset.sk.split('.');
+        fiState.fases[+fi_].steps[+si][campo] = val;
+    } else if (el.dataset.ak) {
+        const [fi_, si, ai] = el.dataset.ak.split('.');
+        fiState.fases[+fi_].steps[+si].apis[+ai] = val;
+    }
+    fiPersist();
+    if (el.dataset.atk && el.dataset.atk.endsWith('.badge')) fiRender();
+}
+
+function fiBindDragDrop() {
+    document.querySelectorAll('#view-fluxos-integracao .fi-phase').forEach(el => {
+        el.addEventListener('dragstart', e => {
+            fiDragging = { type: 'phase', fi: +el.dataset.fi };
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'phase');
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            document.querySelectorAll('#view-fluxos-integracao .drag-over').forEach(x => x.classList.remove('drag-over'));
+            fiDragging = null;
+        });
+        el.addEventListener('dragover', e => {
+            if (fiDragging?.type !== 'phase' || fiDragging.fi === +el.dataset.fi) return;
+            e.preventDefault();
+            document.querySelectorAll('#view-fluxos-integracao .fi-phase.drag-over').forEach(x => x.classList.remove('drag-over'));
+            el.classList.add('drag-over');
+        });
+        el.addEventListener('drop', e => {
+            if (fiDragging?.type !== 'phase') return;
+            e.preventDefault();
+            const from = fiDragging.fi, to = +el.dataset.fi;
+            if (from === to) return;
+            const [moved] = fiState.fases.splice(from, 1);
+            fiState.fases.splice(to, 0, moved);
+            fiRender();
+        });
+    });
+    document.querySelectorAll('#view-fluxos-integracao .fi-step').forEach(el => {
+        el.addEventListener('dragstart', e => {
+            fiDragging = { type: 'step', fi: +el.dataset.fi, si: +el.dataset.si };
+            el.classList.add('dragging');
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'step');
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            document.querySelectorAll('#view-fluxos-integracao .drag-over-top, #view-fluxos-integracao .drag-over-bottom').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom'));
+            fiDragging = null;
+        });
+        el.addEventListener('dragover', e => {
+            if (fiDragging?.type !== 'step') return;
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelectorAll('#view-fluxos-integracao .fi-step.drag-over-top, #view-fluxos-integracao .fi-step.drag-over-bottom').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom'));
+            const rect = el.getBoundingClientRect();
+            const below = e.clientY > rect.top + rect.height / 2;
+            el.classList.add(below ? 'drag-over-bottom' : 'drag-over-top');
+        });
+        el.addEventListener('drop', e => {
+            if (fiDragging?.type !== 'step') return;
+            e.preventDefault();
+            e.stopPropagation();
+            const fromFi = fiDragging.fi, fromSi = fiDragging.si;
+            const toFi = +el.dataset.fi;
+            const rect = el.getBoundingClientRect();
+            const below = e.clientY > rect.top + rect.height / 2;
+            let toSi = +el.dataset.si + (below ? 1 : 0);
+            if (fromFi === toFi && fromSi < toSi) toSi--;
+            if (fromFi === toFi && fromSi === toSi) return;
+            const [moved] = fiState.fases[fromFi].steps.splice(fromSi, 1);
+            fiState.fases[toFi].steps.splice(toSi, 0, moved);
+            fiRender();
+        });
+    });
+}
+
+function fiAddFase() { fiState.fases.push({ titulo: 'Nova fase', desc: '', steps: [] }); fiRender(); }
+function fiRmFase(i) { if (confirm('Remover esta fase?')) { fiState.fases.splice(i, 1); fiRender(); } }
+function fiAddStep(fi_) { fiState.fases[fi_].steps.push({ titulo: 'Novo passo', desc: '', from: 'cli', to: 'lin', apis: [] }); fiRender(); }
+function fiRmStep(fi_, si) { if (confirm('Remover este passo?')) { fiState.fases[fi_].steps.splice(si, 1); fiRender(); } }
+function fiAddApi(fi_, si) { fiState.fases[fi_].steps[si].apis.push('novo endpoint'); fiRender(); }
+function fiRmApi(fi_, si, ai) { fiState.fases[fi_].steps[si].apis.splice(ai, 1); fiRender(); }
+function fiUpdStepRoute(fi_, si, campo, val) { fiState.fases[fi_].steps[si][campo] = val; fiRender(); }
+function fiUnlockTo(fi_, si) {
+    const step = fiState.fases[fi_].steps[si];
+    step.to = fiState.atores.find(a => a.key !== step.from)?.key || 'lin';
+    fiRender();
+}
+function fiPickLogo() {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => { fiState.cliente.logo = ev.target.result; fiRender(); };
+        reader.readAsDataURL(file);
+    };
+    inp.click();
+}
+function fiSaveJSON() {
+    const blob = new Blob([JSON.stringify(fiState, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fluxo-${(fiState.cliente.nome || 'sem-nome').toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+function fiLoadJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        try { fiState = JSON.parse(ev.target.result); fiRender(); }
+        catch (err) { alert('JSON inválido.'); }
+    };
+    reader.readAsText(file);
+}
+
+function fiInit() {
+    if (fiInited) return;
+    fiInited = true;
+    // Carrega do localStorage se houver, senão BL default
+    const saved = fiLoad();
+    fiState = saved || JSON.parse(JSON.stringify(FI_TEMPLATE_BL));
+    fiRender();
+    // Bind do template select
+    const sel = document.getElementById('fi-tpl-select');
+    if (sel) {
+        sel.addEventListener('change', e => {
+            if (!e.target.value) return;
+            const tpl = e.target.value === 'bl' ? FI_TEMPLATE_BL : FI_TEMPLATE_BLANK;
+            if (!confirm('Isso substitui o fluxo atual. Continuar?')) { e.target.value = ''; return; }
+            fiState = JSON.parse(JSON.stringify(tpl));
+            fiRender();
+            e.target.value = '';
+        });
+    }
+}
+
+// Hook no showView: inicializa a view quando o usuário abrir pela primeira vez
+(function fiHookShowView() {
+    if (typeof showView !== 'function') return;
+    const orig = showView;
+    window.showView = function(v) {
+        const r = orig.apply(this, arguments);
+        if (v === 'fluxos-integracao') setTimeout(fiInit, 50);
+        return r;
+    };
+})();
 
 // ==================== INIT ====================
 // Load dashboard on start (default view)
