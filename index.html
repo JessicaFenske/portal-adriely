@@ -5622,14 +5622,34 @@
         #view-fluxos-integracao .fi-actor-name { font-family: var(--fi-serif); font-size: 16px; font-weight: 500; color: var(--fi-ink); letter-spacing: -0.01em; }
         #view-fluxos-integracao .fi-actor-sub { font-size: 12.5px; color: var(--fi-ink-soft); margin-top: 3px; }
 
-        /* Fase */
-        #view-fluxos-integracao .fi-phase { margin-bottom: 56px; position: relative; }
+        /* ============ TIMELINE HORIZONTAL ============ */
+        /* Container das fases: rola horizontalmente se precisar */
+        #view-fluxos-integracao .fi-timeline {
+            display: flex; flex-direction: row;
+            gap: 32px;
+            overflow-x: auto;
+            padding: 8px 4px 20px;
+            margin: 0 -4px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--fi-rule) transparent;
+        }
+        #view-fluxos-integracao .fi-timeline::-webkit-scrollbar { height: 8px; }
+        #view-fluxos-integracao .fi-timeline::-webkit-scrollbar-track { background: transparent; }
+        #view-fluxos-integracao .fi-timeline::-webkit-scrollbar-thumb { background: var(--fi-rule); border-radius: 4px; }
+        #view-fluxos-integracao .fi-timeline::-webkit-scrollbar-thumb:hover { background: var(--fi-primary); }
+
+        /* Fase = coluna com header no topo + steps em fila horizontal */
+        #view-fluxos-integracao .fi-phase {
+            flex-shrink: 0; position: relative;
+            padding-right: 32px;
+            border-right: 1px dashed var(--fi-rule);
+        }
+        #view-fluxos-integracao .fi-phase:last-child { border-right: none; padding-right: 0; }
         #view-fluxos-integracao .fi-phase.dragging { opacity: 0.4; }
-        #view-fluxos-integracao .fi-phase.drag-over { border-top: 2px solid var(--fi-primary); }
+        #view-fluxos-integracao .fi-phase.drag-over { background: color-mix(in srgb, var(--fi-primary) 5%, transparent); }
         #view-fluxos-integracao .fi-phase-header {
-            display: grid; grid-template-columns: 28px auto 1fr;
-            align-items: baseline; gap: 16px;
-            padding-bottom: 18px; margin-bottom: 28px;
+            display: flex; align-items: baseline; gap: 12px;
+            padding-bottom: 14px; margin-bottom: 18px;
             border-bottom: 1px solid var(--fi-rule);
             position: relative;
         }
@@ -5643,11 +5663,11 @@
         #view-fluxos-integracao .fi-drag-handle:hover { opacity: 1 !important; color: var(--fi-primary); }
         #view-fluxos-integracao .fi-drag-handle:active { cursor: grabbing; }
         #view-fluxos-integracao .fi-phase-num {
-            font-family: var(--fi-serif); font-size: 40px; font-weight: 500; font-style: italic;
+            font-family: var(--fi-serif); font-size: 32px; font-weight: 500; font-style: italic;
             color: var(--fi-primary); line-height: 1; flex-shrink: 0;
         }
-        #view-fluxos-integracao .fi-phase-title { font-family: var(--fi-serif); font-size: 26px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.1; margin: 0; }
-        #view-fluxos-integracao .fi-phase-desc { font-family: var(--fi-serif); font-style: italic; font-size: 14px; color: var(--fi-ink-soft); margin-top: 4px; max-width: 54ch; }
+        #view-fluxos-integracao .fi-phase-title { font-family: var(--fi-serif); font-size: 20px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; margin: 0; }
+        #view-fluxos-integracao .fi-phase-desc { font-family: var(--fi-serif); font-style: italic; font-size: 12.5px; color: var(--fi-ink-soft); margin-top: 3px; max-width: 42ch; }
         #view-fluxos-integracao .fi-phase-body { min-width: 0; }
         #view-fluxos-integracao .fi-row-actions {
             position: absolute; right: 0; top: -2px;
@@ -5665,58 +5685,79 @@
         #view-fluxos-integracao .fi-btn-x:hover { color: var(--fi-danger); border-color: var(--fi-danger); }
         #view-fluxos-integracao .fi-btn-mini:hover { color: var(--fi-primary); border-color: var(--fi-primary); }
 
-        /* Steps */
-        #view-fluxos-integracao .fi-steps { display: flex; flex-direction: column; }
-        #view-fluxos-integracao .fi-step {
-            display: grid; grid-template-columns: 28px 44px 1fr;
-            gap: 20px; padding: 22px 0;
-            border-bottom: 1px solid var(--fi-rule);
-            position: relative; align-items: start;
+        /* Passos em linha horizontal dentro da fase */
+        #view-fluxos-integracao .fi-steps {
+            display: flex; flex-direction: row;
+            gap: 18px; align-items: stretch;
         }
-        #view-fluxos-integracao .fi-step:last-child { border-bottom: none; }
+        #view-fluxos-integracao .fi-step {
+            flex-shrink: 0; width: 300px;
+            display: flex; flex-direction: column;
+            position: relative;
+            background: var(--fi-bg-elev);
+            border: 1px solid var(--fi-rule);
+            border-radius: 8px;
+            padding: 16px;
+            transition: border-color 0.15s;
+        }
+        #view-fluxos-integracao .fi-step:hover { border-color: color-mix(in srgb, var(--fi-primary) 35%, var(--fi-rule)); }
         #view-fluxos-integracao .fi-step.dragging { opacity: 0.4; }
-        #view-fluxos-integracao .fi-step.drag-over-top { border-top: 2px solid var(--fi-primary); }
-        #view-fluxos-integracao .fi-step.drag-over-bottom { border-bottom: 2px solid var(--fi-primary); }
-        #view-fluxos-integracao .fi-step-marker { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+        #view-fluxos-integracao .fi-step.drag-over-top { border-left: 2px solid var(--fi-primary); }
+        #view-fluxos-integracao .fi-step.drag-over-bottom { border-right: 2px solid var(--fi-primary); }
+        /* Seta ligando steps: aparece no espaço entre eles */
+        #view-fluxos-integracao .fi-step:not(:last-child)::after {
+            content: '→';
+            position: absolute; right: -18px; top: 50%;
+            transform: translateY(-50%);
+            width: 18px; text-align: center;
+            font-family: var(--fi-mono); font-size: 16px;
+            color: var(--fi-ink-mute); pointer-events: none;
+        }
+        #view-fluxos-integracao .fi-step-marker {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px;
+        }
         #view-fluxos-integracao .fi-step-num {
-            width: 38px; height: 38px; border-radius: 50%;
-            background: var(--fi-bg-elev); border: 1px solid var(--fi-rule);
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--fi-bg); border: 1px solid var(--fi-rule);
             display: flex; align-items: center; justify-content: center;
-            font-family: var(--fi-mono); font-size: 11.5px; font-weight: 700;
+            font-family: var(--fi-mono); font-size: 10.5px; font-weight: 700;
             color: var(--fi-ink-soft);
         }
         #view-fluxos-integracao .fi-step-body {
-            display: grid; grid-template-columns: 1fr auto; gap: 20px;
-            align-items: start; position: relative;
+            display: flex; flex-direction: column;
+            gap: 10px; flex: 1;
+            position: relative;
         }
-        @media (max-width: 720px) { #view-fluxos-integracao .fi-step-body { grid-template-columns: 1fr; } }
-        #view-fluxos-integracao .fi-step-title { font-family: var(--fi-serif); font-size: 19px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 6px; text-wrap: balance; }
-        #view-fluxos-integracao .fi-step-desc { font-size: 14px; line-height: 1.6; color: var(--fi-ink-soft); max-width: 62ch; }
+        #view-fluxos-integracao .fi-step-title { font-family: var(--fi-serif); font-size: 15px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; margin: 0; text-wrap: balance; }
+        #view-fluxos-integracao .fi-step-desc { font-size: 12.5px; line-height: 1.5; color: var(--fi-ink-soft); margin: 0; }
         #view-fluxos-integracao .fi-step-route {
-            display: flex; align-items: center; gap: 6px;
-            font-family: var(--fi-mono); font-size: 11px;
-            color: var(--fi-ink-mute); margin-top: 12px; flex-wrap: wrap;
+            display: flex; align-items: center; gap: 5px;
+            font-family: var(--fi-mono); font-size: 10.5px;
+            color: var(--fi-ink-mute); flex-wrap: wrap;
         }
         #view-fluxos-integracao .fi-step-route select {
-            padding: 3px 7px; border: 1px solid var(--fi-rule); border-radius: 4px;
-            background: var(--fi-bg-elev); color: var(--fi-ink);
+            padding: 2px 6px; border: 1px solid var(--fi-rule); border-radius: 4px;
+            background: var(--fi-bg); color: var(--fi-ink);
             font-family: var(--fi-mono); font-size: 10px;
             text-transform: uppercase; letter-spacing: var(--fi-step);
             font-weight: 700; cursor: pointer;
         }
         #view-fluxos-integracao .fi-step-route select:hover { border-color: var(--fi-primary); }
         #view-fluxos-integracao .fi-step-apis {
-            display: flex; flex-direction: column; gap: 5px;
-            align-items: flex-end; min-width: 240px;
+            display: flex; flex-direction: column;
+            gap: 4px; margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px dashed var(--fi-rule);
         }
-        @media (max-width: 720px) { #view-fluxos-integracao .fi-step-apis { align-items: flex-start; min-width: 0; } }
-        #view-fluxos-integracao .fi-step-apis-label { font-family: var(--fi-mono); font-size: 10px; text-transform: uppercase; letter-spacing: var(--fi-step); color: var(--fi-ink-mute); font-weight: 700; margin-bottom: 3px; }
+        #view-fluxos-integracao .fi-step-apis-label { font-family: var(--fi-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: var(--fi-step); color: var(--fi-ink-mute); font-weight: 700; margin-bottom: 3px; }
         #view-fluxos-integracao .fi-api {
-            display: inline-block; font-family: var(--fi-mono); font-size: 12px;
-            background: color-mix(in srgb, var(--fi-accent) 8%, var(--fi-bg-elev));
-            color: var(--fi-accent); padding: 5px 10px; border-radius: 4px;
+            display: block; font-family: var(--fi-mono); font-size: 10.5px;
+            background: color-mix(in srgb, var(--fi-accent) 8%, var(--fi-bg));
+            color: var(--fi-accent); padding: 4px 8px; border-radius: 3px;
             border: 1px solid color-mix(in srgb, var(--fi-accent) 25%, transparent);
-            min-width: 60px; position: relative;
+            position: relative; line-height: 1.4;
+            word-break: break-all;
         }
         #view-fluxos-integracao .fi-api-x {
             display: inline-block; margin-left: 6px;
@@ -5733,26 +5774,35 @@
         }
         #view-fluxos-integracao .fi-add-api:hover { color: var(--fi-accent); border-color: var(--fi-accent); }
 
-        /* Add buttons */
-        #view-fluxos-integracao .fi-add-slot {
-            display: flex; justify-content: center;
-            padding: 10px 0;
-            opacity: 0; transition: opacity 0.15s;
-        }
-        #view-fluxos-integracao .fi-add-slot:hover,
-        #view-fluxos-integracao .fi-steps:hover .fi-add-slot { opacity: 1; }
-        #view-fluxos-integracao .fi-add-btn {
-            background: var(--fi-bg-elev); border: 1px dashed var(--fi-rule);
-            color: var(--fi-ink-mute); padding: 6px 14px; border-radius: 20px;
+        /* Add buttons — horizontais */
+        #view-fluxos-integracao .fi-add-step {
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100%; width: 100px;
+            background: transparent; border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute);
+            border-radius: 8px;
             font-family: var(--fi-mono); font-size: 11px; cursor: pointer;
             text-transform: uppercase; letter-spacing: var(--fi-step); font-weight: 700;
             transition: all 0.15s;
+            opacity: 0.5;
         }
-        #view-fluxos-integracao .fi-add-btn:hover { color: var(--fi-primary); border-color: var(--fi-primary); border-style: solid; }
-        #view-fluxos-integracao .fi-add-phase-container {
-            opacity: 1; padding: 20px 0; text-align: center;
-            border-top: 1px dashed var(--fi-rule); margin-top: 20px;
+        #view-fluxos-integracao .fi-steps:hover .fi-add-step,
+        #view-fluxos-integracao .fi-add-step:hover { opacity: 1; }
+        #view-fluxos-integracao .fi-add-step:hover { color: var(--fi-primary); border-color: var(--fi-primary); border-style: solid; }
+        #view-fluxos-integracao .fi-add-phase {
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            min-width: 140px;
+            background: transparent; border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute);
+            border-radius: 8px;
+            font-family: var(--fi-mono); font-size: 11px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: var(--fi-step); font-weight: 700;
+            transition: all 0.15s;
+            padding: 20px;
         }
+        #view-fluxos-integracao .fi-add-phase:hover { color: var(--fi-primary); border-color: var(--fi-primary); border-style: solid; }
 
         /* Footer */
         #view-fluxos-integracao .fi-foot {
@@ -5765,14 +5815,15 @@
             flex-wrap: wrap; gap: 12px;
         }
 
-        /* Print */
+        /* Print — landscape pra caber o fluxo horizontal */
         @media print {
+            @page { size: landscape; margin: 10mm; }
             body > *:not(#view-fluxos-integracao) { display: none !important; }
             #view-fluxos-integracao .fi-toolbar,
             #view-fluxos-integracao .fi-drag-handle,
             #view-fluxos-integracao .fi-row-actions,
-            #view-fluxos-integracao .fi-add-slot,
-            #view-fluxos-integracao .fi-add-phase-container,
+            #view-fluxos-integracao .fi-add-step,
+            #view-fluxos-integracao .fi-add-phase,
             #view-fluxos-integracao .fi-add-api,
             #view-fluxos-integracao .fi-api-x { display: none !important; }
             #view-fluxos-integracao {
@@ -5782,7 +5833,9 @@
             }
             #view-fluxos-integracao [contenteditable]:hover { outline: none !important; background: none !important; }
             #view-fluxos-integracao .fi-step-route select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; }
-            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 24px !important; }
+            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 8mm !important; }
+            /* Timeline no PDF: permitir wrap se muito longa */
+            #view-fluxos-integracao .fi-timeline { overflow: visible !important; flex-wrap: wrap; row-gap: 24px; }
         }
 
     </style>
@@ -26899,31 +26952,31 @@ function fiRender() {
                 </div>
             `).join('')}
         </div>
-        ${s.fases.map((f, fi_) => {
-            let stepBase = 0;
-            for (let i = 0; i < fi_; i++) stepBase += s.fases[i].steps.length;
-            return `
-                <section class="fi-phase" draggable="true" data-fi="${fi_}">
-                    <header class="fi-phase-header">
-                        <span class="fi-drag-handle" title="Arrastar fase">⋮⋮</span>
-                        <div class="fi-phase-num">${fiRom(fi_ + 1)}</div>
-                        <div class="fi-phase-body">
-                            <h2 class="fi-phase-title" contenteditable data-ph="Título da fase" data-fk="${fi_}.titulo">${fiEsc(f.titulo)}</h2>
-                            <p class="fi-phase-desc" contenteditable data-ph="Descrição da fase" data-fk="${fi_}.desc">${fiEsc(f.desc)}</p>
-                            <div class="fi-row-actions">
-                                <button class="fi-btn-x" onclick="fiRmFase(${fi_})">× remover fase</button>
-                            </div>
-                        </div>
-                    </header>
-                    <div class="fi-steps" data-fi-steps="${fi_}">
-                        ${f.steps.map((st, si) => `
-                            <article class="fi-step" draggable="true" data-fi="${fi_}" data-si="${si}">
-                                <span class="fi-drag-handle" title="Arrastar passo">⋮⋮</span>
-                                <div class="fi-step-marker">
-                                    <span class="fi-step-num">${String(stepBase + si + 1).padStart(2, '0')}</span>
+        <div class="fi-timeline">
+            ${s.fases.map((f, fi_) => {
+                let stepBase = 0;
+                for (let i = 0; i < fi_; i++) stepBase += s.fases[i].steps.length;
+                return `
+                    <section class="fi-phase" draggable="true" data-fi="${fi_}">
+                        <header class="fi-phase-header">
+                            <span class="fi-drag-handle" title="Arrastar fase">⋮⋮</span>
+                            <div class="fi-phase-num">${fiRom(fi_ + 1)}</div>
+                            <div class="fi-phase-body">
+                                <h2 class="fi-phase-title" contenteditable data-ph="Título da fase" data-fk="${fi_}.titulo">${fiEsc(f.titulo)}</h2>
+                                <p class="fi-phase-desc" contenteditable data-ph="Descrição da fase" data-fk="${fi_}.desc">${fiEsc(f.desc)}</p>
+                                <div class="fi-row-actions">
+                                    <button class="fi-btn-x" onclick="fiRmFase(${fi_})">× remover fase</button>
                                 </div>
-                                <div class="fi-step-body">
-                                    <div>
+                            </div>
+                        </header>
+                        <div class="fi-steps" data-fi-steps="${fi_}">
+                            ${f.steps.map((st, si) => `
+                                <article class="fi-step" draggable="true" data-fi="${fi_}" data-si="${si}">
+                                    <div class="fi-step-marker">
+                                        <span class="fi-step-num">${String(stepBase + si + 1).padStart(2, '0')}</span>
+                                        <span class="fi-drag-handle" title="Arrastar passo">⋮⋮</span>
+                                    </div>
+                                    <div class="fi-step-body">
                                         <h3 class="fi-step-title" contenteditable data-ph="Título do passo" data-sk="${fi_}.${si}.titulo">${fiEsc(st.titulo)}</h3>
                                         <p class="fi-step-desc" contenteditable data-ph="Descrição" data-sk="${fi_}.${si}.desc">${fiEsc(st.desc)}</p>
                                         <div class="fi-step-route">
@@ -26932,32 +26985,28 @@ function fiRender() {
                                             ${st.from === st.to ? '' : `<span>→</span><select onchange="fiUpdStepRoute(${fi_}, ${si}, 'to', this.value)">${atoresOptions(st.to)}</select>`}
                                             ${st.from === st.to ? `<button class="fi-btn-mini" onclick="fiUnlockTo(${fi_}, ${si})">definir destino</button>` : ''}
                                         </div>
+                                        <div class="fi-step-apis">
+                                            <div class="fi-step-apis-label">${st.apis.length > 1 ? 'Endpoints' : 'Endpoint'}</div>
+                                            ${st.apis.map((api, ai) => `
+                                                <code class="fi-api">
+                                                    <span contenteditable data-ak="${fi_}.${si}.${ai}">${fiEsc(api)}</span>
+                                                    <span class="fi-api-x" onclick="fiRmApi(${fi_}, ${si}, ${ai})">×</span>
+                                                </code>
+                                            `).join('')}
+                                            <button class="fi-add-api" onclick="fiAddApi(${fi_}, ${si})">+ endpoint</button>
+                                        </div>
                                         <div class="fi-row-actions">
-                                            <button class="fi-btn-x" onclick="fiRmStep(${fi_}, ${si})">× remover passo</button>
+                                            <button class="fi-btn-x" onclick="fiRmStep(${fi_}, ${si})">× remover</button>
                                         </div>
                                     </div>
-                                    <div class="fi-step-apis">
-                                        <div class="fi-step-apis-label">${st.apis.length > 1 ? 'Endpoints' : 'Endpoint'}</div>
-                                        ${st.apis.map((api, ai) => `
-                                            <code class="fi-api">
-                                                <span contenteditable data-ak="${fi_}.${si}.${ai}">${fiEsc(api)}</span>
-                                                <span class="fi-api-x" onclick="fiRmApi(${fi_}, ${si}, ${ai})">×</span>
-                                            </code>
-                                        `).join('')}
-                                        <button class="fi-add-api" onclick="fiAddApi(${fi_}, ${si})">+ endpoint</button>
-                                    </div>
-                                </div>
-                            </article>
-                        `).join('')}
-                        <div class="fi-add-slot">
-                            <button class="fi-add-btn" onclick="fiAddStep(${fi_})">+ passo</button>
+                                </article>
+                            `).join('')}
+                            <button class="fi-add-step" onclick="fiAddStep(${fi_})">+ passo</button>
                         </div>
-                    </div>
-                </section>
-            `;
-        }).join('')}
-        <div class="fi-add-phase-container">
-            <button class="fi-add-btn" onclick="fiAddFase()">+ nova fase</button>
+                    </section>
+                `;
+            }).join('')}
+            <button class="fi-add-phase" onclick="fiAddFase()">+ nova fase</button>
         </div>
         <footer class="fi-foot">
             <span contenteditable data-ph="Rodapé esquerda" data-set="footL">${fiEsc(s.footL)}</span>
@@ -27063,8 +27112,9 @@ function fiBindDragDrop() {
             e.stopPropagation();
             document.querySelectorAll('#view-fluxos-integracao .fi-step.drag-over-top, #view-fluxos-integracao .fi-step.drag-over-bottom').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom'));
             const rect = el.getBoundingClientRect();
-            const below = e.clientY > rect.top + rect.height / 2;
-            el.classList.add(below ? 'drag-over-bottom' : 'drag-over-top');
+            // Layout horizontal: usar clientX pra decidir se cai antes (drag-over-top) ou depois (drag-over-bottom)
+            const after = e.clientX > rect.left + rect.width / 2;
+            el.classList.add(after ? 'drag-over-bottom' : 'drag-over-top');
         });
         el.addEventListener('drop', e => {
             if (fiDragging?.type !== 'step') return;
@@ -27073,8 +27123,8 @@ function fiBindDragDrop() {
             const fromFi = fiDragging.fi, fromSi = fiDragging.si;
             const toFi = +el.dataset.fi;
             const rect = el.getBoundingClientRect();
-            const below = e.clientY > rect.top + rect.height / 2;
-            let toSi = +el.dataset.si + (below ? 1 : 0);
+            const after = e.clientX > rect.left + rect.width / 2;
+            let toSi = +el.dataset.si + (after ? 1 : 0);
             if (fromFi === toFi && fromSi < toSi) toSi--;
             if (fromFi === toFi && fromSi === toSi) return;
             const [moved] = fiState.fases[fromFi].steps.splice(fromSi, 1);
