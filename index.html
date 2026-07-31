@@ -8209,6 +8209,9 @@
                             <option value="Semana 3">Semana 3</option>
                             <option value="Semana 4">Semana 4</option>
                         </select>
+                        <select id="fcRealFunil" onchange="renderFcRealizado()">
+                            <option value="">Todos os funis</option>
+                        </select>
                         <select id="fcRealOwner" onchange="renderFcRealizado()">
                             <option value="">Todos vendedores</option>
                         </select>
@@ -23069,6 +23072,7 @@ function _fcRealFiltered() {
     const status = document.getElementById('fcRealStatus')?.value || '';
     const semana = document.getElementById('fcRealSemana')?.value || '';
     const owner  = document.getElementById('fcRealOwner')?.value  || '';
+    const funil  = document.getElementById('fcRealFunil')?.value  || '';
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - period);
 
     const all = _fcRealCollect();
@@ -23079,6 +23083,7 @@ function _fcRealFiltered() {
         .filter(d => !status || String(d.StatusId) === status)
         .filter(d => !semana || _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName === semana)
         .filter(d => !owner  || (d.Owner?.Name || '') === owner)
+        .filter(d => !funil  || (d.Pipeline?.Name || '') === funil)
         .map(d => ({
             id: d.Id,
             titulo: d.Title || '',
@@ -23100,13 +23105,21 @@ function renderFcRealizado() {
     const tableEl = document.getElementById('fcRealTable');
     if (!kpisEl || !tableEl) return;
 
-    // Popular filtro de vendedores (uma vez, a partir de todos os deals com forecast)
+    // Popular filtros de vendedores e funis (uma vez, a partir de todos os deals com forecast)
     const ownerSel = document.getElementById('fcRealOwner');
-    if (ownerSel && ownerSel.options.length <= 1) {
+    const funilSel = document.getElementById('fcRealFunil');
+    const needsPopulate = (ownerSel && ownerSel.options.length <= 1) || (funilSel && funilSel.options.length <= 1);
+    if (needsPopulate) {
         const all = _fcRealCollect();
         const withForecast = all.filter(d => _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName && d.StatusId !== 2);
-        const owners = [...new Set(withForecast.map(d => d.Owner?.Name || '').filter(Boolean))].sort();
-        owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; ownerSel.appendChild(opt); });
+        if (ownerSel && ownerSel.options.length <= 1) {
+            const owners = [...new Set(withForecast.map(d => d.Owner?.Name || '').filter(Boolean))].sort();
+            owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; ownerSel.appendChild(opt); });
+        }
+        if (funilSel && funilSel.options.length <= 1) {
+            const funis = [...new Set(withForecast.map(d => d.Pipeline?.Name || '').filter(Boolean))].sort();
+            funis.forEach(f => { const opt = document.createElement('option'); opt.value = f; opt.textContent = f; funilSel.appendChild(opt); });
+        }
     }
 
     const rows = _fcRealFiltered();
