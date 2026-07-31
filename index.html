@@ -3966,46 +3966,60 @@
         /* =========== FORECAST × REALIZAÇÃO =========== */
         .fc-real-block {
             margin: 24px 30px 30px;
-            padding: 22px 24px;
-            background: linear-gradient(180deg, rgba(30,27,58,0.55) 0%, rgba(17,19,32,0.55) 100%);
-            border: 1px solid rgba(248,113,113,0.2);
+            padding: 24px 28px 26px;
+            background: linear-gradient(180deg, rgba(30,27,58,0.6) 0%, rgba(17,19,32,0.6) 100%);
+            border: 1px solid rgba(248,113,113,0.18);
             border-radius: 14px;
         }
-        .fc-real-header {
-            display: grid; grid-template-columns: 1fr auto; gap: 20px;
-            align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap;
-        }
-        @media (max-width: 900px) { .fc-real-header { grid-template-columns: 1fr; } }
+        /* Header: bloco de texto no topo, ocupando toda a largura */
+        .fc-real-header { margin-bottom: 20px; }
         .fc-real-eyebrow {
-            font-family: ui-monospace, monospace; font-size: 10.5px;
+            font-family: ui-monospace, monospace; font-size: 10px;
             text-transform: uppercase; letter-spacing: 0.14em;
-            color: #f87171; font-weight: 700; margin-bottom: 4px;
+            color: #f87171; font-weight: 700; margin-bottom: 6px;
         }
         .fc-real-title {
             font-family: Georgia, 'Charter', serif;
-            font-size: 24px; font-weight: 500; letter-spacing: -0.015em;
-            color: #f1f5f9; margin: 0 0 6px;
+            font-size: 28px; font-weight: 500; letter-spacing: -0.02em;
+            color: #f1f5f9; margin: 0 0 8px; line-height: 1.1;
         }
         .fc-real-title em { color: #f87171; font-style: italic; }
-        .fc-real-sub { font-size: 13px; color: #94a3b8; margin: 0; max-width: 62ch; }
+        .fc-real-sub {
+            font-size: 13.5px; color: #94a3b8; margin: 0;
+            max-width: 68ch; line-height: 1.55;
+        }
+        .fc-real-sub strong { color: #cbd5e1; font-weight: 600; }
+        /* Barra de filtros: linha separada abaixo do texto */
         .fc-real-controls {
             display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            background: rgba(15,17,28,0.5);
+            border: 1px solid rgba(148,163,184,0.1);
+            border-radius: 10px;
         }
         .fc-real-controls label {
-            font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11px; color: #94a3b8;
+            display: inline-flex; align-items: center; gap: 6px;
+            text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
         }
         .fc-real-controls select {
-            padding: 6px 10px; border: 1px solid #232C48;
+            padding: 7px 10px; border: 1px solid #232C48;
             background: #12192B; color: #E9EDF7;
-            border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer;
+            border-radius: 6px; font-size: 12px; font-weight: 500;
+            font-family: inherit; cursor: pointer;
+            transition: border-color 0.15s;
+            min-width: 140px;
         }
         .fc-real-controls select:hover { border-color: #7C6BFF; }
+        .fc-real-controls select:focus { outline: none; border-color: #7C6BFF; box-shadow: 0 0 0 2px rgba(124,107,255,0.25); }
         .fc-real-export {
             background: linear-gradient(135deg, #7C6BFF, #5A4CD1);
             border: none; color: #fff;
-            padding: 6px 12px; border-radius: 6px;
+            padding: 7px 14px; border-radius: 6px;
             font-size: 12px; font-weight: 600; cursor: pointer;
             transition: all 0.15s;
+            margin-left: auto;
         }
         .fc-real-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,107,255,0.4); }
 
@@ -8179,45 +8193,43 @@
             <!-- =============== FORECAST × REALIZAÇÃO — deals com forecast que não ganharam =============== -->
             <section id="fcRealBlock" class="fc-real-block">
                 <header class="fc-real-header">
-                    <div>
-                        <div class="fc-real-eyebrow">DEALS QUE <strong>CAÍRAM DO FORECAST</strong></div>
-                        <h2 class="fc-real-title">Caíram do <em>forecast</em></h2>
-                        <p class="fc-real-sub">
-                            Deals que foram colocados em forecast (Semana 1 a 4) e ainda <strong>não fecharam ganho</strong> —
-                            seja porque estão travados abertos há muito tempo, seja porque viraram perda.
-                            Use pra retroalimentar a qualificação e evitar forecast otimista demais.
-                        </p>
-                    </div>
-                    <div class="fc-real-controls">
-                        <label>Últimos
-                            <select id="fcRealPeriod" onchange="renderFcRealizado()">
-                                <option value="30">30 dias</option>
-                                <option value="60">60 dias</option>
-                                <option value="90" selected>90 dias</option>
-                                <option value="180">180 dias</option>
-                            </select>
-                        </label>
-                        <select id="fcRealStatus" onchange="renderFcRealizado()" title="Como caiu do forecast">
-                            <option value="">Todos que caíram</option>
-                            <option value="1">Só travados (ainda abertos)</option>
-                            <option value="3">Só perdidos de fato</option>
-                        </select>
-                        <select id="fcRealSemana" onchange="renderFcRealizado()">
-                            <option value="">Todas as semanas</option>
-                            <option value="Semana 1">Semana 1</option>
-                            <option value="Semana 2">Semana 2</option>
-                            <option value="Semana 3">Semana 3</option>
-                            <option value="Semana 4">Semana 4</option>
-                        </select>
-                        <select id="fcRealFunil" onchange="renderFcRealizado()">
-                            <option value="">Todos os funis</option>
-                        </select>
-                        <select id="fcRealOwner" onchange="renderFcRealizado()">
-                            <option value="">Todos vendedores</option>
-                        </select>
-                        <button class="fc-real-export" onclick="exportFcRealizado()">📊 CSV</button>
-                    </div>
+                    <div class="fc-real-eyebrow">DEALS QUE <strong>CAÍRAM DO FORECAST</strong></div>
+                    <h2 class="fc-real-title">Caíram do <em>forecast</em></h2>
+                    <p class="fc-real-sub">
+                        Deals que foram colocados em forecast e ainda <strong>não fecharam ganho</strong> —
+                        estão travados abertos há muito tempo ou viraram perda. Use pra ajustar a qualificação
+                        e evitar forecast otimista demais.
+                    </p>
                 </header>
+                <div class="fc-real-controls">
+                    <label>Últimos
+                        <select id="fcRealPeriod" onchange="renderFcRealizado()">
+                            <option value="30">30 dias</option>
+                            <option value="60">60 dias</option>
+                            <option value="90" selected>90 dias</option>
+                            <option value="180">180 dias</option>
+                        </select>
+                    </label>
+                    <select id="fcRealStatus" onchange="renderFcRealizado()" title="Como caiu do forecast">
+                        <option value="">Todos que caíram</option>
+                        <option value="1">Só travados</option>
+                        <option value="3">Só perdidos</option>
+                    </select>
+                    <select id="fcRealSemana" onchange="renderFcRealizado()">
+                        <option value="">Todas as semanas</option>
+                        <option value="Semana 1">Semana 1</option>
+                        <option value="Semana 2">Semana 2</option>
+                        <option value="Semana 3">Semana 3</option>
+                        <option value="Semana 4">Semana 4</option>
+                    </select>
+                    <select id="fcRealFunil" onchange="renderFcRealizado()">
+                        <option value="">Todos os funis</option>
+                    </select>
+                    <select id="fcRealOwner" onchange="renderFcRealizado()">
+                        <option value="">Todos vendedores</option>
+                    </select>
+                    <button class="fc-real-export" onclick="exportFcRealizado()">📊 Exportar CSV</button>
+                </div>
                 <div id="fcRealKpis" class="fc-real-kpis"></div>
                 <div id="fcRealTable" class="fc-real-table-wrap"></div>
             </section>
