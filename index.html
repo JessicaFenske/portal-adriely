@@ -6033,6 +6033,47 @@
         }
         #view-fluxos-integracao .fi-add-phase:hover { color: var(--fi-primary); border-color: var(--fi-primary); border-style: solid; }
 
+        /* Floating Action Buttons (canto inferior direito do canvas) */
+        #view-fluxos-integracao .fi-fab-group {
+            position: fixed;
+            right: 24px; bottom: 24px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 90;
+        }
+        #view-fluxos-integracao .fi-fab {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 18px;
+            background: var(--fi-primary);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            font-family: var(--fi-sans); font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(124,107,255,0.35), 0 2px 6px rgba(0,0,0,0.2);
+            transition: all 0.15s;
+            text-transform: none; letter-spacing: 0;
+        }
+        #view-fluxos-integracao .fi-fab:hover {
+            background: var(--fi-primary-soft);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(124,107,255,0.45), 0 2px 8px rgba(0,0,0,0.25);
+        }
+        #view-fluxos-integracao .fi-fab .fi-fab-icon {
+            font-size: 16px; line-height: 1;
+        }
+        #view-fluxos-integracao .fi-fab.secondary {
+            background: var(--fi-bg-elev);
+            color: var(--fi-ink);
+            border: 1px solid var(--fi-rule);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        #view-fluxos-integracao .fi-fab.secondary:hover {
+            border-color: var(--fi-primary);
+            color: var(--fi-primary);
+        }
+        /* Esconde o FAB no print */
+        @media print { #view-fluxos-integracao .fi-fab-group { display: none !important; } }
+
         /* Footer */
         #view-fluxos-integracao .fi-foot {
             margin-top: 60px; padding-top: 24px;
@@ -27640,6 +27681,15 @@ function fiRender() {
             <button class="fi-add-phase" onclick="fiAddStepAndFocus()">+ passo</button>
             <button class="fi-add-phase" onclick="fiAddFase()">+ fase</button>
             <button class="fi-add-phase" onclick="fiExpandCanvas()">+ largura</button>
+        </div>
+        <!-- Floating Action Buttons: sempre visiveis pra adicionar rapido -->
+        <div class="fi-fab-group">
+            <button class="fi-fab secondary" onclick="fiAddFase()" title="Adicionar nova fase (raia)">
+                <span class="fi-fab-icon">▤</span> nova fase
+            </button>
+            <button class="fi-fab" onclick="fiAddStepAndFocus()" title="Adicionar novo passo">
+                <span class="fi-fab-icon">＋</span> novo passo
+            </button>
         </div>
         <footer class="fi-foot">
             <span contenteditable data-ph="Rodapé esquerda" data-set="footL">${fiEsc(s.footL)}</span>
