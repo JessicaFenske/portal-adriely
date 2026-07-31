@@ -6011,18 +6011,14 @@
         #view-fluxos-integracao .fi-print-logo {
             display: flex; align-items: center; gap: 10px;
         }
+        /* Logo oficial Lincros by Sankhya · versao branca original,
+           invertida via CSS pra ficar escura no PDF de fundo branco */
         #view-fluxos-integracao .fi-print-logo img {
-            width: 42px; height: 42px; border-radius: 8px;
-        }
-        #view-fluxos-integracao .fi-print-brand {
-            font-family: 'Charter', 'Cambria', Georgia, serif;
-            font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-            color: #101528;
-        }
-        #view-fluxos-integracao .fi-print-brand small {
-            display: block; font-size: 10px; font-weight: 500;
-            text-transform: uppercase; letter-spacing: 0.14em;
-            color: #6B7699; margin-top: 2px;
+            height: 44px; width: auto; max-width: 200px;
+            object-fit: contain;
+            filter: invert(1) brightness(0.9);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         #view-fluxos-integracao .fi-print-title {
             font-family: 'Charter', 'Cambria', Georgia, serif;
@@ -27353,11 +27349,7 @@ function fiRender() {
         <div class="fi-print-header">
             <div class="fi-print-header-row">
                 <div class="fi-print-logo">
-                    <img src="lincros-icon.png" alt="Lincros">
-                    <div class="fi-print-brand">
-                        LINCROS
-                        <small>Soluções em Software S.A.</small>
-                    </div>
+                    <img src="lincros-logo-white.png" alt="Lincros by Sankhya">
                 </div>
                 <div class="fi-print-title">
                     ${fiEscKeepEm(s.titulo)}
