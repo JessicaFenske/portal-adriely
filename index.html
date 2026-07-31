@@ -3963,6 +3963,123 @@
         .fc-summary-card table { margin-top: 12px; }
         .fc-summary-card canvas { max-height: 250px; }
 
+        /* =========== FORECAST × REALIZAÇÃO =========== */
+        .fc-real-block {
+            margin: 24px 30px 30px;
+            padding: 22px 24px;
+            background: linear-gradient(180deg, rgba(30,27,58,0.55) 0%, rgba(17,19,32,0.55) 100%);
+            border: 1px solid rgba(248,113,113,0.2);
+            border-radius: 14px;
+        }
+        .fc-real-header {
+            display: grid; grid-template-columns: 1fr auto; gap: 20px;
+            align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap;
+        }
+        @media (max-width: 900px) { .fc-real-header { grid-template-columns: 1fr; } }
+        .fc-real-eyebrow {
+            font-family: ui-monospace, monospace; font-size: 10.5px;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: #f87171; font-weight: 700; margin-bottom: 4px;
+        }
+        .fc-real-title {
+            font-family: Georgia, 'Charter', serif;
+            font-size: 24px; font-weight: 500; letter-spacing: -0.015em;
+            color: #f1f5f9; margin: 0 0 6px;
+        }
+        .fc-real-title em { color: #f87171; font-style: italic; }
+        .fc-real-sub { font-size: 13px; color: #94a3b8; margin: 0; max-width: 62ch; }
+        .fc-real-controls {
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+        }
+        .fc-real-controls label {
+            font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .fc-real-controls select {
+            padding: 6px 10px; border: 1px solid #232C48;
+            background: #12192B; color: #E9EDF7;
+            border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer;
+        }
+        .fc-real-controls select:hover { border-color: #7C6BFF; }
+        .fc-real-export {
+            background: linear-gradient(135deg, #7C6BFF, #5A4CD1);
+            border: none; color: #fff;
+            padding: 6px 12px; border-radius: 6px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .fc-real-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,107,255,0.4); }
+
+        .fc-real-kpis {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+        }
+        @media (max-width: 900px) { .fc-real-kpis { grid-template-columns: repeat(2, 1fr); } }
+        .fc-real-kpi {
+            background: rgba(15,17,28,0.6);
+            border: 1px solid rgba(148,163,184,0.15);
+            border-radius: 10px; padding: 12px 14px;
+            position: relative; overflow: hidden;
+        }
+        .fc-real-kpi::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: linear-gradient(180deg, #f87171, #dc2626);
+        }
+        .fc-real-kpi.total::before { background: linear-gradient(180deg, #7c6bff, #5a4cd1); }
+        .fc-real-kpi.money::before { background: linear-gradient(180deg, #38bdf8, #0284c7); }
+        .fc-real-kpi.perdidos::before { background: linear-gradient(180deg, #f87171, #dc2626); }
+        .fc-real-kpi.abertos::before { background: linear-gradient(180deg, #facc15, #ca8a04); }
+        .fc-real-kpi-label {
+            font-family: ui-monospace, monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.12em;
+            color: #94a3b8; font-weight: 700;
+        }
+        .fc-real-kpi-val {
+            font-size: 26px; font-weight: 700; font-family: ui-monospace, monospace;
+            color: #f1f5f9; line-height: 1.1; margin-top: 4px;
+        }
+        .fc-real-kpi-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+        .fc-real-table-wrap { overflow-x: auto; }
+        .fc-real-table {
+            width: 100%; border-collapse: collapse; font-size: 12.5px;
+            background: rgba(15,17,28,0.4);
+            border: 1px solid rgba(148,163,184,0.12);
+            border-radius: 8px;
+        }
+        .fc-real-table th {
+            text-align: left; padding: 10px 12px;
+            border-bottom: 1px solid rgba(148,163,184,0.2);
+            font-family: ui-monospace, monospace; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: #94a3b8; font-weight: 700;
+            position: sticky; top: 0; background: #12192B;
+        }
+        .fc-real-table th.num { text-align: right; }
+        .fc-real-table td {
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(148,163,184,0.06);
+            color: #e5e7eb;
+        }
+        .fc-real-table td.num { text-align: right; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+        .fc-real-table td.money { color: #38bdf8; font-weight: 600; }
+        .fc-real-table tr:hover td { background: rgba(139,92,246,0.06); }
+        .fc-real-table a { color: #a78bfa; text-decoration: none; font-weight: 600; }
+        .fc-real-table a:hover { text-decoration: underline; }
+        .fc-real-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 10.5px; font-weight: 600;
+            font-family: ui-monospace, monospace;
+        }
+        .fc-real-badge.aberto { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
+        .fc-real-badge.perdido { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+        .fc-real-badge.s1 { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .fc-real-badge.s2 { background: rgba(132,204,22,0.15); color: #84cc16; }
+        .fc-real-badge.s3 { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .fc-real-badge.s4 { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .fc-real-empty {
+            padding: 40px 20px; text-align: center; color: #64748b; font-size: 13px;
+            font-style: italic;
+        }
+
         /* ==================== MOBILE OPTIMIZATIONS ==================== */
         /* Tablet (até 900px) já tem hamburger + sidebar drawer + dashboard 1-col. */
         /* Aqui foco em melhorar densidade, padding e tamanhos de fonte. */
@@ -8053,6 +8170,45 @@
                     </div>
                 </div>
             </div>
+
+            <!-- =============== FORECAST × REALIZAÇÃO — deals com forecast que não ganharam =============== -->
+            <section id="fcRealBlock" class="fc-real-block">
+                <header class="fc-real-header">
+                    <div>
+                        <div class="fc-real-eyebrow">DIAGNÓSTICO · ONDE O FORECAST ESCORREGOU</div>
+                        <h2 class="fc-real-title">Forecast × <em>Realização</em></h2>
+                        <p class="fc-real-sub">Deals que passaram por forecast e ainda não fecharam ganho. Ajuda a identificar previsões otimistas demais e negócios "arrastados".</p>
+                    </div>
+                    <div class="fc-real-controls">
+                        <label>Últimos
+                            <select id="fcRealPeriod" onchange="renderFcRealizado()">
+                                <option value="30">30 dias</option>
+                                <option value="60">60 dias</option>
+                                <option value="90" selected>90 dias</option>
+                                <option value="180">180 dias</option>
+                            </select>
+                        </label>
+                        <select id="fcRealStatus" onchange="renderFcRealizado()">
+                            <option value="">Todos status</option>
+                            <option value="1">Só abertos</option>
+                            <option value="3">Só perdidos</option>
+                        </select>
+                        <select id="fcRealSemana" onchange="renderFcRealizado()">
+                            <option value="">Todas as semanas</option>
+                            <option value="Semana 1">Semana 1</option>
+                            <option value="Semana 2">Semana 2</option>
+                            <option value="Semana 3">Semana 3</option>
+                            <option value="Semana 4">Semana 4</option>
+                        </select>
+                        <select id="fcRealOwner" onchange="renderFcRealizado()">
+                            <option value="">Todos vendedores</option>
+                        </select>
+                        <button class="fc-real-export" onclick="exportFcRealizado()">📊 CSV</button>
+                    </div>
+                </header>
+                <div id="fcRealKpis" class="fc-real-kpis"></div>
+                <div id="fcRealTable" class="fc-real-table-wrap"></div>
+            </section>
 
             <div class="last-update" id="fcLastUpdate"></div>
         </div>
@@ -22889,6 +23045,152 @@ function exportForecast() {
     ], 'forecast');
 }
 
+// =============== FORECAST × REALIZAÇÃO — deals com forecast que não fecharam ===============
+// Base: wonDeals + lostDeals + dashOpenDeals (populados pelo dashboard).
+// Filtra: forecast preenchido, StatusId != 2 (não ganhos), LastUpdateDate no período.
+function _fcRealCollect() {
+    const openArr = typeof dashOpenDeals !== 'undefined' ? dashOpenDeals : Object.values(window._dashOpenDealsById || {});
+    const wonArr  = typeof wonDeals  !== 'undefined' ? wonDeals  : [];
+    const lostArr = typeof lostDeals !== 'undefined' ? lostDeals : [];
+    return [...wonArr, ...lostArr, ...openArr];
+}
+function _fcRealGetProp(d, k) { return (d.OtherProperties || []).find(p => p.FieldKey === k); }
+function _fcRealFiltered() {
+    const period = parseInt(document.getElementById('fcRealPeriod')?.value || '90', 10);
+    const status = document.getElementById('fcRealStatus')?.value || '';
+    const semana = document.getElementById('fcRealSemana')?.value || '';
+    const owner  = document.getElementById('fcRealOwner')?.value  || '';
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - period);
+
+    const all = _fcRealCollect();
+    return all
+        .filter(d => d.StatusId !== 2)
+        .filter(d => _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName)
+        .filter(d => d.LastUpdateDate && new Date(d.LastUpdateDate) >= cutoff)
+        .filter(d => !status || String(d.StatusId) === status)
+        .filter(d => !semana || _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName === semana)
+        .filter(d => !owner  || (d.Owner?.Name || '') === owner)
+        .map(d => ({
+            id: d.Id,
+            titulo: d.Title || '',
+            vendedor: d.Owner?.Name || '',
+            funil: d.Pipeline?.Name || '',
+            etapa: d.Stage?.Name || '',
+            status: d.StatusId === 1 ? 'Aberto' : d.StatusId === 3 ? 'Perdido' : 'Outro',
+            statusId: d.StatusId,
+            forecast: _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName,
+            mrr: _fcRealGetProp(d, FIELD_MRR)?.DecimalValue || 0,
+            setup: _fcRealGetProp(d, FIELD_SETUP)?.DecimalValue || 0,
+            finish: d.FinishDate,
+            lastUpdate: d.LastUpdateDate
+        }))
+        .sort((a, b) => b.mrr - a.mrr);
+}
+function renderFcRealizado() {
+    const kpisEl  = document.getElementById('fcRealKpis');
+    const tableEl = document.getElementById('fcRealTable');
+    if (!kpisEl || !tableEl) return;
+
+    // Popular filtro de vendedores (uma vez, a partir de todos os deals com forecast)
+    const ownerSel = document.getElementById('fcRealOwner');
+    if (ownerSel && ownerSel.options.length <= 1) {
+        const all = _fcRealCollect();
+        const withForecast = all.filter(d => _fcRealGetProp(d, FIELD_FORECAST)?.ObjectValueName && d.StatusId !== 2);
+        const owners = [...new Set(withForecast.map(d => d.Owner?.Name || '').filter(Boolean))].sort();
+        owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; ownerSel.appendChild(opt); });
+    }
+
+    const rows = _fcRealFiltered();
+    window._fcRealCurrentRows = rows; // pra export
+
+    // KPIs
+    const totalMrr   = rows.reduce((s, r) => s + r.mrr, 0);
+    const totalSetup = rows.reduce((s, r) => s + r.setup, 0);
+    const abertos    = rows.filter(r => r.statusId === 1).length;
+    const perdidos   = rows.filter(r => r.statusId === 3).length;
+    const fmtR  = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+    const fmtRk = v => v >= 1000 ? 'R$ ' + Math.round(v/1000) + 'k' : fmtR(v);
+
+    kpisEl.innerHTML = `
+        <div class="fc-real-kpi total">
+            <div class="fc-real-kpi-label">Deals no filtro</div>
+            <div class="fc-real-kpi-val">${rows.length}</div>
+            <div class="fc-real-kpi-sub">com forecast e sem ganho</div>
+        </div>
+        <div class="fc-real-kpi money">
+            <div class="fc-real-kpi-label">MRR em risco</div>
+            <div class="fc-real-kpi-val">${fmtRk(totalMrr)}</div>
+            <div class="fc-real-kpi-sub">recorrente projetado que não fechou</div>
+        </div>
+        <div class="fc-real-kpi money">
+            <div class="fc-real-kpi-label">Setup em risco</div>
+            <div class="fc-real-kpi-val">${fmtRk(totalSetup)}</div>
+            <div class="fc-real-kpi-sub">one-time projetado que não fechou</div>
+        </div>
+        <div class="fc-real-kpi perdidos">
+            <div class="fc-real-kpi-label">Split status</div>
+            <div class="fc-real-kpi-val" style="font-size:18px;">
+                <span style="color:#facc15;">${abertos}</span> ab · <span style="color:#f87171;">${perdidos}</span> pd
+            </div>
+            <div class="fc-real-kpi-sub">${rows.length > 0 ? Math.round(perdidos/rows.length*100) : 0}% já perdidos</div>
+        </div>
+    `;
+
+    if (!rows.length) {
+        tableEl.innerHTML = `<div class="fc-real-empty">Nenhum deal encontrado no filtro selecionado. Ajuste o período ou os filtros acima.</div>`;
+        return;
+    }
+
+    const fmtDate = iso => { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pt-BR'); } catch(e) { return ''; } };
+    const semanaClass = s => s === 'Semana 1' ? 's1' : s === 'Semana 2' ? 's2' : s === 'Semana 3' ? 's3' : s === 'Semana 4' ? 's4' : '';
+    tableEl.innerHTML = `
+        <table class="fc-real-table">
+            <thead><tr>
+                <th>Deal</th>
+                <th>Vendedor</th>
+                <th>Funil · Etapa</th>
+                <th>Forecast</th>
+                <th>Status</th>
+                <th class="num">MRR</th>
+                <th class="num">Setup</th>
+                <th class="num">Fechamento</th>
+                <th class="num">Última att.</th>
+            </tr></thead>
+            <tbody>
+            ${rows.map(r => `<tr>
+                <td><a href="https://app2.ploomes.com/deal/${r.id}" target="_blank" rel="noopener">${escapeHtmlSimple(r.titulo)}</a></td>
+                <td>${escapeHtmlSimple(r.vendedor)}</td>
+                <td style="color:#94a3b8;font-size:11.5px;">${escapeHtmlSimple(r.funil)} · ${escapeHtmlSimple(r.etapa)}</td>
+                <td><span class="fc-real-badge ${semanaClass(r.forecast)}">${escapeHtmlSimple(r.forecast || '')}</span></td>
+                <td><span class="fc-real-badge ${r.status === 'Aberto' ? 'aberto' : r.status === 'Perdido' ? 'perdido' : ''}">${r.status}</span></td>
+                <td class="num money">${r.mrr > 0 ? fmtR(r.mrr) : '—'}</td>
+                <td class="num money">${r.setup > 0 ? fmtR(r.setup) : '—'}</td>
+                <td class="num" style="color:#94a3b8;">${fmtDate(r.finish)}</td>
+                <td class="num" style="color:#94a3b8;">${fmtDate(r.lastUpdate)}</td>
+            </tr>`).join('')}
+            </tbody>
+        </table>
+    `;
+}
+function escapeHtmlSimple(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function exportFcRealizado() {
+    const rows = window._fcRealCurrentRows || [];
+    if (!rows.length) { alert('Nenhum deal no filtro atual pra exportar.'); return; }
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : '';
+    const cols = ['Título', 'Vendedor', 'Funil', 'Etapa', 'Forecast', 'Status', 'MRR', 'Setup', 'Fechamento', 'Última att.', 'Ploomes'];
+    const data = rows.map(r => [
+        r.titulo, r.vendedor, r.funil, r.etapa, r.forecast, r.status,
+        r.mrr, r.setup, fmtDate(r.finish), fmtDate(r.lastUpdate),
+        'https://app2.ploomes.com/deal/' + r.id
+    ]);
+    const csv = [cols.join(';'), ...data.map(row => row.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(';'))].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `forecast_realizacao_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
 async function loadForecast() {
     const loadingArea = document.getElementById('fcLoadingArea');
     const contentArea = document.getElementById('fcContentArea');
@@ -22927,6 +23229,13 @@ async function loadForecast() {
         contentArea.style.display = '';
         populateFcFilters();
         renderForecast();
+        // Bloco Forecast x Realização: depende de dashboard ter carregado.
+        // Se ainda não, carrega em segundo plano e atualiza quando pronto.
+        if (typeof dashOpenDeals !== 'undefined' && dashOpenDeals.length) {
+            try { renderFcRealizado(); } catch (e) { console.warn('[fc real]', e); }
+        } else if (typeof loadDashboard === 'function') {
+            loadDashboard().then(() => { try { renderFcRealizado(); } catch (e) { console.warn('[fc real]', e); } }).catch(() => {});
+        }
 
         document.getElementById('fcLastUpdate').textContent =
             `Última atualização: ${new Date().toLocaleString('pt-BR')} | ${fcAllDeals.length} negócios com forecast`;
