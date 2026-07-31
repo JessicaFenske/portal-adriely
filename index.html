@@ -3971,32 +3971,41 @@
             border: 1px solid rgba(248,113,113,0.18);
             border-radius: 14px;
         }
-        /* Header: bloco de texto no topo, ocupando toda a largura */
-        .fc-real-header { margin-bottom: 20px; }
-        .fc-real-eyebrow {
+        /* Header: bloco de texto ocupa 100% largura acima dos filtros */
+        .fc-real-block .fc-real-header {
+            display: block !important;
+            grid-template-columns: none !important;
+            width: 100% !important;
+            margin: 0 0 20px 0 !important;
+        }
+        .fc-real-block .fc-real-eyebrow {
             font-family: ui-monospace, monospace; font-size: 10px;
             text-transform: uppercase; letter-spacing: 0.14em;
-            color: #f87171; font-weight: 700; margin-bottom: 6px;
+            color: #f87171; font-weight: 700; margin: 0 0 6px 0;
+            display: block;
         }
-        .fc-real-title {
+        .fc-real-block .fc-real-title {
             font-family: Georgia, 'Charter', serif;
             font-size: 28px; font-weight: 500; letter-spacing: -0.02em;
-            color: #f1f5f9; margin: 0 0 8px; line-height: 1.1;
+            color: #f1f5f9; margin: 0 0 8px 0; line-height: 1.15;
+            display: block; width: 100%;
         }
-        .fc-real-title em { color: #f87171; font-style: italic; }
-        .fc-real-sub {
+        .fc-real-block .fc-real-title em { color: #f87171; font-style: italic; }
+        .fc-real-block .fc-real-sub {
             font-size: 13.5px; color: #94a3b8; margin: 0;
-            max-width: 68ch; line-height: 1.55;
+            max-width: 780px; line-height: 1.55;
+            display: block; width: 100%;
         }
-        .fc-real-sub strong { color: #cbd5e1; font-weight: 600; }
+        .fc-real-block .fc-real-sub strong { color: #cbd5e1; font-weight: 600; }
         /* Barra de filtros: linha separada abaixo do texto */
-        .fc-real-controls {
-            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+        .fc-real-block .fc-real-controls {
+            display: flex !important; gap: 8px; flex-wrap: wrap; align-items: center;
             padding: 12px 14px;
-            margin-bottom: 18px;
+            margin: 0 0 18px 0;
             background: rgba(15,17,28,0.5);
             border: 1px solid rgba(148,163,184,0.1);
             border-radius: 10px;
+            width: 100%;
         }
         .fc-real-controls label {
             font-size: 11px; color: #94a3b8;
