@@ -27617,7 +27617,7 @@ function fiBindDragDrop() {
     document.querySelectorAll('#view-fluxos-integracao .fi-step').forEach(el => {
         el.addEventListener('mousedown', e => {
             // Ignora se clicou em texto editável, select, botão, ou API chip
-            if (e.target.closest('[contenteditable="true"], select, button, .fi-api-x, .fi-add-api')) return;
+            if (e.target.closest('[contenteditable], select, button, .fi-api-x, .fi-add-api')) return;
             e.preventDefault();
             const si = +el.dataset.si;
             const step = fiState.steps[si];
@@ -27657,7 +27657,7 @@ function fiBindDragDrop() {
     let panning = false, panStartX = 0, panStartY = 0, scrollStartL = 0, scrollStartT = 0;
     if (wrap) {
         wrap.addEventListener('mousedown', e => {
-            if (e.target.closest('.fi-step, .fi-phase-marker, .fi-band-label, [contenteditable="true"], button, select, .fi-api')) return;
+            if (e.target.closest('.fi-step, .fi-phase-marker, .fi-band-label, [contenteditable], button, select, .fi-api')) return;
             panning = true;
             panStartX = e.clientX; panStartY = e.clientY;
             scrollStartL = wrap.scrollLeft; scrollStartT = wrap.scrollTop;
