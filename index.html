@@ -5873,25 +5873,42 @@
 
         /* Print — landscape pra caber o fluxo horizontal */
         @media print {
-            @page { size: landscape; margin: 10mm; }
-            body > *:not(#view-fluxos-integracao) { display: none !important; }
+            @page { size: landscape; margin: 8mm; }
+            /* Esconde TUDO por visibility, depois re-mostra so o que interessa */
+            body * { visibility: hidden !important; }
+            #view-fluxos-integracao,
+            #view-fluxos-integracao * { visibility: visible !important; }
+            /* Posiciona a view no topo do papel, ignorando sidebar/main-content */
+            .sidebar { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            #view-fluxos-integracao {
+                position: absolute !important;
+                top: 0 !important; left: 0 !important; right: 0 !important;
+                width: 100% !important;
+                --fi-bg: #FFFFFF !important; --fi-bg-elev: #FAFAFA !important;
+                --fi-ink: #101528 !important; --fi-ink-soft: #4B5573 !important;
+                --fi-ink-mute: #8791AF !important; --fi-rule: #DCE1EC !important;
+            }
+            /* Esconde controles de edicao no PDF */
             #view-fluxos-integracao .fi-toolbar,
             #view-fluxos-integracao .fi-drag-handle,
             #view-fluxos-integracao .fi-row-actions,
             #view-fluxos-integracao .fi-add-step,
             #view-fluxos-integracao .fi-add-phase,
             #view-fluxos-integracao .fi-add-api,
-            #view-fluxos-integracao .fi-api-x { display: none !important; }
-            #view-fluxos-integracao {
-                --fi-bg: #FFFFFF !important; --fi-bg-elev: #FAFAFA !important;
-                --fi-ink: #101528 !important; --fi-ink-soft: #4B5573 !important;
-                --fi-ink-mute: #8791AF !important; --fi-rule: #DCE1EC !important;
+            #view-fluxos-integracao .fi-api-x {
+                display: none !important; visibility: hidden !important;
             }
             #view-fluxos-integracao [contenteditable]:hover { outline: none !important; background: none !important; }
-            #view-fluxos-integracao .fi-step-route select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; }
-            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 8mm !important; }
-            /* Timeline no PDF: permitir wrap se muito longa */
-            #view-fluxos-integracao .fi-timeline { overflow: visible !important; flex-wrap: wrap; row-gap: 24px; }
+            #view-fluxos-integracao .fi-step-route select {
+                border: none !important; background: transparent !important;
+                -webkit-appearance: none; appearance: none; padding: 0 !important;
+            }
+            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 6mm !important; }
+            /* Zoom-wrap: remove scroll no print pra ver tudo */
+            #view-fluxos-integracao .fi-zoom-wrap { overflow: visible !important; }
+            /* Reset do transform de zoom pra imprimir 100% */
+            #view-fluxos-integracao #fi-timeline { transform: none !important; }
         }
 
     </style>
