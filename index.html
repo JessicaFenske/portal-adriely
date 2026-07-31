@@ -5745,31 +5745,54 @@
             color: var(--fi-ink-mute); font-weight: 700; margin-top: 2px;
         }
 
-        /* Marcador de fase (label no topo) */
-        #view-fluxos-integracao .fi-phase-marker {
-            position: absolute; top: 4px;
-            padding: 8px 14px;
-            border-top: 3px solid var(--fi-primary);
-            border-left: 1px dashed var(--fi-primary);
+        /* ===== FASES COMO RAIAS HORIZONTAIS (label à esquerda + faixa do lado) ===== */
+        #view-fluxos-integracao .fi-fase-band {
+            position: absolute;
+            left: 0; right: 0;
+            pointer-events: none;
+            border-top: 1px solid var(--fi-rule);
+        }
+        #view-fluxos-integracao .fi-fase-band:last-of-type { border-bottom: 1px solid var(--fi-rule); }
+        #view-fluxos-integracao .fi-fase-band.even {
+            background: color-mix(in srgb, var(--fi-primary) 3%, transparent);
+        }
+        #view-fluxos-integracao .fi-fase-band-label {
+            position: sticky; left: 14px;
+            display: inline-flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px;
+            background: var(--fi-bg-elev);
+            border: 1px solid var(--fi-rule);
+            border-left: 3px solid var(--fi-primary);
+            border-radius: 4px;
             pointer-events: auto;
-            background: color-mix(in srgb, var(--fi-primary) 5%, transparent);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            max-width: 220px;
+            margin: 14px 0 0 14px;
         }
-        #view-fluxos-integracao .fi-phase-marker:hover { background: color-mix(in srgb, var(--fi-primary) 10%, transparent); }
-        #view-fluxos-integracao .fi-phase-head-row {
-            display: flex; align-items: baseline; gap: 10px;
+        #view-fluxos-integracao .fi-fase-band-num {
+            font-family: var(--fi-serif); font-size: 22px; font-weight: 500;
+            font-style: italic; color: var(--fi-primary); line-height: 1;
+            flex-shrink: 0;
         }
-        #view-fluxos-integracao .fi-phase-num {
-            font-family: var(--fi-serif); font-size: 22px; font-weight: 500; font-style: italic;
-            color: var(--fi-primary); line-height: 1;
+        #view-fluxos-integracao .fi-fase-band-body { min-width: 0; }
+        #view-fluxos-integracao .fi-fase-band-title {
+            font-family: var(--fi-serif); font-size: 13px; font-weight: 500;
+            letter-spacing: -0.01em; line-height: 1.2; margin: 0;
+            color: var(--fi-ink);
         }
-        #view-fluxos-integracao .fi-phase-title {
-            font-family: var(--fi-serif); font-size: 14px; font-weight: 500;
-            letter-spacing: -0.01em; line-height: 1.15; margin: 0;
-        }
-        #view-fluxos-integracao .fi-phase-desc {
+        #view-fluxos-integracao .fi-fase-band-desc {
             font-family: var(--fi-serif); font-style: italic; font-size: 11px;
-            color: var(--fi-ink-soft); margin-top: 3px; max-width: 40ch;
+            color: var(--fi-ink-soft); margin-top: 3px; line-height: 1.4;
         }
+        #view-fluxos-integracao .fi-fase-band-rm {
+            font-family: var(--fi-mono); font-size: 10px;
+            background: transparent; border: 1px solid var(--fi-rule);
+            color: var(--fi-ink-mute); padding: 2px 6px; border-radius: 3px;
+            cursor: pointer; margin-top: 4px;
+            opacity: 0; transition: opacity 0.15s;
+        }
+        #view-fluxos-integracao .fi-fase-band-label:hover .fi-fase-band-rm { opacity: 1; }
+        #view-fluxos-integracao .fi-fase-band-rm:hover { color: var(--fi-danger); border-color: var(--fi-danger); }
 
         /* Drag handles + action buttons (compartilhado entre fase e step) */
         #view-fluxos-integracao .fi-drag-handle {
@@ -27154,11 +27177,11 @@ const FI_ROM = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'
 const fiRom = n => FI_ROM[n] || String(n);
 
 // Layout constants — usados nos templates + fiMigrate
-const FI_LANE_Y = { cli: 100, lin: 300, par: 500 }; // Y central de cada raia
 const FI_STEP_H = 180;
 const FI_STEP_W = 240;
-const FI_CANVAS_H = 660;
-const FI_COL_W = 300;
+const FI_FASE_H = 220;       // altura de cada raia (fase)
+const FI_LABEL_W = 250;      // largura da coluna do label da fase à esquerda
+const FI_COL_W = 280;        // gap horizontal entre steps
 
 // Labels editáveis (defaults em pt-BR — vendedor pode trocar)
 const FI_LABELS_DEFAULT = {
@@ -27184,10 +27207,10 @@ const FI_TEMPLATE_BLANK = {
         { key: 'par', badge: 'TSP', role: 'Parceira', name: 'Transportadora', sub: 'Confirma coleta · Envia CT-e e fatura' }
     ],
     fases: [
-        { titulo: 'Primeira fase', desc: 'Descrição da fase.', startX: 180, endX: 480 }
+        { titulo: 'Primeira fase', desc: 'Descrição da fase.' }
     ],
     steps: [
-        { id: 's1', x: 200, y: 100, titulo: 'Primeiro passo', desc: 'O que acontece aqui.', from: 'cli', to: 'lin', apis: ['endpoint/exemplo'] }
+        { id: 's1', faseId: 0, x: 20, titulo: 'Primeiro passo', desc: 'O que acontece aqui.', from: 'cli', to: 'lin', apis: ['endpoint/exemplo'] }
     ],
     canvasW: 900,
     labels: { ...FI_LABELS_DEFAULT },
@@ -27207,55 +27230,73 @@ const FI_TEMPLATE_BL = {
         { key: 'par', badge: 'TSP', role: 'Parceira', name: 'Transportadora', sub: 'Confirma coleta · Envia CT-e e fatura' }
     ],
     fases: [
-        { titulo: 'Cotação & ordem de coleta',            desc: 'O pedido nasce no ERP, ganha uma pré-nota, sai da fábrica.',       startX: 180,  endX: 1000 },
-        { titulo: 'Emissão fiscal & provisão',            desc: 'NF-e vai pra Lincros; transportadora emite CT-e; ERP provisiona.', startX: 1020, endX: 1620 },
-        { titulo: 'Rastreio & ocorrências',               desc: 'A carga viaja. Ocorrências capturadas por EDI.',                   startX: 1640, endX: 1940 },
-        { titulo: 'Auditoria & contabilização',           desc: 'CT-es e faturas passam pelo motor de auditoria.',                  startX: 1960, endX: 2560 }
+        { titulo: 'Cotação & ordem de coleta',            desc: 'O pedido nasce no ERP, ganha uma pré-nota, sai da fábrica.' },
+        { titulo: 'Emissão fiscal & provisão',            desc: 'NF-e vai pra Lincros; transportadora emite CT-e; ERP provisiona.' },
+        { titulo: 'Rastreio & ocorrências',               desc: 'A carga viaja. Ocorrências capturadas por EDI.' },
+        { titulo: 'Auditoria & contabilização',           desc: 'CT-es e faturas passam pelo motor de auditoria.' }
     ],
     steps: [
-        { id: 's1', x: 200,  y: 60,  titulo: 'B&L envia o pedido',                        desc: 'O Dynamics 365 publica o pedido na Lincros de forma assíncrona. A Lincros cria a pré-nota correspondente. Pedidos cancelados no ERP são refletidos pelo endpoint de cancelamento.',                    from: 'cli', to: 'lin', apis: ['POST · prenota/criarAsync', 'POST · prenota/cancelar'] },
-        { id: 's2', x: 470,  y: 260, titulo: 'Lincros calcula o frete',                   desc: 'O motor de cotação simula frete fracionado e carga lotação/itinerante em paralelo, retornando ao D365 a transportadora vencedora e os componentes de preço.',                                              from: 'lin', to: 'cli', apis: ['POST · prenota/selecao/simulacao'] },
-        { id: 's3', x: 740,  y: 460, titulo: 'Ordem de coleta despachada',                desc: 'A Lincros gera a ordem de coleta. O D365 sincroniza pelos três endpoints. A transportadora recebe e confirma o pick-up.',                                                                                  from: 'lin', to: 'par', apis: ['GET · ordemcoleta/buscarRegistrosParaIntegracao', 'GET · ordemcoleta/recuperarDados', 'POST · ordemcoleta/salvarRetornoOrdemColeta'] },
-        { id: 's4', x: 1040, y: 60,  titulo: 'B&L envia o XML da NF-e',                   desc: 'Ao faturar o pedido, o D365 envia o XML da nota fiscal eletrônica para a Lincros, que vincula à ordem de coleta e prepara a base para o CT-e da transportadora.',                                       from: 'cli', to: 'lin', apis: ['POST · nota/criarAsync', 'POST · nota/cancelar'] },
-        { id: 's5', x: 1340, y: 460, titulo: 'CT-e é emitido, integrado e provisionado',  desc: 'A transportadora emite o CT-e pela carga. A Lincros captura, valida e disponibiliza para o D365. O ERP integra o CT-e e provisiona o frete no financeiro.',                                                from: 'par', to: 'cli', apis: ['GET · cte/buscarRegistrosParaIntegracao', 'GET · cte/recuperarDados', 'POST · cte/salvarRetornoCte'] },
-        { id: 's6', x: 1660, y: 460, titulo: 'EDI de ocorrências flui pro cliente',       desc: 'A transportadora envia EDI de ocorrências. A Lincros normaliza os eventos, aplica regras de negócio e dispara os status para o D365 e canais de acompanhamento.',                                          from: 'par', to: 'cli', apis: ['EDI · Ocorrências de entrega', 'Webhook · status síncrono'] },
-        { id: 's7', x: 1980, y: 260, titulo: 'Lincros audita CT-e',                       desc: 'Cada CT-e é conferido contra a tabela de frete contratada, os componentes cobrados, os impostos destacados e as ocorrências efetivamente registradas.',                                                    from: 'lin', to: 'lin', apis: ['Auditoria automatizada · CT-e'] },
-        { id: 's8', x: 2280, y: 60,  titulo: 'Fatura auditada integrada ao D365',         desc: 'Após a transportadora emitir a fatura, a Lincros a audita contra os CT-es já validados. A fatura aprovada é integrada ao D365 para contabilização e pagamento.',                                            from: 'par', to: 'cli', apis: ['GET · fatura/buscarRegistrosParaIntegracao', 'GET · fatura/recuperarDados', 'POST · fatura/salvarRetornoFatura'] }
+        { id: 's1', faseId: 0, x: 20,   titulo: 'B&L envia o pedido',                        desc: 'O Dynamics 365 publica o pedido na Lincros de forma assíncrona. A Lincros cria a pré-nota correspondente. Pedidos cancelados no ERP são refletidos pelo endpoint de cancelamento.',                    from: 'cli', to: 'lin', apis: ['POST · prenota/criarAsync', 'POST · prenota/cancelar'] },
+        { id: 's2', faseId: 0, x: 300,  titulo: 'Lincros calcula o frete',                   desc: 'O motor de cotação simula frete fracionado e carga lotação/itinerante em paralelo, retornando ao D365 a transportadora vencedora e os componentes de preço.',                                              from: 'lin', to: 'cli', apis: ['POST · prenota/selecao/simulacao'] },
+        { id: 's3', faseId: 0, x: 580,  titulo: 'Ordem de coleta despachada',                desc: 'A Lincros gera a ordem de coleta. O D365 sincroniza pelos três endpoints. A transportadora recebe e confirma o pick-up.',                                                                                  from: 'lin', to: 'par', apis: ['GET · ordemcoleta/buscarRegistrosParaIntegracao', 'GET · ordemcoleta/recuperarDados', 'POST · ordemcoleta/salvarRetornoOrdemColeta'] },
+        { id: 's4', faseId: 1, x: 20,   titulo: 'B&L envia o XML da NF-e',                   desc: 'Ao faturar o pedido, o D365 envia o XML da nota fiscal eletrônica para a Lincros, que vincula à ordem de coleta e prepara a base para o CT-e da transportadora.',                                       from: 'cli', to: 'lin', apis: ['POST · nota/criarAsync', 'POST · nota/cancelar'] },
+        { id: 's5', faseId: 1, x: 300,  titulo: 'CT-e é emitido, integrado e provisionado',  desc: 'A transportadora emite o CT-e pela carga. A Lincros captura, valida e disponibiliza para o D365. O ERP integra o CT-e e provisiona o frete no financeiro.',                                                from: 'par', to: 'cli', apis: ['GET · cte/buscarRegistrosParaIntegracao', 'GET · cte/recuperarDados', 'POST · cte/salvarRetornoCte'] },
+        { id: 's6', faseId: 2, x: 20,   titulo: 'EDI de ocorrências flui pro cliente',       desc: 'A transportadora envia EDI de ocorrências. A Lincros normaliza os eventos, aplica regras de negócio e dispara os status para o D365 e canais de acompanhamento.',                                          from: 'par', to: 'cli', apis: ['EDI · Ocorrências de entrega', 'Webhook · status síncrono'] },
+        { id: 's7', faseId: 3, x: 20,   titulo: 'Lincros audita CT-e',                       desc: 'Cada CT-e é conferido contra a tabela de frete contratada, os componentes cobrados, os impostos destacados e as ocorrências efetivamente registradas.',                                                    from: 'lin', to: 'lin', apis: ['Auditoria automatizada · CT-e'] },
+        { id: 's8', faseId: 3, x: 300,  titulo: 'Fatura auditada integrada ao D365',         desc: 'Após a transportadora emitir a fatura, a Lincros a audita contra os CT-es já validados. A fatura aprovada é integrada ao D365 para contabilização e pagamento.',                                            from: 'par', to: 'cli', apis: ['GET · fatura/buscarRegistrosParaIntegracao', 'GET · fatura/recuperarDados', 'POST · fatura/salvarRetornoFatura'] }
     ],
-    canvasW: 2600,
+    canvasW: 1200,
     labels: { ...FI_LABELS_DEFAULT },
     footL: 'Fluxo Base de Integração · V1.1',
     footR: 'B&L × LINCROS'
 };
 
-// Migração: estado antigo tinha fases[].steps[], novo tem steps[] linear + fases só com startX/endX
+// Migração universal:
+// - Estados antigos com fases[].steps[] → achata para steps[] linear + fase(faseId)
+// - Estados com steps.y absoluto → recalcula y=undefined (agora derivado da fase)
+// - Garante labels default e faseId em todos os steps
 function fiMigrate(state) {
     if (!state) return null;
-    // Garante labels default (backward compat pra estados sem labels ainda)
     state.labels = { ...FI_LABELS_DEFAULT, ...(state.labels || {}) };
-    // Já é novo formato?
-    if (Array.isArray(state.steps) && !state.fases?.[0]?.steps) return state;
-    // Antigo: fases[].steps[] — achata pra steps[] com posições auto-calculadas
-    const migrated = { ...state, steps: [], fases: [] };
-    let x = 200;
-    (state.fases || []).forEach((f, fi) => {
-        const startX = x;
-        (f.steps || []).forEach((st, si) => {
-            const laneY = FI_LANE_Y[st.from] || 300;
-            migrated.steps.push({
-                id: 'mig-' + fi + '-' + si,
-                x: x, y: laneY - FI_STEP_H / 2,
-                titulo: st.titulo, desc: st.desc,
-                from: st.from, to: st.to,
-                apis: st.apis || []
+
+    // Formato antigo: fases[].steps[]
+    if (Array.isArray(state.fases) && state.fases[0]?.steps) {
+        const migrated = { ...state, steps: [], fases: [] };
+        state.fases.forEach((f, fi) => {
+            let localX = 20;
+            (f.steps || []).forEach((st, si) => {
+                migrated.steps.push({
+                    id: 'mig-' + fi + '-' + si,
+                    faseId: fi,
+                    x: localX,
+                    titulo: st.titulo, desc: st.desc,
+                    from: st.from, to: st.to,
+                    apis: st.apis || []
+                });
+                localX += FI_COL_W;
             });
-            x += FI_COL_W;
+            migrated.fases.push({ titulo: f.titulo, desc: f.desc });
         });
-        migrated.fases.push({ titulo: f.titulo, desc: f.desc, startX, endX: x - 60 });
-        x += 40; // gap entre fases
-    });
-    migrated.canvasW = Math.max(x + 200, 900);
-    return migrated;
+        migrated.canvasW = 1200;
+        return migrated;
+    }
+
+    // Formato canvas-livre anterior: steps com x,y absolutos, sem faseId
+    // Distribui uniformemente pela primeira fase se houver
+    if (Array.isArray(state.steps)) {
+        state.steps.forEach((st, i) => {
+            if (typeof st.faseId !== 'number') st.faseId = 0;
+            if (typeof st.x !== 'number' || isNaN(st.x)) st.x = 20 + i * FI_COL_W;
+            // Remove y absoluto — agora derivado da fase
+            delete st.y;
+        });
+        // Remove startX/endX das fases (obsoleto)
+        (state.fases || []).forEach(f => { delete f.startX; delete f.endX; });
+        if (!state.fases || !state.fases.length) {
+            state.fases = [{ titulo: 'Fase 1', desc: '' }];
+        }
+    }
+    return state;
 }
 
 let fiState = null;
@@ -27442,46 +27483,46 @@ function fiRender() {
         </div>
         <div class="fi-zoom-wrap" id="fi-zoom-wrap">
         ${(() => {
-            const laneOrder = ['cli', 'lin', 'par'];
             const atorByKey = k => s.atores.find(a => a.key === k) || { badge: k.toUpperCase(), name: k, sub: '' };
-            const canvasW = s.canvasW || 1400;
-            const canvasH = FI_CANVAS_H;
-            const laneH = Math.floor(canvasH / 3);
+            const fases = s.fases || [];
             const steps = s.steps || [];
+            // Cada fase = uma raia horizontal de altura FI_FASE_H empilhada verticalmente
+            const canvasH = Math.max(fases.length * FI_FASE_H, FI_FASE_H);
+            // Canvas W: pega o maior x de step ou o s.canvasW, com padding pro label
+            const maxStepX = steps.reduce((m, st) => Math.max(m, (st.x || 0) + FI_STEP_W), 0);
+            const canvasW = Math.max(FI_LABEL_W + maxStepX + 200, s.canvasW || 1200);
+            // Y central de cada fase (dentro da faixa)
+            const faseCenterY = (faseId) => faseId * FI_FASE_H + FI_FASE_H / 2 - FI_STEP_H / 2;
+            // Y absoluto do step = centro da fase dele
+            const stepY = (st) => faseCenterY(st.faseId || 0);
+            // X absoluto do step = label offset + x local
+            const stepAbsX = (st) => FI_LABEL_W + (st.x || 0);
 
-            // Bands removidas — canvas sem raias fixas. O ator "from" fica indicado
-            // apenas pela barrinha lateral colorida do card + badge no header.
-            const bandsHtml = '';
-
-            // Markers de fase (labels no topo, spans horizontal x)
-            const phasesHtml = (s.fases || []).map((f, fi_) => `
-                <div class="fi-phase-marker"
-                     data-fi="${fi_}"
-                     style="left: ${f.startX}px; width: ${(f.endX || f.startX + 300) - f.startX}px;">
-                    <div class="fi-phase-head-row">
-                        <div class="fi-phase-num">${fiRom(fi_ + 1)}</div>
-                        <div>
-                            <h2 class="fi-phase-title" contenteditable data-ph="Título" data-fk="${fi_}.titulo">${fiEsc(f.titulo)}</h2>
-                            <p class="fi-phase-desc" contenteditable data-ph="Descrição" data-fk="${fi_}.desc">${fiEsc(f.desc || '')}</p>
-                        </div>
-                        <div class="fi-row-actions" style="position:absolute; top: 4px; right: 6px;">
-                            <button class="fi-btn-x" onclick="fiRmFase(${fi_})">× fase</button>
+            // Bands laterais das fases (cada uma = raia horizontal empilhada)
+            const bandsHtml = fases.map((f, fi_) => `
+                <div class="fi-fase-band ${fi_ % 2 === 1 ? 'even' : ''}"
+                     style="top: ${fi_ * FI_FASE_H}px; height: ${FI_FASE_H}px;">
+                    <div class="fi-fase-band-label" data-fi="${fi_}">
+                        <div class="fi-fase-band-num">${fiRom(fi_ + 1)}</div>
+                        <div class="fi-fase-band-body">
+                            <h2 class="fi-fase-band-title" contenteditable data-ph="Título" data-fk="${fi_}.titulo">${fiEsc(f.titulo || '')}</h2>
+                            <p class="fi-fase-band-desc" contenteditable data-ph="Descrição" data-fk="${fi_}.desc">${fiEsc(f.desc || '')}</p>
+                            <button class="fi-fase-band-rm" onclick="fiRmFase(${fi_})">× remover fase</button>
                         </div>
                     </div>
                 </div>
             `).join('');
 
-            // Setas SVG: conecta cada step ao próximo (steps na ordem do array)
+            // Setas SVG: bezier entre step[i] e step[i+1] (ordem do array)
             const arrowsSvg = (() => {
                 if (steps.length < 2) return '';
                 const paths = [];
                 for (let i = 0; i < steps.length - 1; i++) {
                     const a = steps[i], b = steps[i + 1];
-                    const ax = a.x + FI_STEP_W;   // saída pela direita
-                    const ay = a.y + FI_STEP_H / 2;
-                    const bx = b.x;                // entrada pela esquerda
-                    const by = b.y + FI_STEP_H / 2;
-                    // Curva de bezier suave
+                    const ax = stepAbsX(a) + FI_STEP_W;
+                    const ay = stepY(a) + FI_STEP_H / 2;
+                    const bx = stepAbsX(b);
+                    const by = stepY(b) + FI_STEP_H / 2;
                     const cx1 = ax + Math.max(40, (bx - ax) / 2);
                     const cx2 = bx - Math.max(40, (bx - ax) / 2);
                     paths.push(`<path d="M ${ax} ${ay} C ${cx1} ${ay}, ${cx2} ${by}, ${bx} ${by}" marker-end="url(#fi-arrow-head)" />`);
@@ -27497,11 +27538,12 @@ function fiRender() {
                     </svg>
                 `;
             })();
+            const phasesHtml = ''; // markers antigos do topo removidos
 
-            // Cards dos steps (absolute posicionados)
+            // Cards dos steps (absolute posicionados) — Y vem da fase, X é local à fase + offset do label
             const stepsHtml = steps.map((st, si) => `
                 <article class="fi-step from-${st.from}" data-si="${si}"
-                         style="left: ${st.x}px; top: ${st.y}px;">
+                         style="left: ${stepAbsX(st)}px; top: ${stepY(st)}px;">
                     <div class="fi-step-marker">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span class="fi-step-num">${String(si + 1).padStart(2, '0')}</span>
@@ -27626,28 +27668,36 @@ function fiBindDragDrop() {
     // Drag livre de step: mousedown num step (fora de controles editáveis) inicia arrasto
     document.querySelectorAll('#view-fluxos-integracao .fi-step').forEach(el => {
         el.addEventListener('mousedown', e => {
-            // Ignora se clicou em texto editável, select, botão, ou API chip
             if (e.target.closest('[contenteditable], select, button, .fi-api-x, .fi-add-api')) return;
             e.preventDefault();
             const si = +el.dataset.si;
             const step = fiState.steps[si];
-            const startX = e.clientX, startY = e.clientY;
-            const origX = step.x, origY = step.y;
+            const startClientX = e.clientX, startClientY = e.clientY;
+            const origLocalX = step.x || 0;         // X local (dentro da fase, relativo ao label offset)
+            const origFaseId = step.faseId || 0;
             const zoom = fiZoom || 1;
+            const totalFases = (fiState.fases || []).length;
             el.classList.add('dragging');
             fiDragging = { type: 'step', si };
 
             const onMove = (ev) => {
-                const dx = (ev.clientX - startX) / zoom;
-                const dy = (ev.clientY - startY) / zoom;
-                let nx = Math.max(0, origX + dx);
-                let ny = Math.max(0, origY + dy);
-                nx = Math.round(nx / 10) * 10;
-                ny = Math.round(ny / 10) * 10;
-                step.x = nx; step.y = ny;
-                el.style.left = nx + 'px';
-                el.style.top  = ny + 'px';
-                // Redesenha as setas SVG conforme o card se move
+                const dx = (ev.clientX - startClientX) / zoom;
+                const dy = (ev.clientY - startClientY) / zoom;
+                // X local (relativo à fase, após label offset)
+                let newLocalX = Math.max(0, origLocalX + dx);
+                newLocalX = Math.round(newLocalX / 10) * 10;
+                // Nova fase: baseada em quantos FI_FASE_H deslocou verticalmente
+                const origFaseCenter = (origFaseId + 0.5) * FI_FASE_H;
+                const newAbsY = origFaseCenter + dy;
+                let newFaseId = Math.floor(newAbsY / FI_FASE_H);
+                newFaseId = Math.max(0, Math.min(totalFases - 1, newFaseId));
+                step.x = newLocalX;
+                step.faseId = newFaseId;
+                // Atualiza posição visual
+                const absX = FI_LABEL_W + newLocalX;
+                const absY = newFaseId * FI_FASE_H + FI_FASE_H / 2 - FI_STEP_H / 2;
+                el.style.left = absX + 'px';
+                el.style.top  = absY + 'px';
                 fiRedrawArrows();
             };
             const onUp = () => {
@@ -27656,7 +27706,7 @@ function fiBindDragDrop() {
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onUp);
                 fiPersist();
-                fiRender(); // re-render pra atualizar dropdowns "De" e possíveis mudanças de estado
+                fiRender();
             };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
@@ -27692,14 +27742,15 @@ function fiRedrawArrows() {
     const paths = svg.querySelectorAll('path');
     const steps = fiState.steps || [];
     if (steps.length < 2) return;
-    // O primeiro path é do defs marker; começamos do índice de path real
     const realPaths = Array.from(paths).filter(p => p.getAttribute('d'));
+    const _absX = (st) => FI_LABEL_W + (st.x || 0);
+    const _absY = (st) => (st.faseId || 0) * FI_FASE_H + FI_FASE_H / 2 - FI_STEP_H / 2;
     for (let i = 0; i < realPaths.length && i < steps.length - 1; i++) {
         const a = steps[i], b = steps[i + 1];
-        const ax = a.x + FI_STEP_W;
-        const ay = a.y + FI_STEP_H / 2;
-        const bx = b.x;
-        const by = b.y + FI_STEP_H / 2;
+        const ax = _absX(a) + FI_STEP_W;
+        const ay = _absY(a) + FI_STEP_H / 2;
+        const bx = _absX(b);
+        const by = _absY(b) + FI_STEP_H / 2;
         const cx1 = ax + Math.max(40, (bx - ax) / 2);
         const cx2 = bx - Math.max(40, (bx - ax) / 2);
         realPaths[i].setAttribute('d', `M ${ax} ${ay} C ${cx1} ${ay}, ${cx2} ${by}, ${bx} ${by}`);
@@ -27707,30 +27758,41 @@ function fiRedrawArrows() {
 }
 
 function fiAddFase() {
-    // Nova fase começa depois da última
-    const lastX = (fiState.fases || []).reduce((m, f) => Math.max(m, f.endX || 0), 0);
-    fiState.fases.push({ titulo: 'Nova fase', desc: '', startX: lastX + 40, endX: lastX + 340 });
+    fiState.fases.push({ titulo: 'Nova fase', desc: '' });
     fiRender();
 }
-function fiRmFase(i) { if (confirm('Remover esta fase?')) { fiState.fases.splice(i, 1); fiRender(); } }
+function fiRmFase(i) {
+    if (!confirm('Remover esta fase? Os passos dessa fase serão movidos pra fase anterior.')) return;
+    fiState.fases.splice(i, 1);
+    // Redistribui os passos que estavam nessa fase
+    (fiState.steps || []).forEach(st => {
+        if (st.faseId === i) st.faseId = Math.max(0, i - 1);
+        else if (st.faseId > i) st.faseId -= 1;
+    });
+    fiRender();
+}
 function fiAddStep(customPos) {
+    // Adiciona à última fase, no fim da fila x
+    const lastFaseId = Math.max(0, (fiState.fases || []).length - 1);
+    // Descobre o maior x dentro dessa fase pra empilhar depois
+    const stepsInFase = (fiState.steps || []).filter(s => (s.faseId || 0) === lastFaseId);
+    const lastLocalX = stepsInFase.reduce((m, s) => Math.max(m, s.x || 0), -FI_COL_W);
+    const nx = customPos?.x != null ? customPos.x : (lastLocalX + FI_COL_W);
     const lastStep = fiState.steps[fiState.steps.length - 1];
-    const nx = lastStep ? lastStep.x + FI_COL_W : 200;
-    const ny = lastStep ? lastStep.y : 100;
     const from = lastStep ? (lastStep.to || lastStep.from) : 'cli';
     const to = from === 'cli' ? 'lin' : (from === 'lin' ? 'par' : 'lin');
     fiState.steps.push({
         id: 's' + Date.now(),
-        x: customPos?.x != null ? customPos.x : nx,
-        y: customPos?.y != null ? customPos.y : ny,
+        faseId: lastFaseId,
+        x: Math.max(20, nx),
         titulo: 'Novo passo',
         desc: '',
         from, to,
         apis: []
     });
-    // Expande o canvas se necessário
-    if (nx + FI_STEP_W + 100 > (fiState.canvasW || 0)) {
-        fiState.canvasW = nx + FI_STEP_W + 200;
+    // Expande canvasW se necessário
+    if (FI_LABEL_W + nx + FI_STEP_W + 200 > (fiState.canvasW || 0)) {
+        fiState.canvasW = FI_LABEL_W + nx + FI_STEP_W + 200;
     }
     fiRender();
 }
