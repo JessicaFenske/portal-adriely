@@ -5822,7 +5822,8 @@
         /* Passo (card absoluto no canvas) */
         #view-fluxos-integracao .fi-step {
             position: absolute;
-            width: 240px;
+            width: 260px;
+            min-height: 260px;
             display: flex; flex-direction: column;
             background: var(--fi-bg-elev);
             border: 1px solid var(--fi-rule);
@@ -5878,6 +5879,32 @@
             letter-spacing: var(--fi-step); font-weight: 700;
         }
         #view-fluxos-integracao .fi-icon-btn:hover { color: var(--fi-primary); border-color: var(--fi-primary); }
+        #view-fluxos-integracao .fi-icon-btn.active {
+            background: var(--fi-accent);
+            border-color: var(--fi-accent);
+            color: var(--fi-bg);
+            border-style: solid;
+        }
+        /* Setas customizadas (traço em âmbar/accent) */
+        #view-fluxos-integracao .fi-arrows path.fi-arrow-custom {
+            stroke: var(--fi-accent);
+            stroke-width: 2.5;
+            stroke-dasharray: none;
+            pointer-events: auto;
+            cursor: pointer;
+            transition: stroke-width 0.15s;
+        }
+        #view-fluxos-integracao .fi-arrows path.fi-arrow-custom:hover {
+            stroke-width: 4;
+        }
+        #view-fluxos-integracao .fi-arrows { pointer-events: none; }
+        #view-fluxos-integracao .fi-arrows path.fi-arrow-custom { pointer-events: stroke; }
+        /* Card em modo "seleção de destino" da seta */
+        #view-fluxos-integracao .fi-step.arrow-target-mode { cursor: crosshair !important; }
+        #view-fluxos-integracao .fi-step.arrow-target-mode:hover {
+            border-color: var(--fi-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--fi-accent) 30%, transparent);
+        }
 
         /* Popover picker de ícones */
         #view-fluxos-integracao .fi-icon-picker {
@@ -8405,7 +8432,7 @@
         <div id="view-fluxos-integracao" style="display:none;">
             <nav class="fi-toolbar">
                 <div class="fi-toolbar-brand"><span class="fi-toolbar-dot"></span> Editor de Fluxos</div>
-                <span class="fi-toolbar-hint">clique em qualquer texto pra editar · arraste ⋮⋮ pra reordenar</span>
+                <span class="fi-toolbar-hint">clique pra editar texto · arraste card pra mover · ↗ seta pra ligar 2 passos (Shift+clique na seta = bidirecional)</span>
                 <div class="fi-toolbar-sep"></div>
                 <div class="fi-zoom-group" title="Controle de zoom">
                     <button onclick="fiZoomOut()" aria-label="Diminuir zoom">−</button>
@@ -27177,11 +27204,11 @@ const FI_ROM = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'
 const fiRom = n => FI_ROM[n] || String(n);
 
 // Layout constants — usados nos templates + fiMigrate
-const FI_STEP_H = 180;
-const FI_STEP_W = 240;
-const FI_FASE_H = 220;       // altura de cada raia (fase)
-const FI_LABEL_W = 250;      // largura da coluna do label da fase à esquerda
-const FI_COL_W = 280;        // gap horizontal entre steps
+const FI_STEP_H = 280;       // altura minima do card (aumentada pra caber conteudo)
+const FI_STEP_W = 260;       // largura do card
+const FI_FASE_H = 340;       // altura de cada raia (fase) — folga pra card + gap
+const FI_LABEL_W = 260;      // largura do label da fase à esquerda
+const FI_COL_W = 300;        // gap horizontal entre steps (X local dentro da fase)
 
 // Labels editáveis (defaults em pt-BR — vendedor pode trocar)
 const FI_LABELS_DEFAULT = {
@@ -27213,6 +27240,7 @@ const FI_TEMPLATE_BLANK = {
         { id: 's1', faseId: 0, x: 20, titulo: 'Primeiro passo', desc: 'O que acontece aqui.', from: 'cli', to: 'lin', apis: ['endpoint/exemplo'] }
     ],
     canvasW: 900,
+    arrows: [], // setas customizadas [{fromId, toId, bidir}]
     labels: { ...FI_LABELS_DEFAULT },
     footL: 'Fluxo de Integração · V1.0',
     footR: 'CLIENTE × LINCROS'
@@ -27246,6 +27274,7 @@ const FI_TEMPLATE_BL = {
         { id: 's8', faseId: 3, x: 300,  titulo: 'Fatura auditada integrada ao D365',         desc: 'Após a transportadora emitir a fatura, a Lincros a audita contra os CT-es já validados. A fatura aprovada é integrada ao D365 para contabilização e pagamento.',                                            from: 'par', to: 'cli', apis: ['GET · fatura/buscarRegistrosParaIntegracao', 'GET · fatura/recuperarDados', 'POST · fatura/salvarRetornoFatura'] }
     ],
     canvasW: 1200,
+    arrows: [], // setas customizadas [{fromId, toId, bidir}]
     labels: { ...FI_LABELS_DEFAULT },
     footL: 'Fluxo Base de Integração · V1.1',
     footR: 'B&L × LINCROS'
@@ -27258,6 +27287,7 @@ const FI_TEMPLATE_BL = {
 function fiMigrate(state) {
     if (!state) return null;
     state.labels = { ...FI_LABELS_DEFAULT, ...(state.labels || {}) };
+    if (!Array.isArray(state.arrows)) state.arrows = [];
 
     // Formato antigo: fases[].steps[]
     if (Array.isArray(state.fases) && state.fases[0]?.steps) {
@@ -27304,6 +27334,7 @@ let fiDragging = null;
 let fiInited = false;
 let fiZoom = parseFloat(localStorage.getItem('fi_zoom') || '1') || 1;
 let fiTheme = localStorage.getItem('fi_theme') || 'dark'; // 'dark' | 'light'
+let fiArrowPending = null; // {fromStepId} quando usuario clicou "+ seta" e aguarda destino
 
 // Paleta de ícones (agrupados por categoria para o picker)
 const FI_ICONS = {
@@ -27513,10 +27544,10 @@ function fiRender() {
                 </div>
             `).join('');
 
-            // Setas SVG: bezier entre step[i] e step[i+1] (ordem do array)
+            // Setas SVG: automáticas (consecutivos) + customizadas do state.arrows
             const arrowsSvg = (() => {
-                if (steps.length < 2) return '';
                 const paths = [];
+                // Automáticas: entre step[i] e step[i+1]
                 for (let i = 0; i < steps.length - 1; i++) {
                     const a = steps[i], b = steps[i + 1];
                     const ax = stepAbsX(a) + FI_STEP_W;
@@ -27527,11 +27558,30 @@ function fiRender() {
                     const cx2 = bx - Math.max(40, (bx - ax) / 2);
                     paths.push(`<path d="M ${ax} ${ay} C ${cx1} ${ay}, ${cx2} ${by}, ${bx} ${by}" marker-end="url(#fi-arrow-head)" />`);
                 }
+                // Customizadas: entre stepId FROM e stepId TO (+ bidir)
+                (s.arrows || []).forEach((arr, ai) => {
+                    const a = steps.find(x => x.id === arr.fromId);
+                    const b = steps.find(x => x.id === arr.toId);
+                    if (!a || !b) return;
+                    const ax = stepAbsX(a) + FI_STEP_W / 2;
+                    const ay = stepY(a);
+                    const bx = stepAbsX(b) + FI_STEP_W / 2;
+                    const by = stepY(b) + FI_STEP_H;
+                    // Curva pra cima (Y menor no destino) — pra diferenciar do fluxo padrao
+                    const midX = (ax + bx) / 2;
+                    const arcY = Math.min(ay, by) - Math.abs(bx - ax) * 0.3 - 40;
+                    const markerStart = arr.bidir ? 'marker-start="url(#fi-arrow-head-custom)"' : '';
+                    paths.push(`<path class="fi-arrow-custom" data-ai="${ai}" d="M ${ax} ${ay} Q ${midX} ${arcY}, ${bx} ${by}" marker-end="url(#fi-arrow-head-custom)" ${markerStart} />`);
+                });
+                if (!paths.length) return '';
                 return `
                     <svg class="fi-arrows" width="${canvasW}" height="${canvasH}">
                         <defs>
                             <marker id="fi-arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                                 <path d="M 0 0 L 10 5 L 0 10 z" fill="color-mix(in srgb, var(--fi-primary) 60%, var(--fi-ink-mute))" />
+                            </marker>
+                            <marker id="fi-arrow-head-custom" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--fi-accent)" />
                             </marker>
                         </defs>
                         ${paths.join('')}
@@ -27545,9 +27595,10 @@ function fiRender() {
                 <article class="fi-step from-${st.from}" data-si="${si}"
                          style="left: ${stepAbsX(st)}px; top: ${stepY(st)}px;">
                     <div class="fi-step-marker">
-                        <div style="display:flex;align-items:center;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                             <span class="fi-step-num">${String(si + 1).padStart(2, '0')}</span>
                             ${st.icon ? `<span class="fi-step-icon" onclick="fiOpenIconPicker(${si})" title="Trocar ícone">${st.icon}</span>` : `<button class="fi-icon-btn" onclick="fiOpenIconPicker(${si})" title="Adicionar ícone">+ ícone</button>`}
+                            <button class="fi-icon-btn ${fiArrowPending?.fromId === st.id ? 'active' : ''}" onclick="fiHandleArrowClick(event, '${st.id}')" title="Criar seta manual — clique aqui e depois no card destino">${fiArrowPending?.fromId === st.id ? '● cancelar' : '↗ seta'}</button>
                         </div>
                         <span class="fi-drag-handle" title="Arrastar">⋮⋮</span>
                     </div>
@@ -27597,6 +27648,9 @@ function fiRender() {
     `;
     fiBindEditables();
     fiBindDragDrop();
+    fiBindArrowClicks();
+    // Se tem seta pendente, deixa cards em modo target
+    if (fiArrowPending) _fiEnterArrowTargetMode();
     fiPersist();
 }
 
@@ -27739,13 +27793,13 @@ function fiBindDragDrop() {
 function fiRedrawArrows() {
     const svg = document.querySelector('#view-fluxos-integracao .fi-arrows');
     if (!svg) return;
-    const paths = svg.querySelectorAll('path');
     const steps = fiState.steps || [];
-    if (steps.length < 2) return;
-    const realPaths = Array.from(paths).filter(p => p.getAttribute('d'));
+    if (steps.length < 2 && !(fiState.arrows || []).length) return;
     const _absX = (st) => FI_LABEL_W + (st.x || 0);
     const _absY = (st) => (st.faseId || 0) * FI_FASE_H + FI_FASE_H / 2 - FI_STEP_H / 2;
-    for (let i = 0; i < realPaths.length && i < steps.length - 1; i++) {
+    // Automáticas (paths sem class fi-arrow-custom)
+    const autoPaths = Array.from(svg.querySelectorAll('path:not(.fi-arrow-custom)')).filter(p => p.getAttribute('d'));
+    for (let i = 0; i < autoPaths.length && i < steps.length - 1; i++) {
         const a = steps[i], b = steps[i + 1];
         const ax = _absX(a) + FI_STEP_W;
         const ay = _absY(a) + FI_STEP_H / 2;
@@ -27753,8 +27807,43 @@ function fiRedrawArrows() {
         const by = _absY(b) + FI_STEP_H / 2;
         const cx1 = ax + Math.max(40, (bx - ax) / 2);
         const cx2 = bx - Math.max(40, (bx - ax) / 2);
-        realPaths[i].setAttribute('d', `M ${ax} ${ay} C ${cx1} ${ay}, ${cx2} ${by}, ${bx} ${by}`);
+        autoPaths[i].setAttribute('d', `M ${ax} ${ay} C ${cx1} ${ay}, ${cx2} ${by}, ${bx} ${by}`);
     }
+    // Customizadas
+    const custPaths = svg.querySelectorAll('path.fi-arrow-custom');
+    custPaths.forEach(pel => {
+        const arr = fiState.arrows[+pel.dataset.ai];
+        if (!arr) return;
+        const a = steps.find(x => x.id === arr.fromId);
+        const b = steps.find(x => x.id === arr.toId);
+        if (!a || !b) return;
+        const ax = _absX(a) + FI_STEP_W / 2;
+        const ay = _absY(a);
+        const bx = _absX(b) + FI_STEP_W / 2;
+        const by = _absY(b) + FI_STEP_H;
+        const midX = (ax + bx) / 2;
+        const arcY = Math.min(ay, by) - Math.abs(bx - ax) * 0.3 - 40;
+        pel.setAttribute('d', `M ${ax} ${ay} Q ${midX} ${arcY}, ${bx} ${by}`);
+    });
+}
+
+// Bind click nas setas customizadas: click com Shift = toggle bidir, click normal = remover
+function fiBindArrowClicks() {
+    document.querySelectorAll('#view-fluxos-integracao .fi-arrows path.fi-arrow-custom').forEach(pel => {
+        pel.addEventListener('click', ev => {
+            ev.stopPropagation();
+            const ai = +pel.dataset.ai;
+            if (ev.shiftKey) {
+                // Shift+click alterna bidirecional
+                fiState.arrows[ai].bidir = !fiState.arrows[ai].bidir;
+                fiRender();
+            } else {
+                fiRmArrow(ai);
+            }
+        });
+        pel.style.cursor = 'pointer';
+        pel.setAttribute('title', 'Clique = remover · Shift+Clique = alternar bidirecional');
+    });
 }
 
 function fiAddFase() {
@@ -27810,6 +27899,58 @@ function fiUpdStepRoute(si, campo, val) {
 function fiUnlockTo(si) {
     const step = fiState.steps[si];
     step.to = fiState.atores.find(a => a.key !== step.from)?.key || 'lin';
+    fiRender();
+}
+
+// === SETAS MANUAIS ===
+// Clique no botão "↗ seta" do card A → arma pendente
+// Próximo clique em outro botão "↗ seta" do card B → completa a seta A→B
+// Segundo clique no mesmo card A → cancela
+function fiHandleArrowClick(ev, stepId) {
+    ev.stopPropagation();
+    if (fiArrowPending?.fromId === stepId) {
+        // Cancela
+        fiArrowPending = null;
+        _fiExitArrowTargetMode();
+        fiRender();
+        return;
+    }
+    if (!fiArrowPending) {
+        // Inicia — próximo clique em outro card completa
+        fiArrowPending = { fromId: stepId };
+        _fiEnterArrowTargetMode();
+        fiRender();
+        return;
+    }
+    // Já tinha um pending — completa a seta
+    const fromId = fiArrowPending.fromId;
+    const toId = stepId;
+    if (fromId === toId) { fiArrowPending = null; _fiExitArrowTargetMode(); fiRender(); return; }
+    // Evita duplicata; se já existe, alterna bidir
+    const existing = fiState.arrows.find(a => (a.fromId === fromId && a.toId === toId) || (a.fromId === toId && a.toId === fromId));
+    if (existing) {
+        existing.bidir = !existing.bidir;
+    } else {
+        fiState.arrows.push({ fromId, toId, bidir: false });
+    }
+    fiArrowPending = null;
+    _fiExitArrowTargetMode();
+    fiRender();
+}
+function _fiEnterArrowTargetMode() {
+    // Passa o cursor pra crosshair em todos os cards (exceto o origem)
+    document.querySelectorAll('#view-fluxos-integracao .fi-step').forEach(el => {
+        if (el.dataset.si !== undefined) el.classList.add('arrow-target-mode');
+    });
+}
+function _fiExitArrowTargetMode() {
+    document.querySelectorAll('#view-fluxos-integracao .fi-step.arrow-target-mode').forEach(el => {
+        el.classList.remove('arrow-target-mode');
+    });
+}
+function fiRmArrow(ai) {
+    if (!confirm('Remover esta seta?')) return;
+    fiState.arrows.splice(ai, 1);
     fiRender();
 }
 function fiPickLogo() {
