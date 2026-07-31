@@ -5994,13 +5994,28 @@
             flex-wrap: wrap; gap: 12px;
         }
 
-        /* ============ PAPEL TIMBRADO (só no PDF) ============ */
+        /* ============ PAPEL TIMBRADO ============ */
+        /* Aparece na tela como PREVIEW do PDF (pra permitir edicao dos textos)
+           e tambem no print — layout identico nos dois modos */
         #view-fluxos-integracao .fi-print-only { display: none; }
         #view-fluxos-integracao .fi-print-header {
-            display: none;
-            border-bottom: 2px solid #1F1F1F;
-            padding-bottom: 12mm;
-            margin-bottom: 8mm;
+            display: block;
+            border-bottom: 2px solid var(--fi-ink);
+            padding: 20px 20px 20px;
+            margin: 0 0 20px;
+            background: color-mix(in srgb, var(--fi-ink) 3%, var(--fi-bg-elev));
+            border-radius: 6px 6px 0 0;
+        }
+        #view-fluxos-integracao .fi-print-header::before {
+            content: 'PREVIEW · PAPEL TIMBRADO DO PDF';
+            display: block;
+            font-family: var(--fi-mono); font-size: 9.5px;
+            text-transform: uppercase; letter-spacing: var(--fi-step);
+            color: var(--fi-primary); font-weight: 700;
+            margin-bottom: 12px;
+        }
+        @media print {
+            #view-fluxos-integracao .fi-print-header::before { display: none !important; }
         }
         #view-fluxos-integracao .fi-print-header-row {
             display: grid;
@@ -6011,14 +6026,22 @@
         #view-fluxos-integracao .fi-print-logo {
             display: flex; align-items: center; gap: 10px;
         }
-        /* Logo oficial Lincros by Sankhya · versao branca original,
-           invertida via CSS pra ficar escura no PDF de fundo branco */
+        /* Logo oficial Lincros by Sankhya · versao branca do site.
+           Na tela dark aparece branca normalmente; no PDF (fundo branco) e
+           no tema light e invertida via CSS pra ficar escura. */
         #view-fluxos-integracao .fi-print-logo img {
             height: 44px; width: auto; max-width: 200px;
             object-fit: contain;
+        }
+        #view-fluxos-integracao[data-theme="light"] .fi-print-logo img {
             filter: invert(1) brightness(0.9);
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        }
+        @media print {
+            #view-fluxos-integracao .fi-print-logo img {
+                filter: invert(1) brightness(0.9) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
         #view-fluxos-integracao .fi-print-title {
             font-family: 'Charter', 'Cambria', Georgia, serif;
@@ -6034,17 +6057,29 @@
         }
         #view-fluxos-integracao .fi-print-meta strong { color: #101528; display: block; margin-bottom: 2px; }
         #view-fluxos-integracao .fi-print-footer {
-            display: none;
-            position: fixed;
-            bottom: 4mm; left: 8mm; right: 8mm;
-            padding-top: 4mm;
-            border-top: 1px solid #DCE1EC;
-            font-family: ui-monospace, monospace;
-            font-size: 9.5px; color: #6B7699;
             display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px;
+            border-top: 1px solid var(--fi-rule);
+            margin-top: 24px;
+            font-family: var(--fi-mono);
+            font-size: 10px; color: var(--fi-ink-mute);
             text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+            background: color-mix(in srgb, var(--fi-ink) 3%, var(--fi-bg-elev));
+            border-radius: 0 0 6px 6px;
         }
-        #view-fluxos-integracao .fi-print-footer span:first-child { color: var(--fi-primary); }
+        #view-fluxos-integracao .fi-print-footer > span:first-child { color: var(--fi-primary); }
+        @media print {
+            #view-fluxos-integracao .fi-print-footer {
+                position: fixed;
+                bottom: 4mm; left: 8mm; right: 8mm;
+                padding-top: 4mm;
+                border-top: 1px solid #DCE1EC;
+                background: transparent;
+                border-radius: 0;
+                margin-top: 0;
+                color: #6B7699;
+            }
+        }
 
         /* Print — landscape pra caber o fluxo horizontal */
         @media print {
@@ -6053,14 +6088,8 @@
             body * { visibility: hidden !important; }
             #view-fluxos-integracao,
             #view-fluxos-integracao * { visibility: visible !important; }
-            /* Papel timbrado fica visivel APENAS no print */
-            #view-fluxos-integracao .fi-print-header,
-            #view-fluxos-integracao .fi-print-footer {
-                display: flex !important;
-            }
-            #view-fluxos-integracao .fi-print-header {
-                display: block !important;
-            }
+            /* Papel timbrado ja aparece na tela (pra edicao) — no print
+               so garante o layout formal sem o rotulo "PREVIEW..." */
             #view-fluxos-integracao .fi-print-only { display: block !important; }
             /* Posiciona a view no topo do papel, ignorando sidebar/main-content */
             .sidebar { display: none !important; }
@@ -27129,7 +27158,19 @@ const FI_LANE_Y = { cli: 100, lin: 300, par: 500 }; // Y central de cada raia
 const FI_STEP_H = 180;
 const FI_STEP_W = 240;
 const FI_CANVAS_H = 660;
-const FI_COL_W = 300; // largura padrão de cada "coluna" de step
+const FI_COL_W = 300;
+
+// Labels editáveis (defaults em pt-BR — vendedor pode trocar)
+const FI_LABELS_DEFAULT = {
+    de: 'De',
+    para: 'Para',
+    arrow: '→',
+    endpoint: 'Endpoint',
+    endpoints: 'Endpoints',
+    printAnexoTitulo: 'Anexo · Fluxo de Integração',
+    printAnexoRodape: 'Anexo do Contrato',
+    printGeradoEm: 'Documento gerado em'
+};
 
 const FI_TEMPLATE_BLANK = {
     cliente: { nome: 'Nome do Cliente', logo: null },
@@ -27149,6 +27190,7 @@ const FI_TEMPLATE_BLANK = {
         { id: 's1', x: 200, y: 100, titulo: 'Primeiro passo', desc: 'O que acontece aqui.', from: 'cli', to: 'lin', apis: ['endpoint/exemplo'] }
     ],
     canvasW: 900,
+    labels: { ...FI_LABELS_DEFAULT },
     footL: 'Fluxo de Integração · V1.0',
     footR: 'CLIENTE × LINCROS'
 };
@@ -27181,6 +27223,7 @@ const FI_TEMPLATE_BL = {
         { id: 's8', x: 2280, y: 60,  titulo: 'Fatura auditada integrada ao D365',         desc: 'Após a transportadora emitir a fatura, a Lincros a audita contra os CT-es já validados. A fatura aprovada é integrada ao D365 para contabilização e pagamento.',                                            from: 'par', to: 'cli', apis: ['GET · fatura/buscarRegistrosParaIntegracao', 'GET · fatura/recuperarDados', 'POST · fatura/salvarRetornoFatura'] }
     ],
     canvasW: 2600,
+    labels: { ...FI_LABELS_DEFAULT },
     footL: 'Fluxo Base de Integração · V1.1',
     footR: 'B&L × LINCROS'
 };
@@ -27188,6 +27231,8 @@ const FI_TEMPLATE_BL = {
 // Migração: estado antigo tinha fases[].steps[], novo tem steps[] linear + fases só com startX/endX
 function fiMigrate(state) {
     if (!state) return null;
+    // Garante labels default (backward compat pra estados sem labels ainda)
+    state.labels = { ...FI_LABELS_DEFAULT, ...(state.labels || {}) };
     // Já é novo formato?
     if (Array.isArray(state.steps) && !state.fases?.[0]?.steps) return state;
     // Antigo: fases[].steps[] — achata pra steps[] com posições auto-calculadas
@@ -27356,14 +27401,14 @@ function fiRender() {
                 </div>
                 <div class="fi-print-meta">
                     <strong>${fiEsc(s.cliente.nome || 'Cliente')}</strong>
-                    Anexo · Fluxo de Integração<br>
+                    <span contenteditable data-set="labels.printAnexoTitulo">${fiEsc(s.labels?.printAnexoTitulo || 'Anexo · Fluxo de Integração')}</span><br>
                     ${_dataStr}
                 </div>
             </div>
         </div>
         <div class="fi-print-footer">
             <span>LINCROS · ${fiEsc(s.cliente.nome || 'Cliente')}</span>
-            <span>Documento gerado em ${_dataStr} · Anexo do Contrato</span>
+            <span><span contenteditable data-set="labels.printGeradoEm">${fiEsc(s.labels?.printGeradoEm || 'Documento gerado em')}</span> ${_dataStr} · <span contenteditable data-set="labels.printAnexoRodape">${fiEsc(s.labels?.printAnexoRodape || 'Anexo do Contrato')}</span></span>
         </div>
         <nav class="fi-flow-nav">
             <div class="fi-flow-brand cli">
@@ -27468,12 +27513,12 @@ function fiRender() {
                     <h3 class="fi-step-title" contenteditable data-ph="Título" data-sk="${si}.titulo">${fiEsc(st.titulo)}</h3>
                     <p class="fi-step-desc" contenteditable data-ph="Descrição" data-sk="${si}.desc">${fiEsc(st.desc)}</p>
                     <div class="fi-step-route">
-                        <span>De</span>
+                        <span contenteditable data-set="labels.de">${fiEsc(s.labels?.de || 'De')}</span>
                         <select onchange="fiUpdStepRoute(${si}, 'from', this.value)">${atoresOptions(st.from)}</select>
-                        ${st.from === st.to ? `<button class="fi-btn-mini" onclick="fiUnlockTo(${si})">+ destino</button>` : `<span>→</span><select onchange="fiUpdStepRoute(${si}, 'to', this.value)">${atoresOptions(st.to)}</select>`}
+                        ${st.from === st.to ? `<button class="fi-btn-mini" onclick="fiUnlockTo(${si})">+ destino</button>` : `<span contenteditable data-set="labels.arrow">${fiEsc(s.labels?.arrow || '→')}</span><select onchange="fiUpdStepRoute(${si}, 'to', this.value)">${atoresOptions(st.to)}</select>`}
                     </div>
                     <div class="fi-step-apis">
-                        <div class="fi-step-apis-label">${st.apis.length > 1 ? 'Endpoints' : 'Endpoint'}</div>
+                        <div class="fi-step-apis-label" contenteditable data-set="labels.${st.apis.length > 1 ? 'endpoints' : 'endpoint'}">${fiEsc((st.apis.length > 1 ? s.labels?.endpoints : s.labels?.endpoint) || (st.apis.length > 1 ? 'Endpoints' : 'Endpoint'))}</div>
                         ${st.apis.map((api, ai) => `
                             <code class="fi-api">
                                 <span contenteditable data-ak="${si}.${ai}">${fiEsc(api)}</span>
