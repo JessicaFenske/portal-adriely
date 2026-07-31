@@ -4071,6 +4071,11 @@
         }
         .fc-real-badge.aberto { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
         .fc-real-badge.perdido { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+        .fc-real-status-hint {
+            display: block; font-size: 10px; color: #64748b;
+            font-family: ui-monospace, monospace; margin-top: 2px;
+            letter-spacing: 0.04em;
+        }
         .fc-real-badge.s1 { background: rgba(34,197,94,0.15); color: #22c55e; }
         .fc-real-badge.s2 { background: rgba(132,204,22,0.15); color: #84cc16; }
         .fc-real-badge.s3 { background: rgba(245,158,11,0.15); color: #f59e0b; }
@@ -8175,9 +8180,13 @@
             <section id="fcRealBlock" class="fc-real-block">
                 <header class="fc-real-header">
                     <div>
-                        <div class="fc-real-eyebrow">DIAGNÓSTICO · ONDE O FORECAST ESCORREGOU</div>
-                        <h2 class="fc-real-title">Forecast × <em>Realização</em></h2>
-                        <p class="fc-real-sub">Deals que passaram por forecast e ainda não fecharam ganho. Ajuda a identificar previsões otimistas demais e negócios "arrastados".</p>
+                        <div class="fc-real-eyebrow">DEALS QUE <strong>CAÍRAM DO FORECAST</strong></div>
+                        <h2 class="fc-real-title">Caíram do <em>forecast</em></h2>
+                        <p class="fc-real-sub">
+                            Deals que foram colocados em forecast (Semana 1 a 4) e ainda <strong>não fecharam ganho</strong> —
+                            seja porque estão travados abertos há muito tempo, seja porque viraram perda.
+                            Use pra retroalimentar a qualificação e evitar forecast otimista demais.
+                        </p>
                     </div>
                     <div class="fc-real-controls">
                         <label>Últimos
@@ -8188,10 +8197,10 @@
                                 <option value="180">180 dias</option>
                             </select>
                         </label>
-                        <select id="fcRealStatus" onchange="renderFcRealizado()">
-                            <option value="">Todos status</option>
-                            <option value="1">Só abertos</option>
-                            <option value="3">Só perdidos</option>
+                        <select id="fcRealStatus" onchange="renderFcRealizado()" title="Como caiu do forecast">
+                            <option value="">Todos que caíram</option>
+                            <option value="1">Só travados (ainda abertos)</option>
+                            <option value="3">Só perdidos de fato</option>
                         </select>
                         <select id="fcRealSemana" onchange="renderFcRealizado()">
                             <option value="">Todas as semanas</option>
@@ -23113,26 +23122,26 @@ function renderFcRealizado() {
 
     kpisEl.innerHTML = `
         <div class="fc-real-kpi total">
-            <div class="fc-real-kpi-label">Deals no filtro</div>
+            <div class="fc-real-kpi-label">CAÍRAM DO FORECAST</div>
             <div class="fc-real-kpi-val">${rows.length}</div>
-            <div class="fc-real-kpi-sub">com forecast e sem ganho</div>
+            <div class="fc-real-kpi-sub">deals que foram projetados e não fecharam</div>
         </div>
         <div class="fc-real-kpi money">
-            <div class="fc-real-kpi-label">MRR em risco</div>
+            <div class="fc-real-kpi-label">MRR PROMETIDO NÃO ENTREGUE</div>
             <div class="fc-real-kpi-val">${fmtRk(totalMrr)}</div>
-            <div class="fc-real-kpi-sub">recorrente projetado que não fechou</div>
+            <div class="fc-real-kpi-sub">recorrente que estava no forecast</div>
         </div>
         <div class="fc-real-kpi money">
-            <div class="fc-real-kpi-label">Setup em risco</div>
+            <div class="fc-real-kpi-label">SETUP PROMETIDO NÃO ENTREGUE</div>
             <div class="fc-real-kpi-val">${fmtRk(totalSetup)}</div>
-            <div class="fc-real-kpi-sub">one-time projetado que não fechou</div>
+            <div class="fc-real-kpi-sub">one-time que estava no forecast</div>
         </div>
         <div class="fc-real-kpi perdidos">
-            <div class="fc-real-kpi-label">Split status</div>
+            <div class="fc-real-kpi-label">POR ONDE CAIU</div>
             <div class="fc-real-kpi-val" style="font-size:18px;">
-                <span style="color:#facc15;">${abertos}</span> ab · <span style="color:#f87171;">${perdidos}</span> pd
+                <span style="color:#facc15;">${abertos}</span> travados · <span style="color:#f87171;">${perdidos}</span> perdidos
             </div>
-            <div class="fc-real-kpi-sub">${rows.length > 0 ? Math.round(perdidos/rows.length*100) : 0}% já perdidos</div>
+            <div class="fc-real-kpi-sub">${rows.length > 0 ? Math.round(perdidos/rows.length*100) : 0}% viraram perda · ${rows.length > 0 ? Math.round(abertos/rows.length*100) : 0}% arrastando</div>
         </div>
     `;
 
@@ -23162,7 +23171,10 @@ function renderFcRealizado() {
                 <td>${escapeHtmlSimple(r.vendedor)}</td>
                 <td style="color:#94a3b8;font-size:11.5px;">${escapeHtmlSimple(r.funil)} · ${escapeHtmlSimple(r.etapa)}</td>
                 <td><span class="fc-real-badge ${semanaClass(r.forecast)}">${escapeHtmlSimple(r.forecast || '')}</span></td>
-                <td><span class="fc-real-badge ${r.status === 'Aberto' ? 'aberto' : r.status === 'Perdido' ? 'perdido' : ''}">${r.status}</span></td>
+                <td>
+                    <span class="fc-real-badge ${r.status === 'Aberto' ? 'aberto' : r.status === 'Perdido' ? 'perdido' : ''}">${r.status === 'Aberto' ? '⏳ Travado' : r.status === 'Perdido' ? '❌ Perdido' : r.status}</span>
+                    <span class="fc-real-status-hint">caiu do forecast</span>
+                </td>
                 <td class="num money">${r.mrr > 0 ? fmtR(r.mrr) : '—'}</td>
                 <td class="num money">${r.setup > 0 ? fmtR(r.setup) : '—'}</td>
                 <td class="num" style="color:#94a3b8;">${fmtDate(r.finish)}</td>
