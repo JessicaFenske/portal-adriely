@@ -5994,13 +5994,78 @@
             flex-wrap: wrap; gap: 12px;
         }
 
+        /* ============ PAPEL TIMBRADO (só no PDF) ============ */
+        #view-fluxos-integracao .fi-print-only { display: none; }
+        #view-fluxos-integracao .fi-print-header {
+            display: none;
+            border-bottom: 2px solid #1F1F1F;
+            padding-bottom: 12mm;
+            margin-bottom: 8mm;
+        }
+        #view-fluxos-integracao .fi-print-header-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 16px;
+        }
+        #view-fluxos-integracao .fi-print-logo {
+            display: flex; align-items: center; gap: 10px;
+        }
+        #view-fluxos-integracao .fi-print-logo img {
+            width: 42px; height: 42px; border-radius: 8px;
+        }
+        #view-fluxos-integracao .fi-print-brand {
+            font-family: 'Charter', 'Cambria', Georgia, serif;
+            font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+            color: #101528;
+        }
+        #view-fluxos-integracao .fi-print-brand small {
+            display: block; font-size: 10px; font-weight: 500;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: #6B7699; margin-top: 2px;
+        }
+        #view-fluxos-integracao .fi-print-title {
+            font-family: 'Charter', 'Cambria', Georgia, serif;
+            font-size: 14px; font-weight: 500; color: #4B5573;
+            text-align: center;
+            font-style: italic;
+        }
+        #view-fluxos-integracao .fi-print-meta {
+            font-family: ui-monospace, monospace;
+            font-size: 10px; color: #6B7699;
+            text-align: right;
+            line-height: 1.5;
+        }
+        #view-fluxos-integracao .fi-print-meta strong { color: #101528; display: block; margin-bottom: 2px; }
+        #view-fluxos-integracao .fi-print-footer {
+            display: none;
+            position: fixed;
+            bottom: 4mm; left: 8mm; right: 8mm;
+            padding-top: 4mm;
+            border-top: 1px solid #DCE1EC;
+            font-family: ui-monospace, monospace;
+            font-size: 9.5px; color: #6B7699;
+            display: flex; justify-content: space-between; align-items: center;
+            text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+        }
+        #view-fluxos-integracao .fi-print-footer span:first-child { color: var(--fi-primary); }
+
         /* Print — landscape pra caber o fluxo horizontal */
         @media print {
-            @page { size: landscape; margin: 8mm; }
+            @page { size: landscape; margin: 12mm 10mm 20mm 10mm; }
             /* Esconde TUDO por visibility, depois re-mostra so o que interessa */
             body * { visibility: hidden !important; }
             #view-fluxos-integracao,
             #view-fluxos-integracao * { visibility: visible !important; }
+            /* Papel timbrado fica visivel APENAS no print */
+            #view-fluxos-integracao .fi-print-header,
+            #view-fluxos-integracao .fi-print-footer {
+                display: flex !important;
+            }
+            #view-fluxos-integracao .fi-print-header {
+                display: block !important;
+            }
+            #view-fluxos-integracao .fi-print-only { display: block !important; }
             /* Posiciona a view no topo do papel, ignorando sidebar/main-content */
             .sidebar { display: none !important; }
             .main-content { margin-left: 0 !important; padding: 0 !important; }
@@ -6011,27 +6076,58 @@
                 --fi-bg: #FFFFFF !important; --fi-bg-elev: #FAFAFA !important;
                 --fi-ink: #101528 !important; --fi-ink-soft: #4B5573 !important;
                 --fi-ink-mute: #8791AF !important; --fi-rule: #DCE1EC !important;
+                background: #FFFFFF !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
-            /* Esconde controles de edicao no PDF */
+            /* Esconde controles de edicao + toolbar no PDF */
             #view-fluxos-integracao .fi-toolbar,
             #view-fluxos-integracao .fi-drag-handle,
             #view-fluxos-integracao .fi-row-actions,
             #view-fluxos-integracao .fi-add-step,
             #view-fluxos-integracao .fi-add-phase,
             #view-fluxos-integracao .fi-add-api,
-            #view-fluxos-integracao .fi-api-x {
+            #view-fluxos-integracao .fi-api-x,
+            #view-fluxos-integracao .fi-icon-btn,
+            #view-fluxos-integracao .fi-icon-picker {
                 display: none !important; visibility: hidden !important;
             }
+            /* Esconde tambem toolbar bottom (botoes + passo/fase/largura) */
+            #view-fluxos-integracao .fi-shell > div:last-of-type { display: none !important; }
             #view-fluxos-integracao [contenteditable]:hover { outline: none !important; background: none !important; }
             #view-fluxos-integracao .fi-step-route select {
                 border: none !important; background: transparent !important;
                 -webkit-appearance: none; appearance: none; padding: 0 !important;
+                color: inherit !important;
             }
-            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 6mm !important; }
-            /* Zoom-wrap: remove scroll no print pra ver tudo */
-            #view-fluxos-integracao .fi-zoom-wrap { overflow: visible !important; }
-            /* Reset do transform de zoom pra imprimir 100% */
+            #view-fluxos-integracao .fi-shell { max-width: 100% !important; padding: 4mm 6mm !important; }
+            #view-fluxos-integracao .fi-zoom-wrap {
+                overflow: visible !important;
+                background: white !important;
+                border: none !important; height: auto !important;
+                padding: 0 !important;
+            }
             #view-fluxos-integracao #fi-timeline { transform: none !important; }
+            /* Cards, setas e cores preservados no PDF */
+            #view-fluxos-integracao .fi-step {
+                box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                page-break-inside: avoid;
+            }
+            #view-fluxos-integracao .fi-arrows path {
+                stroke: #6353E8 !important;
+            }
+            #view-fluxos-integracao .fi-arrows marker path {
+                fill: #6353E8 !important;
+            }
+            /* Header da view (nome cliente × Lincros, título hero, atores) esconde
+               no print — a informacao ja esta no papel timbrado */
+            #view-fluxos-integracao .fi-flow-nav,
+            #view-fluxos-integracao .fi-eyebrow-row,
+            #view-fluxos-integracao h1.fi-hero,
+            #view-fluxos-integracao .fi-lede,
+            #view-fluxos-integracao .fi-actors { display: none !important; }
         }
 
     </style>
@@ -27248,7 +27344,35 @@ function fiRender() {
         `<option value="${a.key}" ${a.key === key ? 'selected' : ''}>${fiEsc(a.badge)}</option>`
     ).join('');
 
+    // Data formatada pt-BR pra papel timbrado
+    const _hoje = new Date();
+    const _dataStr = _hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
     shell.innerHTML = `
+        <!-- PAPEL TIMBRADO (só aparece no PDF) -->
+        <div class="fi-print-header">
+            <div class="fi-print-header-row">
+                <div class="fi-print-logo">
+                    <img src="lincros-icon.png" alt="Lincros">
+                    <div class="fi-print-brand">
+                        LINCROS
+                        <small>Soluções em Software S.A.</small>
+                    </div>
+                </div>
+                <div class="fi-print-title">
+                    ${fiEscKeepEm(s.titulo)}
+                </div>
+                <div class="fi-print-meta">
+                    <strong>${fiEsc(s.cliente.nome || 'Cliente')}</strong>
+                    Anexo · Fluxo de Integração<br>
+                    ${_dataStr}
+                </div>
+            </div>
+        </div>
+        <div class="fi-print-footer">
+            <span>LINCROS · ${fiEsc(s.cliente.nome || 'Cliente')}</span>
+            <span>Documento gerado em ${_dataStr} · Anexo do Contrato</span>
+        </div>
         <nav class="fi-flow-nav">
             <div class="fi-flow-brand cli">
                 ${s.cliente.logo
