@@ -9434,6 +9434,8 @@ function showView(viewName) {
     if (cpEl) cpEl.style.display = 'none';
     const pmEl = document.getElementById('view-planejamento-metas');
     if (pmEl) pmEl.style.display = 'none';
+    const fiEl = document.getElementById('view-fluxos-integracao');
+    if (fiEl) fiEl.style.display = 'none';
     document.getElementById('view-' + viewName).style.display = 'block';
 
     // Lazy load data
