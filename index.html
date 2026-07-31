@@ -5452,6 +5452,7 @@
         }
 
         /* ==================== VIEW: FLUXOS DE INTEGRAÇÃO (editor drag-and-drop) ==================== */
+        /* Tema dark (default) */
         #view-fluxos-integracao {
             --fi-bg:            #0B1220;
             --fi-bg-elev:       #12192B;
@@ -5473,6 +5474,20 @@
             font-family: var(--fi-sans);
             font-size: 15px; line-height: 1.55;
             min-height: 100vh;
+        }
+        /* Tema light — override das vars */
+        #view-fluxos-integracao[data-theme="light"] {
+            --fi-bg:            #F5F7FB;
+            --fi-bg-elev:       #FFFFFF;
+            --fi-ink:           #101528;
+            --fi-ink-soft:      #4B5573;
+            --fi-ink-mute:      #8791AF;
+            --fi-rule:          #DCE1EC;
+            --fi-primary:       #6353E8;
+            --fi-primary-soft:  #4E3FCC;
+            --fi-accent:        #C97919;
+            --fi-flow:          #2E86C1;
+            --fi-danger:        #C0392B;
         }
         #view-fluxos-integracao * { box-sizing: border-box; }
         #view-fluxos-integracao ::selection { background: var(--fi-primary); color: #fff; }
@@ -5820,6 +5835,67 @@
             margin-bottom: 8px;
         }
         #view-fluxos-integracao .fi-step [contenteditable] { cursor: text; }
+
+        /* Icone do step */
+        #view-fluxos-integracao .fi-step-icon {
+            font-size: 20px; line-height: 1;
+            cursor: pointer; user-select: none;
+            filter: grayscale(0.1);
+            transition: transform 0.15s;
+        }
+        #view-fluxos-integracao .fi-step-icon:hover { transform: scale(1.15); filter: grayscale(0); }
+        #view-fluxos-integracao .fi-icon-btn {
+            background: transparent;
+            border: 1px dashed var(--fi-rule);
+            color: var(--fi-ink-mute);
+            padding: 3px 8px; font-size: 10.5px;
+            border-radius: 3px; cursor: pointer;
+            font-family: var(--fi-mono);
+            text-transform: uppercase;
+            letter-spacing: var(--fi-step); font-weight: 700;
+        }
+        #view-fluxos-integracao .fi-icon-btn:hover { color: var(--fi-primary); border-color: var(--fi-primary); }
+
+        /* Popover picker de ícones */
+        #view-fluxos-integracao .fi-icon-picker {
+            position: fixed; z-index: 200;
+            background: var(--fi-bg-elev);
+            border: 1px solid var(--fi-rule);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            max-width: 320px;
+        }
+        #view-fluxos-integracao .fi-icon-picker .fi-picker-title {
+            font-family: var(--fi-mono); font-size: 10.5px;
+            text-transform: uppercase; letter-spacing: var(--fi-step);
+            color: var(--fi-ink-mute); font-weight: 700;
+            margin-bottom: 8px;
+        }
+        #view-fluxos-integracao .fi-icon-grid {
+            display: grid; grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+        }
+        #view-fluxos-integracao .fi-icon-cell {
+            background: transparent; border: 1px solid transparent;
+            border-radius: 6px; cursor: pointer;
+            padding: 6px; font-size: 20px;
+            transition: all 0.12s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #view-fluxos-integracao .fi-icon-cell:hover {
+            background: color-mix(in srgb, var(--fi-primary) 15%, transparent);
+            border-color: color-mix(in srgb, var(--fi-primary) 40%, transparent);
+            transform: scale(1.15);
+        }
+        #view-fluxos-integracao .fi-icon-cell.remove {
+            font-size: 12px; font-family: var(--fi-mono);
+            color: var(--fi-danger);
+            grid-column: span 8; margin-top: 4px;
+            padding: 6px 12px;
+            border: 1px dashed color-mix(in srgb, var(--fi-danger) 30%, var(--fi-rule));
+            text-transform: uppercase; letter-spacing: var(--fi-step); font-weight: 700;
+        }
         #view-fluxos-integracao .fi-step-num {
             width: 32px; height: 32px; border-radius: 50%;
             background: var(--fi-bg); border: 1px solid var(--fi-rule);
@@ -8191,8 +8267,9 @@
                     <button onclick="fiZoomOut()" aria-label="Diminuir zoom">−</button>
                     <span id="fi-zoom-val">100%</span>
                     <button onclick="fiZoomIn()" aria-label="Aumentar zoom">+</button>
-                    <button onclick="fiZoomFit()" title="Ajustar à tela">⤢</button>
                 </div>
+                <button onclick="fiZoomFit()" title="Ver o fluxo inteiro na tela">⤢ Ver tudo</button>
+                <button onclick="fiToggleTheme()" title="Alternar tema claro/escuro" id="fi-theme-btn">🌙</button>
                 <select id="fi-tpl-select" title="Carregar template">
                     <option value="">— Template —</option>
                     <option value="bl">Buschle &amp; Lepper</option>
@@ -27048,6 +27125,74 @@ let fiState = null;
 let fiDragging = null;
 let fiInited = false;
 let fiZoom = parseFloat(localStorage.getItem('fi_zoom') || '1') || 1;
+let fiTheme = localStorage.getItem('fi_theme') || 'dark'; // 'dark' | 'light'
+
+// Paleta de ícones (agrupados por categoria para o picker)
+const FI_ICONS = {
+    'Sistemas & Dados': ['💻','🖥️','📊','📈','🗂️','📁','🔌','⚙️','🔧','🛠️','📡','🌐','🔗','🗃️','💾','☁️'],
+    'Logística & Transporte': ['🚚','🚛','🚐','🚗','✈️','🛳️','📦','🏭','🏢','🏬','🏗️','🚧','🗺️','📍','🚦','⚓'],
+    'Documentos & Fiscal': ['📄','📃','📋','📑','🧾','📝','✍️','📮','📤','📥','✅','❌','⚠️','🚩','🔖','📌'],
+    'Pessoas & Ações': ['👤','👥','💼','🤝','👨‍💼','👩‍💼','📞','📧','💬','📨','🕐','⏰','⏱️','🔔','🔎','🔍'],
+    'Financeiro': ['💰','💵','💳','💸','🏦','📉','📈','💲','🧮','⚖️'],
+    'Fluxo & Status': ['➡️','⬅️','⬆️','⬇️','🔄','🔁','⤴️','⤵️','▶️','⏸️','🔃','🎯','🚀','⭐','🎉','🏁']
+};
+
+function fiApplyTheme() {
+    const view = document.getElementById('view-fluxos-integracao');
+    if (view) view.setAttribute('data-theme', fiTheme);
+    const btn = document.getElementById('fi-theme-btn');
+    if (btn) btn.textContent = fiTheme === 'dark' ? '🌙' : '☀️';
+    try { localStorage.setItem('fi_theme', fiTheme); } catch(e) {}
+}
+function fiToggleTheme() { fiTheme = fiTheme === 'dark' ? 'light' : 'dark'; fiApplyTheme(); }
+
+// Popover picker de ícones
+function fiOpenIconPicker(si) {
+    // Remove picker anterior se existir
+    document.querySelectorAll('#view-fluxos-integracao .fi-icon-picker').forEach(el => el.remove());
+
+    const step = fiState.steps[si];
+    const gridsHtml = Object.entries(FI_ICONS).map(([category, icons]) => `
+        <div class="fi-picker-title">${category}</div>
+        <div class="fi-icon-grid">
+            ${icons.map(ic => `<button type="button" class="fi-icon-cell" onclick="fiSetIcon(${si}, '${ic}')">${ic}</button>`).join('')}
+        </div>
+    `).join('');
+
+    const picker = document.createElement('div');
+    picker.className = 'fi-icon-picker';
+    picker.innerHTML = `
+        <div class="fi-picker-title" style="font-size:12px;color:var(--fi-primary);margin-bottom:10px;">🎨 Escolha um ícone</div>
+        ${gridsHtml}
+        ${step.icon ? `<button type="button" class="fi-icon-cell remove" onclick="fiSetIcon(${si}, '')">Remover ícone</button>` : ''}
+    `;
+    document.getElementById('view-fluxos-integracao').appendChild(picker);
+
+    // Posiciona perto do card
+    const card = document.querySelector(`#view-fluxos-integracao .fi-step[data-si="${si}"]`);
+    if (card) {
+        const r = card.getBoundingClientRect();
+        const px = Math.min(window.innerWidth - 340, r.left);
+        const py = Math.min(window.innerHeight - 400, r.bottom + 8);
+        picker.style.left = px + 'px';
+        picker.style.top = py + 'px';
+    }
+    // Fecha ao clicar fora
+    setTimeout(() => {
+        const closer = (e) => {
+            if (!picker.contains(e.target) && !e.target.closest('.fi-icon-btn') && !e.target.closest('.fi-step-icon')) {
+                picker.remove();
+                document.removeEventListener('mousedown', closer);
+            }
+        };
+        document.addEventListener('mousedown', closer);
+    }, 50);
+}
+function fiSetIcon(si, icon) {
+    fiState.steps[si].icon = icon;
+    document.querySelectorAll('#view-fluxos-integracao .fi-icon-picker').forEach(el => el.remove());
+    fiRender();
+}
 
 function fiApplyZoom() {
     const el = document.getElementById('fi-timeline');
@@ -27144,22 +27289,9 @@ function fiRender() {
             const laneH = Math.floor(canvasH / 3);
             const steps = s.steps || [];
 
-            // Bands (raias visuais)
-            const bandsHtml = laneOrder.map((k, i) => {
-                const a = atorByKey(k);
-                const top = i * laneH;
-                return `
-                    <div class="fi-band ${k}" style="top: ${top}px; height: ${laneH}px;">
-                        <div class="fi-band-label">
-                            <span class="fi-band-badge">${fiEsc(a.badge)}</span>
-                            <div>
-                                <div class="fi-band-text" contenteditable data-atk="${s.atores.findIndex(x => x.key === k)}.name">${fiEsc(a.name)}</div>
-                                <span class="fi-band-sub" contenteditable data-atk="${s.atores.findIndex(x => x.key === k)}.sub">${fiEsc(a.sub)}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            // Bands removidas — canvas sem raias fixas. O ator "from" fica indicado
+            // apenas pela barrinha lateral colorida do card + badge no header.
+            const bandsHtml = '';
 
             // Markers de fase (labels no topo, spans horizontal x)
             const phasesHtml = (s.fases || []).map((f, fi_) => `
@@ -27211,7 +27343,10 @@ function fiRender() {
                 <article class="fi-step from-${st.from}" data-si="${si}"
                          style="left: ${st.x}px; top: ${st.y}px;">
                     <div class="fi-step-marker">
-                        <span class="fi-step-num">${String(si + 1).padStart(2, '0')}</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="fi-step-num">${String(si + 1).padStart(2, '0')}</span>
+                            ${st.icon ? `<span class="fi-step-icon" onclick="fiOpenIconPicker(${si})" title="Trocar ícone">${st.icon}</span>` : `<button class="fi-icon-btn" onclick="fiOpenIconPicker(${si})" title="Adicionar ícone">+ ícone</button>`}
+                        </div>
                         <span class="fi-drag-handle" title="Arrastar">⋮⋮</span>
                     </div>
                     <h3 class="fi-step-title" contenteditable data-ph="Título" data-sk="${si}.titulo">${fiEsc(st.titulo)}</h3>
@@ -27336,22 +27471,12 @@ function fiBindDragDrop() {
                 const dy = (ev.clientY - startY) / zoom;
                 let nx = Math.max(0, origX + dx);
                 let ny = Math.max(0, origY + dy);
-                // Snap em grid de 10px (leve)
                 nx = Math.round(nx / 10) * 10;
                 ny = Math.round(ny / 10) * 10;
                 step.x = nx; step.y = ny;
                 el.style.left = nx + 'px';
                 el.style.top  = ny + 'px';
-                // Ajusta o `from` baseado na raia (Y)
-                const laneH = FI_CANVAS_H / 3;
-                const laneIdx = Math.min(2, Math.max(0, Math.floor((ny + FI_STEP_H / 2) / laneH)));
-                const newFrom = ['cli', 'lin', 'par'][laneIdx];
-                if (step.from !== newFrom) {
-                    step.from = newFrom;
-                    el.classList.remove('from-cli','from-lin','from-par');
-                    el.classList.add('from-' + newFrom);
-                }
-                // Redesenha as setas SVG
+                // Redesenha as setas SVG conforme o card se move
                 fiRedrawArrows();
             };
             const onUp = () => {
@@ -27444,12 +27569,9 @@ function fiRmStep(si) { if (confirm('Remover este passo?')) { fiState.steps.spli
 function fiAddApi(si) { fiState.steps[si].apis.push('novo endpoint'); fiRender(); }
 function fiRmApi(si, ai) { fiState.steps[si].apis.splice(ai, 1); fiRender(); }
 function fiUpdStepRoute(si, campo, val) {
+    // Sem raias fixas: mudar "from" só troca a barra lateral colorida do card.
+    // Posição x,y do card não muda mais automaticamente.
     fiState.steps[si][campo] = val;
-    // Se mudou "from", move o card pra raia correspondente
-    if (campo === 'from') {
-        const laneY = FI_LANE_Y[val] || 300;
-        fiState.steps[si].y = laneY - FI_STEP_H / 2;
-    }
     fiRender();
 }
 function fiUnlockTo(si) {
@@ -27496,6 +27618,8 @@ function fiLoadJSON(event) {
 function fiInit() {
     if (fiInited) return;
     fiInited = true;
+    // Aplica tema salvo (dark ou light)
+    fiApplyTheme();
     // Carrega do localStorage se houver, senão BL default. Migra formato antigo se necessário.
     const saved = fiLoad();
     fiState = fiMigrate(saved) || JSON.parse(JSON.stringify(FI_TEMPLATE_BL));
