@@ -27417,7 +27417,6 @@ function fiRender() {
                     : `<span class="fi-logo-drop" onclick="fiPickLogo()" title="Clique pra adicionar logo">📎</span>`}
                 <span contenteditable data-ph="Nome do cliente" data-set="cliente.nome">${fiEsc(s.cliente.nome)}</span>
             </div>
-            <div class="fi-flow-x">×</div>
             <div class="fi-flow-brand">
                 <span class="fi-dot"></span>
                 <span contenteditable data-ph="Lincros" data-set="lincrosNome">${fiEsc(s.lincrosNome)}</span>
@@ -27578,6 +27577,17 @@ function fiBindEditables() {
                     e.preventDefault(); el.blur();
                 }
             }
+        });
+        // Sync em tempo real: qualquer OUTRO elemento que aponte pro mesmo campo
+        // atualiza enquanto usuario digita (ex: titulo hero -> titulo do papel timbrado)
+        el.addEventListener('input', () => {
+            const key = el.dataset.set || el.dataset.atk || el.dataset.fk || el.dataset.sk || el.dataset.ak;
+            if (!key) return;
+            const attr = el.dataset.set ? 'data-set' : el.dataset.atk ? 'data-atk' : el.dataset.fk ? 'data-fk' : el.dataset.sk ? 'data-sk' : 'data-ak';
+            const html = el.innerHTML;
+            document.querySelectorAll(`#view-fluxos-integracao [${attr}="${key}"]`).forEach(other => {
+                if (other !== el && !other.matches(':focus')) other.innerHTML = html;
+            });
         });
     });
 }
