@@ -6071,6 +6071,12 @@
             border-color: var(--fi-primary);
             color: var(--fi-primary);
         }
+        #view-fluxos-integracao .fi-fab.secondary.active {
+            background: var(--fi-accent);
+            color: var(--fi-bg);
+            border-color: var(--fi-accent);
+            box-shadow: 0 6px 18px rgba(245,158,66,0.5), 0 0 0 4px color-mix(in srgb, var(--fi-accent) 30%, transparent);
+        }
         /* Esconde o FAB no print */
         @media print { #view-fluxos-integracao .fi-fab-group { display: none !important; } }
 
@@ -27684,6 +27690,9 @@ function fiRender() {
         </div>
         <!-- Floating Action Buttons: sempre visiveis pra adicionar rapido -->
         <div class="fi-fab-group">
+            <button class="fi-fab secondary ${fiArrowPending ? 'active' : ''}" onclick="fiStartNewArrow()" title="Criar nova seta entre 2 passos">
+                <span class="fi-fab-icon">↗</span> ${fiArrowPending ? 'clique no destino…' : 'nova seta'}
+            </button>
             <button class="fi-fab secondary" onclick="fiAddFase()" title="Adicionar nova fase (raia)">
                 <span class="fi-fab-icon">▤</span> nova fase
             </button>
@@ -27772,6 +27781,14 @@ function fiBindDragDrop() {
     // Drag livre de step: mousedown num step (fora de controles editáveis) inicia arrasto
     document.querySelectorAll('#view-fluxos-integracao .fi-step').forEach(el => {
         el.addEventListener('mousedown', e => {
+            // Se esta em modo seta pendente (FAB "nova seta"), clicar no card seleciona origem/destino
+            if (fiArrowPending && !e.target.closest('button, select, .fi-api-x, .fi-add-api, [contenteditable]')) {
+                e.preventDefault(); e.stopPropagation();
+                const si = +el.dataset.si;
+                const stepId = fiState.steps[si].id;
+                fiHandleArrowClick(e, stepId);
+                return;
+            }
             if (e.target.closest('[contenteditable], select, button, .fi-api-x, .fi-add-api')) return;
             e.preventDefault();
             const si = +el.dataset.si;
@@ -27953,30 +27970,45 @@ function fiUnlockTo(si) {
 }
 
 // === SETAS MANUAIS ===
-// Clique no botão "↗ seta" do card A → arma pendente
-// Próximo clique em outro botão "↗ seta" do card B → completa a seta A→B
-// Segundo clique no mesmo card A → cancela
+// 2 formas de criar:
+//  (a) FAB "↗ nova seta" → primeiro card clicado = origem, segundo = destino
+//  (b) Botao "↗ seta" no card A → depois botao no card B (fluxo legacy)
+function fiStartNewArrow() {
+    if (fiArrowPending) {
+        // Cancela modo seta se ja tava ativo
+        fiArrowPending = null;
+        _fiExitArrowTargetMode();
+    } else {
+        // Ativa modo picking-from (fromId ainda null)
+        fiArrowPending = { fromId: null };
+        _fiEnterArrowTargetMode();
+    }
+    fiRender();
+}
 function fiHandleArrowClick(ev, stepId) {
-    ev.stopPropagation();
+    ev && ev.stopPropagation();
     if (fiArrowPending?.fromId === stepId) {
-        // Cancela
         fiArrowPending = null;
         _fiExitArrowTargetMode();
         fiRender();
         return;
     }
+    // Modo picking-from: define origem, muda pra picking-to
+    if (fiArrowPending && fiArrowPending.fromId == null) {
+        fiArrowPending.fromId = stepId;
+        fiRender();
+        return;
+    }
     if (!fiArrowPending) {
-        // Inicia — próximo clique em outro card completa
         fiArrowPending = { fromId: stepId };
         _fiEnterArrowTargetMode();
         fiRender();
         return;
     }
-    // Já tinha um pending — completa a seta
+    // fromId ja setado, este e o destino
     const fromId = fiArrowPending.fromId;
     const toId = stepId;
     if (fromId === toId) { fiArrowPending = null; _fiExitArrowTargetMode(); fiRender(); return; }
-    // Evita duplicata; se já existe, alterna bidir
     const existing = fiState.arrows.find(a => (a.fromId === fromId && a.toId === toId) || (a.fromId === toId && a.toId === fromId));
     if (existing) {
         existing.bidir = !existing.bidir;
